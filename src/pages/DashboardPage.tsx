@@ -1,473 +1,455 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { StatusBadge, DateCell } from '@/components/ui/shared'
 
+// ── Types ─────────────────────────────────────────────────────
 type Company = { id: string; registered_name: string }
+
 type TaxEvent = {
-  id: string; company_id: string; effective_deadline: string; status: string
-  ref_compliance_forms?: { form_code: string; form_name: string; compliance_type: string } | null
+  id: string
+  effective_deadline: string
+  statutory_deadline: string
+  coverage_period_start: string
+  coverage_period_end: string
+  status: 'pending' | 'filed' | 'late'
+  date_filed: string | null
+  efps_reference_no: string | null
+  ref_compliance_forms: { form_code: string; form_name: string; compliance_type: string } | null
 }
 
-type DateRange = 'today' | 'this_month' | 'this_quarter' | 'ytd'
-
-const DATE_RANGE_LABELS: Record<DateRange, string> = {
-  today: 'Today',
-  this_month: 'This Month',
-  this_quarter: 'This Quarter',
-  ytd: 'Year-to-Date',
+type Counts = {
+  companies: number
+  branches: number
+  customers: number
+  suppliers: number
+  items: number
+  accounts: number
+  workflows: number
 }
 
-// ── Mock KPI data (clearly labelled) ────────────────────────────────────────
-const MOCK_CASH: Record<DateRange, { balance: number; accounts: number; change: number }> = {
-  today:       { balance: 4_820_150.00, accounts: 3, change: +12500 },
-  this_month:  { balance: 5_245_000.00, accounts: 3, change: +185000 },
-  this_quarter:{ balance: 4_980_500.00, accounts: 3, change: -62000 },
-  ytd:         { balance: 5_245_000.00, accounts: 3, change: +920000 },
-}
-const MOCK_AGING = {
-  receivables: { current: 1_250_000, d30: 480_000, d60: 195_000, d90: 87_500 },
-  payables:    { current: 890_000,   d30: 320_000, d60: 148_000, d90: 42_000 },
-}
-const MOCK_REVENUE: Record<DateRange, { months: { label: string; amount: number }[]; total: number; growth: number }> = {
-  today: {
-    months: [{ label: 'Today', amount: 185_000 }],
-    total: 185_000, growth: 8.2,
-  },
-  this_month: {
-    months: [
-      { label: 'Mar', amount: 1_820_000 }, { label: 'Apr', amount: 2_150_000 },
-      { label: 'May', amount: 1_940_000 }, { label: 'Jun', amount: 2_380_000 },
-    ],
-    total: 2_380_000, growth: 22.7,
-  },
-  this_quarter: {
-    months: [
-      { label: 'Q3 2025', amount: 5_400_000 }, { label: 'Q4 2025', amount: 6_120_000 },
-      { label: 'Q1 2026', amount: 5_850_000 }, { label: 'Q2 2026', amount: 6_500_000 },
-    ],
-    total: 6_500_000, growth: 11.1,
-  },
-  ytd: {
-    months: [
-      { label: 'Jan', amount: 1_950_000 }, { label: 'Feb', amount: 2_020_000 },
-      { label: 'Mar', amount: 1_820_000 }, { label: 'Apr', amount: 2_150_000 },
-      { label: 'May', amount: 1_940_000 }, { label: 'Jun', amount: 2_380_000 },
-    ],
-    total: 12_260_000, growth: 15.4,
-  },
-}
-const MOCK_ACTIVITIES = [
-  { date: '2026-06-28', type: 'Purchase Order', reference: 'PO-2026-0182', amount: 485_000, action: 'Pending Approval', severity: 'warning' },
-  { date: '2026-06-27', type: 'Sales Invoice', reference: 'SI-2026-1045', amount: 128_500, action: 'Overdue — 15 days', severity: 'danger' },
-  { date: '2026-06-25', type: 'Payment Voucher', reference: 'PV-2026-0390', amount: 220_000, action: 'Pending Release', severity: 'warning' },
-  { date: '2026-06-24', type: 'Credit Memo', reference: 'CM-2026-0042', amount: 35_000, action: 'For Approval', severity: 'info' },
-  { date: '2026-06-22', type: 'Journal Entry', reference: 'JE-2026-0501', amount: 0, action: 'Unposted', severity: 'info' },
-]
+type SetupItem = { label: string; done: boolean; page?: string }
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-const php = (n: number) =>
-  '₱' + n.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+// ── Helpers ──────────────────────────────────────────────────
+const daysUntil = (d: string) =>
+  Math.ceil((new Date(d).getTime() - Date.now()) / 86_400_000)
 
-const phpCompact = (n: number) => {
-  if (n >= 1_000_000) return '₱' + (n / 1_000_000).toFixed(2) + 'M'
-  if (n >= 1_000)     return '₱' + (n / 1_000).toFixed(1) + 'K'
-  return '₱' + n.toLocaleString()
+const fmtDeadline = (days: number) => {
+  if (days < 0) return { label: `${Math.abs(days)}d overdue`, cls: 'text-red-700 bg-red-50' }
+  if (days === 0) return { label: 'Due today', cls: 'text-red-700 bg-red-50' }
+  if (days <= 7)  return { label: `${days}d left`, cls: 'text-amber-700 bg-amber-50' }
+  return { label: `${days}d left`, cls: 'text-gray-600 bg-gray-100' }
 }
 
-const fmtDate = (d: string) =>
-  new Date(d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
-
-const daysUntil = (d: string) => {
-  const diff = new Date(d).getTime() - Date.now()
-  return Math.ceil(diff / 86400000)
+const COMPLIANCE_TYPE_LABEL: Record<string, string> = {
+  vat: 'VAT', ewt: 'EWT', fwt: 'FWT',
+  income_tax: 'Income Tax', alphalist: 'Alphalist',
+  information: 'Information Return', lgu: 'LGU',
 }
 
-// ── Sample data badge ────────────────────────────────────────────────────────
-const SampleBadge = () => (
-  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700 border border-amber-200 leading-none">
-    Sample Data
-  </span>
-)
-
-// ── Mini bar chart (pure CSS) ─────────────────────────────────────────────
-function MiniBarChart({ data }: { data: { label: string; amount: number }[] }) {
-  const max = Math.max(...data.map(d => d.amount))
+// ── KPI Card ─────────────────────────────────────────────────
+function KpiCard({ label, value, sub, danger }: {
+  label: string; value: number | string; sub?: string; danger?: boolean
+}) {
   return (
-    <div className="flex items-end gap-1.5 h-14 mt-2">
-      {data.map((d, i) => (
-        <div key={i} className="flex flex-col items-center gap-1 flex-1">
-          <div className="w-full bg-gray-900 rounded-sm transition-all"
-            style={{ height: `${Math.max(4, (d.amount / max) * 48)}px` }} />
-          <span className="text-[10px] text-gray-400 leading-none">{d.label}</span>
-        </div>
-      ))}
+    <div className="bg-white border border-gray-200 px-4 py-3 flex flex-col gap-0.5">
+      <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{label}</span>
+      <span className={`text-2xl font-semibold tabular-nums leading-tight ${danger && Number(value) > 0 ? 'text-red-700' : 'text-gray-900'}`}>
+        {value}
+      </span>
+      {sub && <span className="text-xs text-gray-400">{sub}</span>}
     </div>
   )
 }
 
-// ── Aging bar ─────────────────────────────────────────────────────────────
-function AgingRow({ label, data, color }: { label: string; data: { current: number; d30: number; d60: number; d90: number }; color: string }) {
-  const total = data.current + data.d30 + data.d60 + data.d90
+// ── Empty state for widgets ───────────────────────────────────
+function WidgetEmpty({ message }: { message: string }) {
   return (
-    <div className="space-y-1">
-      <div className="flex items-center justify-between">
-        <span className={`text-xs font-semibold ${color}`}>{label}</span>
-        <span className="text-xs font-mono text-gray-700">{phpCompact(total)}</span>
-      </div>
-      <div className="flex gap-0.5 h-2 rounded overflow-hidden">
-        <div title={`Current: ${phpCompact(data.current)}`} className="bg-green-400" style={{ width: `${(data.current / total) * 100}%` }} />
-        <div title={`30-60d: ${phpCompact(data.d30)}`} className="bg-yellow-400" style={{ width: `${(data.d30 / total) * 100}%` }} />
-        <div title={`60-90d: ${phpCompact(data.d60)}`} className="bg-orange-400" style={{ width: `${(data.d60 / total) * 100}%` }} />
-        <div title={`90d+: ${phpCompact(data.d90)}`} className="bg-red-400" style={{ width: `${(data.d90 / total) * 100}%` }} />
-      </div>
-      <div className="flex justify-between text-[10px] text-gray-400">
-        <span>Current</span><span>30–60d</span><span>60–90d</span><span>90d+</span>
-      </div>
-      <div className="flex justify-between text-[10px] font-mono text-gray-600">
-        <span>{phpCompact(data.current)}</span>
-        <span>{phpCompact(data.d30)}</span>
-        <span>{phpCompact(data.d60)}</span>
-        <span className="text-red-600">{phpCompact(data.d90)}</span>
-      </div>
-    </div>
+    <div className="py-8 text-center text-sm text-gray-400">{message}</div>
   )
 }
 
-// ── Main component ────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { companyId, setCompanyId } = useAppCtx()
   const [companies, setCompanies] = useState<Company[]>([])
-  const [taxEvents, setTaxEvents] = useState<TaxEvent[]>([])
-  const [customerCount, setCustomerCount] = useState(0)
-  const [supplierCount, setSupplierCount] = useState(0)
-  const [dateRange, setDateRange] = useState<DateRange>('this_month')
-  const [refreshing, setRefreshing] = useState(false)
-  const [lastRefreshed, setLastRefreshed] = useState(new Date())
+  const [events, setEvents] = useState<TaxEvent[]>([])
+  const [counts, setCounts] = useState<Counts>({ companies: 0, branches: 0, customers: 0, suppliers: 0, items: 0, accounts: 0, workflows: 0 })
+  const [setupItems, setSetupItems] = useState<SetupItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null)
 
-  const loadData = useCallback(async () => {
-    setRefreshing(true)
-    await Promise.all([
-      supabase.from('companies').select('id,registered_name').eq('is_active', true).order('registered_name')
-        .then(({ data }) => setCompanies(data || [])),
-      companyId
-        ? supabase.from('tax_calendar_events')
-            .select('id,company_id,effective_deadline,status,ref_compliance_forms(form_code,form_name,compliance_type)')
-            .eq('company_id', companyId)
-            .eq('status', 'pending')
-            .lte('effective_deadline', new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0])
-            .order('effective_deadline')
-            .limit(10)
-            .then(({ data }) => setTaxEvents((data as unknown as TaxEvent[]) || []))
-        : Promise.resolve(setTaxEvents([])),
-      companyId
-        ? supabase.from('customers').select('id', { count: 'exact', head: true }).eq('company_id', companyId)
-            .then(({ count }) => setCustomerCount(count || 0))
-        : Promise.resolve(setCustomerCount(0)),
-      companyId
-        ? supabase.from('suppliers').select('id', { count: 'exact', head: true }).eq('company_id', companyId)
-            .then(({ count }) => setSupplierCount(count || 0))
-        : Promise.resolve(setSupplierCount(0)),
+  const load = useCallback(async () => {
+    setLoading(true)
+
+    // Companies always loaded
+    const { data: cos } = await supabase
+      .from('companies').select('id,registered_name').eq('is_active', true).order('registered_name')
+    setCompanies(cos || [])
+
+    const cid = companyId
+
+    // Global counts
+    const [{ count: coCount }, { count: brCount }] = await Promise.all([
+      supabase.from('companies').select('*', { count: 'exact', head: true }).eq('is_active', true),
+      cid ? supabase.from('branches').select('*', { count: 'exact', head: true }).eq('company_id', cid).eq('is_active', true)
+           : Promise.resolve({ count: 0 }),
     ])
+
+    // Company-scoped counts
+    const [{ count: custCount }, { count: suppCount }, { count: itemCount },
+      { count: acctCount }, { count: wfCount }] = await Promise.all([
+      cid ? supabase.from('customers').select('*', { count: 'exact', head: true }).eq('company_id', cid).eq('is_active', true)
+          : Promise.resolve({ count: 0 }),
+      cid ? supabase.from('suppliers').select('*', { count: 'exact', head: true }).eq('company_id', cid).eq('is_active', true)
+          : Promise.resolve({ count: 0 }),
+      cid ? supabase.from('items').select('*', { count: 'exact', head: true }).eq('company_id', cid).eq('is_active', true)
+          : Promise.resolve({ count: 0 }),
+      cid ? supabase.from('chart_of_accounts').select('*', { count: 'exact', head: true }).eq('company_id', cid)
+          : Promise.resolve({ count: 0 }),
+      cid ? supabase.from('approval_workflows').select('*', { count: 'exact', head: true }).eq('company_id', cid).eq('is_active', true)
+          : Promise.resolve({ count: 0 }),
+    ])
+
+    setCounts({
+      companies: coCount || 0, branches: brCount || 0,
+      customers: custCount || 0, suppliers: suppCount || 0,
+      items: itemCount || 0, accounts: acctCount || 0, workflows: wfCount || 0,
+    })
+
+    // Tax calendar events (next 90 days + overdue)
+    if (cid) {
+      const ninetyDays = new Date(Date.now() + 90 * 86_400_000).toISOString().split('T')[0]
+      const { data: evts } = await supabase
+        .from('tax_calendar_events')
+        .select('id,effective_deadline,statutory_deadline,coverage_period_start,coverage_period_end,status,date_filed,efps_reference_no,ref_compliance_forms(form_code,form_name,compliance_type)')
+        .eq('company_id', cid)
+        .neq('status', 'filed')
+        .lte('effective_deadline', ninetyDays)
+        .order('effective_deadline')
+        .limit(25)
+      setEvents((evts as unknown as TaxEvent[]) || [])
+    } else {
+      setEvents([])
+    }
+
+    // Setup checklist — real checks against actual data
+    if (cid) {
+      const [{ count: cpCount }, { count: fyCount }, { count: currCount },
+        { count: tcCount }, { count: nsCount }] = await Promise.all([
+        supabase.from('compliance_profiles').select('*', { count: 'exact', head: true }).eq('company_id', cid),
+        supabase.from('fiscal_years').select('*', { count: 'exact', head: true }).eq('company_id', cid),
+        supabase.from('currencies').select('*', { count: 'exact', head: true }).eq('is_active', true),
+        supabase.from('tax_codes').select('*', { count: 'exact', head: true }),
+        supabase.from('number_series').select('*', { count: 'exact', head: true }).eq('company_id', cid),
+      ])
+      setSetupItems([
+        { label: 'Company configured', done: (coCount || 0) > 0, page: 'company-setup' },
+        { label: 'Branch set up', done: (brCount || 0) > 0, page: 'branch-setup' },
+        { label: 'Chart of Accounts', done: (acctCount || 0) > 0, page: 'chart-of-accounts' },
+        { label: 'Fiscal Year defined', done: (fyCount || 0) > 0, page: 'fiscal-years' },
+        { label: 'Currencies configured', done: (currCount || 0) > 0, page: 'currency-setup' },
+        { label: 'Tax codes set up', done: (tcCount || 0) > 0, page: 'tax-setup' },
+        { label: 'Compliance profile', done: (cpCount || 0) > 0, page: 'compliance-profile' },
+        { label: 'Number series', done: (nsCount || 0) > 0, page: 'number-series' },
+      ])
+    } else {
+      setSetupItems([])
+    }
+
     setLastRefreshed(new Date())
-    setRefreshing(false)
+    setLoading(false)
   }, [companyId])
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { load() }, [load])
 
-  const cash = MOCK_CASH[dateRange]
-  const revenue = MOCK_REVENUE[dateRange]
+  // Derived metrics
+  const overdue = events.filter(e => e.status === 'late' || (e.status === 'pending' && daysUntil(e.effective_deadline) < 0))
+  const dueThisWeek = events.filter(e => { const d = daysUntil(e.effective_deadline); return e.status === 'pending' && d >= 0 && d <= 7 })
+  const setupDone = setupItems.filter(s => s.done).length
+  const setupTotal = setupItems.length
 
-  // Build tax deadline rows from real data
-  const taxRows = taxEvents.map(e => {
-    const days = daysUntil(e.effective_deadline)
-    return {
-      date: e.effective_deadline,
-      type: 'Tax Filing',
-      reference: e.ref_compliance_forms?.form_code ?? '—',
-      amount: 0,
-      action: days < 0 ? `Overdue — ${Math.abs(days)} days` : days === 0 ? 'Due Today' : `Due in ${days} day${days === 1 ? '' : 's'}`,
-      severity: days < 0 ? 'danger' : days <= 7 ? 'danger' : 'warning',
-    }
-  })
-  const allActivities = [...taxRows, ...MOCK_ACTIVITIES].slice(0, 10)
-
-  const overdueTax = taxEvents.filter(e => daysUntil(e.effective_deadline) < 0).length
-  const dueSoonTax = taxEvents.filter(e => { const d = daysUntil(e.effective_deadline); return d >= 0 && d <= 7 }).length
-
-  const inp = 'border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900 bg-white'
+  const sel = 'border border-gray-300 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white'
 
   return (
-    <div className="space-y-5">
-      {/* Page header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">Executive Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Financial overview — last refreshed {lastRefreshed.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <SampleBadge />
-          <span className="text-xs text-gray-400">KPI cards show placeholder data pending live transaction modules</span>
-        </div>
-      </div>
+    <div className="space-y-0 divide-y divide-gray-200">
 
       {/* Action bar */}
-      <div className="flex items-center gap-3 p-4 bg-white border border-gray-200 rounded-lg">
+      <div className="bg-white px-5 py-2.5 flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Date Range</label>
-          <select value={dateRange} onChange={e => setDateRange(e.target.value as DateRange)} className={inp}>
-            {(Object.entries(DATE_RANGE_LABELS) as [DateRange, string][]).map(([k, v]) => (
-              <option key={k} value={k}>{v}</option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-center gap-2">
-          <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Entity</label>
-          <select value={companyId} onChange={e => setCompanyId(e.target.value)} className={inp}>
+          <label className="text-xs text-gray-500 font-medium whitespace-nowrap">Company</label>
+          <select value={companyId} onChange={e => setCompanyId(e.target.value)} className={sel}>
             <option value="">All Companies</option>
             {companies.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}
           </select>
         </div>
         <div className="flex-1" />
-        <button onClick={loadData} disabled={refreshing}
-          className="flex items-center gap-2 px-3 py-1.5 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors">
-          <svg className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" />
-            <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M3 21v-5h5" />
+        {lastRefreshed && (
+          <span className="text-xs text-gray-400">
+            Updated {lastRefreshed.toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+          </span>
+        )}
+        <button onClick={load} disabled={loading}
+          className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-300 rounded text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50">
+          <svg className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+            <path d="M3 12a9 9 0 019-9 9.75 9.75 0 016.74 2.74L21 8M21 3v5h-5M21 12a9 9 0 01-9 9 9.75 9.75 0 01-6.74-2.74L3 16M3 21v-5h5" />
           </svg>
-          {refreshing ? 'Refreshing…' : 'Refresh'}
+          Refresh
         </button>
       </div>
 
-      {/* ── KPI Widget Grid ── */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-200">
+        <KpiCard
+          label="Overdue Filings"
+          value={loading ? '—' : overdue.length}
+          sub={overdue.length > 0 ? 'Penalties may apply' : 'All current'}
+          danger
+        />
+        <KpiCard
+          label="Due This Week"
+          value={loading ? '—' : dueThisWeek.length}
+          sub={dueThisWeek.length > 0 ? 'Action required' : 'No urgent deadlines'}
+        />
+        <KpiCard
+          label="Active Companies"
+          value={loading ? '—' : counts.companies}
+          sub={counts.branches > 0 ? `${counts.branches} branch${counts.branches !== 1 ? 'es' : ''}` : 'No branches yet'}
+        />
+        <KpiCard
+          label={companyId ? 'Master Records' : 'Select Company'}
+          value={loading ? '—' : companyId ? counts.customers + counts.suppliers + counts.items : '—'}
+          sub={companyId ? `${counts.customers} customers · ${counts.suppliers} suppliers · ${counts.items} items` : 'Select a company to view'}
+        />
+      </div>
 
-        {/* 1. Cash Flow Overview */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-3">
-          <div className="flex items-start justify-between">
+      {/* Main body */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 divide-y xl:divide-y-0 xl:divide-x divide-gray-200">
+
+        {/* Tax Compliance Schedule — left 2/3 */}
+        <div className="xl:col-span-2">
+          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between bg-white">
             <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cash Flow Overview</p>
-              <p className="text-xs text-gray-400 mt-0.5">{cash.accounts} bank accounts</p>
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Tax Compliance Schedule</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Pending filings — next 90 days + overdue</p>
             </div>
-            <SampleBadge />
-          </div>
-          <div>
-            <div className="text-2xl font-bold font-mono tabular-nums text-gray-900">{phpCompact(cash.balance)}</div>
-            <div className="text-xs text-gray-400 font-mono">{php(cash.balance)}</div>
-          </div>
-          <div className={`flex items-center gap-1 text-xs font-medium ${cash.change >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-              {cash.change >= 0 ? <path d="m18 15-6-6-6 6" /> : <path d="m6 9 6 6 6-6" />}
-            </svg>
-            {cash.change >= 0 ? '+' : ''}{phpCompact(Math.abs(cash.change))} vs prior period
-          </div>
-          <div className="pt-1 border-t border-gray-100">
-            <div className="flex justify-between text-xs text-gray-500">
-              <span>Petty Cash</span><span className="font-mono">{phpCompact(48500)}</span>
-            </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Bank — BPI Checking</span><span className="font-mono">{phpCompact(2_840_000)}</span>
-            </div>
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>Bank — BDO Savings</span><span className="font-mono">{phpCompact(1_931_650)}</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 2. Receivables & Payables Aging */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-4">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Receivables & Payables</p>
-              <p className="text-xs text-gray-400 mt-0.5">Aging summary</p>
-            </div>
-            <SampleBadge />
-          </div>
-          <AgingRow label="Receivables" data={MOCK_AGING.receivables} color="text-green-700" />
-          <div className="border-t border-gray-100 pt-3">
-            <AgingRow label="Payables" data={MOCK_AGING.payables} color="text-red-700" />
-          </div>
-          <div className="pt-1">
-            <div className="flex items-center gap-3 text-[10px] text-gray-400">
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-green-400 inline-block" />Current</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-yellow-400 inline-block" />30–60d</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-orange-400 inline-block" />60–90d</span>
-              <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400 inline-block" />90d+</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 3. Tax Compliance Snapshot */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-3">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Tax Compliance</p>
-              <p className="text-xs text-gray-400 mt-0.5">Next 30 days</p>
-            </div>
-            {taxEvents.length === 0 && <SampleBadge />}
-          </div>
-
-          {taxEvents.length > 0 ? (
-            <div className="space-y-2">
-              {overdueTax > 0 && (
-                <div className="flex items-center gap-2 p-2 bg-red-50 border border-red-100 rounded-md">
-                  <div className="h-2 w-2 rounded-full bg-red-500 shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-red-700">{overdueTax} Overdue Filing{overdueTax > 1 ? 's' : ''}</p>
-                    <p className="text-[10px] text-red-600">Penalties may apply</p>
-                  </div>
-                </div>
-              )}
-              {dueSoonTax > 0 && (
-                <div className="flex items-center gap-2 p-2 bg-amber-50 border border-amber-100 rounded-md">
-                  <div className="h-2 w-2 rounded-full bg-amber-500 shrink-0" />
-                  <div className="flex-1">
-                    <p className="text-xs font-semibold text-amber-700">{dueSoonTax} Due This Week</p>
-                    <p className="text-[10px] text-amber-600">File before deadline</p>
-                  </div>
-                </div>
-              )}
-              <div className="space-y-1.5 pt-1">
-                {taxEvents.slice(0, 4).map(e => {
-                  const days = daysUntil(e.effective_deadline)
-                  return (
-                    <div key={e.id} className="flex items-center justify-between">
-                      <span className="text-xs text-gray-700 font-mono">{e.ref_compliance_forms?.form_code}</span>
-                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded ${days < 0 ? 'bg-red-100 text-red-700' : days <= 7 ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? 'Today' : `${days}d left`}
-                      </span>
-                    </div>
-                  )
-                })}
+            {events.length > 0 && (
+              <div className="flex items-center gap-2">
+                {overdue.length > 0 && (
+                  <span className="text-xs font-medium text-red-700 bg-red-50 px-2 py-0.5 rounded">
+                    {overdue.length} overdue
+                  </span>
+                )}
+                {dueThisWeek.length > 0 && (
+                  <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded">
+                    {dueThisWeek.length} this week
+                  </span>
+                )}
               </div>
+            )}
+          </div>
+
+          {!companyId ? (
+            <WidgetEmpty message="Select a company in the toolbar to view the tax compliance schedule." />
+          ) : loading ? (
+            <div className="divide-y divide-gray-100">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="px-5 py-3 flex gap-4 animate-pulse">
+                  <div className="h-3 bg-gray-100 rounded w-16" />
+                  <div className="h-3 bg-gray-100 rounded flex-1" />
+                  <div className="h-3 bg-gray-100 rounded w-20" />
+                </div>
+              ))}
             </div>
+          ) : events.length === 0 ? (
+            <WidgetEmpty message="No pending tax deadlines in the next 90 days. Set up a Compliance Profile to generate the Tax Calendar." />
           ) : (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600">VAT Payable (est.)</span>
-                <span className="text-xs font-mono font-semibold text-gray-900">{phpCompact(142_800)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600">EWT Payable (est.)</span>
-                <span className="text-xs font-mono font-semibold text-gray-900">{phpCompact(38_500)}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600">Next Deadline</span>
-                <span className="text-xs font-medium text-amber-700">Jul 20, 2026</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600">Pending Filings</span>
-                <span className="text-xs font-medium text-gray-700">3</span>
-              </div>
-              <p className="text-[10px] text-gray-400 pt-1">Select a company with a Compliance Profile to see real deadlines</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm" aria-label="Tax compliance schedule">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    {['Form', 'Type', 'Coverage Period', 'Effective Deadline', 'Status', 'Days'].map(h => (
+                      <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {events.map(e => {
+                    const days = daysUntil(e.effective_deadline)
+                    const urgency = fmtDeadline(days)
+                    const isOverdue = e.status === 'late' || days < 0
+                    return (
+                      <tr key={e.id} className={`hover:bg-gray-50 transition-colors ${isOverdue ? 'bg-red-50/40' : ''}`}>
+                        <td className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-900 whitespace-nowrap">
+                          {e.ref_compliance_forms?.form_code ?? '—'}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className="text-[11px] font-medium text-gray-500">
+                            {COMPLIANCE_TYPE_LABEL[e.ref_compliance_forms?.compliance_type ?? ''] ?? '—'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+                          {new Date(e.coverage_period_start).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}
+                          {' – '}
+                          {new Date(e.coverage_period_end).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs font-mono text-gray-700 whitespace-nowrap">
+                          {new Date(e.effective_deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <StatusBadge status={isOverdue ? 'error' : e.status} label={isOverdue ? 'Overdue' : e.status.charAt(0).toUpperCase() + e.status.slice(1)} />
+                        </td>
+                        <td className="px-4 py-2.5">
+                          <span className={`text-[11px] font-medium px-2 py-0.5 rounded ${urgency.cls}`}>
+                            {urgency.label}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
 
-        {/* 4. Revenue Trends */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 space-y-3">
-          <div className="flex items-start justify-between">
-            <div>
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Revenue Trends</p>
-              <p className="text-xs text-gray-400 mt-0.5">Gross sales — {DATE_RANGE_LABELS[dateRange].toLowerCase()}</p>
-            </div>
-            <SampleBadge />
-          </div>
+        {/* Right panel — Setup Status + Master Data counts */}
+        <div className="divide-y divide-gray-200">
+
+          {/* Master Data Counts */}
           <div>
-            <div className="text-2xl font-bold font-mono tabular-nums text-gray-900">{phpCompact(revenue.total)}</div>
-            <div className={`flex items-center gap-1 text-xs font-medium mt-0.5 ${revenue.growth >= 0 ? 'text-green-700' : 'text-red-700'}`}>
-              <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
-                {revenue.growth >= 0 ? <path d="m18 15-6-6-6 6" /> : <path d="m6 9 6 6 6-6" />}
-              </svg>
-              {revenue.growth >= 0 ? '+' : ''}{revenue.growth}% vs prior period
+            <div className="px-5 py-3 bg-white border-b border-gray-100">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Master Data</h2>
             </div>
+            {!companyId ? (
+              <WidgetEmpty message="Select a company." />
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {[
+                  { label: 'Chart of Accounts', value: counts.accounts },
+                  { label: 'Customers', value: counts.customers },
+                  { label: 'Suppliers', value: counts.suppliers },
+                  { label: 'Items', value: counts.items },
+                  { label: 'Branches', value: counts.branches },
+                  { label: 'Approval Workflows', value: counts.workflows },
+                ].map(row => (
+                  <div key={row.label} className="px-5 py-2.5 flex items-center justify-between hover:bg-gray-50">
+                    <span className="text-sm text-gray-600">{row.label}</span>
+                    <span className={`text-sm font-mono font-semibold tabular-nums ${loading ? 'text-gray-300' : 'text-gray-900'}`}>
+                      {loading ? '—' : row.value.toLocaleString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          <MiniBarChart data={revenue.months} />
-          <div className="pt-1 border-t border-gray-100 flex justify-between text-xs text-gray-500">
-            <span>Customers: <span className="font-semibold text-gray-700">{customerCount}</span></span>
-            <span>Suppliers: <span className="font-semibold text-gray-700">{supplierCount}</span></span>
+
+          {/* Setup Checklist */}
+          <div>
+            <div className="px-5 py-3 bg-white border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Setup Checklist</h2>
+              {setupTotal > 0 && (
+                <span className="text-xs text-gray-400">{setupDone}/{setupTotal} complete</span>
+              )}
+            </div>
+            {!companyId ? (
+              <WidgetEmpty message="Select a company." />
+            ) : loading ? (
+              <WidgetEmpty message="Loading…" />
+            ) : setupItems.length === 0 ? (
+              <WidgetEmpty message="No setup data available." />
+            ) : (
+              <div className="divide-y divide-gray-100">
+                {setupItems.map(item => (
+                  <div key={item.label} className="px-5 py-2.5 flex items-center gap-3">
+                    <span className={`h-4 w-4 rounded-full flex items-center justify-center shrink-0 ${item.done ? 'bg-green-500' : 'bg-gray-200'}`}>
+                      {item.done && (
+                        <svg className="h-2.5 w-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
+                          <path d="M5 12l5 5L20 7" />
+                        </svg>
+                      )}
+                    </span>
+                    <span className={`text-sm ${item.done ? 'text-gray-700' : 'text-gray-400'}`}>{item.label}</span>
+                    {!item.done && item.page && (
+                      <span className="ml-auto text-[11px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded">Setup required</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
+
         </div>
       </div>
 
-      {/* ── Recent Critical Activities ── */}
-      <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div>
-            <h2 className="text-sm font-semibold text-gray-900">Recent Critical Activities</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Items requiring executive attention</p>
-          </div>
-          <div className="flex items-center gap-2">
-            {taxRows.length > 0 && (
-              <span className="text-xs text-gray-500">{taxRows.length} real tax deadline{taxRows.length > 1 ? 's' : ''} from compliance profile</span>
-            )}
-            {MOCK_ACTIVITIES.length > 0 && (
-              <SampleBadge />
-            )}
-          </div>
+      {/* Recent Critical Activities */}
+      <div>
+        <div className="px-5 py-3 bg-white border-b border-gray-100">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-gray-500">Recent Critical Activities</h2>
+          <p className="text-xs text-gray-400 mt-0.5">Overdue and urgent items requiring action</p>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm" aria-label="Critical activities list">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                {['Date', 'Document Type', 'Reference', 'Amount', 'Action Required'].map(h => (
-                  <th key={h} className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide whitespace-nowrap">{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {allActivities.map((a, i) => (
-                <tr key={i} className="hover:bg-gray-50 transition-colors group">
-                  <td className="px-5 py-3 text-xs text-gray-500 whitespace-nowrap">{fmtDate(a.date)}</td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                      a.type === 'Tax Filing'      ? 'bg-indigo-50 text-indigo-700' :
-                      a.type === 'Sales Invoice'   ? 'bg-blue-50 text-blue-700' :
-                      a.type === 'Purchase Order'  ? 'bg-purple-50 text-purple-700' :
-                      a.type === 'Payment Voucher' ? 'bg-orange-50 text-orange-700' :
-                      a.type === 'Credit Memo'     ? 'bg-teal-50 text-teal-700' :
-                                                     'bg-gray-100 text-gray-600'
-                    }`}>{a.type}</span>
-                  </td>
-                  <td className="px-5 py-3 font-mono font-medium text-gray-900 text-xs">{a.reference}</td>
-                  <td className="px-5 py-3 text-right font-mono text-sm tabular-nums text-gray-700">
-                    {a.amount > 0 ? php(a.amount) : <span className="text-gray-300">—</span>}
-                  </td>
-                  <td className="px-5 py-3">
-                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${
-                      a.severity === 'danger'  ? 'text-red-700' :
-                      a.severity === 'warning' ? 'text-amber-700' :
-                                                 'text-blue-700'
-                    }`}>
-                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${
-                        a.severity === 'danger'  ? 'bg-red-500' :
-                        a.severity === 'warning' ? 'bg-amber-500' :
-                                                   'bg-blue-500'
-                      }`} />
-                      {a.action}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-              {!allActivities.length && (
+        {!companyId ? (
+          <WidgetEmpty message="Select a company to view critical activities." />
+        ) : loading ? (
+          <WidgetEmpty message="Loading…" />
+        ) : overdue.length === 0 && dueThisWeek.length === 0 ? (
+          <WidgetEmpty message="No critical activities. All tax filings are current." />
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm" aria-label="Critical activities">
+              <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <td colSpan={5} className="px-5 py-10 text-center text-gray-400">
-                    No critical activities to show
-                  </td>
+                  {['Effective Deadline', 'Document Type', 'Reference', 'Coverage Period', 'Action Required'].map(h => (
+                    <th key={h} className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">{h}</th>
+                  ))}
                 </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-        <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 flex items-center justify-between">
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {[...overdue, ...dueThisWeek].slice(0, 15).map(e => {
+                  const days = daysUntil(e.effective_deadline)
+                  const isOv = days < 0
+                  return (
+                    <tr key={e.id} className={`hover:bg-gray-50 transition-colors ${isOv ? 'bg-red-50/30' : 'bg-amber-50/20'}`}>
+                      <td className="px-5 py-2.5 text-xs font-mono text-gray-700 whitespace-nowrap">
+                        <DateCell date={e.effective_deadline} />
+                      </td>
+                      <td className="px-5 py-2.5">
+                        <span className="text-xs font-medium text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">
+                          Tax Filing
+                        </span>
+                      </td>
+                      <td className="px-5 py-2.5 font-mono text-xs font-semibold text-gray-900">
+                        {e.ref_compliance_forms?.form_code ?? '—'}
+                      </td>
+                      <td className="px-5 py-2.5 text-xs text-gray-500 whitespace-nowrap">
+                        {new Date(e.coverage_period_start).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}
+                        {' – '}
+                        {new Date(e.coverage_period_end).toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}
+                      </td>
+                      <td className="px-5 py-2.5">
+                        <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${isOv ? 'text-red-700' : 'text-amber-700'}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${isOv ? 'bg-red-500' : 'bg-amber-500'}`} />
+                          {isOv
+                            ? `File immediately — ${Math.abs(days)} day${Math.abs(days) !== 1 ? 's' : ''} overdue`
+                            : `File before ${new Date(e.effective_deadline).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+        <div className="px-5 py-2 border-t border-gray-100 bg-gray-50">
           <span className="text-xs text-gray-400">
-            Showing {allActivities.length} items
-            {taxRows.length > 0 ? ` (${taxRows.length} live, ${MOCK_ACTIVITIES.length} sample)` : ' (sample data)'}
+            {companyId && !loading
+              ? `${overdue.length + dueThisWeek.length} item${overdue.length + dueThisWeek.length !== 1 ? 's' : ''} shown · Transaction modules (Sales, Purchasing, Accounting) will surface additional activities when built`
+              : 'Select a company to load activities'}
           </span>
-          <span className="text-xs text-gray-400">Transaction modules required for full live data</span>
         </div>
       </div>
+
     </div>
   )
 }
