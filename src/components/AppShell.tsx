@@ -23,6 +23,9 @@ import TaxCalendarPage from '@/pages/TaxCalendarPage'
 import BIRFormConfigPage from '@/pages/BIRFormConfigPage'
 import DashboardPage from '@/pages/DashboardPage'
 import SalesInvoicePage from '@/pages/SalesInvoicePage'
+import ReceiptsPage from '@/pages/ReceiptsPage'
+import CreditMemosPage from '@/pages/CreditMemosPage'
+import DebitMemosPage from '@/pages/DebitMemosPage'
 
 type SubItem = { name: string; page: string }
 type Group = { group: string; items: SubItem[] }
@@ -90,8 +93,9 @@ const NAV: NavItem[] = [
     label: 'Sales', groups: [
       { group: 'Transactions', items: [
         s('Quotations'), s('Sales Orders'), s('Delivery Receipts'),
-        s('Sales Invoices', 'sales-invoices'), s('Cash Sales'), s('Receipts'),
-        s('Credit Memos'), s('Debit Memos'), s('Customer Returns'),
+        s('Sales Invoices', 'sales-invoices'), s('Cash Sales'),
+        s('Receipts', 'receipts'),
+        s('Credit Memos', 'credit-memos'), s('Debit Memos', 'debit-memos'), s('Customer Returns'),
       ]},
       { group: 'Receivables', items: [s('Customer Ledger'), s('AR Aging'), s('Collection Monitoring')] },
       { group: 'Tax Review', items: [s('Output VAT Review'), s('Percentage Tax Review'), s('2307 Received Review')] },
@@ -189,6 +193,9 @@ const PAGE_LABELS: Record<string, string> = {
   'bir-form-config': 'BIR Form Configuration',
   'dashboard': 'Executive Dashboard',
   'sales-invoices': 'Sales Invoices',
+  'receipts':       'Receipts',
+  'credit-memos':   'Credit Memos',
+  'debit-memos':    'Debit Memos',
 }
 
 // Context selector group — embedded inside the nav bar on the right side
@@ -279,6 +286,9 @@ function AppShellInner({ session }: { session: Session }) {
       case 'bir-form-config':  return <BIRFormConfigPage />
       case 'dashboard':        return <DashboardPage />
       case 'sales-invoices':   return <SalesInvoicePage />
+      case 'receipts':         return <ReceiptsPage />
+      case 'credit-memos':     return <CreditMemosPage />
+      case 'debit-memos':      return <DebitMemosPage />
       default: return (
         <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
           <h1 className="text-xl font-semibold text-gray-900">Welcome to PXL</h1>
