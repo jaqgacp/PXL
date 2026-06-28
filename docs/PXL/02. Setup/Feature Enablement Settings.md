@@ -44,7 +44,7 @@ A sectioned form categorized by business area, heavily utilizing boolean toggle 
 
 ## Supabase Database Architecture
 
-**Critical Database Rule for Lovable:** A composite unique constraint must be enforced on `(company_id)` to ensure this table acts as a strict singleton configuration record per tenant.
+**Critical Database Rule:** A composite unique constraint must be enforced on `(company_id)` to ensure this table acts as a strict singleton configuration record per tenant.
 
 ### Table: `sys_feature_enablement`
 This table acts as a singleton per company. It dictates global application state.

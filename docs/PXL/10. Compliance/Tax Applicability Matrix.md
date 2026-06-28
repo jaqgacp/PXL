@@ -39,7 +39,7 @@ Accessed primarily during initial company setup or when the BIR updates a taxpay
 
 ## Supabase Database Architecture
 
-**Critical Database Rule for Lovable:** A composite unique constraint must be enforced on `(company_id)` to ensure this table functions as a strict singleton settings record per company profile.
+**Critical Database Rule:** A composite unique constraint must be enforced on `(company_id)` to ensure this table functions as a strict singleton settings record per company profile.
 
 ### Table: `tax_applicability_matrix`
 This table stores the boolean/enum rules that frontend components will read to conditionally render the Compliance dashboards.

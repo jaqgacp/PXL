@@ -32,6 +32,8 @@ import DeliveryReceiptsPage from '@/pages/DeliveryReceiptsPage'
 import ARAgingPage from '@/pages/ARAgingPage'
 import SalesTaxReviewPage from '@/pages/SalesTaxReviewPage'
 import SalesRegistersPage from '@/pages/SalesRegistersPage'
+import EWTWorkingPapersPage from '@/pages/EWTWorkingPapersPage'
+import Form2307ReceivedPage from '@/pages/Form2307ReceivedPage'
 
 type SubItem = { name: string; page: string }
 type Group = { group: string; items: SubItem[] }
@@ -104,7 +106,7 @@ const NAV: NavItem[] = [
         s('Credit Memos', 'credit-memos'), s('Debit Memos', 'debit-memos'), s('Customer Returns'),
       ]},
       { group: 'Receivables', items: [s('AR Aging / Customer Ledger', 'ar-aging'), s('Collection Monitoring')] },
-      { group: 'Tax Review', items: [s('Output VAT Review', 'sales-tax-review'), s('Percentage Tax Review'), s('2307 Received Review')] },
+      { group: 'Tax Review', items: [s('Output VAT Review', 'sales-tax-review'), s('Percentage Tax Review'), s('2307 Received Review', '2307-received-review')] },
       { group: 'Registers', items: [s('Sales Registers', 'sales-registers'), s('SLS')] },
     ]
   },
@@ -155,7 +157,7 @@ const NAV: NavItem[] = [
     label: 'Compliance', groups: [
       { group: 'Percentage Tax', items: [s('PT Dashboard'), s('PT Working Papers'), s('PT Quarterly Return 2551Q'), s('PT Reconciliation'), s('PT Summary Register')] },
       { group: 'VAT', items: [s('VAT Dashboard'), s('VAT Working Papers'), s('Output VAT Summary'), s('Input VAT Summary'), s('VAT Reconciliation'), s('VAT Return 2550M'), s('VAT Return 2550Q'), s('SLS'), s('SLP'), s('SLSP Export'), s('RELIEF Export')] },
-      { group: 'Withholding Tax', items: [s('WT Dashboard'), s('EWT Working Papers'), s('EWT Payable Summary'), s('EWT Receivable Summary'), s('ATC Summary'), s('1601EQ Working Papers'), s('1601EQ Quarterly Return'), s('QAP'), s('SAWT'), s('2307 Certificates Issued'), s('2307 Certificates Received'), s('2306 Certificates'), s('FWT Working Papers'), s('1601FQ Working Papers'), s('1601FQ Quarterly Return')] },
+      { group: 'Withholding Tax', items: [s('WT Dashboard'), s('EWT Working Papers', 'ewt-working-papers'), s('EWT Payable Summary'), s('EWT Receivable Summary'), s('ATC Summary'), s('1601EQ Working Papers'), s('1601EQ Quarterly Return'), s('QAP'), s('SAWT'), s('2307 Certificates Issued'), s('2307 Certificates Received'), s('2306 Certificates'), s('FWT Working Papers'), s('1601FQ Working Papers'), s('1601FQ Quarterly Return')] },
       { group: 'Income Tax', items: [s('Income Tax Dashboard'), s('Taxable Income Computation'), s('Book-to-Tax Reconciliation'), s('OSD Computation'), s('NOLCO Schedule'), s('Tax Credits Schedule'), s('1701Q Quarterly ITR'), s('1701 Annual ITR'), s('1702Q Quarterly ITR'), s('1702RT Annual ITR'), s('MCIT Computation')] },
       { group: 'BIR Books', items: [s('Books Dashboard'), s('General Journal'), s('General Ledger Book'), s('Cash Receipts Book'), s('Cash Disbursements Book'), s('Sales Journal'), s('Cash Sales Journal'), s('Purchase Journal'), s('Cash Purchases Journal'), s('AR Subsidiary Ledger'), s('AP Subsidiary Ledger'), s('Inventory Subsidiary Ledger'), s('Fixed Asset Register')] },
       { group: 'Audit & CAS', items: [s('CAS Dashboard'), s('Transaction Audit Log'), s('Master Data Change Log'), s('System Parameter Logs'), s('User Activity Log'), s('Attachment Register'), s('Document Void Register'), s('ATP Usage Log'), s('DAT File Generation'), s('CAS Audit Report'), s('Export History')] },
@@ -207,7 +209,9 @@ const PAGE_LABELS: Record<string, string> = {
   'delivery-receipts':   'Delivery Receipts',
   'ar-aging':            'AR Aging & Customer Ledger',
   'sales-tax-review':    'Output VAT Review',
-  'sales-registers':     'Sales Registers',
+  'sales-registers':        'Sales Registers',
+  'ewt-working-papers':     'EWT Working Papers',
+  '2307-received-review':   '2307 Received Review',
 }
 
 // Context selector group — embedded inside the nav bar on the right side
@@ -306,7 +310,9 @@ function AppShellInner({ session }: { session: Session }) {
       case 'delivery-receipts': return <DeliveryReceiptsPage />
       case 'ar-aging':          return <ARAgingPage />
       case 'sales-tax-review':  return <SalesTaxReviewPage />
-      case 'sales-registers':   return <SalesRegistersPage />
+      case 'sales-registers':       return <SalesRegistersPage />
+      case 'ewt-working-papers':    return <EWTWorkingPapersPage />
+      case '2307-received-review':  return <Form2307ReceivedPage />
       default: return (
         <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
           <h1 className="text-xl font-semibold text-gray-900">Welcome to PXL</h1>

@@ -35,7 +35,7 @@ A split-view dashboard separating "To Collect (Customers)" and "To Issue (Vendor
 
 ## Supabase Database Architecture
 
-**Critical Database Rule for Lovable:** Composite Unique Constraint required on `(company_id, source_doc_id, type)` to prevent duplicate logging of certificates for the same transaction.
+**Critical Database Rule:** Composite Unique Constraint required on `(company_id, source_doc_id, type)` to prevent duplicate logging of certificates for the same transaction.
 
 ### Table: `form_2307_registry`
 | Column Name | Data Type | Rules | What it stores |

@@ -38,7 +38,7 @@ Displays all historical migration batches, showing their Type (`AR`, `AP`, `INV`
 
 ## Supabase Database Architecture
 
-**Critical Database Rule for Lovable:** Composite Unique Constraint required on `(company_id, batch_id)` to ensure migration batch integrity.
+**Critical Database Rule:** Composite Unique Constraint required on `(company_id, batch_id)` to ensure migration batch integrity.
 
 ### Table: `opening_balance_uploads`
 | Column Name | Data Type | Rules | What it stores |

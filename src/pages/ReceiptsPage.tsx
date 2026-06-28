@@ -19,6 +19,7 @@ type ApplicationLine = {
   invoice_id: string; si_number: string; si_date: string
   original_amount: number; balance_due: number
   payment_amount: number; cwt_amount: number; forex_adjustment: number
+  atc_code_id: string | null
 }
 
 type CustomerRef = {
@@ -28,6 +29,7 @@ type CustomerRef = {
 type PaymentMode = { id: string; code: string; name: string }
 type COAAccount  = { id: string; account_code: string; account_name: string }
 type Branch      = { id: string; branch_code: string; branch_name: string }
+type ATCCode     = { id: string; atc_code: string; description: string }
 
 // ── Helpers ──────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -52,6 +54,7 @@ export default function ReceiptsPage() {
   const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([])
   const [bankAccounts, setBankAccounts] = useState<COAAccount[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
+  const [atcCodes, setAtcCodes] = useState<ATCCode[]>([])
 
   // List state
   const [list, setList] = useState<Receipt[]>([])
@@ -94,11 +97,13 @@ export default function ReceiptsPage() {
         .order('account_code'),
       supabase.from('branches').select('id,branch_code,branch_name')
         .eq('company_id', companyId).eq('is_active', true),
-    ]).then(([{ data: cos }, { data: pms }, { data: coa }, { data: brs }]) => {
+      supabase.from('ref_atc_codes').select('id,atc_code,description').eq('is_active', true).order('atc_code'),
+    ]).then(([{ data: cos }, { data: pms }, { data: coa }, { data: brs }, { data: atcs }]) => {
       setCustomers(cos as CustomerRef[] || [])
       setPaymentModes(pms as PaymentMode[] || [])
       setBankAccounts(coa as COAAccount[] || [])
       setBranches(brs as Branch[] || [])
+      setAtcCodes(atcs as ATCCode[] || [])
     })
   }, [companyId])
 
@@ -158,7 +163,7 @@ export default function ReceiptsPage() {
       return {
         invoice_id: si.id, si_number: si.si_number, si_date: si.date,
         original_amount: Number(si.total_amount), balance_due: balance,
-        payment_amount: 0, cwt_amount: 0, forex_adjustment: 0,
+        payment_amount: 0, cwt_amount: 0, forex_adjustment: 0, atc_code_id: null,
       }
     }).filter(l => l.balance_due > 0.005)
 
@@ -209,7 +214,7 @@ export default function ReceiptsPage() {
         si_date: si?.date || '', original_amount: Number(si?.total_amount || 0),
         balance_due: 0, // will be stale, but fine for view
         payment_amount: Number(r.payment_amount), cwt_amount: Number(r.cwt_amount),
-        forex_adjustment: Number(r.forex_adjustment),
+        forex_adjustment: Number(r.forex_adjustment), atc_code_id: r.atc_code_id || null,
       }
     })
     setLines(mapped)
@@ -218,6 +223,10 @@ export default function ReceiptsPage() {
 
   const setLineField = (invoiceId: string, field: 'payment_amount' | 'cwt_amount' | 'forex_adjustment', val: number) => {
     setLines(prev => prev.map(l => l.invoice_id === invoiceId ? { ...l, [field]: val } : l))
+  }
+
+  const setLineAtc = (invoiceId: string, atcCodeId: string | null) => {
+    setLines(prev => prev.map(l => l.invoice_id === invoiceId ? { ...l, atc_code_id: atcCodeId } : l))
   }
 
   const totalPayment = lines.reduce((s, l) => s + l.payment_amount, 0)
@@ -280,6 +289,7 @@ export default function ReceiptsPage() {
             receipt_id: docId!, company_id: companyId,
             invoice_id: l.invoice_id, payment_amount: l.payment_amount,
             cwt_amount: l.cwt_amount, forex_adjustment: l.forex_adjustment,
+            atc_code_id: l.cwt_amount > 0 ? l.atc_code_id : null,
           }))
         )
         if (le) throw le
@@ -520,7 +530,7 @@ export default function ReceiptsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['SI Number','SI Date','Original Amount','Balance Due','Payment Amount','CWT (2307)','Forex Adj.','Remaining After'].map(h => (
+                    {['SI Number','SI Date','Original Amount','Balance Due','Payment Amount','CWT (2307)','ATC Code','Forex Adj.','Remaining After'].map(h => (
                       <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap last:text-right">{h}</th>
                     ))}
                   </tr>
@@ -555,6 +565,27 @@ export default function ReceiptsPage() {
                               onChange={e => setLineField(l.invoice_id, 'cwt_amount', parseFloat(e.target.value) || 0)}
                               className="w-24 border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
                               placeholder="0.00" />
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {l.cwt_amount > 0 ? (
+                            readOnly ? (
+                              <span className="font-mono text-xs text-gray-600">
+                                {atcCodes.find(a => a.id === l.atc_code_id)?.atc_code || '—'}
+                              </span>
+                            ) : (
+                              <select
+                                value={l.atc_code_id || ''}
+                                onChange={e => setLineAtc(l.invoice_id, e.target.value || null)}
+                                className="w-28 border border-gray-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
+                                <option value="">Select…</option>
+                                {atcCodes.map(a => (
+                                  <option key={a.id} value={a.id}>{a.atc_code}</option>
+                                ))}
+                              </select>
+                            )
+                          ) : (
+                            <span className="text-xs text-gray-300">—</span>
                           )}
                         </td>
                         <td className="px-4 py-2.5">

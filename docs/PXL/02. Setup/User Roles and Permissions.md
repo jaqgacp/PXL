@@ -42,7 +42,7 @@ A massive grid displaying all system modules and the granular rights associated 
 
 ## Supabase Database Architecture
 
-**Critical Database Rule for Lovable:** A composite unique constraint must be enforced on `(company_id, role_name)` in the `roles` table, and `(role_id, module_name)` in the `role_permissions` table to ensure strict RBAC integrity.
+**Critical Database Rule:** A composite unique constraint must be enforced on `(company_id, role_name)` in the `roles` table, and `(role_id, module_name)` in the `role_permissions` table to ensure strict RBAC integrity.
 
 ### Table 1: `roles` (Header)
 Defines the high-level access profiles.

@@ -1,6 +1,6 @@
 # PXL ERP: Supreme Engineering Constitution
 
-As the definitive master reference for the PXL ERP architecture, this document serves as the absolute, unbreakable constitution for all human developers, UI/UX designers, and AI models contributing to the system. PXL ERP is a strictly BIR-compliant, multi-tenant, accounting-first enterprise application built on Lovable.dev and Supabase. 
+As the definitive master reference for the PXL ERP architecture, this document serves as the absolute, unbreakable constitution for all human developers, UI/UX designers, and AI models contributing to the system. PXL ERP is a strictly BIR-compliant, multi-tenant, accounting-first enterprise application built on React and Supabase. 
 
 Any code, schema, or UI design that violates the 27 principles below shall be classified as technical debt and immediately rejected.
 

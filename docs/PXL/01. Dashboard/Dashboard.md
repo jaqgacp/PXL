@@ -55,7 +55,7 @@ To support the customizable nature of the Executive Dashboard, the system stores
 The data structure is designed to persist user-defined dashboard configurations.
 
 ### Table 1: `dashboard_layouts` (Header Table)
-**Critical Database Rule for Lovable:** The `dashboard_layouts` table must have a composite unique constraint on (`layout_name`, `created_by`) to ensure a user does not create duplicate layout names.
+**Critical Database Rule:** The `dashboard_layouts` table must have a composite unique constraint on (`layout_name`, `created_by`) to ensure a user does not create duplicate layout names.
 
 Stores the overarching configuration for a specific dashboard view.
 

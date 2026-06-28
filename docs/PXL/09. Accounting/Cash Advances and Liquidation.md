@@ -49,7 +49,7 @@ Displays all Cash Advances with their statuses (`Draft`, `Approved`, `Released`,
 
 ## Supabase Database Architecture
 
-**Critical Database Rule for Lovable:** Composite Unique Constraint required on `(company_id, ca_number)` for Cash Advances, and `(company_id, liquidation_number)` for Liquidations.
+**Critical Database Rule:** Composite Unique Constraint required on `(company_id, ca_number)` for Cash Advances, and `(company_id, liquidation_number)` for Liquidations.
 
 ### Table 1: `cash_advances` (Header)
 | Column Name | Data Type | Rules | What it stores |

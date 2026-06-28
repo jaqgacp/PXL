@@ -1,6 +1,6 @@
 # PXL ERP — Build Order & Progress Tracker
 
-> Mark each step `✅ DONE` when complete. The current step always matches what is set in `LOVABLE_GUIDE.md`.
+> Mark each step `✅ DONE` when complete. 
 > Dependencies are listed — never skip ahead of them.
 
 ---
@@ -12,7 +12,7 @@
 | S0.1 | Supabase + Auth Setup | Supabase project, Google OAuth, email auth, users table, JWT custom claims edge function | ⬜ |
 | S0.2 | Login Page | Login screen with Google button + email/password form. Handles first-time setup redirect. | ⬜ |
 | S0.3 | App Shell | Fixed top nav bar, mega menu (all 11 module tabs), `<PageShell>` layout, breadcrumbs, context bar (Company/Branch/Period selector) | ⬜ |
-| S0.4 | Shared Component Library | All components listed in LOVABLE_GUIDE.md "Shared Components" section. DataTable, StatusBadge, LookupDialog, FormSection, EmptyState, ConfirmDialog, AuditTrailSection, MegaMenu, AmountCell, DateCell | ⬜ |
+| S0.4 | Shared Component Library | 
 
 **Dependency:** Nothing. These are the foundation.
 

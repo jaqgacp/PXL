@@ -34,7 +34,7 @@ Displays all defined Fiscal Periods (e.g., Jan 2024, Feb 2024) and their current
 
 ## Supabase Database Architecture
 
-**Critical Database Rule for Lovable:** Composite Unique Constraint required on `(company_id, start_date, end_date)` to prevent overlapping fiscal periods.
+**Critical Database Rule:** Composite Unique Constraint required on `(company_id, start_date, end_date)` to prevent overlapping fiscal periods.
 
 ### Table 1: `fiscal_periods`
 | Column Name | Data Type | Rules | What it stores |

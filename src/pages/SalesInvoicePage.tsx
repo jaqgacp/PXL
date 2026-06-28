@@ -16,6 +16,7 @@ type SI = {
   total_taxable_amount: number; total_zero_rated_amount: number
   total_exempt_amount: number; total_vat_amount: number
   total_amount: number; status: SIStatus
+  cwt_amount_expected: number | null
   void_reason_id: string | null; posted_at: string | null
   created_at: string; updated_at: string
 }
@@ -187,6 +188,10 @@ export default function SalesInvoicePage() {
   const [fRef, setFRef] = useState('')
   const [fMemo, setFMemo] = useState('')
 
+  // CWT state (informational — does not affect invoice total)
+  const [fIsWithholdingAgent, setFIsWithholdingAgent] = useState(false)
+  const [fCwtExpected, setFCwtExpected] = useState<number>(0)
+
   // Void dialog
   const [showVoid, setShowVoid] = useState(false)
   const [voidReason, setVoidReason] = useState('')
@@ -265,6 +270,7 @@ export default function SalesInvoicePage() {
     setFDate(today()); setFBranch(branchId); setFCustomer(''); setFCustomerName('')
     setFCustomerTIN(''); setFCustomerAddr(''); setFTerms(''); setFDueDate('')
     setFCurrency('PHP'); setFRef(''); setFMemo('')
+    setFIsWithholdingAgent(false); setFCwtExpected(0)
     setLines([newLine()])
     setError('')
     setMode('new')
@@ -277,6 +283,10 @@ export default function SalesInvoicePage() {
     setFCustomerAddr(si.customer_address_snapshot)
     setFTerms(si.payment_terms_id || ''); setFDueDate(si.due_date || '')
     setFCurrency(si.currency_code); setFRef(si.reference || ''); setFMemo(si.memo || '')
+    // Restore CWT state from saved SI + customer master
+    const cust = customers.find(c => c.id === si.customer_id)
+    setFIsWithholdingAgent(cust?.is_withholding_agent ?? false)
+    setFCwtExpected(si.cwt_amount_expected ? Number(si.cwt_amount_expected) : 0)
     setError('')
 
     // Load existing lines
@@ -318,6 +328,8 @@ export default function SalesInvoicePage() {
     setFCustomerName(c.registered_name)
     setFCustomerTIN(c.tin + (c.tin_branch_code ? `-${c.tin_branch_code}` : ''))
     setFCustomerAddr(c.registered_address)
+    setFIsWithholdingAgent(c.is_withholding_agent)
+    if (!c.is_withholding_agent) setFCwtExpected(0)
     const pt = c.payment_terms
     if (pt && c.default_terms_id) {
       setFTerms(c.default_terms_id)
@@ -406,6 +418,7 @@ export default function SalesInvoicePage() {
         reference: fRef || null,
         memo: fMemo || null,
         ...totals,
+        cwt_amount_expected: fIsWithholdingAgent && fCwtExpected > 0 ? fCwtExpected : null,
         status: nextStatus || editSI?.status || 'draft',
         ...(nextStatus === 'posted' ? { posted_at: new Date().toISOString() } : {}),
       }
@@ -871,6 +884,34 @@ export default function SalesInvoicePage() {
               <span className="text-sm font-semibold text-gray-900">Grand Total</span>
               <span className="text-sm font-mono tabular-nums font-semibold text-gray-900">{fmt(totals.total_amount)}</span>
             </div>
+            {fIsWithholdingAgent && (
+              <div className="pt-2 mt-1 border-t border-blue-100 bg-blue-50/60 rounded-md px-3 py-2.5 space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">2307 / CWT — Informational Only</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-blue-700">Less: CWT (not deducted from total — collected via OR)</span>
+                  {mode === 'view' ? (
+                    <span className="text-xs font-mono tabular-nums text-blue-700">
+                      {fCwtExpected > 0 ? `(${fmt(fCwtExpected)})` : '—'}
+                    </span>
+                  ) : (
+                    <input
+                      type="number"
+                      min={0}
+                      step="any"
+                      value={fCwtExpected || ''}
+                      onChange={e => setFCwtExpected(parseFloat(e.target.value) || 0)}
+                      className="w-32 border border-blue-200 bg-white rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"
+                      placeholder="0.00"
+                    />
+                  )}
+                </div>
+                <p className="text-[10px] text-blue-500 leading-relaxed">
+                  Customer is flagged as withholding agent. CWT will be settled when the customer remits BIR Form 2307.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
