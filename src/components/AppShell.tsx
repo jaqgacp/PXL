@@ -17,6 +17,10 @@ import CustomersPage from '@/pages/CustomersPage'
 import SuppliersPage from '@/pages/SuppliersPage'
 import PaymentTermsPage from '@/pages/PaymentTermsPage'
 import ItemCatalogPage from '@/pages/ItemCatalogPage'
+import TaxSetupPage from '@/pages/TaxSetupPage'
+import ComplianceProfilePage from '@/pages/ComplianceProfilePage'
+import TaxCalendarPage from '@/pages/TaxCalendarPage'
+import BIRFormConfigPage from '@/pages/BIRFormConfigPage'
 
 type SubItem = { name: string; page: string }
 type Group = { group: string; items: SubItem[] }
@@ -33,7 +37,7 @@ const NAV: NavItem[] = [
         s('Branch Setup', 'branch-setup'),
         s('Department Setup', 'department-setup'),
         s('Cost Centers', 'department-setup'),
-        s('CAS Registrations'), s('Company Bank Accounts'), s('Compliance Profile'),
+        s('CAS Registrations'), s('Company Bank Accounts'), s('Compliance Profile', 'compliance-profile'),
       ]},
       { group: 'System Controls', items: [
         s('Number Series — Sales', 'number-series'),
@@ -63,9 +67,11 @@ const NAV: NavItem[] = [
         s('Financial Statement Fields'), s('GL Posting Configuration'),
       ]},
       { group: 'Tax Setup', items: [
-        s('BIR Form Configuration'), s('Tax Codes'), s('VAT Codes'),
-        s('EWT Codes'), s('FWT Codes'), s('Percentage Tax Codes'),
-        s('ATC Codes'), s('Tax Calendar'),
+        s('BIR Form Configuration', 'bir-form-config'),
+        s('Tax Codes', 'tax-setup'), s('VAT Codes', 'tax-setup'),
+        s('EWT Codes', 'tax-setup'), s('FWT Codes', 'tax-setup'),
+        s('Percentage Tax Codes', 'tax-setup'), s('ATC Codes', 'tax-setup'),
+        s('Tax Calendar', 'tax-calendar'),
       ]},
       { group: 'System', items: [s('System Audit Log', 'audit-log')] },
     ]
@@ -175,6 +181,10 @@ const PAGE_LABELS: Record<string, string> = {
   'suppliers': 'Suppliers',
   'payment-terms': 'Payment Terms',
   'item-catalog': 'Item Catalog',
+  'tax-setup': 'Tax Code Setup',
+  'compliance-profile': 'Compliance Profile',
+  'tax-calendar': 'Tax Calendar',
+  'bir-form-config': 'BIR Form Configuration',
 }
 
 // Context selector group — embedded inside the nav bar on the right side
@@ -259,6 +269,10 @@ function AppShellInner({ session }: { session: Session }) {
       case 'suppliers':        return <SuppliersPage />
       case 'payment-terms':    return <PaymentTermsPage />
       case 'item-catalog':     return <ItemCatalogPage />
+      case 'tax-setup':        return <TaxSetupPage />
+      case 'compliance-profile': return <ComplianceProfilePage />
+      case 'tax-calendar':     return <TaxCalendarPage />
+      case 'bir-form-config':  return <BIRFormConfigPage />
       default: return (
         <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
           <h1 className="text-xl font-semibold text-gray-900">Welcome to PXL</h1>
