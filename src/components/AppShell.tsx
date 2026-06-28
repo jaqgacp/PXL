@@ -1,7 +1,22 @@
-import { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
-import CompanySetupPage from '@/pages/CompanySetupPage'
+import { AppContextProvider, useAppCtx } from '@/lib/context'
 import type { Session } from '@supabase/supabase-js'
+
+import CompanySetupPage from '@/pages/CompanySetupPage'
+import BranchSetupPage from '@/pages/BranchSetupPage'
+import DepartmentSetupPage from '@/pages/DepartmentSetupPage'
+import FiscalYearsPage from '@/pages/FiscalYearsPage'
+import ChartOfAccountsPage from '@/pages/ChartOfAccountsPage'
+import CurrencySetupPage from '@/pages/CurrencySetupPage'
+import FeatureEnablementPage from '@/pages/FeatureEnablementPage'
+import NumberSeriesPage from '@/pages/NumberSeriesPage'
+import ApprovalWorkflowPage from '@/pages/ApprovalWorkflowPage'
+import AuditLogPage from '@/pages/AuditLogPage'
+import CustomersPage from '@/pages/CustomersPage'
+import SuppliersPage from '@/pages/SuppliersPage'
+import PaymentTermsPage from '@/pages/PaymentTermsPage'
+import ItemCatalogPage from '@/pages/ItemCatalogPage'
 
 type SubItem = { name: string; page: string }
 type Group = { group: string; items: SubItem[] }
@@ -15,16 +30,22 @@ const NAV: NavItem[] = [
     label: 'Setup', groups: [
       { group: 'Organization', items: [
         s('Company Setup', 'company-setup'),
-        s('Branch Setup'), s('Department Setup'), s('Cost Centers'),
+        s('Branch Setup', 'branch-setup'),
+        s('Department Setup', 'department-setup'),
+        s('Cost Centers', 'department-setup'),
         s('CAS Registrations'), s('Company Bank Accounts'), s('Compliance Profile'),
       ]},
       { group: 'System Controls', items: [
-        s('Number Series — Sales'), s('Number Series — Purchasing'),
-        s('Number Series — Accounting'), s('Number Series — Compliance'),
-        s('ATP Monitoring'), s('Global Feature Enablement'),
+        s('Number Series — Sales', 'number-series'),
+        s('Number Series — Purchasing', 'number-series'),
+        s('Number Series — Accounting', 'number-series'),
+        s('Number Series — Compliance', 'number-series'),
+        s('ATP Monitoring'),
+        s('Global Feature Enablement', 'feature-enablement'),
         s('Inventory Settings'), s('Fixed Assets Settings'),
         s('Petty Cash Settings'), s('Bank Reconciliation Settings'),
-        s('Budget Settings'), s('Unified Approval Workflow'),
+        s('Budget Settings'),
+        s('Unified Approval Workflow', 'approval-workflow'),
       ]},
       { group: 'Document & Validation', items: [
         s('Status Controls'), s('Posting Controls'),
@@ -33,8 +54,12 @@ const NAV: NavItem[] = [
         s('Posting Validation Rules'), s('Period Controls'),
       ]},
       { group: 'Accounting Setup', items: [
-        s('Fiscal Years'), s('Fiscal Calendar'), s('Chart of Accounts'),
-        s('Currency Setup'), s('Exchange Rates'), s('Opening Balances'),
+        s('Fiscal Years', 'fiscal-years'),
+        s('Fiscal Calendar', 'fiscal-years'),
+        s('Chart of Accounts', 'chart-of-accounts'),
+        s('Currency Setup', 'currency-setup'),
+        s('Exchange Rates', 'currency-setup'),
+        s('Opening Balances'),
         s('Financial Statement Fields'), s('GL Posting Configuration'),
       ]},
       { group: 'Tax Setup', items: [
@@ -42,15 +67,15 @@ const NAV: NavItem[] = [
         s('EWT Codes'), s('FWT Codes'), s('Percentage Tax Codes'),
         s('ATC Codes'), s('Tax Calendar'),
       ]},
-      { group: 'System', items: [s('System Audit Log')] },
+      { group: 'System', items: [s('System Audit Log', 'audit-log')] },
     ]
   },
   {
     label: 'Master Data', groups: [
-      { group: 'Parties', items: [s('Customers'), s('Suppliers'), s('Personnel / Employees Lite')] },
-      { group: 'Items & Services', items: [s('Item Categories'), s('Units of Measure'), s('Items'), s('Services')] },
+      { group: 'Parties', items: [s('Customers', 'customers'), s('Suppliers', 'suppliers'), s('Personnel / Employees Lite')] },
+      { group: 'Items & Services', items: [s('Item Categories', 'item-catalog'), s('Units of Measure', 'item-catalog'), s('Items', 'item-catalog'), s('Services', 'item-catalog')] },
       { group: 'Inventory Master', items: [s('Warehouses'), s('Warehouse Stock Settings')] },
-      { group: 'Shared', items: [s('Payment Terms')] },
+      { group: 'Shared', items: [s('Payment Terms', 'payment-terms')] },
     ]
   },
   {
@@ -134,22 +159,84 @@ const NAV: NavItem[] = [
   },
 ]
 
-export default function AppShell({ session }: { session: Session }) {
+// Flat map of page → breadcrumb label for display
+const PAGE_LABELS: Record<string, string> = {
+  'company-setup': 'Company Setup',
+  'branch-setup': 'Branch Setup',
+  'department-setup': 'Departments & Cost Centers',
+  'fiscal-years': 'Fiscal Years',
+  'chart-of-accounts': 'Chart of Accounts',
+  'currency-setup': 'Currency Setup',
+  'feature-enablement': 'Feature Enablement',
+  'number-series': 'Number Series',
+  'approval-workflow': 'Approval Workflows',
+  'audit-log': 'System Audit Log',
+  'customers': 'Customers',
+  'suppliers': 'Suppliers',
+  'payment-terms': 'Payment Terms',
+  'item-catalog': 'Item Catalog',
+}
+
+// Context selector group — embedded inside the nav bar on the right side
+function ContextSelectors() {
+  const { companyId, branchId, periodId, setCompanyId, setBranchId, setPeriodId } = useAppCtx()
+  const [companies, setCompanies] = useState<Array<{ id: string; registered_name: string }>>([])
+  const [branches, setBranches] = useState<Array<{ id: string; branch_code: string; branch_name: string }>>([])
+  const [periods, setPeriods] = useState<Array<{ id: string; period_name: string; fiscal_year_id: string }>>([])
+
+  useEffect(() => {
+    supabase.from('companies').select('id,registered_name').eq('is_active', true).order('registered_name')
+      .then(({ data }) => setCompanies(data || []))
+  }, [])
+
+  useEffect(() => {
+    if (!companyId) { setBranches([]); setPeriods([]); return }
+    supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true).order('branch_name')
+      .then(({ data }) => setBranches(data || []))
+    supabase.from('fiscal_periods').select('id,period_name,fiscal_year_id').eq('company_id', companyId).eq('is_locked', false).order('start_date', { ascending: false }).limit(24)
+      .then(({ data }) => setPeriods(data || []))
+  }, [companyId])
+
+  const sel = 'border border-gray-700 bg-gray-800 text-gray-300 text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer max-w-[140px] truncate'
+
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <select value={companyId} onChange={e => { setCompanyId(e.target.value); setBranchId(''); setPeriodId('') }} className={sel} title="Company">
+        <option value="">Company</option>
+        {companies.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}
+      </select>
+      <select value={branchId} onChange={e => setBranchId(e.target.value)} disabled={!companyId} className={`${sel} disabled:opacity-40 disabled:cursor-not-allowed`} title="Branch">
+        <option value="">Branch</option>
+        {branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}
+      </select>
+      <select value={periodId} onChange={e => setPeriodId(e.target.value)} disabled={!companyId} className={`${sel} disabled:opacity-40 disabled:cursor-not-allowed`} title="Period">
+        <option value="">Period</option>
+        {periods.map(p => <option key={p.id} value={p.id}>{p.period_name}</option>)}
+      </select>
+    </div>
+  )
+}
+
+function AppShellInner({ session }: { session: Session }) {
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
+  const [menuLeft, setMenuLeft] = useState(0)
   const [currentPage, setCurrentPage] = useState('')
+  const [breadcrumb, setBreadcrumb] = useState<{ section: string; page: string } | null>(null)
 
-  const openMenu = (label: string) => {
+  const openMenu = (label: string, left = 0) => {
     setActiveMenu(label)
+    setMenuLeft(left)
     const nav = NAV.find(n => n.label === label)
     if (nav && nav.groups.length > 0) setActiveGroup(nav.groups[0].group)
   }
 
   const closeMenu = () => { setActiveMenu(null); setActiveGroup(null) }
 
-  const navigate = (page: string) => {
+  const navigate = (page: string, section?: string) => {
     if (!page) return
     setCurrentPage(page)
+    setBreadcrumb(section ? { section, page } : null)
     closeMenu()
   }
 
@@ -157,96 +244,150 @@ export default function AppShell({ session }: { session: Session }) {
   const currentGroupItems = currentNav?.groups.find(g => g.group === activeGroup)?.items ?? []
 
   const renderPage = () => {
-    if (currentPage === 'company-setup') return <CompanySetupPage />
-    return (
-      <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
-        <h1 className="text-xl font-semibold text-gray-900">Welcome to PXL</h1>
-        <p className="text-sm text-gray-500 mt-1">Philippine Accounting ERP</p>
-        <p className="text-xs text-gray-400 mt-3">Select a module from the navigation above</p>
-      </div>
-    )
+    switch (currentPage) {
+      case 'company-setup':    return <CompanySetupPage />
+      case 'branch-setup':     return <BranchSetupPage />
+      case 'department-setup': return <DepartmentSetupPage />
+      case 'fiscal-years':     return <FiscalYearsPage />
+      case 'chart-of-accounts': return <ChartOfAccountsPage />
+      case 'currency-setup':   return <CurrencySetupPage />
+      case 'feature-enablement': return <FeatureEnablementPage />
+      case 'number-series':    return <NumberSeriesPage />
+      case 'approval-workflow': return <ApprovalWorkflowPage />
+      case 'audit-log':        return <AuditLogPage />
+      case 'customers':        return <CustomersPage />
+      case 'suppliers':        return <SuppliersPage />
+      case 'payment-terms':    return <PaymentTermsPage />
+      case 'item-catalog':     return <ItemCatalogPage />
+      default: return (
+        <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
+          <h1 className="text-xl font-semibold text-gray-900">Welcome to PXL</h1>
+          <p className="text-sm text-gray-500 mt-1">Philippine Accounting ERP</p>
+          <p className="text-xs text-gray-400 mt-3">Select a module from the navigation above</p>
+        </div>
+      )
+    }
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <nav className="fixed top-0 left-0 right-0 h-14 bg-gray-900 z-50 flex items-center px-6 border-b border-gray-800">
-        <span onClick={() => { setCurrentPage(''); closeMenu() }}
-          className="font-bold text-white text-sm tracking-tight mr-6 cursor-pointer shrink-0">
-          PXL
-        </span>
+      {/*
+        Nav bar: mouseLeave on the <nav> element closes the menu.
+        Dropdown is a direct child of <nav> (not inside the scroll container)
+        so overflow-x-auto on the scroll container cannot clip it.
+      */}
+      <nav className="fixed top-0 left-0 right-0 h-14 bg-gray-900 z-50 border-b border-gray-800 relative"
+        onMouseLeave={closeMenu}>
 
-        <div className="flex items-center h-14 flex-1">
-          {NAV.map((item) => (
-            <div key={item.label} className="relative h-14 flex items-center"
-              onMouseEnter={() => openMenu(item.label)}
-              onMouseLeave={closeMenu}>
+        <div className="flex items-center h-14">
+          {/* Logo */}
+          <span onClick={() => { setCurrentPage(''); setBreadcrumb(null); closeMenu() }}
+            className="font-bold text-white text-sm tracking-tight px-4 cursor-pointer shrink-0">
+            PXL
+          </span>
 
-              <button className={`px-3 h-14 text-sm transition-colors border-b-2 whitespace-nowrap ${
-                activeMenu === item.label
-                  ? 'text-white border-blue-400 bg-gray-800'
-                  : 'text-gray-300 border-transparent hover:text-white hover:bg-gray-800'
-              }`}>
+          {/* Nav buttons — scrollable, no visible scrollbar. Dropdown is NOT here. */}
+          <div className="flex items-center h-14 flex-1 min-w-0 overflow-x-auto"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
+            {NAV.map((item) => (
+              <button key={item.label}
+                onMouseEnter={(e) => openMenu(item.label, (e.currentTarget as HTMLElement).getBoundingClientRect().left)}
+                className={`shrink-0 px-3 h-14 text-sm transition-colors border-b-2 whitespace-nowrap ${
+                  activeMenu === item.label
+                    ? 'text-white border-blue-400 bg-gray-800'
+                    : 'text-gray-300 border-transparent hover:text-white hover:bg-gray-800'
+                }`}>
                 {item.label}
               </button>
+            ))}
+          </div>
 
-              {activeMenu === item.label && currentNav && currentNav.groups.length > 0 && (
-                <div className="absolute top-14 left-0 flex shadow-2xl border border-gray-200 rounded-b-lg overflow-hidden z-50">
-                  {/* Left panel — group list */}
-                  <div className="bg-gray-800 w-52 py-2 shrink-0">
-                    <p className="px-4 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-widest">
-                      {item.label}
-                    </p>
-                    {currentNav.groups.map(g => (
-                      <button key={g.group}
-                        onMouseEnter={() => setActiveGroup(g.group)}
-                        className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between transition-colors ${
-                          activeGroup === g.group
-                            ? 'bg-gray-700 text-white'
-                            : 'text-gray-300 hover:bg-gray-700 hover:text-white'
-                        }`}>
-                        {g.group}
-                        <span className="text-gray-500 text-xs ml-2">›</span>
-                      </button>
-                    ))}
-                  </div>
+          {/* Context selectors + user — right side */}
+          <div className="flex items-center gap-2 shrink-0 px-3 border-l border-gray-800 ml-1">
+            <ContextSelectors />
+            <div className="w-px h-5 bg-gray-700 mx-1" />
+            <span className="text-xs text-gray-500 truncate max-w-32 hidden xl:block">{session.user.email}</span>
+            <button onClick={() => supabase.auth.signOut()}
+              className="text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1 transition-colors shrink-0">
+              Sign out
+            </button>
+          </div>
+        </div>
 
-                  {/* Right panel — items */}
-                  <div className="bg-white w-56 py-3 overflow-y-auto max-h-96">
-                    <p className="px-4 pb-1.5 text-xs font-semibold text-gray-400 uppercase tracking-widest">
-                      {activeGroup}
-                    </p>
-                    {currentGroupItems.map(mod => (
-                      <button key={mod.name}
-                        onClick={() => navigate(mod.page)}
-                        className={`w-full text-left px-4 py-1.5 text-sm transition-colors ${
-                          mod.page
-                            ? 'text-gray-700 hover:bg-blue-50 hover:text-blue-700'
-                            : 'text-gray-400 cursor-not-allowed'
-                        }`}>
-                        {mod.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
+        {/* Mega menu — direct child of <nav>, escapes the scroll container */}
+        {activeMenu && currentNav && currentNav.groups.length > 0 && (
+          <div className="absolute top-14 flex shadow-2xl border border-gray-700 rounded-b-lg overflow-hidden z-50"
+            style={{ left: menuLeft }}>
+
+            {/* Left panel — groups */}
+            <div className="bg-gray-800 w-52 py-2 shrink-0">
+              <p className="px-4 py-1.5 text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                {activeMenu}
+              </p>
+              {currentNav.groups.map(g => (
+                <button key={g.group}
+                  onMouseEnter={() => setActiveGroup(g.group)}
+                  className={`w-full text-left px-4 py-2 text-sm flex items-center justify-between transition-colors whitespace-nowrap ${
+                    activeGroup === g.group
+                      ? 'bg-gray-700 text-white'
+                      : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  }`}>
+                  {g.group}
+                  <span className="text-gray-500 text-xs ml-3">›</span>
+                </button>
+              ))}
             </div>
-          ))}
-        </div>
 
-        <div className="flex items-center gap-3 ml-4">
-          <span className="text-xs text-gray-400 truncate max-w-36">{session.user.email}</span>
-          <button onClick={() => supabase.auth.signOut()}
-            className="text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2 py-1 transition-colors shrink-0">
-            Sign out
-          </button>
-        </div>
+            {/* Right panel — items, auto height, no internal scroll */}
+            <div className="bg-gray-900 w-72 py-3">
+              <p className="px-4 pb-1.5 text-xs font-semibold text-gray-500 uppercase tracking-widest">
+                {activeGroup}
+              </p>
+              {currentGroupItems.map(mod => (
+                <button key={mod.name}
+                  onClick={() => navigate(mod.page, activeMenu)}
+                  disabled={!mod.page}
+                  className={`w-full text-left px-4 py-1.5 text-sm transition-colors whitespace-nowrap ${
+                    mod.page
+                      ? 'text-gray-200 hover:bg-gray-700 hover:text-white'
+                      : 'text-gray-500 cursor-not-allowed'
+                  }`}>
+                  {mod.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </nav>
 
       {activeMenu && <div className="fixed inset-0 z-40" onClick={closeMenu} />}
 
-      <main className="pt-14 p-6">
-        <div className="max-w-7xl mx-auto">{renderPage()}</div>
+      {/* Breadcrumb + main */}
+      <main className="pt-16 px-6 pb-6">
+        <div className="max-w-7xl mx-auto">
+          {/* Breadcrumb */}
+          {currentPage && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-4">
+              <button onClick={() => { setCurrentPage(''); setBreadcrumb(null) }} className="hover:text-gray-700">Home</button>
+              {breadcrumb && <>
+                <span>›</span>
+                <span className="text-gray-500">{breadcrumb.section}</span>
+              </>}
+              <span>›</span>
+              <span className="text-gray-700 font-medium">{PAGE_LABELS[currentPage] || currentPage}</span>
+            </div>
+          )}
+          {renderPage()}
+        </div>
       </main>
     </div>
+  )
+}
+
+export default function AppShell({ session }: { session: Session }) {
+  return (
+    <AppContextProvider>
+      <AppShellInner session={session} />
+    </AppContextProvider>
   )
 }
