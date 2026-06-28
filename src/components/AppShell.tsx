@@ -29,6 +29,9 @@ import DebitMemosPage from '@/pages/DebitMemosPage'
 import QuotationsPage from '@/pages/QuotationsPage'
 import SalesOrdersPage from '@/pages/SalesOrdersPage'
 import DeliveryReceiptsPage from '@/pages/DeliveryReceiptsPage'
+import ARAgingPage from '@/pages/ARAgingPage'
+import SalesTaxReviewPage from '@/pages/SalesTaxReviewPage'
+import SalesRegistersPage from '@/pages/SalesRegistersPage'
 
 type SubItem = { name: string; page: string }
 type Group = { group: string; items: SubItem[] }
@@ -100,9 +103,9 @@ const NAV: NavItem[] = [
         s('Receipts', 'receipts'),
         s('Credit Memos', 'credit-memos'), s('Debit Memos', 'debit-memos'), s('Customer Returns'),
       ]},
-      { group: 'Receivables', items: [s('Customer Ledger'), s('AR Aging'), s('Collection Monitoring')] },
-      { group: 'Tax Review', items: [s('Output VAT Review'), s('Percentage Tax Review'), s('2307 Received Review')] },
-      { group: 'Registers', items: [s('Sales Invoice Register'), s('Receipt Register'), s('Credit Memo Register'), s('Debit Memo Register'), s('SLS')] },
+      { group: 'Receivables', items: [s('AR Aging / Customer Ledger', 'ar-aging'), s('Collection Monitoring')] },
+      { group: 'Tax Review', items: [s('Output VAT Review', 'sales-tax-review'), s('Percentage Tax Review'), s('2307 Received Review')] },
+      { group: 'Registers', items: [s('Sales Registers', 'sales-registers'), s('SLS')] },
     ]
   },
   {
@@ -202,6 +205,9 @@ const PAGE_LABELS: Record<string, string> = {
   'quotations':          'Quotations',
   'sales-orders':        'Sales Orders',
   'delivery-receipts':   'Delivery Receipts',
+  'ar-aging':            'AR Aging & Customer Ledger',
+  'sales-tax-review':    'Output VAT Review',
+  'sales-registers':     'Sales Registers',
 }
 
 // Context selector group — embedded inside the nav bar on the right side
@@ -298,6 +304,9 @@ function AppShellInner({ session }: { session: Session }) {
       case 'quotations':       return <QuotationsPage />
       case 'sales-orders':     return <SalesOrdersPage />
       case 'delivery-receipts': return <DeliveryReceiptsPage />
+      case 'ar-aging':          return <ARAgingPage />
+      case 'sales-tax-review':  return <SalesTaxReviewPage />
+      case 'sales-registers':   return <SalesRegistersPage />
       default: return (
         <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
           <h1 className="text-xl font-semibold text-gray-900">Welcome to PXL</h1>
