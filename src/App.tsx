@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import LoginPage from '@/pages/LoginPage'
+import AppShell from '@/components/AppShell'
 import type { Session } from '@supabase/supabase-js'
 
 export default function App() {
@@ -26,16 +27,5 @@ export default function App() {
 
   if (!session) return <LoginPage />
 
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-gray-900">PXL</h1>
-        <p className="text-sm text-gray-500 mt-1">Welcome, {session.user.email}</p>
-        <button onClick={() => supabase.auth.signOut()}
-          className="mt-4 text-sm text-gray-500 underline">
-          Sign out
-        </button>
-      </div>
-    </div>
-  )
+  return <AppShell session={session} />
 }
