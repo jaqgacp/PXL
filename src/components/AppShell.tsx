@@ -21,15 +21,16 @@ import TaxSetupPage from '@/pages/TaxSetupPage'
 import ComplianceProfilePage from '@/pages/ComplianceProfilePage'
 import TaxCalendarPage from '@/pages/TaxCalendarPage'
 import BIRFormConfigPage from '@/pages/BIRFormConfigPage'
+import DashboardPage from '@/pages/DashboardPage'
 
 type SubItem = { name: string; page: string }
 type Group = { group: string; items: SubItem[] }
-type NavItem = { label: string; groups: Group[] }
+type NavItem = { label: string; groups: Group[]; page?: string }
 
 const s = (name: string, page = ''): SubItem => ({ name, page })
 
 const NAV: NavItem[] = [
-  { label: 'Dashboard', groups: [] },
+  { label: 'Dashboard', groups: [], page: 'dashboard' },
   {
     label: 'Setup', groups: [
       { group: 'Organization', items: [
@@ -185,6 +186,7 @@ const PAGE_LABELS: Record<string, string> = {
   'compliance-profile': 'Compliance Profile',
   'tax-calendar': 'Tax Calendar',
   'bir-form-config': 'BIR Form Configuration',
+  'dashboard': 'Executive Dashboard',
 }
 
 // Context selector group — embedded inside the nav bar on the right side
@@ -273,6 +275,7 @@ function AppShellInner({ session }: { session: Session }) {
       case 'compliance-profile': return <ComplianceProfilePage />
       case 'tax-calendar':     return <TaxCalendarPage />
       case 'bir-form-config':  return <BIRFormConfigPage />
+      case 'dashboard':        return <DashboardPage />
       default: return (
         <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
           <h1 className="text-xl font-semibold text-gray-900">Welcome to PXL</h1>
@@ -306,8 +309,9 @@ function AppShellInner({ session }: { session: Session }) {
             {NAV.map((item) => (
               <button key={item.label}
                 onMouseEnter={(e) => openMenu(item.label, (e.currentTarget as HTMLElement).getBoundingClientRect().left)}
+                onClick={() => { if (item.page) { navigate(item.page); closeMenu() } }}
                 className={`shrink-0 px-3 h-14 text-sm transition-colors border-b-2 whitespace-nowrap ${
-                  activeMenu === item.label
+                  activeMenu === item.label || currentPage === item.page
                     ? 'text-white border-blue-400 bg-gray-800'
                     : 'text-gray-300 border-transparent hover:text-white hover:bg-gray-800'
                 }`}>
