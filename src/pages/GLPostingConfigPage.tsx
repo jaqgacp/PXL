@@ -9,9 +9,15 @@ type Config = {
   vat_payable_account_id: string
   ewt_withheld_account_id: string
   default_cash_account_id: string
+  ap_account_id: string
+  input_vat_account_id: string
+  ewt_payable_account_id: string
 }
 
-const EMPTY: Config = { ar_account_id: '', vat_payable_account_id: '', ewt_withheld_account_id: '', default_cash_account_id: '' }
+const EMPTY: Config = {
+  ar_account_id: '', vat_payable_account_id: '', ewt_withheld_account_id: '',
+  default_cash_account_id: '', ap_account_id: '', input_vat_account_id: '', ewt_payable_account_id: '',
+}
 
 export default function GLPostingConfigPage() {
   const { companyId } = useAppCtx()
@@ -39,6 +45,9 @@ export default function GLPostingConfigPage() {
           vat_payable_account_id: cfgRes.data.vat_payable_account_id || '',
           ewt_withheld_account_id: cfgRes.data.ewt_withheld_account_id || '',
           default_cash_account_id: cfgRes.data.default_cash_account_id || '',
+          ap_account_id: cfgRes.data.ap_account_id || '',
+          input_vat_account_id: cfgRes.data.input_vat_account_id || '',
+          ewt_payable_account_id: cfgRes.data.ewt_payable_account_id || '',
         })
       } else {
         setConfig(EMPTY)
@@ -56,6 +65,9 @@ export default function GLPostingConfigPage() {
       vat_payable_account_id: config.vat_payable_account_id || null,
       ewt_withheld_account_id: config.ewt_withheld_account_id || null,
       default_cash_account_id: config.default_cash_account_id || null,
+      ap_account_id: config.ap_account_id || null,
+      input_vat_account_id: config.input_vat_account_id || null,
+      ewt_payable_account_id: config.ewt_payable_account_id || null,
       updated_by: (await supabase.auth.getUser()).data.user?.id,
     }
     const { error: e } = config.id
@@ -127,6 +139,24 @@ export default function GLPostingConfigPage() {
               v => setConfig(c => ({ ...c, default_cash_account_id: v })),
               allPostable,
               'Used as the debit account on Receipts when no specific bank account is selected.')}
+          </div>
+
+          <div className="px-5 py-4">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-4">Accounts Payable</div>
+            <div className="flex flex-col gap-4">
+              {sel('AP Control Account', config.ap_account_id,
+                v => setConfig(c => ({ ...c, ap_account_id: v })),
+                liabilityAccounts,
+                'Credited when posting Vendor Bills; debited when posting Payment Vouchers.')}
+              {sel('Input VAT Receivable', config.input_vat_account_id,
+                v => setConfig(c => ({ ...c, input_vat_account_id: v })),
+                assetAccounts,
+                'Debited with the Input VAT portion when posting Vendor Bills. Required if any bill has VAT.')}
+              {sel('EWT Payable (to BIR)', config.ewt_payable_account_id,
+                v => setConfig(c => ({ ...c, ewt_payable_account_id: v })),
+                liabilityAccounts,
+                'Credited with EWT amounts withheld from suppliers when posting Payment Vouchers.')}
+            </div>
           </div>
 
           <div className="px-5 py-4 flex items-center gap-3">

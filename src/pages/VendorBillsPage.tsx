@@ -1,0 +1,565 @@
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
+import { useAppCtx } from '@/lib/context'
+import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+
+// ── Types ─────────────────────────────────────────────────────
+type VBStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
+
+type VB = {
+  id: string; company_id: string; branch_id: string
+  bill_number: string; supplier_invoice_number: string | null
+  bill_date: string; due_date: string | null
+  supplier_id: string; supplier_name_snapshot: string
+  supplier_tin_snapshot: string | null; payment_terms_id: string | null
+  currency_code: string; reference: string | null; memo: string | null
+  total_taxable_amount: number; total_zero_rated_amount: number
+  total_exempt_amount: number; total_input_vat_amount: number
+  total_amount: number; ewt_amount_expected: number | null
+  status: VBStatus; void_reason_id: string | null; posted_at: string | null
+  created_at: string
+}
+
+type VBLine = {
+  _key: string; id?: string
+  item_id: string; description: string
+  quantity: number; uom_id: string; uom_label: string
+  unit_price: number; discount_percent: number; discount_amount: number
+  net_amount: number; vat_code_id: string
+  vat_classification: 'regular' | 'zero_rated' | 'exempt'; vat_rate: number
+  input_vat_amount: number; total_amount: number
+  expense_account_id: string
+}
+
+type SupplierRef = {
+  id: string; registered_name: string; tin: string
+  registered_address: string; default_tax_type: string
+  default_terms_id: string | null; default_gl_account_id: string | null
+  payment_terms?: { days_to_due: number } | null
+}
+
+type ItemRef = {
+  id: string; item_code: string; description: string
+  uom_id: string; uom_label: string; standard_selling_price: number
+  default_purchase_vat_id: string | null; purchase_account_id: string | null
+}
+
+type VATRef = { id: string; vat_code: string; description: string; vat_classification: 'regular' | 'zero_rated' | 'exempt'; rate: number }
+type COARef = { id: string; account_code: string; account_name: string; account_type: string }
+type Branch = { id: string; branch_code: string; branch_name: string }
+type VoidReason = { id: string; code: string; description: string }
+
+// ── Helpers ───────────────────────────────────────────────────
+const fmt = (n: number) =>
+  new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
+
+const today = () => new Date().toISOString().split('T')[0]
+
+const newLine = (): VBLine => ({
+  _key: crypto.randomUUID(), item_id: '', description: '',
+  quantity: 1, uom_id: '', uom_label: '',
+  unit_price: 0, discount_percent: 0, discount_amount: 0, net_amount: 0,
+  vat_code_id: '', vat_classification: 'regular', vat_rate: 12,
+  input_vat_amount: 0, total_amount: 0, expense_account_id: '',
+})
+
+const computeLine = (l: VBLine): VBLine => {
+  const gross = l.unit_price * l.quantity
+  const disc = gross * (l.discount_percent / 100)
+  const net = Math.max(gross - disc, 0)
+  const vat = l.vat_classification === 'regular' ? (net * l.vat_rate) / 100 : 0
+  return { ...l, discount_amount: disc, net_amount: net, input_vat_amount: vat, total_amount: net + vat }
+}
+
+// ── Component ─────────────────────────────────────────────────
+export default function VendorBillsPage() {
+  const { companyId, branchId } = useAppCtx()
+
+  const [bills, setBills] = useState<VB[]>([])
+  const [loading, setLoading] = useState(false)
+  const [mode, setMode] = useState<'list' | 'edit' | 'view'>('list')
+  const [editVB, setEditVB] = useState<Partial<VB> | null>(null)
+  const [lines, setLines] = useState<VBLine[]>([newLine()])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [voidTarget, setVoidTarget] = useState<VB | null>(null)
+  const [voidReasonId, setVoidReasonId] = useState('')
+  const [voidMemo, setVoidMemo] = useState('')
+
+  const [suppliers, setSuppliers] = useState<SupplierRef[]>([])
+  const [items, setItems] = useState<ItemRef[]>([])
+  const [vatCodes, setVatCodes] = useState<VATRef[]>([])
+  const [expenseAccounts, setExpenseAccounts] = useState<COARef[]>([])
+  const [branches, setBranches] = useState<Branch[]>([])
+  const [voidReasons, setVoidReasons] = useState<VoidReason[]>([])
+
+  const [fStatus, setFStatus] = useState('')
+  const [fSearch, setFSearch] = useState('')
+  const listRef = useRef<HTMLDivElement>(null)
+
+  const readOnly = mode === 'view'
+
+  const load = useCallback(async () => {
+    if (!companyId) return
+    setLoading(true)
+    let q = supabase.from('vendor_bills').select('*')
+      .eq('company_id', companyId).order('bill_date', { ascending: false }).order('bill_number', { ascending: false })
+    if (fStatus) q = q.eq('status', fStatus)
+    const { data } = await q
+    setBills(data as VB[] || [])
+    setLoading(false)
+  }, [companyId, fStatus])
+
+  const loadRefs = useCallback(async () => {
+    if (!companyId) return
+    const [suppRes, vatRes, coaRes, brRes, vrRes] = await Promise.all([
+      supabase.from('suppliers').select('id,registered_name,tin,registered_address,default_tax_type,default_terms_id,default_gl_account_id,payment_terms(days_to_due)').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
+      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('company_id', companyId).eq('is_active', true),
+      supabase.from('chart_of_accounts').select('id,account_code,account_name,account_type').eq('company_id', companyId).eq('is_active', true).eq('is_postable', true).order('account_code'),
+      supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
+      supabase.from('void_reasons').select('id,code,description').eq('company_id', companyId),
+    ])
+    setSuppliers((suppRes.data || []).map((s: any) => ({ ...s, payment_terms: s.payment_terms })))
+    setVatCodes((vatRes.data || []).map((v: any) => ({ id: v.id, vat_code: v.vat_code, description: v.description, vat_classification: v.vat_classification, rate: v.tax_codes?.rate ?? 0 })))
+    setExpenseAccounts(coaRes.data as COARef[] || [])
+    setBranches(brRes.data as Branch[] || [])
+    setVoidReasons(vrRes.data as VoidReason[] || [])
+    // Items
+    const { data: itemData } = await supabase.from('items').select('id,item_code,description,uom_id,units_of_measure(uom_code),standard_selling_price,default_purchase_vat_id,purchase_account_id').eq('company_id', companyId).eq('is_active', true).order('item_code')
+    setItems((itemData || []).map((i: any) => ({ ...i, uom_label: i.units_of_measure?.uom_code ?? '' })))
+  }, [companyId])
+
+  useEffect(() => { if (companyId) { load(); loadRefs() } }, [load, loadRefs, companyId])
+  useEffect(() => { if (companyId) load() }, [load, fStatus, companyId])
+
+  const openNew = () => {
+    setEditVB({ company_id: companyId!, branch_id: branchId || '', bill_date: today(), currency_code: 'PHP', status: 'draft' })
+    setLines([newLine()])
+    setError('')
+    setMode('edit')
+  }
+
+  const openEdit = (vb: VB) => {
+    setEditVB(vb)
+    supabase.from('vendor_bill_lines').select('*').eq('vendor_bill_id', vb.id).order('line_number').then(({ data }) => {
+      if (data && data.length > 0) {
+        const mapped: VBLine[] = data.map((l: any) => {
+          const vc = vatCodes.find(v => v.id === l.vat_code_id)
+          return {
+            _key: l.id, id: l.id, item_id: l.item_id || '', description: l.description,
+            quantity: Number(l.quantity), uom_id: l.uom_id || '', uom_label: '',
+            unit_price: Number(l.unit_price), discount_percent: Number(l.discount_percent),
+            discount_amount: Number(l.discount_amount), net_amount: Number(l.net_amount),
+            vat_code_id: l.vat_code_id || '',
+            vat_classification: vc?.vat_classification ?? 'regular',
+            vat_rate: vc?.rate ?? 12,
+            input_vat_amount: Number(l.input_vat_amount), total_amount: Number(l.total_amount),
+            expense_account_id: l.expense_account_id || '',
+          }
+        })
+        setLines(mapped)
+      } else {
+        setLines([newLine()])
+      }
+    })
+    setError('')
+    setMode(vb.status === 'draft' ? 'edit' : 'view')
+  }
+
+  const pickSupplier = (id: string) => {
+    const s = suppliers.find(x => x.id === id)
+    if (!s) return
+    const daysToAdd = s.payment_terms?.days_to_due
+    const due = daysToAdd ? new Date(Date.now() + daysToAdd * 86400000).toISOString().split('T')[0] : undefined
+    setEditVB(v => ({ ...v, supplier_id: id, supplier_name_snapshot: s.registered_name,
+      supplier_tin_snapshot: s.tin, payment_terms_id: s.default_terms_id || '', due_date: due || v?.due_date }))
+  }
+
+  const pickItem = (lineKey: string, itemId: string) => {
+    const item = items.find(i => i.id === itemId)
+    if (!item) return
+    const vc = vatCodes.find(v => v.id === item.default_purchase_vat_id)
+    setLines(ls => ls.map(l => l._key !== lineKey ? l : computeLine({
+      ...l, item_id: item.id, description: item.description,
+      uom_id: item.uom_id, uom_label: item.uom_label,
+      unit_price: item.standard_selling_price,
+      vat_code_id: vc?.id || '', vat_classification: vc?.vat_classification || 'regular',
+      vat_rate: vc?.rate ?? 12,
+      expense_account_id: item.purchase_account_id || l.expense_account_id,
+    })))
+  }
+
+  const pickVat = (lineKey: string, vatId: string) => {
+    const vc = vatCodes.find(v => v.id === vatId)
+    setLines(ls => ls.map(l => l._key !== lineKey ? l : computeLine({
+      ...l, vat_code_id: vatId, vat_classification: vc?.vat_classification || 'exempt', vat_rate: vc?.rate ?? 0,
+    })))
+  }
+
+  const updateLine = (key: string, field: keyof VBLine, raw: string) => {
+    setLines(ls => ls.map(l => {
+      if (l._key !== key) return l
+      const updated = { ...l, [field]: ['quantity','unit_price','discount_percent'].includes(field) ? parseFloat(raw) || 0 : raw }
+      return computeLine(updated)
+    }))
+  }
+
+  const totals = lines.reduce((acc, l) => ({
+    taxable: acc.taxable + (l.vat_classification === 'regular' ? l.net_amount : 0),
+    zero: acc.zero + (l.vat_classification === 'zero_rated' ? l.net_amount : 0),
+    exempt: acc.exempt + (l.vat_classification === 'exempt' ? l.net_amount : 0),
+    vat: acc.vat + l.input_vat_amount,
+    total: acc.total + l.total_amount,
+  }), { taxable: 0, zero: 0, exempt: 0, vat: 0, total: 0 })
+
+  const save = async (nextStatus: string) => {
+    if (!companyId || !editVB) return
+    setSaving(true); setError('')
+    try {
+      const header = {
+        company_id: companyId, branch_id: editVB.branch_id || branchId || '',
+        supplier_id: editVB.supplier_id || '',
+        supplier_name_snapshot: editVB.supplier_name_snapshot || '',
+        supplier_tin_snapshot: editVB.supplier_tin_snapshot || '',
+        supplier_invoice_number: editVB.supplier_invoice_number || '',
+        bill_date: editVB.bill_date || today(), due_date: editVB.due_date || '',
+        payment_terms_id: editVB.payment_terms_id || '',
+        currency_code: editVB.currency_code || 'PHP',
+        reference: editVB.reference || '', memo: editVB.memo || '',
+        ewt_amount_expected: editVB.ewt_amount_expected?.toString() || '',
+      }
+      const linesPayload = lines.map(l => ({
+        item_id: l.item_id, description: l.description,
+        quantity: l.quantity, uom_id: l.uom_id,
+        unit_price: l.unit_price, discount_percent: l.discount_percent,
+        discount_amount: l.discount_amount, net_amount: l.net_amount,
+        vat_code_id: l.vat_code_id, input_vat_amount: l.input_vat_amount,
+        total_amount: l.total_amount, expense_account_id: l.expense_account_id,
+      }))
+
+      const { data: billId, error: saveErr } = await supabase.rpc('fn_save_vendor_bill', {
+        p_bill_id: editVB.id || null, p_header: header, p_lines: linesPayload,
+      })
+      if (saveErr) throw saveErr
+
+      if (nextStatus === 'approved') {
+        const { error: appErr } = await supabase.rpc('fn_approve_vendor_bill', { p_bill_id: billId })
+        if (appErr) throw appErr
+      }
+      if (nextStatus === 'posted') {
+        const { error: postErr } = await supabase.rpc('fn_post_vendor_bill', { p_bill_id: billId })
+        if (postErr) throw postErr
+      }
+
+      await load()
+      setMode('list')
+    } catch (e: any) {
+      setError(e.message || 'Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const doRevertToDraft = async () => {
+    if (!editVB?.id) return
+    setSaving(true); setError('')
+    const { error: e } = await supabase.rpc('fn_revert_vendor_bill_to_draft', { p_bill_id: editVB.id })
+    if (e) { setError(e.message); setSaving(false); return }
+    openEdit({ ...editVB as VB, status: 'draft' })
+    setSaving(false)
+  }
+
+  const doVoid = async () => {
+    if (!voidTarget || !voidReasonId) return
+    setSaving(true); setError('')
+    const { error: e } = await supabase.rpc('fn_void_vendor_bill', {
+      p_bill_id: voidTarget.id, p_void_reason_id: voidReasonId, p_memo: voidMemo || null,
+    })
+    if (e) { setError(e.message); setSaving(false); return }
+    setVoidTarget(null); setVoidReasonId(''); setVoidMemo('')
+    await load(); setMode('list')
+    setSaving(false)
+  }
+
+  const filtered = bills.filter(b =>
+    !fSearch || b.bill_number.includes(fSearch) ||
+    b.supplier_name_snapshot.toLowerCase().includes(fSearch.toLowerCase()) ||
+    (b.supplier_invoice_number || '').includes(fSearch)
+  )
+
+  // ── List View ────────────────────────────────────────────────
+  if (mode === 'list') return (
+    <div>
+      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3 flex-wrap">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Vendor Bills</span>
+        <input value={fSearch} onChange={e => setFSearch(e.target.value)} placeholder="Search bill # / supplier / ref…"
+          className="border border-gray-300 rounded px-2.5 py-1.5 text-sm w-56 focus:outline-none focus:ring-1 focus:ring-gray-900" />
+        <select value={fStatus} onChange={e => setFStatus(e.target.value)}
+          className="border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900">
+          <option value="">All statuses</option>
+          <option value="draft">Draft</option>
+          <option value="approved">Approved</option>
+          <option value="posted">Posted</option>
+          <option value="cancelled">Void</option>
+        </select>
+        <button onClick={openNew} className="ml-auto px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800">
+          + New Vendor Bill
+        </button>
+        {!companyId && <span className="text-xs text-gray-400">Select a company first</span>}
+      </div>
+
+      <div ref={listRef}>
+        {loading ? (
+          <div className="divide-y divide-gray-100">{[...Array(6)].map((_, i) => (
+            <div key={i} className="px-5 py-3 flex gap-4 animate-pulse">
+              <div className="h-3 bg-gray-100 rounded w-24" /><div className="h-3 bg-gray-100 rounded flex-1" />
+            </div>
+          ))}</div>
+        ) : filtered.length === 0 ? (
+          <div className="py-20 text-center">
+            <p className="text-sm font-medium text-gray-500">No vendor bills</p>
+            <p className="text-xs text-gray-400 mt-1">Create your first vendor bill to track payables.</p>
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                {['Bill #','Supplier Ref','Date','Due','Supplier','Taxable','Input VAT','Total','Status'].map(h => (
+                  <th key={h} className={`px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap ${['Taxable','Input VAT','Total'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {filtered.map(vb => (
+                <tr key={vb.id} onClick={() => openEdit(vb)}
+                  className={`cursor-pointer hover:bg-gray-50/60 ${vb.status === 'cancelled' ? 'opacity-50' : ''}`}>
+                  <td className="px-3 py-2.5 font-mono text-xs font-semibold text-gray-900 whitespace-nowrap">{vb.bill_number}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{vb.supplier_invoice_number || '—'}</td>
+                  <DateCell value={vb.bill_date} />
+                  <DateCell value={vb.due_date} />
+                  <td className="px-3 py-2.5 text-xs text-gray-900 max-w-[160px] truncate">{vb.supplier_name_snapshot}</td>
+                  <AmountCell value={vb.total_taxable_amount} />
+                  <AmountCell value={vb.total_input_vat_amount} accent />
+                  <AmountCell value={vb.total_amount} bold />
+                  <td className="px-3 py-2.5"><StatusBadge status={vb.status} /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Void dialog */}
+      {voidTarget && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <h3 className="font-semibold text-gray-900 mb-1">Void Vendor Bill</h3>
+            <p className="text-xs text-gray-500 mb-4">{voidTarget.bill_number}</p>
+            <select value={voidReasonId} onChange={e => setVoidReasonId(e.target.value)}
+              className="w-full border border-gray-300 rounded px-2.5 py-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-gray-900">
+              <option value="">Select void reason…</option>
+              {voidReasons.map(r => <option key={r.id} value={r.id}>{r.code} — {r.description}</option>)}
+            </select>
+            <textarea value={voidMemo} onChange={e => setVoidMemo(e.target.value)} rows={2}
+              placeholder="Additional memo (optional)" className="w-full border border-gray-300 rounded px-2.5 py-2 text-sm mb-4 resize-none focus:outline-none focus:ring-1 focus:ring-gray-900" />
+            {error && <p className="text-red-600 text-xs mb-3">{error}</p>}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setVoidTarget(null); setError('') }}
+                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50">Cancel</button>
+              <button onClick={doVoid} disabled={!voidReasonId || saving}
+                className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50">Void Bill</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+
+  // ── Edit / View ──────────────────────────────────────────────
+  const h = (label: string, children: React.ReactNode) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>
+      {children}
+    </div>
+  )
+  const inputCls = `border border-gray-300 rounded px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500 w-full`
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Toolbar */}
+      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-2 flex-wrap">
+        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
+        <span className="text-gray-300">|</span>
+        <span className="text-sm font-semibold text-gray-700">{editVB?.bill_number || 'New Vendor Bill'}</span>
+        {editVB?.status && <StatusBadge status={editVB.status} />}
+        <div className="ml-auto flex items-center gap-2">
+          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
+          {editVB?.status === 'approved' && (
+            <>
+              <button onClick={doRevertToDraft} disabled={saving}
+                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-50">Revert to Draft</button>
+              <button onClick={() => save('posted')} disabled={saving}
+                className="px-3 py-1.5 bg-green-700 text-white rounded text-sm font-medium hover:bg-green-800 disabled:opacity-50">
+                {saving ? 'Posting…' : 'Post'}
+              </button>
+            </>
+          )}
+          {editVB?.status && !['draft','approved'].includes(editVB.status) && editVB.status !== 'cancelled' && (
+            <button onClick={() => setVoidTarget(editVB as VB)}
+              className="px-3 py-1.5 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50">Void</button>
+          )}
+          {!readOnly && (
+            <>
+              <button onClick={() => save('draft')} disabled={saving}
+                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-50">
+                {saving ? 'Saving…' : 'Save Draft'}
+              </button>
+              <button onClick={() => save('approved')} disabled={saving}
+                className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                {saving ? 'Saving…' : 'Save & Approve'}
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
+        {/* Header */}
+        <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {h('Supplier', (
+              <select value={editVB?.supplier_id || ''} disabled={readOnly}
+                onChange={e => pickSupplier(e.target.value)} className={inputCls}>
+                <option value="">— select supplier —</option>
+                {suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}
+              </select>
+            ))}
+            {h('Supplier Invoice #', (
+              <input value={editVB?.supplier_invoice_number || ''} disabled={readOnly}
+                onChange={e => setEditVB(v => ({ ...v, supplier_invoice_number: e.target.value }))} className={inputCls} />
+            ))}
+            {h('Bill Date', (
+              <input type="date" value={editVB?.bill_date || today()} disabled={readOnly}
+                onChange={e => setEditVB(v => ({ ...v, bill_date: e.target.value }))} className={inputCls} />
+            ))}
+            {h('Due Date', (
+              <input type="date" value={editVB?.due_date || ''} disabled={readOnly}
+                onChange={e => setEditVB(v => ({ ...v, due_date: e.target.value }))} className={inputCls} />
+            ))}
+            {h('Branch', (
+              <select value={editVB?.branch_id || ''} disabled={readOnly}
+                onChange={e => setEditVB(v => ({ ...v, branch_id: e.target.value }))} className={inputCls}>
+                <option value="">— none —</option>
+                {branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}
+              </select>
+            ))}
+            {h('Reference', (
+              <input value={editVB?.reference || ''} disabled={readOnly}
+                onChange={e => setEditVB(v => ({ ...v, reference: e.target.value }))} className={inputCls} />
+            ))}
+            {h('Memo', (
+              <input value={editVB?.memo || ''} disabled={readOnly}
+                onChange={e => setEditVB(v => ({ ...v, memo: e.target.value }))} className={inputCls} />
+            ))}
+          </div>
+        </div>
+
+        {/* Lines */}
+        <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                {['Item','Description','Qty','Unit Price','Disc %','VAT Code','Expense Account','Net','Input VAT','Total',''].map(h => (
+                  <th key={h} className={`px-2.5 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap ${['Net','Input VAT','Total'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {lines.map((l, idx) => (
+                <tr key={l._key}>
+                  <td className="px-2 py-1.5">
+                    <select value={l.item_id} disabled={readOnly} onChange={e => pickItem(l._key, e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50">
+                      <option value="">—</option>
+                      {items.map(i => <option key={i.id} value={i.id}>{i.item_code}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-2 py-1.5 min-w-[180px]">
+                    <input value={l.description} disabled={readOnly}
+                      onChange={e => updateLine(l._key, 'description', e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs w-full focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50" />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input type="number" value={l.quantity} min={0} disabled={readOnly}
+                      onChange={e => updateLine(l._key, 'quantity', e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs w-16 text-right focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50" />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input type="number" value={l.unit_price} min={0} disabled={readOnly}
+                      onChange={e => updateLine(l._key, 'unit_price', e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs w-24 text-right focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50" />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input type="number" value={l.discount_percent} min={0} max={100} disabled={readOnly}
+                      onChange={e => updateLine(l._key, 'discount_percent', e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs w-16 text-right focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50" />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <select value={l.vat_code_id} disabled={readOnly} onChange={e => pickVat(l._key, e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs w-28 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50">
+                      <option value="">—</option>
+                      {vatCodes.map(v => <option key={v.id} value={v.id}>{v.vat_code}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <select value={l.expense_account_id} disabled={readOnly}
+                      onChange={e => updateLine(l._key, 'expense_account_id', e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs w-44 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50">
+                      <option value="">— select account —</option>
+                      {expenseAccounts.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-gray-700">{fmt(l.net_amount)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums text-blue-700">{fmt(l.input_vat_amount)}</td>
+                  <td className="px-2 py-1.5 text-right font-mono tabular-nums font-semibold text-gray-900">{fmt(l.total_amount)}</td>
+                  <td className="px-2 py-1.5">
+                    {!readOnly && lines.length > 1 && (
+                      <button onClick={() => setLines(ls => ls.filter(x => x._key !== l._key))}
+                        className="text-gray-400 hover:text-red-500 text-xs px-1">✕</button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!readOnly && (
+            <div className="px-4 py-2 border-t border-gray-100">
+              <button onClick={() => setLines(ls => [...ls, newLine()])}
+                className="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Line</button>
+            </div>
+          )}
+        </div>
+
+        {/* Totals */}
+        <div className="bg-white border border-gray-200 rounded-lg p-5 flex justify-end">
+          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm min-w-[300px]">
+            {[
+              ['Taxable', totals.taxable],
+              ['Zero-Rated', totals.zero],
+              ['Exempt', totals.exempt],
+            ].map(([label, val]) => (
+              <React.Fragment key={label as string}>
+                <span className="text-gray-500 text-xs">{label as string}</span>
+                <span className="text-right font-mono text-xs text-gray-700">{fmt(val as number)}</span>
+              </React.Fragment>
+            ))}
+            <span className="text-gray-700 text-xs font-medium border-t border-gray-200 pt-1 mt-1">Input VAT</span>
+            <span className="text-right font-mono text-xs text-blue-700 border-t border-gray-200 pt-1 mt-1">{fmt(totals.vat)}</span>
+            <span className="text-gray-900 font-semibold">Total</span>
+            <span className="text-right font-mono font-bold text-gray-900">{fmt(totals.total)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}

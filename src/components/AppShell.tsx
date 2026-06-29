@@ -82,9 +82,11 @@ const NAV: NavItem[] = [
   {
     label: 'Purchasing', feature: 'accounts_payable', groups: [
       { group: 'Transactions', items: [
-        s('Purchase Orders'), s('Receiving Reports'), s('Vendor Bills'),
-        s('Cash Purchases'), s('Payment Vouchers'), s('Vendor Credits'),
-        s('Debit Memos to Suppliers'), s('Purchase Returns'),
+        s('Purchase Orders'), s('Receiving Reports'),
+        s('Vendor Bills', 'vendor-bills'),
+        s('Cash Purchases'),
+        s('Payment Vouchers', 'payment-vouchers'),
+        s('Vendor Credits'), s('Debit Memos to Suppliers'), s('Purchase Returns'),
       ]},
       { group: 'Payables', items: [s('Supplier Ledger'), s('AP Aging'), s('Payment Monitoring')] },
       { group: 'Tax Review', items: [s('Input VAT Review'), s('EWT Summary'), s('2307 Issued Review')] },
@@ -186,6 +188,8 @@ const PAGE_LABELS: Record<string, string> = {
   'pt-review':              'Percentage Tax Review',
   'sls':                    'Summary List of Sales (SLS)',
   'customer-returns':       'Customer Returns',
+  'vendor-bills':           'Vendor Bills',
+  'payment-vouchers':       'Payment Vouchers',
 }
 
 function findSection(page: string): string | null {

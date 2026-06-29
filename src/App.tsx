@@ -44,6 +44,8 @@ import CollectionMonitoringPage from '@/pages/CollectionMonitoringPage'
 import PercentageTaxReviewPage from '@/pages/PercentageTaxReviewPage'
 import SLSPage from '@/pages/SLSPage'
 import CustomerReturnsPage from '@/pages/CustomerReturnsPage'
+import VendorBillsPage from '@/pages/VendorBillsPage'
+import PaymentVouchersPage from '@/pages/PaymentVouchersPage'
 
 const WelcomeScreen = () => (
   <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
@@ -125,6 +127,8 @@ export default function App() {
         <Route path="/pt-review" element={<PercentageTaxReviewPage />} />
         <Route path="/sls" element={<SLSPage />} />
         <Route path="/customer-returns" element={<CustomerReturnsPage />} />
+        <Route path="/vendor-bills" element={<VendorBillsPage />} />
+        <Route path="/payment-vouchers" element={<PaymentVouchersPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>
