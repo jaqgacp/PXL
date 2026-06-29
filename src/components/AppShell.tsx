@@ -243,23 +243,29 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
   const [menuLeft, setMenuLeft] = useState(0)
-  const [enabledFeatures, setEnabledFeatures] = useState<Set<string>>(new Set())
+  // null = not yet loaded or no company selected → show all nav items
+  const [enabledFeatures, setEnabledFeatures] = useState<Set<string> | null>(null)
 
   useEffect(() => {
-    if (!companyId) { setEnabledFeatures(new Set()); return }
-    // Load always-enabled features from definitions + company-specific enablements
+    if (!companyId) { setEnabledFeatures(null); return }
     Promise.all([
       supabase.from('ref_feature_definitions').select('feature_key').eq('always_enabled', true),
       supabase.from('sys_feature_enablement').select('feature_key').eq('company_id', companyId).eq('is_enabled', true),
     ]).then(([alwaysRes, companyRes]) => {
+      const companyRows = companyRes.data || []
+      // If the company has no feature records configured yet, show everything (default-open)
+      if (companyRows.length === 0) { setEnabledFeatures(null); return }
       const keys = new Set<string>()
       for (const r of alwaysRes.data || []) keys.add(r.feature_key)
-      for (const r of companyRes.data || []) keys.add(r.feature_key)
+      for (const r of companyRows) keys.add(r.feature_key)
       setEnabledFeatures(keys)
     })
   }, [companyId])
 
-  const visibleNav = NAV.filter(n => !n.feature || enabledFeatures.has(n.feature))
+  // Show all nav items when features are not configured; only gate when explicitly loaded
+  const visibleNav = enabledFeatures === null
+    ? NAV
+    : NAV.filter(n => !n.feature || enabledFeatures.has(n.feature))
 
   const currentPage = location.pathname.slice(1) // e.g. "company-setup"
   const breadcrumbSection = currentPage ? findSection(currentPage) : null
