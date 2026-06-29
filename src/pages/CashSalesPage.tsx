@@ -13,9 +13,9 @@ type CashSale = {
 }
 
 type Customer    = { id: string; registered_name: string; tin: string; address: string | null }
-type VATCode     = { id: string; code: string; description: string; vat_classification: string; rate: number }
+type VATCode     = { id: string; vat_code: string; description: string; vat_classification: string; rate: number }
 type COAAccount  = { id: string; account_code: string; account_name: string }
-type PaymentMode = { id: string; mode_name: string }
+type PaymentMode = { id: string; name: string }
 type Item        = { id: string; item_code: string; item_name: string; unit_price: number; vat_code_id: string | null }
 
 type Line = {
@@ -109,15 +109,15 @@ export default function CashSalesPage() {
     if (!companyId) return
     Promise.all([
       supabase.from('customers').select('id,registered_name,tin,address').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('vat_codes').select('id,code,description,vat_classification,tax_codes(rate)').eq('is_active', true).order('code'),
+      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('is_active', true).order('vat_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'revenue').eq('is_postable', true).eq('is_active', true).order('account_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'asset').eq('is_postable', true).eq('is_active', true).order('account_code'),
-      supabase.from('payment_modes').select('id,mode_name').eq('is_active', true).order('mode_name'),
+      supabase.from('ref_payment_modes').select('id,name').eq('is_active', true).order('sort_order'),
       supabase.from('items').select('id,item_code,item_name,unit_price,vat_code_id').eq('company_id', companyId).eq('is_active', true).order('item_name'),
     ]).then(([custR, vatR, accR, bankR, pmR, itemR]) => {
       setCustomers(custR.data as Customer[] || [])
       setVatCodes((vatR.data || []).map((v: Record<string, unknown>) => ({
-        id: v.id as string, code: v.code as string, description: v.description as string,
+        id: v.id as string, vat_code: v.vat_code as string, description: v.description as string,
         vat_classification: v.vat_classification as string,
         rate: ((v.tax_codes as Record<string, unknown>)?.rate as number) || 0,
       })))
@@ -308,7 +308,7 @@ export default function CashSalesPage() {
               <label className="block text-xs text-gray-500 mb-1">Payment Mode</label>
               <select value={fPaymentMode} onChange={e => setFPaymentMode(e.target.value)} className={inp}>
                 <option value="">Select…</option>
-                {paymentModes.map(m => <option key={m.id} value={m.id}>{m.mode_name}</option>)}
+                {paymentModes.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
               </select>
             </div>
             <div>
@@ -386,7 +386,7 @@ export default function CashSalesPage() {
                       <select value={l.vat_code_id} onChange={e => updateLine(l._key, { vat_code_id: e.target.value })}
                         className="border border-gray-200 rounded px-1.5 py-1 text-xs w-full">
                         <option value="">—</option>
-                        {vatCodes.map(v => <option key={v.id} value={v.id}>{v.code}</option>)}
+                        {vatCodes.map(v => <option key={v.id} value={v.id}>{v.vat_code}</option>)}
                       </select>
                     </td>
                     <td className={td}>

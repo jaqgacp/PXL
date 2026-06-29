@@ -23,7 +23,7 @@ type DRLine = {
   vat_code_id: string | null; revenue_account_id: string | null
 }
 
-type VATCode = { id: string; code: string; description: string; vat_classification: string; rate: number }
+type VATCode = { id: string; vat_code: string; description: string; vat_classification: string; rate: number }
 type ReasonCode = { id: string; code: string; description: string }
 
 type ReturnLine = {
@@ -102,11 +102,11 @@ export default function CustomerReturnsPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
-      supabase.from('vat_codes').select('id,code,description,vat_classification,tax_codes(rate)').eq('is_active', true).order('code'),
-      supabase.from('reason_codes').select('id,code,description').eq('company_id', companyId).order('code'),
+      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('is_active', true).order('vat_code'),
+      supabase.from('ref_reason_codes').select('id,code,description').in('applies_to', ['credit_memo','both']).order('code'),
     ]).then(([vatR, rcR]) => {
       setVatCodes((vatR.data || []).map((v: Record<string, unknown>) => ({
-        id: v.id as string, code: v.code as string, description: v.description as string,
+        id: v.id as string, vat_code: v.vat_code as string, description: v.description as string,
         vat_classification: v.vat_classification as string,
         rate: ((v.tax_codes as Record<string, unknown>)?.rate as number) || 0,
       })))

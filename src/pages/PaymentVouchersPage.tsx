@@ -29,7 +29,7 @@ type VendorBillRef = {
   bill_date: string; supplier_invoice_number: string | null
 }
 type COARef = { id: string; account_code: string; account_name: string }
-type PaymentMode = { id: string; mode_code: string; mode_name: string }
+type PaymentMode = { id: string; code: string; name: string }
 type ATCCode = { id: string; code: string; description: string; rate: number }
 type Branch = { id: string; branch_code: string; branch_name: string }
 
@@ -83,8 +83,8 @@ export default function PaymentVouchersPage() {
     const [suppRes, coaRes, pmRes, atcRes, brRes] = await Promise.all([
       supabase.from('suppliers').select('id,registered_name,tin').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('is_active', true).eq('is_postable', true).in('account_type', ['asset']).order('account_code'),
-      supabase.from('payment_modes').select('id,mode_code,mode_name').eq('company_id', companyId).eq('is_active', true),
-      supabase.from('atc_codes').select('id,code,description,rate').eq('company_id', companyId).eq('is_active', true).order('code'),
+      supabase.from('ref_payment_modes').select('id,code,name').eq('is_active', true).order('sort_order'),
+      supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).order('code'),
       supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
     ])
     setSuppliers(suppRes.data as SupplierRef[] || [])
@@ -361,7 +361,7 @@ export default function PaymentVouchersPage() {
               <select value={editPV?.payment_mode_id || ''} disabled={readOnly}
                 onChange={e => setEditPV(v => ({ ...v, payment_mode_id: e.target.value }))} className={inputCls}>
                 <option value="">—</option>
-                {paymentModes.map(pm => <option key={pm.id} value={pm.id}>{pm.mode_name}</option>)}
+                {paymentModes.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}
               </select>
             ))}
             {h('Bank / Cash Account', (

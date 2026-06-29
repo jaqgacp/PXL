@@ -114,10 +114,10 @@ export default function VendorBillsPage() {
     if (!companyId) return
     const [suppRes, vatRes, coaRes, brRes, vrRes] = await Promise.all([
       supabase.from('suppliers').select('id,registered_name,tin,registered_address,default_tax_type,default_terms_id,default_gl_account_id,payment_terms(days_to_due)').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('company_id', companyId).eq('is_active', true),
+      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('is_active', true),
       supabase.from('chart_of_accounts').select('id,account_code,account_name,account_type').eq('company_id', companyId).eq('is_active', true).eq('is_postable', true).order('account_code'),
       supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
-      supabase.from('void_reasons').select('id,code,description').eq('company_id', companyId),
+      supabase.from('void_reason_codes').select('id,code,description'),
     ])
     setSuppliers((suppRes.data || []).map((s: any) => ({ ...s, payment_terms: s.payment_terms })))
     setVatCodes((vatRes.data || []).map((v: any) => ({ id: v.id, vat_code: v.vat_code, description: v.description, vat_classification: v.vat_classification, rate: v.tax_codes?.rate ?? 0 })))

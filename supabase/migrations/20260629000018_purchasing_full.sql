@@ -509,30 +509,6 @@ WHERE vc.status IN ('open','applied');
 
 -- ── vw_input_vat_review ───────────────────────────────────────────────────────
 -- Aggregates per bill from vendor_bill_lines classified by VAT type
-CREATE OR REPLACE VIEW vw_input_vat_review AS
-SELECT
-  vb.id                 AS transaction_id,
-  'vendor_bill'         AS source_module,
-  vb.company_id,
-  vb.bill_date          AS invoice_date,
-  s.tin                 AS supplier_tin,
-  s.registered_name     AS supplier_name,
-  COALESCE(s.address_line1, '') || CASE WHEN s.city IS NOT NULL THEN ', ' || s.city ELSE '' END AS supplier_address,
-  vb.supplier_invoice_number AS invoice_no,
-  vb.bill_number        AS system_no,
-  SUM(vbl.net_amount + vbl.input_vat_amount) AS gross_purchases,
-  SUM(CASE WHEN vc.vat_classification = 'exempt'    THEN vbl.net_amount ELSE 0 END) AS exempt_purchases,
-  SUM(CASE WHEN vc.vat_classification = 'zero_rated' THEN vbl.net_amount ELSE 0 END) AS zero_rated,
-  SUM(CASE WHEN vc.vat_classification = 'regular'   THEN vbl.net_amount ELSE 0 END) AS taxable_base,
-  SUM(vbl.input_vat_amount) AS input_vat
-FROM vendor_bills vb
-JOIN vendors_view_helper s ON TRUE   -- replaced below
-JOIN vendor_bill_lines vbl ON vbl.vendor_bill_id = vb.id
-LEFT JOIN vat_codes vc ON vc.id = vbl.vat_code_id
-WHERE vb.status = 'posted'
-GROUP BY vb.id, vb.company_id, vb.bill_date, s.tin, s.registered_name, s.address_line1, s.city, vb.supplier_invoice_number, vb.bill_number;
-
--- Rebuild correctly with direct suppliers join
 DROP VIEW IF EXISTS vw_input_vat_review;
 CREATE OR REPLACE VIEW vw_input_vat_review AS
 SELECT

@@ -35,7 +35,7 @@ CREATE TABLE vendor_bills (
   ewt_amount_expected      NUMERIC(15,2),
   status                   TEXT        NOT NULL DEFAULT 'draft'
                                        CHECK (status IN ('draft','approved','posted','cancelled')),
-  void_reason_id           UUID        REFERENCES void_reasons(id),
+  void_reason_id           UUID        REFERENCES void_reason_codes(id),
   journal_entry_id         UUID        REFERENCES journal_entries(id),
   posted_by                UUID,
   posted_at                TIMESTAMPTZ,
@@ -106,7 +106,7 @@ CREATE TABLE payment_vouchers (
   supplier_tin_snapshot  TEXT,
   voucher_number         TEXT        NOT NULL,
   voucher_date           DATE        NOT NULL,
-  payment_mode_id        UUID        REFERENCES payment_modes(id),
+  payment_mode_id        UUID        REFERENCES ref_payment_modes(id),
   reference_number       TEXT,
   bank_account_id        UUID        REFERENCES chart_of_accounts(id),
   total_amount           NUMERIC(15,2) NOT NULL DEFAULT 0,
