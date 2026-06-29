@@ -38,6 +38,12 @@ import SalesTaxReviewPage from '@/pages/SalesTaxReviewPage'
 import SalesRegistersPage from '@/pages/SalesRegistersPage'
 import EWTWorkingPapersPage from '@/pages/EWTWorkingPapersPage'
 import Form2307ReceivedPage from '@/pages/Form2307ReceivedPage'
+import GLPostingConfigPage from '@/pages/GLPostingConfigPage'
+import CashSalesPage from '@/pages/CashSalesPage'
+import CollectionMonitoringPage from '@/pages/CollectionMonitoringPage'
+import PercentageTaxReviewPage from '@/pages/PercentageTaxReviewPage'
+import SLSPage from '@/pages/SLSPage'
+import CustomerReturnsPage from '@/pages/CustomerReturnsPage'
 
 const WelcomeScreen = () => (
   <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
@@ -113,6 +119,12 @@ export default function App() {
         <Route path="/sales-registers" element={<SalesRegistersPage />} />
         <Route path="/ewt-working-papers" element={<EWTWorkingPapersPage />} />
         <Route path="/2307-received-review" element={<Form2307ReceivedPage />} />
+        <Route path="/gl-posting-config" element={<GLPostingConfigPage />} />
+        <Route path="/cash-sales" element={<CashSalesPage />} />
+        <Route path="/collection-monitoring" element={<CollectionMonitoringPage />} />
+        <Route path="/pt-review" element={<PercentageTaxReviewPage />} />
+        <Route path="/sls" element={<SLSPage />} />
+        <Route path="/customer-returns" element={<CustomerReturnsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>

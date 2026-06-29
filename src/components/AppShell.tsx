@@ -46,7 +46,7 @@ const NAV: NavItem[] = [
         s('Currency Setup', 'currency-setup'),
         s('Exchange Rates', 'currency-setup'),
         s('Opening Balances'),
-        s('Financial Statement Fields'), s('GL Posting Configuration'),
+        s('Financial Statement Fields'), s('GL Posting Configuration', 'gl-posting-config'),
       ]},
       { group: 'Tax Setup', items: [
         s('BIR Form Configuration', 'bir-form-config'),
@@ -70,13 +70,13 @@ const NAV: NavItem[] = [
     label: 'Sales', feature: 'accounts_receivable', groups: [
       { group: 'Transactions', items: [
         s('Quotations', 'quotations'), s('Sales Orders', 'sales-orders'), s('Delivery Receipts', 'delivery-receipts'),
-        s('Sales Invoices', 'sales-invoices'), s('Cash Sales'),
+        s('Sales Invoices', 'sales-invoices'), s('Cash Sales', 'cash-sales'),
         s('Receipts', 'receipts'),
-        s('Credit Memos', 'credit-memos'), s('Debit Memos', 'debit-memos'), s('Customer Returns'),
+        s('Credit Memos', 'credit-memos'), s('Debit Memos', 'debit-memos'), s('Customer Returns', 'customer-returns'),
       ]},
-      { group: 'Receivables', items: [s('AR Aging / Customer Ledger', 'ar-aging'), s('Collection Monitoring')] },
-      { group: 'Tax Review', items: [s('Output VAT Review', 'sales-tax-review'), s('Percentage Tax Review'), s('2307 Received Review', '2307-received-review')] },
-      { group: 'Registers', items: [s('Sales Registers', 'sales-registers'), s('SLS')] },
+      { group: 'Receivables', items: [s('AR Aging / Customer Ledger', 'ar-aging'), s('Collection Monitoring', 'collection-monitoring')] },
+      { group: 'Tax Review', items: [s('Output VAT Review', 'sales-tax-review'), s('Percentage Tax Review', 'pt-review'), s('2307 Received Review', '2307-received-review')] },
+      { group: 'Registers', items: [s('Sales Registers', 'sales-registers'), s('SLS', 'sls')] },
     ]
   },
   {
@@ -180,6 +180,12 @@ const PAGE_LABELS: Record<string, string> = {
   'sales-registers':        'Sales Registers',
   'ewt-working-papers':     'EWT Working Papers',
   '2307-received-review':   '2307 Received Review',
+  'gl-posting-config':      'GL Posting Configuration',
+  'cash-sales':             'Cash Sales',
+  'collection-monitoring':  'Collection Monitoring',
+  'pt-review':              'Percentage Tax Review',
+  'sls':                    'Summary List of Sales (SLS)',
+  'customer-returns':       'Customer Returns',
 }
 
 function findSection(page: string): string | null {
