@@ -85,6 +85,9 @@ Migrations live in `supabase/migrations/` and are numbered sequentially:
 | 010 | Atomic save/post RPCs: fn_save_sales_invoice, fn_post_sales_invoice, fn_save_receipt, etc. |
 | 011 | Audit triggers: automatic DB-level logging to sys_audit_logs |
 | 012 | Number series hardening: search_path fix, membership check, restricted EXECUTE grant |
+| 013 | GL Core: journal_entries, journal_entry_lines, company_accounting_config; posting RPCs create balanced double-entry JEs |
+| 014 | Hardening: ATC table consolidation, AR view CWT fix, server-side VAT computation, approved-SI edit lock, over-application check, fn_mark_tax_event_filed, audit triggers for line tables, admin-only tax code writes |
+| 015 | CM/DM RPCs: fn_save_credit_memo, fn_save_debit_memo with server-side computation and status transitions |
 
 ---
 
@@ -104,7 +107,7 @@ Migrations live in `supabase/migrations/` and are numbered sequentially:
 - **SELECT**: scoped to `is_company_member(company_id)` on every company-owned table
 - **INSERT**: `WITH CHECK (is_company_member(company_id))` on all transactional tables
 - **UPDATE/DELETE**: `USING (is_company_member(company_id))` on all transactional tables
-- Global BIR reference tables (`tax_codes`, `vat_codes`, `atc_codes`) allow reads and writes by any authenticated user
+- Global BIR reference tables (`tax_codes`, `vat_codes`, `atc_codes`) allow reads by any authenticated user; writes require company admin role (`is_any_company_admin()`)
 - User dashboard data is scoped to `user_id = auth.uid()`
 
 ### SECURITY DEFINER RPCs
@@ -113,13 +116,17 @@ All status transitions and atomic saves use `SECURITY DEFINER` functions with `S
 
 | Function | Purpose |
 |---|---|
-| `fn_save_sales_invoice(id, header, lines)` | Atomic header+lines save, number generation, fiscal period resolution |
+| `fn_save_sales_invoice(id, header, lines)` | Atomic header+lines save; server-side VAT/net recomputation; rejects non-draft edits |
 | `fn_approve_sales_invoice(id)` | draft → approved |
-| `fn_post_sales_invoice(id)` | approved → posted (GL stub for Sprint 9) |
+| `fn_post_sales_invoice(id)` | approved → posted; requires company_accounting_config; creates balanced JE |
+| `fn_revert_si_to_draft(id)` | approved → draft; clears approval record |
 | `fn_void_sales_invoice(id, reason_id, memo)` | Any status → cancelled (BIR: numbers never reused) |
-| `fn_save_receipt(id, header, lines)` | Atomic receipt + lines save |
-| `fn_post_receipt(id)` | draft → posted (GL stub) |
+| `fn_save_receipt(id, header, lines)` | Atomic receipt + lines save; over-application guard per invoice |
+| `fn_post_receipt(id)` | draft → posted; requires company_accounting_config; creates balanced JE |
 | `fn_bounce_receipt(id)` | posted → bounced (dishonoured cheque) |
+| `fn_save_credit_memo(id, header, lines, status)` | Atomic save + status transition; server-side computation |
+| `fn_save_debit_memo(id, header, lines, status)` | Atomic save + status transition; server-side computation |
+| `fn_mark_tax_event_filed(event_id, date_filed, efps_ref)` | Validates membership; marks tax calendar event as filed |
 | `fn_next_document_number(company, branch, code)` | Sequential number generation with row-level locking |
 
 ### Content Security Policy
@@ -139,12 +146,18 @@ Receipt:        draft → posted → bounced
                                 → cancelled
 ```
 
-**Posting does not create real GL journal entries yet.** The stub comment in each post RPC documents the intended entry:
+**Posting creates real, balanced double-entry journal entries** stored in `journal_entries` / `journal_entry_lines`.
+Before posting is allowed, each company must configure GL accounts in `company_accounting_config`:
 
-- **Sales Invoice post**: DR Accounts Receivable / CR Revenue accounts / CR VAT Payable
-- **Receipt post**: DR Cash or Bank / DR EWT Withheld (if applicable) / CR Accounts Receivable
+| Account | Used for |
+|---|---|
+| `ar_account_id` | Debit (SI post), Credit (receipt post) |
+| `vat_payable_account_id` | Credit (SI post, for VAT portion) |
+| `ewt_withheld_account_id` | Debit (receipt post, for CWT amount) |
+| `default_cash_account_id` | Debit (receipt post, when no bank account on receipt) |
 
-GL journal entry creation is planned for Sprint 9 (General Ledger module).
+- **Sales Invoice post**: DR AR = total_amount; CR Revenue per line = net_amount; CR VAT Payable = vat_amount
+- **Receipt post**: DR Cash/Bank = total_amount; DR EWT Withheld = total_cwt; CR AR = total_amount + total_cwt
 
 ---
 

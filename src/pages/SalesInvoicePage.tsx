@@ -317,7 +317,7 @@ export default function SalesInvoicePage() {
       setLines([newLine()])
     }
 
-    setMode(si.status === 'draft' || si.status === 'approved' ? 'edit' : 'view')
+    setMode(si.status === 'draft' ? 'edit' : 'view')
   }
 
   // Customer auto-fill
@@ -460,6 +460,15 @@ export default function SalesInvoicePage() {
     if (e) { setError(e.message); setSaving(false); return }
     setShowVoid(false)
     setMode('list')
+    setSaving(false)
+  }
+
+  const doRevertToDraft = async () => {
+    if (!editSI) return
+    setSaving(true)
+    const { error: e } = await supabase.rpc('fn_revert_si_to_draft', { p_invoice_id: editSI.id })
+    if (e) { setError(e.message); setSaving(false); return }
+    await openEdit({ ...editSI, status: 'draft' } as SI)
     setSaving(false)
   }
 
@@ -613,11 +622,11 @@ export default function SalesInvoicePage() {
             </button>
           </>
         )}
-        {siStatus === 'approved' && !readOnly && (
+        {siStatus === 'approved' && (
           <>
-            <button onClick={() => save('draft')} disabled={saving}
+            <button onClick={doRevertToDraft} disabled={saving}
               className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-              Return to Draft
+              {saving ? 'Reverting…' : 'Revert to Draft'}
             </button>
             <button onClick={() => save('posted')} disabled={saving}
               className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">

@@ -24,7 +24,7 @@ type Line2307 = {
   remarks: string | null
 }
 
-type ATCCode = { id: string; atc_code: string; description: string; tax_rate: number }
+type ATCCode = { id: string; code: string; description: string; rate: number }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -80,10 +80,10 @@ export default function Form2307ReceivedPage() {
 
     // Load ATC codes
     const { data: atcs } = await supabase
-      .from('ref_atc_codes')
-      .select('id,atc_code,description,tax_rate')
+      .from('atc_codes')
+      .select('id,code,description,rate')
       .eq('is_active', true)
-      .order('atc_code')
+      .order('code')
     setAtcCodes((atcs as ATCCode[]) || [])
 
     const receiptIds = (receipts || []).map(r => r.id)
@@ -122,7 +122,7 @@ export default function Form2307ReceivedPage() {
         customer_id: r?.customer_id || null,
         cwt_amount: Number(l.cwt_amount),
         atc_code_id: l.atc_code_id || null,
-        atc_code: atc?.atc_code || null,
+        atc_code: atc?.code || null,
         tracking_id: t?.id || null,
         tracking_status: (t?.status as TrackingStatus) || null,
         date_received: t?.date_received || null,
@@ -399,7 +399,7 @@ export default function Form2307ReceivedPage() {
                   <option value="">Select ATC Code…</option>
                   {atcCodes.map(a => (
                     <option key={a.id} value={a.id}>
-                      {a.atc_code} — {a.description} ({a.tax_rate}%)
+                      {a.code} — {a.description} ({a.rate}%)
                     </option>
                   ))}
                 </select>

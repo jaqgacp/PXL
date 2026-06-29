@@ -9,6 +9,7 @@ type RStatus = 'draft' | 'posted' | 'bounced' | 'cancelled'
 type Receipt = {
   id: string; receipt_number: string; receipt_date: string
   customer_id: string; customer_name_snapshot: string; customer_tin_snapshot: string
+  branch_id: string | null
   payment_mode_id: string; reference_number: string | null
   bank_account_id: string | null; total_amount: number; total_cwt: number
   remarks: string | null; status: RStatus; posted_at: string | null
@@ -29,7 +30,7 @@ type CustomerRef = {
 type PaymentMode = { id: string; code: string; name: string }
 type COAAccount  = { id: string; account_code: string; account_name: string }
 type Branch      = { id: string; branch_code: string; branch_name: string }
-type ATCCode     = { id: string; atc_code: string; description: string }
+type ATCCode     = { id: string; code: string; description: string }
 
 // ── Helpers ──────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -97,7 +98,7 @@ export default function ReceiptsPage() {
         .order('account_code'),
       supabase.from('branches').select('id,branch_code,branch_name')
         .eq('company_id', companyId).eq('is_active', true),
-      supabase.from('ref_atc_codes').select('id,atc_code,description').eq('is_active', true).order('atc_code'),
+      supabase.from('atc_codes').select('id,code,description').eq('is_active', true).order('code'),
     ]).then(([{ data: cos }, { data: pms }, { data: coa }, { data: brs }, { data: atcs }]) => {
       setCustomers(cos as CustomerRef[] || [])
       setPaymentModes(pms as PaymentMode[] || [])
@@ -194,7 +195,7 @@ export default function ReceiptsPage() {
     setEditDoc(doc)
     setFCustomer(doc.customer_id); setFCustomerName(doc.customer_name_snapshot)
     setFCustomerTIN(doc.customer_tin_snapshot)
-    setFDate(doc.receipt_date); setFBranch(doc.id) // branch not stored separately
+    setFDate(doc.receipt_date); setFBranch(doc.branch_id || branchId)
     setFMode(doc.payment_mode_id); setFRef(doc.reference_number || '')
     setFBankAccount(doc.bank_account_id || ''); setFRemarks(doc.remarks || '')
     setError('')
@@ -577,7 +578,7 @@ export default function ReceiptsPage() {
                                 className="w-28 border border-gray-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
                                 <option value="">Select…</option>
                                 {atcCodes.map(a => (
-                                  <option key={a.id} value={a.id}>{a.atc_code}</option>
+                                  <option key={a.id} value={a.id}>{a.code}</option>
                                 ))}
                               </select>
                             )

@@ -251,8 +251,8 @@ export default function EWTWorkingPapersPage() {
 
   // ── Generate ───────────────────────────────────────────────────────────────
   const handleGenerate = () => {
-    setGenMsg('Generate complete — no ledger data available yet.')
-    setTimeout(() => setGenMsg(''), 5000)
+    setGenMsg('Manual entry only — GL-backed generation requires the General Ledger module (Sprint 9).')
+    setTimeout(() => setGenMsg(''), 8000)
   }
 
   // ── Filtered list ──────────────────────────────────────────────────────────
@@ -502,9 +502,9 @@ export default function EWTWorkingPapersPage() {
               {genMsg}
             </span>
           )}
-          <button onClick={handleGenerate}
+          <button onClick={handleGenerate} title="Manual entry only — GL-backed generation requires Sprint 9"
             className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50">
-            ⚡ Generate
+            ⚡ Generate (Manual)
           </button>
           <button className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50">
             ↑ Import

@@ -90,9 +90,11 @@ export default function TaxCalendarPage() {
   const handleMarkFiled = async () => {
     if (!editId) return
     setSaving(true)
-    const { error } = await supabase.from('tax_calendar_events')
-      .update({ status: 'filed', date_filed: filedDate || new Date().toISOString().split('T')[0], efps_reference_no: efpsRef || null })
-      .eq('id', editId)
+    const { error } = await supabase.rpc('fn_mark_tax_event_filed', {
+      p_event_id: editId,
+      p_date_filed: filedDate || new Date().toISOString().split('T')[0],
+      p_efps_ref: efpsRef || null,
+    })
     if (error) alert(error.message)
     else { setEditId(null); fetchEvents(cid) }
     setSaving(false)

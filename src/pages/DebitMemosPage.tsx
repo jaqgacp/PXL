@@ -171,7 +171,7 @@ export default function DebitMemosPage() {
         }
       }))
     } else setLines([newLine(0)])
-    setMode(doc.status === 'draft' || doc.status === 'approved' ? 'edit' : 'view')
+    setMode(doc.status === 'draft' ? 'edit' : 'view')
   }
 
   const totalNet = lines.reduce((s, l) => s + l.amount, 0)
@@ -183,45 +183,26 @@ export default function DebitMemosPage() {
     if (lines.every(l => !l.description.trim())) { setError('At least one line is required.'); return }
     setSaving(true); setError('')
     try {
-      const isNew = mode === 'new'
-      let dmNum = editDoc?.dm_number || ''
-      if (isNew) {
-        const { data: num, error: ne } = await supabase.rpc('fn_next_document_number', {
-          p_company_id: companyId, p_branch_id: fBranch || branchId, p_document_code: 'DM-S',
-        })
-        if (ne || !num) throw new Error(ne?.message || 'No number series for Debit Memos to Customer.')
-        dmNum = num as string
-      }
-      const payload = {
+      const header = {
         company_id: companyId, branch_id: fBranch || branchId,
-        customer_id: fCustomer, customer_name_snapshot: fCustomerName, customer_tin_snapshot: fCustomerTIN,
-        source_doc_type: fSourceType || null, source_doc_id: null,
-        dm_number: dmNum, dm_date: fDate, reason_code_id: fReason, remarks: fRemarks || null,
-        total_net_amount: totalNet, total_vat_amount: totalVAT, total_amount: totalAmt,
-        status: nextStatus,
-        ...(nextStatus === 'paid' ? { posted_at: new Date().toISOString() } : {}),
+        customer_id: fCustomer, customer_name_snapshot: fCustomerName, customer_tin_snapshot: fCustomerTIN || '',
+        source_doc_type: fSourceType || '', source_doc_id: '',
+        dm_date: fDate, reason_code_id: fReason, remarks: fRemarks || '',
       }
-      let docId = editDoc?.id
-      if (isNew) {
-        const { data: ins, error: ie } = await supabase.from('debit_memos').insert(payload).select('id').single()
-        if (ie) throw ie; docId = ins.id
-      } else {
-        const { error: ue } = await supabase.from('debit_memos').update(payload).eq('id', docId!)
-        if (ue) throw ue
-      }
-      const validLines = lines.filter(l => l.description.trim())
-      await supabase.from('debit_memo_lines').delete().eq('debit_memo_id', docId!)
-      if (validLines.length > 0) {
-        const { error: le } = await supabase.from('debit_memo_lines').insert(
-          validLines.map((l, i) => ({
-            debit_memo_id: docId!, company_id: companyId, line_number: i + 1,
-            account_id: l.account_id || null, item_id: l.item_id || null,
-            description: l.description, amount: l.amount, vat_code_id: l.vat_code_id || null,
-            vat_amount: l.vat_amount, total_amount: l.total_amount,
-          }))
-        )
-        if (le) throw le
-      }
+      const linesPayload = lines
+        .filter(l => l.description.trim())
+        .map(l => ({
+          account_id: l.account_id || '', item_id: l.item_id || '',
+          description: l.description, amount: l.amount,
+          vat_code_id: l.vat_code_id || '',
+        }))
+      const { error: rpcErr } = await supabase.rpc('fn_save_debit_memo', {
+        p_dm_id: mode === 'new' ? null : (editDoc?.id ?? null),
+        p_header: header,
+        p_lines: linesPayload,
+        p_next_status: nextStatus,
+      })
+      if (rpcErr) throw rpcErr
       setMode('list')
     } catch (e) { setError(e instanceof Error ? e.message : 'Save failed.') }
     setSaving(false)
@@ -318,8 +299,8 @@ export default function DebitMemosPage() {
           <button onClick={() => save('approved')} disabled={saving} className="px-3 py-1.5 border border-blue-500 text-blue-700 rounded text-sm hover:bg-blue-50 font-medium disabled:opacity-50">Submit for Approval</button>
           <button onClick={() => save('paid')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Post</button>
         </>}
-        {dmStatus === 'approved' && !readOnly && <>
-          <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">Return to Draft</button>
+        {dmStatus === 'approved' && <>
+          <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Reverting…' : 'Revert to Draft'}</button>
           <button onClick={() => save('paid')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Post</button>
         </>}
       </div>

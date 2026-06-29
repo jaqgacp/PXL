@@ -217,7 +217,7 @@ export default function CreditMemosPage() {
         }
       }))
     } else setLines([newLine()])
-    setMode(doc.status === 'draft' || doc.status === 'approved' ? 'edit' : 'view')
+    setMode(doc.status === 'draft' ? 'edit' : 'view')
     void c
   }
 
@@ -230,47 +230,26 @@ export default function CreditMemosPage() {
     if (lines.every(l => !l.description.trim())) { setError('At least one line is required.'); return }
     setSaving(true); setError('')
     try {
-      const isNew = mode === 'new'
-      let cmNum = editDoc?.cm_number || ''
-      if (isNew) {
-        const { data: num, error: ne } = await supabase.rpc('fn_next_document_number', {
-          p_company_id: companyId, p_branch_id: fBranch || branchId, p_document_code: 'CM',
-        })
-        if (ne || !num) throw new Error(ne?.message || 'No number series for Credit Memos.')
-        cmNum = num as string
-      }
-      const payload = {
+      const header = {
         company_id: companyId, branch_id: fBranch || branchId,
-        customer_id: fCustomer, customer_name_snapshot: fCustomerName, customer_tin_snapshot: fCustomerTIN,
-        invoice_id: fInvoice || null, cm_number: cmNum, cm_date: fDate,
-        reason_code_id: fReason, remarks: fRemarks || null,
-        total_net_amount: totalNet, total_vat_amount: totalVAT, total_amount: totalAmt,
-        status: nextStatus,
-        ...(nextStatus === 'applied' ? { posted_at: new Date().toISOString() } : {}),
+        customer_id: fCustomer, customer_name_snapshot: fCustomerName, customer_tin_snapshot: fCustomerTIN || '',
+        invoice_id: fInvoice || '', cm_date: fDate,
+        reason_code_id: fReason, remarks: fRemarks || '',
       }
-      let docId = editDoc?.id
-      if (isNew) {
-        const { data: ins, error: ie } = await supabase.from('credit_memos').insert(payload).select('id').single()
-        if (ie) throw ie; docId = ins.id
-      } else {
-        const { error: ue } = await supabase.from('credit_memos').update(payload).eq('id', docId!)
-        if (ue) throw ue
-      }
-      const validLines = lines.filter(l => l.description.trim())
-      await supabase.from('credit_memo_lines').delete().eq('credit_memo_id', docId!)
-      if (validLines.length > 0) {
-        const { error: le } = await supabase.from('credit_memo_lines').insert(
-          validLines.map((l, i) => ({
-            credit_memo_id: docId!, company_id: companyId, line_number: i + 1,
-            invoice_line_id: l.invoice_line_id || null, item_id: l.item_id || null,
-            description: l.description, quantity: l.quantity, unit_price: l.unit_price,
-            net_amount: l.net_amount, vat_code_id: l.vat_code_id || null,
-            vat_amount: l.vat_amount, total_amount: l.total_amount,
-            revenue_account_id: l.revenue_account_id || null,
-          }))
-        )
-        if (le) throw le
-      }
+      const linesPayload = lines
+        .filter(l => l.description.trim())
+        .map(l => ({
+          invoice_line_id: l.invoice_line_id || '', item_id: l.item_id || '',
+          description: l.description, quantity: l.quantity, unit_price: l.unit_price,
+          vat_code_id: l.vat_code_id || '', revenue_account_id: l.revenue_account_id || '',
+        }))
+      const { error: rpcErr } = await supabase.rpc('fn_save_credit_memo', {
+        p_cm_id: mode === 'new' ? null : (editDoc?.id ?? null),
+        p_header: header,
+        p_lines: linesPayload,
+        p_next_status: nextStatus,
+      })
+      if (rpcErr) throw rpcErr
       setMode('list')
     } catch (e) { setError(e instanceof Error ? e.message : 'Save failed.') }
     setSaving(false)
@@ -367,8 +346,8 @@ export default function CreditMemosPage() {
           <button onClick={() => save('approved')} disabled={saving} className="px-3 py-1.5 border border-blue-500 text-blue-700 rounded text-sm hover:bg-blue-50 font-medium disabled:opacity-50">Submit for Approval</button>
           <button onClick={() => save('applied')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Apply</button>
         </>}
-        {cmStatus === 'approved' && !readOnly && <>
-          <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">Return to Draft</button>
+        {cmStatus === 'approved' && <>
+          <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Reverting…' : 'Revert to Draft'}</button>
           <button onClick={() => save('applied')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Apply</button>
         </>}
       </div>

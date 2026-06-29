@@ -4,9 +4,9 @@ import { supabase } from '@/lib/supabase'
 import { AppContextProvider, useAppCtx } from '@/lib/context'
 import type { Session } from '@supabase/supabase-js'
 
-type SubItem = { name: string; page: string }
+type SubItem = { name: string; page: string; feature?: string }
 type Group = { group: string; items: SubItem[] }
-type NavItem = { label: string; groups: Group[]; page?: string }
+type NavItem = { label: string; groups: Group[]; page?: string; feature?: string }
 
 const s = (name: string, page = ''): SubItem => ({ name, page })
 
@@ -67,7 +67,7 @@ const NAV: NavItem[] = [
     ]
   },
   {
-    label: 'Sales', groups: [
+    label: 'Sales', feature: 'accounts_receivable', groups: [
       { group: 'Transactions', items: [
         s('Quotations', 'quotations'), s('Sales Orders', 'sales-orders'), s('Delivery Receipts', 'delivery-receipts'),
         s('Sales Invoices', 'sales-invoices'), s('Cash Sales'),
@@ -80,7 +80,7 @@ const NAV: NavItem[] = [
     ]
   },
   {
-    label: 'Purchasing', groups: [
+    label: 'Purchasing', feature: 'accounts_payable', groups: [
       { group: 'Transactions', items: [
         s('Purchase Orders'), s('Receiving Reports'), s('Vendor Bills'),
         s('Cash Purchases'), s('Payment Vouchers'), s('Vendor Credits'),
@@ -92,7 +92,7 @@ const NAV: NavItem[] = [
     ]
   },
   {
-    label: 'Inventory', groups: [
+    label: 'Inventory', feature: 'inventory_management', groups: [
       { group: 'Operations', items: [
         s('Inventory Dashboard'), s('Stock Adjustment'), s('Stock Transfer'),
         s('Goods Issue'), s('Physical Count'), s('Inventory Movements'), s('Inventory Valuation'),
@@ -101,14 +101,14 @@ const NAV: NavItem[] = [
     ]
   },
   {
-    label: 'Banking & Treasury', groups: [
+    label: 'Banking & Treasury', feature: 'banking_module', groups: [
       { group: 'Petty Cash', items: [s('Petty Cash Fund Setup'), s('Petty Cash Vouchers'), s('Petty Cash Replenishment'), s('Cash Count Sheet')] },
       { group: 'Bank Operations', items: [s('Fund Transfers'), s('Inter-Branch Transfers'), s('Bank Adjustments'), s('Bank Reconciliation'), s('Outstanding Checks'), s('Deposits in Transit')] },
       { group: 'Payables', items: [s('Check Vouchers')] },
     ]
   },
   {
-    label: 'Fixed Assets', groups: [
+    label: 'Fixed Assets', feature: 'fixed_assets', groups: [
       { group: 'Operations', items: [s('Fixed Asset Dashboard'), s('Asset Register'), s('Asset Acquisition'), s('Depreciation'), s('Disposal'), s('Transfer'), s('Impairment')] },
       { group: 'Setup', items: [s('Asset Categories'), s('Depreciation Profiles')] },
     ]
@@ -233,9 +233,27 @@ function ContextSelectors() {
 function AppShellInner({ session, children }: { session: Session; children: React.ReactNode }) {
   const rrNavigate = useNavigate()
   const location = useLocation()
+  const { companyId } = useAppCtx()
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
   const [menuLeft, setMenuLeft] = useState(0)
+  const [enabledFeatures, setEnabledFeatures] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!companyId) { setEnabledFeatures(new Set()); return }
+    // Load always-enabled features from definitions + company-specific enablements
+    Promise.all([
+      supabase.from('ref_feature_definitions').select('feature_key').eq('always_enabled', true),
+      supabase.from('sys_feature_enablement').select('feature_key').eq('company_id', companyId).eq('is_enabled', true),
+    ]).then(([alwaysRes, companyRes]) => {
+      const keys = new Set<string>()
+      for (const r of alwaysRes.data || []) keys.add(r.feature_key)
+      for (const r of companyRes.data || []) keys.add(r.feature_key)
+      setEnabledFeatures(keys)
+    })
+  }, [companyId])
+
+  const visibleNav = NAV.filter(n => !n.feature || enabledFeatures.has(n.feature))
 
   const currentPage = location.pathname.slice(1) // e.g. "company-setup"
   const breadcrumbSection = currentPage ? findSection(currentPage) : null
@@ -278,7 +296,7 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
           {/* Nav buttons — scrollable, no visible scrollbar. Dropdown is NOT here. */}
           <div className="flex items-center h-14 flex-1 min-w-0 overflow-x-auto"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' } as React.CSSProperties}>
-            {NAV.map((item) => (
+            {visibleNav.map((item) => (
               <button key={item.label}
                 onMouseEnter={(e) => openMenu(item.label, (e.currentTarget as HTMLElement).getBoundingClientRect().left)}
                 onClick={() => { if (item.page) { navigate(item.page); closeMenu() } }}
