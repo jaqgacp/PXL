@@ -245,22 +245,13 @@ export default function ReceiptsPage() {
     setSaving(true); setError('')
     try {
       const isNew = mode === 'new'
-      let receiptNum = editDoc?.receipt_number || ''
-      if (isNew) {
-        const { data: num, error: numErr } = await supabase.rpc('fn_next_document_number', {
-          p_company_id: companyId, p_branch_id: fBranch || branchId, p_document_code: 'OR',
-        })
-        if (numErr || !num) throw new Error(numErr?.message || 'No number series for Official Receipts. Set one up in Number Series Setup.')
-        receiptNum = num as string
-      }
 
-      const payload = {
+      const header = {
         company_id: companyId,
         branch_id: fBranch || branchId,
         customer_id: fCustomer,
         customer_name_snapshot: fCustomerName,
         customer_tin_snapshot: fCustomerTIN,
-        receipt_number: receiptNum,
         receipt_date: fDate,
         payment_mode_id: fMode,
         reference_number: fRef || null,
@@ -268,34 +259,40 @@ export default function ReceiptsPage() {
         total_amount: totalPayment,
         total_cwt: totalCWT,
         remarks: fRemarks || null,
-        status: nextStatus,
-        ...(nextStatus === 'posted' ? { posted_at: new Date().toISOString() } : {}),
       }
 
-      let docId = editDoc?.id
-      if (isNew) {
-        const { data: ins, error: ie } = await supabase.from('receipts').insert(payload).select('id').single()
-        if (ie) throw ie
-        docId = ins.id
-      } else {
-        const { error: ue } = await supabase.from('receipts').update(payload).eq('id', docId!)
-        if (ue) throw ue
+      const linesPayload = appliedLines.map(l => ({
+        invoice_id: l.invoice_id,
+        payment_amount: l.payment_amount,
+        cwt_amount: l.cwt_amount,
+        forex_adjustment: l.forex_adjustment,
+        atc_code_id: l.cwt_amount > 0 ? l.atc_code_id : null,
+      }))
+
+      const { data: docId, error: saveErr } = await supabase.rpc('fn_save_receipt', {
+        p_receipt_id: isNew ? null : editDoc!.id,
+        p_header: header,
+        p_lines: linesPayload,
+      })
+      if (saveErr) throw saveErr
+
+      if (nextStatus === 'posted') {
+        const { error: postErr } = await supabase.rpc('fn_post_receipt', { p_receipt_id: docId })
+        if (postErr) throw postErr
       }
 
-      await supabase.from('receipt_lines').delete().eq('receipt_id', docId!)
-      if (appliedLines.length > 0) {
-        const { error: le } = await supabase.from('receipt_lines').insert(
-          appliedLines.map(l => ({
-            receipt_id: docId!, company_id: companyId,
-            invoice_id: l.invoice_id, payment_amount: l.payment_amount,
-            cwt_amount: l.cwt_amount, forex_adjustment: l.forex_adjustment,
-            atc_code_id: l.cwt_amount > 0 ? l.atc_code_id : null,
-          }))
-        )
-        if (le) throw le
-      }
       setMode('list')
     } catch (e) { setError(e instanceof Error ? e.message : 'Save failed.') }
+    setSaving(false)
+  }
+
+  // Bounce — SECURITY DEFINER RPC bypasses RLS for posted rows
+  const doBounce = async () => {
+    if (!editDoc) return
+    setSaving(true)
+    const { error: e } = await supabase.rpc('fn_bounce_receipt', { p_receipt_id: editDoc.id })
+    if (e) { setError(e.message); setSaving(false); return }
+    setMode('list')
     setSaving(false)
   }
 
@@ -423,7 +420,7 @@ export default function ReceiptsPage() {
           </button>
         </>}
         {editDoc?.status === 'posted' && (
-          <button onClick={() => save('bounced')} disabled={saving}
+          <button onClick={doBounce} disabled={saving}
             className="px-3 py-1.5 border border-red-300 text-red-700 rounded text-sm hover:bg-red-50 font-medium">
             Mark Bounced
           </button>

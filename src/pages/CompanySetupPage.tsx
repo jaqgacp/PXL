@@ -847,12 +847,6 @@ export default function CompanySetupPage() {
             className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50">
             ↑ Import
           </button>
-          <button className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50">
-            ↓ Export
-          </button>
-          <button className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50">
-            🖨 Print
-          </button>
           <button onClick={openCreate}
             className="bg-gray-900 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-gray-800">
             + Create New Company

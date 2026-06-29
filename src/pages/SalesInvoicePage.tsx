@@ -372,7 +372,7 @@ export default function SalesInvoicePage() {
     }))
   }
 
-  // Save
+  // Save — atomic via RPC; status transitions are separate RPC calls
   const save = async (nextStatus?: SIStatus) => {
     if (!companyId || !fCustomer || !fBranch) {
       setError('Company, Branch, and Customer are required.')
@@ -388,26 +388,10 @@ export default function SalesInvoicePage() {
       const totals = computeTotals(lines)
       const isNew = mode === 'new'
 
-      let siNumber = editSI?.si_number || ''
-      if (isNew) {
-        const { data: num, error: numErr } = await supabase
-          .rpc('fn_next_document_number', { p_company_id: companyId, p_branch_id: fBranch, p_document_code: 'SI' })
-        if (numErr || !num) throw new Error(numErr?.message || 'Could not generate SI number. Set up a Number Series for Sales Invoice in this branch.')
-        siNumber = num as string
-      }
-
-      // Resolve fiscal period
-      const { data: fp } = await supabase.from('fiscal_periods')
-        .select('id').eq('company_id', companyId)
-        .lte('start_date', fDate).gte('end_date', fDate)
-        .eq('is_locked', false).maybeSingle()
-
-      const payload = {
+      const header = {
         company_id: companyId,
         branch_id: fBranch,
-        si_number: siNumber,
         date: fDate,
-        fiscal_period_id: fp?.id || null,
         customer_id: fCustomer,
         customer_name_snapshot: fCustomerName,
         customer_tin_snapshot: fCustomerTIN,
@@ -419,46 +403,42 @@ export default function SalesInvoicePage() {
         memo: fMemo || null,
         ...totals,
         cwt_amount_expected: fIsWithholdingAgent && fCwtExpected > 0 ? fCwtExpected : null,
-        status: nextStatus || editSI?.status || 'draft',
-        ...(nextStatus === 'posted' ? { posted_at: new Date().toISOString() } : {}),
       }
 
-      let siId = editSI?.id
-      if (isNew) {
-        const { data: inserted, error: insertErr } = await supabase
-          .from('sales_invoices').insert(payload).select('id').single()
-        if (insertErr) throw insertErr
-        siId = inserted.id
-      } else {
-        const { error: updateErr } = await supabase.from('sales_invoices')
-          .update(payload).eq('id', siId!)
-        if (updateErr) throw updateErr
-      }
+      const linesPayload = lines
+        .filter(l => l.description.trim())
+        .map((l, i) => ({
+          line_number: i + 1,
+          item_id: l.item_id || null,
+          description: l.description,
+          quantity: l.quantity,
+          uom_id: l.uom_id || null,
+          unit_price: l.unit_price,
+          discount_percent: l.discount_percent,
+          discount_amount: l.discount_amount,
+          net_amount: l.net_amount,
+          vat_code_id: l.vat_code_id || null,
+          vat_amount: l.vat_amount,
+          total_amount: l.total_amount,
+          revenue_account_id: l.revenue_account_id || null,
+        }))
 
-      // Upsert lines
-      const validLines = lines.filter(l => l.description.trim())
-      await supabase.from('sales_invoice_lines').delete().eq('sales_invoice_id', siId!)
-      if (validLines.length > 0) {
-        const { error: lineErr } = await supabase.from('sales_invoice_lines').insert(
-          validLines.map((l, i) => ({
-            sales_invoice_id: siId!,
-            company_id: companyId,
-            line_number: i + 1,
-            item_id: l.item_id || null,
-            description: l.description,
-            quantity: l.quantity,
-            uom_id: l.uom_id || null,
-            unit_price: l.unit_price,
-            discount_percent: l.discount_percent,
-            discount_amount: l.discount_amount,
-            net_amount: l.net_amount,
-            vat_code_id: l.vat_code_id || null,
-            vat_amount: l.vat_amount,
-            total_amount: l.total_amount,
-            revenue_account_id: l.revenue_account_id || null,
-          }))
-        )
-        if (lineErr) throw lineErr
+      const { data: siId, error: saveErr } = await supabase.rpc('fn_save_sales_invoice', {
+        p_invoice_id: isNew ? null : editSI!.id,
+        p_header: header,
+        p_lines: linesPayload,
+      })
+      if (saveErr) throw saveErr
+
+      // Status transitions: approve first if going to approved or posted
+      const currentStatus = isNew ? 'draft' : (editSI?.status || 'draft')
+      if ((nextStatus === 'approved' || nextStatus === 'posted') && currentStatus === 'draft') {
+        const { error: appErr } = await supabase.rpc('fn_approve_sales_invoice', { p_invoice_id: siId })
+        if (appErr) throw appErr
+      }
+      if (nextStatus === 'posted') {
+        const { error: postErr } = await supabase.rpc('fn_post_sales_invoice', { p_invoice_id: siId })
+        if (postErr) throw postErr
       }
 
       setMode('list')
@@ -468,13 +448,15 @@ export default function SalesInvoicePage() {
     setSaving(false)
   }
 
-  // Void
+  // Void — SECURITY DEFINER RPC bypasses RLS for posted/approved rows
   const doVoid = async () => {
     if (!editSI || !voidReason) return
     setSaving(true)
-    const { error: e } = await supabase.from('sales_invoices')
-      .update({ status: 'cancelled', void_reason_id: voidReason, memo: voidMemo || editSI.memo })
-      .eq('id', editSI.id)
+    const { error: e } = await supabase.rpc('fn_void_sales_invoice', {
+      p_invoice_id: editSI.id,
+      p_void_reason_id: voidReason,
+      p_memo: voidMemo || null,
+    })
     if (e) { setError(e.message); setSaving(false); return }
     setShowVoid(false)
     setMode('list')

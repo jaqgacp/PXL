@@ -4,10 +4,10 @@ import { useAppCtx } from '@/lib/context'
 
 type TaxCode = { id: string; code: string; description: string; tax_type: string; rate: number; is_active: boolean }
 type VatCode = { id: string; tax_code_id: string; vat_code: string; description: string; vat_classification: string; transaction_type: string; relief_category: string | null; is_active: boolean; tax_codes?: { code: string; rate: number } }
-type ATCCode = { id: string; atc_code: string; description: string; tax_type: string; rate: number; is_active: boolean }
-type EWTCode = { id: string; company_id: string; tax_code_id: string; ewt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { atc_code: string }; tax_codes?: { code: string } }
-type FWTCode = { id: string; company_id: string; tax_code_id: string; fwt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { atc_code: string }; tax_codes?: { code: string } }
-type PTCode  = { id: string; company_id: string; tax_code_id: string; pt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { atc_code: string }; tax_codes?: { code: string } }
+type ATCCode = { id: string; code: string; description: string; tax_category: string; rate: number; is_active: boolean }
+type EWTCode = { id: string; company_id: string; tax_code_id: string; ewt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { code: string }; tax_codes?: { code: string } }
+type FWTCode = { id: string; company_id: string; tax_code_id: string; fwt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { code: string }; tax_codes?: { code: string } }
+type PTCode  = { id: string; company_id: string; tax_code_id: string; pt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { code: string }; tax_codes?: { code: string } }
 type Company = { id: string; registered_name: string }
 
 type Tab = 'tax_codes' | 'vat_codes' | 'ewt_codes' | 'fwt_codes' | 'pt_codes' | 'atc_codes'
@@ -65,14 +65,14 @@ export default function TaxSetupPage() {
   const fetchAll = async () => {
     supabase.from('tax_codes').select('*').order('tax_type').then(({ data }) => setTaxCodes(data || []))
     supabase.from('vat_codes').select('*, tax_codes(code,rate)').order('vat_code').then(({ data }) => setVatCodes((data as VatCode[]) || []))
-    supabase.from('atc_codes').select('*').order('atc_code').then(({ data }) => setATCCodes(data || []))
+    supabase.from('atc_codes').select('*').order('code').then(({ data }) => setATCCodes(data || []))
     supabase.from('companies').select('id,registered_name').order('registered_name').then(({ data }) => setCompanies(data || []))
   }
   const fetchCompanyCodes = async (coid: string) => {
     if (!coid) return
-    supabase.from('ewt_codes').select('*, atc_codes(atc_code), tax_codes(code)').eq('company_id', coid).order('ewt_code').then(({ data }) => setEWTCodes((data as EWTCode[]) || []))
-    supabase.from('fwt_codes').select('*, atc_codes(atc_code), tax_codes(code)').eq('company_id', coid).order('fwt_code').then(({ data }) => setFWTCodes((data as FWTCode[]) || []))
-    supabase.from('percentage_tax_codes').select('*, atc_codes(atc_code), tax_codes(code)').eq('company_id', coid).order('pt_code').then(({ data }) => setPTCodes((data as PTCode[]) || []))
+    supabase.from('ewt_codes').select('*, atc_codes(code), tax_codes(code)').eq('company_id', coid).order('ewt_code').then(({ data }) => setEWTCodes((data as EWTCode[]) || []))
+    supabase.from('fwt_codes').select('*, atc_codes(code), tax_codes(code)').eq('company_id', coid).order('fwt_code').then(({ data }) => setFWTCodes((data as FWTCode[]) || []))
+    supabase.from('percentage_tax_codes').select('*, atc_codes(code), tax_codes(code)').eq('company_id', coid).order('pt_code').then(({ data }) => setPTCodes((data as PTCode[]) || []))
   }
 
   useEffect(() => { fetchAll() }, [])
@@ -173,7 +173,7 @@ export default function TaxSetupPage() {
   const q = search.toLowerCase()
   const filtTax = taxCodes.filter(r => (!filterType || r.tax_type === filterType) && (!q || r.code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
   const filtVAT = vatCodes.filter(r => (!filterType || r.vat_classification === filterType) && (!q || r.vat_code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
-  const filtATC = atcCodes.filter(r => (!filterType || r.tax_type === filterType) && (!q || r.atc_code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
+  const filtATC = atcCodes.filter(r => (!filterType || r.tax_category === filterType) && (!q || r.code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
   const filtEWT = ewtCodes.filter(r => (!q || r.ewt_code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
   const filtFWT = fwtCodes.filter(r => (!q || r.fwt_code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
   const filtPT  = ptCodes.filter(r => (!q || r.pt_code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
@@ -314,7 +314,7 @@ export default function TaxSetupPage() {
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono font-medium text-gray-900">{r.ewt_code}</td>
                   <td className="px-4 py-3 text-gray-700">{r.description}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-indigo-700">{r.atc_codes?.atc_code}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-indigo-700">{r.atc_codes?.code}</td>
                   <td className="px-4 py-3 font-mono">{r.rate}%</td>
                   <td className="px-4 py-3 text-xs">{r.form_type}</td>
                   <td className="px-4 py-3">{badge(r.is_active)}</td>
@@ -342,7 +342,7 @@ export default function TaxSetupPage() {
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono font-medium text-gray-900">{r.fwt_code}</td>
                   <td className="px-4 py-3 text-gray-700">{r.description}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-indigo-700">{r.atc_codes?.atc_code}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-indigo-700">{r.atc_codes?.code}</td>
                   <td className="px-4 py-3 font-mono">{r.rate}%</td>
                   <td className="px-4 py-3 text-xs">{r.form_type}</td>
                   <td className="px-4 py-3">{badge(r.is_active)}</td>
@@ -370,7 +370,7 @@ export default function TaxSetupPage() {
                 <tr key={r.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-mono font-medium text-gray-900">{r.pt_code}</td>
                   <td className="px-4 py-3 text-gray-700">{r.description}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-indigo-700">{r.atc_codes?.atc_code}</td>
+                  <td className="px-4 py-3 font-mono text-xs text-indigo-700">{r.atc_codes?.code}</td>
                   <td className="px-4 py-3 font-mono">{r.rate}%</td>
                   <td className="px-4 py-3 text-xs">{r.form_type}</td>
                   <td className="px-4 py-3">{badge(r.is_active)}</td>
@@ -396,9 +396,9 @@ export default function TaxSetupPage() {
             <tbody className="divide-y divide-gray-100">
               {filtATC.map(r => (
                 <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono font-medium text-gray-900">{r.atc_code}</td>
+                  <td className="px-4 py-3 font-mono font-medium text-gray-900">{r.code}</td>
                   <td className="px-4 py-3 text-gray-700">{r.description}</td>
-                  <td className="px-4 py-3"><span className="uppercase text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{r.tax_type}</span></td>
+                  <td className="px-4 py-3"><span className="uppercase text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{r.tax_category}</span></td>
                   <td className="px-4 py-3 font-mono">{r.rate}%</td>
                   <td className="px-4 py-3">{badge(r.is_active)}</td>
                 </tr>
@@ -494,7 +494,7 @@ export default function TaxSetupPage() {
                 <div><label className={lbl}>ATC *</label>
                   <select className={inp} value={ewtForm.atc_id} onChange={e => setEwtForm(f => ({ ...f, atc_id: e.target.value }))}>
                     <option value="">— select —</option>
-                    {atcCodes.filter(a => a.tax_type === 'ewt').map(a => <option key={a.id} value={a.id}>{a.atc_code} — {a.description}</option>)}
+                    {atcCodes.filter(a => a.tax_category === 'ewt').map(a => <option key={a.id} value={a.id}>{a.code} — {a.description}</option>)}
                   </select>
                 </div>
               </div>
@@ -529,7 +529,7 @@ export default function TaxSetupPage() {
                 <div><label className={lbl}>ATC *</label>
                   <select className={inp} value={fwtForm.atc_id} onChange={e => setFwtForm(f => ({ ...f, atc_id: e.target.value }))}>
                     <option value="">— select —</option>
-                    {atcCodes.filter(a => a.tax_type === 'fwt').map(a => <option key={a.id} value={a.id}>{a.atc_code} — {a.description}</option>)}
+                    {atcCodes.filter(a => a.tax_category === 'fwt').map(a => <option key={a.id} value={a.id}>{a.code} — {a.description}</option>)}
                   </select>
                 </div>
               </div>
@@ -564,7 +564,7 @@ export default function TaxSetupPage() {
                 <div><label className={lbl}>ATC *</label>
                   <select className={inp} value={ptForm.atc_id} onChange={e => setPtForm(f => ({ ...f, atc_id: e.target.value }))}>
                     <option value="">— select —</option>
-                    {atcCodes.map(a => <option key={a.id} value={a.id}>{a.atc_code} — {a.description}</option>)}
+                    {atcCodes.map(a => <option key={a.id} value={a.id}>{a.code} — {a.description}</option>)}
                   </select>
                 </div>
               </div>
