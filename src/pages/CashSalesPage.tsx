@@ -58,7 +58,7 @@ export default function CashSalesPage() {
 
   // Form state
   const [fDate, setFDate] = useState(today())
-  const [fBranch, setFBranch] = useState('')
+  const [fBranch] = useState('')
   const [fCustomer, setFCustomer] = useState('')
   const [fCustomerName, setFCustomerName] = useState('')
   const [fCustomerTIN, setFCustomerTIN] = useState('')

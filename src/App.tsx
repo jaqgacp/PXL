@@ -46,6 +46,18 @@ import SLSPage from '@/pages/SLSPage'
 import CustomerReturnsPage from '@/pages/CustomerReturnsPage'
 import VendorBillsPage from '@/pages/VendorBillsPage'
 import PaymentVouchersPage from '@/pages/PaymentVouchersPage'
+import PurchaseOrdersPage from '@/pages/PurchaseOrdersPage'
+import ReceivingReportsPage from '@/pages/ReceivingReportsPage'
+import CashPurchasesPage from '@/pages/CashPurchasesPage'
+import VendorCreditsPage from '@/pages/VendorCreditsPage'
+import SupplierDebitMemosPage from '@/pages/SupplierDebitMemosPage'
+import PurchaseReturnsPage from '@/pages/PurchaseReturnsPage'
+import APAgingPage from '@/pages/APAgingPage'
+import PaymentMonitoringPage from '@/pages/PaymentMonitoringPage'
+import InputVATReviewPage from '@/pages/InputVATReviewPage'
+import EWTSummaryPage from '@/pages/EWTSummaryPage'
+import Form2307IssuedPage from '@/pages/Form2307IssuedPage'
+import PurchaseRegistersPage from '@/pages/PurchaseRegistersPage'
 
 const WelcomeScreen = () => (
   <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
@@ -129,6 +141,18 @@ export default function App() {
         <Route path="/customer-returns" element={<CustomerReturnsPage />} />
         <Route path="/vendor-bills" element={<VendorBillsPage />} />
         <Route path="/payment-vouchers" element={<PaymentVouchersPage />} />
+        <Route path="/purchase-orders" element={<PurchaseOrdersPage />} />
+        <Route path="/receiving-reports" element={<ReceivingReportsPage />} />
+        <Route path="/cash-purchases" element={<CashPurchasesPage />} />
+        <Route path="/vendor-credits" element={<VendorCreditsPage />} />
+        <Route path="/supplier-debit-memos" element={<SupplierDebitMemosPage />} />
+        <Route path="/purchase-returns" element={<PurchaseReturnsPage />} />
+        <Route path="/ap-aging" element={<APAgingPage />} />
+        <Route path="/payment-monitoring" element={<PaymentMonitoringPage />} />
+        <Route path="/input-vat-review" element={<InputVATReviewPage />} />
+        <Route path="/ewt-summary" element={<EWTSummaryPage />} />
+        <Route path="/2307-issued-review" element={<Form2307IssuedPage />} />
+        <Route path="/purchase-registers" element={<PurchaseRegistersPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppShell>

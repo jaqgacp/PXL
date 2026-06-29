@@ -82,15 +82,27 @@ const NAV: NavItem[] = [
   {
     label: 'Purchasing', feature: 'accounts_payable', groups: [
       { group: 'Transactions', items: [
-        s('Purchase Orders'), s('Receiving Reports'),
+        s('Purchase Orders', 'purchase-orders'),
+        s('Receiving Reports', 'receiving-reports'),
         s('Vendor Bills', 'vendor-bills'),
-        s('Cash Purchases'),
+        s('Cash Purchases', 'cash-purchases'),
         s('Payment Vouchers', 'payment-vouchers'),
-        s('Vendor Credits'), s('Debit Memos to Suppliers'), s('Purchase Returns'),
+        s('Vendor Credits', 'vendor-credits'),
+        s('Debit Memos to Suppliers', 'supplier-debit-memos'),
+        s('Purchase Returns', 'purchase-returns'),
       ]},
-      { group: 'Payables', items: [s('Supplier Ledger'), s('AP Aging'), s('Payment Monitoring')] },
-      { group: 'Tax Review', items: [s('Input VAT Review'), s('EWT Summary'), s('2307 Issued Review')] },
-      { group: 'Registers', items: [s('Vendor Bill Register'), s('Payment Register'), s('Debit Memo Register'), s('SLP')] },
+      { group: 'Payables', items: [
+        s('AP Aging / Supplier Ledger', 'ap-aging'),
+        s('Payment Monitoring', 'payment-monitoring'),
+      ]},
+      { group: 'Tax Review', items: [
+        s('Input VAT Review', 'input-vat-review'),
+        s('EWT Summary', 'ewt-summary'),
+        s('2307 Issued Review', '2307-issued-review'),
+      ]},
+      { group: 'Registers', items: [
+        s('Purchase Registers', 'purchase-registers'),
+      ]},
     ]
   },
   {
@@ -190,6 +202,18 @@ const PAGE_LABELS: Record<string, string> = {
   'customer-returns':       'Customer Returns',
   'vendor-bills':           'Vendor Bills',
   'payment-vouchers':       'Payment Vouchers',
+  'purchase-orders':        'Purchase Orders',
+  'receiving-reports':      'Receiving Reports',
+  'cash-purchases':         'Cash Purchases',
+  'vendor-credits':         'Vendor Credits',
+  'supplier-debit-memos':   'Debit Memos to Suppliers',
+  'purchase-returns':       'Purchase Returns',
+  'ap-aging':               'AP Aging & Supplier Ledger',
+  'payment-monitoring':     'Payment Monitoring',
+  'input-vat-review':       'Input VAT Review',
+  'ewt-summary':            'EWT Summary',
+  '2307-issued-review':     '2307 Issued Review',
+  'purchase-registers':     'Purchase Registers',
 }
 
 function findSection(page: string): string | null {

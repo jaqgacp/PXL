@@ -569,7 +569,7 @@ export default function ReceiptsPage() {
                           {l.cwt_amount > 0 ? (
                             readOnly ? (
                               <span className="font-mono text-xs text-gray-600">
-                                {atcCodes.find(a => a.id === l.atc_code_id)?.atc_code || '—'}
+                                {atcCodes.find(a => a.id === l.atc_code_id)?.code || '—'}
                               </span>
                             ) : (
                               <select

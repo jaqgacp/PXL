@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { StatusBadge } from '@/components/ui/shared'
 
 // ── Types ─────────────────────────────────────────────────────
 type PVStatus = 'draft' | 'posted' | 'cancelled'
@@ -286,12 +286,12 @@ export default function PaymentVouchersPage() {
               <tr key={pv.id} onClick={() => openView(pv)}
                 className={`cursor-pointer hover:bg-gray-50/60 ${pv.status === 'cancelled' ? 'opacity-50' : ''}`}>
                 <td className="px-3 py-2.5 font-mono text-xs font-semibold text-gray-900">{pv.voucher_number}</td>
-                <DateCell value={pv.voucher_date} />
+                <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{pv.voucher_date}</td>
                 <td className="px-3 py-2.5 text-xs text-gray-900 max-w-[160px] truncate">{pv.supplier_name_snapshot}</td>
                 <td className="px-3 py-2.5 text-xs text-gray-500">{pv.reference_number || '—'}</td>
-                <AmountCell value={pv.total_amount} />
-                <AmountCell value={pv.total_ewt} accent />
-                <AmountCell value={pv.total_amount + pv.total_ewt} bold />
+                <td className="px-3 py-2.5 text-right font-mono text-xs text-gray-700">{fmt(pv.total_amount)}</td>
+                <td className="px-3 py-2.5 text-right font-mono text-xs text-blue-600">{fmt(pv.total_ewt)}</td>
+                <td className="px-3 py-2.5 text-right font-mono text-xs font-bold text-gray-900">{fmt(pv.total_amount + pv.total_ewt)}</td>
                 <td className="px-3 py-2.5"><StatusBadge status={pv.status} /></td>
               </tr>
             ))}

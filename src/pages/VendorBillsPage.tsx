@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { StatusBadge } from '@/components/ui/shared'
 
 // ── Types ─────────────────────────────────────────────────────
 type VBStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
@@ -335,12 +335,12 @@ export default function VendorBillsPage() {
                   className={`cursor-pointer hover:bg-gray-50/60 ${vb.status === 'cancelled' ? 'opacity-50' : ''}`}>
                   <td className="px-3 py-2.5 font-mono text-xs font-semibold text-gray-900 whitespace-nowrap">{vb.bill_number}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{vb.supplier_invoice_number || '—'}</td>
-                  <DateCell value={vb.bill_date} />
-                  <DateCell value={vb.due_date} />
+                  <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{vb.bill_date}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{vb.due_date || '—'}</td>
                   <td className="px-3 py-2.5 text-xs text-gray-900 max-w-[160px] truncate">{vb.supplier_name_snapshot}</td>
-                  <AmountCell value={vb.total_taxable_amount} />
-                  <AmountCell value={vb.total_input_vat_amount} accent />
-                  <AmountCell value={vb.total_amount} bold />
+                  <td className="px-3 py-2.5 text-right font-mono text-xs text-gray-700">{fmt(vb.total_taxable_amount)}</td>
+                  <td className="px-3 py-2.5 text-right font-mono text-xs text-blue-600">{fmt(vb.total_input_vat_amount)}</td>
+                  <td className="px-3 py-2.5 text-right font-mono text-xs font-bold text-gray-900">{fmt(vb.total_amount)}</td>
                   <td className="px-3 py-2.5"><StatusBadge status={vb.status} /></td>
                 </tr>
               ))}
@@ -475,7 +475,7 @@ export default function VendorBillsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {lines.map((l, idx) => (
+              {lines.map((l) => (
                 <tr key={l._key}>
                   <td className="px-2 py-1.5">
                     <select value={l.item_id} disabled={readOnly} onChange={e => pickItem(l._key, e.target.value)}
