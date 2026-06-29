@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import Papa from 'papaparse'
 import { supabase } from '@/lib/supabase'
 
 type RDO = { id: string; rdo_code: string; rdo_name: string }
@@ -210,55 +211,52 @@ export default function CompanySetupPage() {
   }
 
   // Parse and validate CSV
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
     setImportDone(false)
-    const text = await file.text()
-    const lines = text.split('\n').filter(l => l.trim())
-    const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
 
-    const rows: ImportRow[] = lines.slice(1).map((line, idx) => {
-      const vals = line.split(',')
-      const data: Record<string, string> = {}
-      headers.forEach((h, i) => { data[h] = vals[i]?.trim() || '' })
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      transformHeader: (h) => h.trim().toLowerCase(),
+      transform: (v) => v.trim(),
+      complete: ({ data }) => {
+        const rows: ImportRow[] = data.map((record, idx) => {
+          const errors: string[] = []
 
-      const errors: string[] = []
+          REQUIRED_COLUMNS.forEach(col => {
+            if (!record[col]) errors.push(`"${col}" is required`)
+          })
 
-      // Required field check
-      REQUIRED_COLUMNS.forEach(col => {
-        if (!data[col]) errors.push(`"${col}" is required`)
-      })
+          if (record.entity_type && !VALID_ENTITY_TYPES.includes(record.entity_type))
+            errors.push(`entity_type must be one of: ${VALID_ENTITY_TYPES.join(', ')}`)
+          if (record.tax_registration && !VALID_TAX_REG.includes(record.tax_registration))
+            errors.push(`tax_registration must be one of: ${VALID_TAX_REG.join(', ')}`)
+          if (record.accounting_period && !VALID_PERIODS.includes(record.accounting_period))
+            errors.push(`accounting_period must be: calendar or fiscal`)
 
-      // Enum validation
-      if (data.entity_type && !VALID_ENTITY_TYPES.includes(data.entity_type))
-        errors.push(`entity_type must be one of: ${VALID_ENTITY_TYPES.join(', ')}`)
-      if (data.tax_registration && !VALID_TAX_REG.includes(data.tax_registration))
-        errors.push(`tax_registration must be one of: ${VALID_TAX_REG.join(', ')}`)
-      if (data.accounting_period && !VALID_PERIODS.includes(data.accounting_period))
-        errors.push(`accounting_period must be: calendar or fiscal`)
+          if (record.accounting_period === 'fiscal' && !record.fiscal_start_month)
+            errors.push('"fiscal_start_month" is required when accounting_period is "fiscal"')
 
-      // Fiscal year requires fiscal_start_month
-      if (data.accounting_period === 'fiscal' && !data.fiscal_start_month)
-        errors.push('"fiscal_start_month" is required when accounting_period is "fiscal"')
+          if (record.tin && !/^\d{3}-\d{3}-\d{3}/.test(record.tin))
+            errors.push('TIN format should be 000-000-000-00000')
 
-      // TIN format check
-      if (data.tin && !/^\d{3}-\d{3}-\d{3}/.test(data.tin))
-        errors.push('TIN format should be 000-000-000-00000')
+          if (record.tin && companies.some(c => c.tin === record.tin))
+            errors.push(`TIN "${record.tin}" already exists in the system`)
 
-      // Duplicate TIN check against existing companies
-      if (data.tin && companies.some(c => c.tin === data.tin))
-        errors.push(`TIN "${data.tin}" already exists in the system`)
+          return {
+            row: idx + 2,
+            data: record,
+            status: errors.length > 0 ? 'error' : 'pending',
+            error: errors.join(' | '),
+          }
+        })
 
-      return {
-        row: idx + 2,
-        data,
-        status: errors.length > 0 ? 'error' : 'pending',
-        error: errors.join(' | '),
-      }
+        setImportRows(rows)
+      },
     })
 
-    setImportRows(rows)
     e.target.value = ''
   }
 

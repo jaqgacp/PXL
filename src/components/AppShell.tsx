@@ -1,39 +1,8 @@
 import React, { useState, useEffect } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { AppContextProvider, useAppCtx } from '@/lib/context'
 import type { Session } from '@supabase/supabase-js'
-
-import CompanySetupPage from '@/pages/CompanySetupPage'
-import BranchSetupPage from '@/pages/BranchSetupPage'
-import DepartmentSetupPage from '@/pages/DepartmentSetupPage'
-import FiscalYearsPage from '@/pages/FiscalYearsPage'
-import ChartOfAccountsPage from '@/pages/ChartOfAccountsPage'
-import CurrencySetupPage from '@/pages/CurrencySetupPage'
-import FeatureEnablementPage from '@/pages/FeatureEnablementPage'
-import NumberSeriesPage from '@/pages/NumberSeriesPage'
-import ApprovalWorkflowPage from '@/pages/ApprovalWorkflowPage'
-import AuditLogPage from '@/pages/AuditLogPage'
-import CustomersPage from '@/pages/CustomersPage'
-import SuppliersPage from '@/pages/SuppliersPage'
-import PaymentTermsPage from '@/pages/PaymentTermsPage'
-import ItemCatalogPage from '@/pages/ItemCatalogPage'
-import TaxSetupPage from '@/pages/TaxSetupPage'
-import ComplianceProfilePage from '@/pages/ComplianceProfilePage'
-import TaxCalendarPage from '@/pages/TaxCalendarPage'
-import BIRFormConfigPage from '@/pages/BIRFormConfigPage'
-import DashboardPage from '@/pages/DashboardPage'
-import SalesInvoicePage from '@/pages/SalesInvoicePage'
-import ReceiptsPage from '@/pages/ReceiptsPage'
-import CreditMemosPage from '@/pages/CreditMemosPage'
-import DebitMemosPage from '@/pages/DebitMemosPage'
-import QuotationsPage from '@/pages/QuotationsPage'
-import SalesOrdersPage from '@/pages/SalesOrdersPage'
-import DeliveryReceiptsPage from '@/pages/DeliveryReceiptsPage'
-import ARAgingPage from '@/pages/ARAgingPage'
-import SalesTaxReviewPage from '@/pages/SalesTaxReviewPage'
-import SalesRegistersPage from '@/pages/SalesRegistersPage'
-import EWTWorkingPapersPage from '@/pages/EWTWorkingPapersPage'
-import Form2307ReceivedPage from '@/pages/Form2307ReceivedPage'
 
 type SubItem = { name: string; page: string }
 type Group = { group: string; items: SubItem[] }
@@ -179,7 +148,6 @@ const NAV: NavItem[] = [
   },
 ]
 
-// Flat map of page → breadcrumb label for display
 const PAGE_LABELS: Record<string, string> = {
   'company-setup': 'Company Setup',
   'branch-setup': 'Branch Setup',
@@ -214,7 +182,15 @@ const PAGE_LABELS: Record<string, string> = {
   '2307-received-review':   '2307 Received Review',
 }
 
-// Context selector group — embedded inside the nav bar on the right side
+function findSection(page: string): string | null {
+  for (const nav of NAV) {
+    for (const group of nav.groups) {
+      if (group.items.some(item => item.page === page)) return nav.label
+    }
+  }
+  return null
+}
+
 function ContextSelectors() {
   const { companyId, branchId, periodId, setCompanyId, setBranchId, setPeriodId } = useAppCtx()
   const [companies, setCompanies] = useState<Array<{ id: string; registered_name: string }>>([])
@@ -254,12 +230,15 @@ function ContextSelectors() {
   )
 }
 
-function AppShellInner({ session }: { session: Session }) {
+function AppShellInner({ session, children }: { session: Session; children: React.ReactNode }) {
+  const rrNavigate = useNavigate()
+  const location = useLocation()
   const [activeMenu, setActiveMenu] = useState<string | null>(null)
   const [activeGroup, setActiveGroup] = useState<string | null>(null)
   const [menuLeft, setMenuLeft] = useState(0)
-  const [currentPage, setCurrentPage] = useState('')
-  const [breadcrumb, setBreadcrumb] = useState<{ section: string; page: string } | null>(null)
+
+  const currentPage = location.pathname.slice(1) // e.g. "company-setup"
+  const breadcrumbSection = currentPage ? findSection(currentPage) : null
 
   const openMenu = (label: string, left = 0) => {
     setActiveMenu(label)
@@ -270,58 +249,14 @@ function AppShellInner({ session }: { session: Session }) {
 
   const closeMenu = () => { setActiveMenu(null); setActiveGroup(null) }
 
-  const navigate = (page: string, section?: string) => {
+  const navigate = (page: string) => {
     if (!page) return
-    setCurrentPage(page)
-    setBreadcrumb(section ? { section, page } : null)
+    rrNavigate(`/${page}`)
     closeMenu()
   }
 
   const currentNav = NAV.find(n => n.label === activeMenu)
   const currentGroupItems = currentNav?.groups.find(g => g.group === activeGroup)?.items ?? []
-
-  const renderPage = () => {
-    switch (currentPage) {
-      case 'company-setup':    return <CompanySetupPage />
-      case 'branch-setup':     return <BranchSetupPage />
-      case 'department-setup': return <DepartmentSetupPage />
-      case 'fiscal-years':     return <FiscalYearsPage />
-      case 'chart-of-accounts': return <ChartOfAccountsPage />
-      case 'currency-setup':   return <CurrencySetupPage />
-      case 'feature-enablement': return <FeatureEnablementPage />
-      case 'number-series':    return <NumberSeriesPage />
-      case 'approval-workflow': return <ApprovalWorkflowPage />
-      case 'audit-log':        return <AuditLogPage />
-      case 'customers':        return <CustomersPage />
-      case 'suppliers':        return <SuppliersPage />
-      case 'payment-terms':    return <PaymentTermsPage />
-      case 'item-catalog':     return <ItemCatalogPage />
-      case 'tax-setup':        return <TaxSetupPage />
-      case 'compliance-profile': return <ComplianceProfilePage />
-      case 'tax-calendar':     return <TaxCalendarPage />
-      case 'bir-form-config':  return <BIRFormConfigPage />
-      case 'dashboard':        return <DashboardPage />
-      case 'sales-invoices':   return <SalesInvoicePage />
-      case 'receipts':         return <ReceiptsPage />
-      case 'credit-memos':     return <CreditMemosPage />
-      case 'debit-memos':      return <DebitMemosPage />
-      case 'quotations':       return <QuotationsPage />
-      case 'sales-orders':     return <SalesOrdersPage />
-      case 'delivery-receipts': return <DeliveryReceiptsPage />
-      case 'ar-aging':          return <ARAgingPage />
-      case 'sales-tax-review':  return <SalesTaxReviewPage />
-      case 'sales-registers':       return <SalesRegistersPage />
-      case 'ewt-working-papers':    return <EWTWorkingPapersPage />
-      case '2307-received-review':  return <Form2307ReceivedPage />
-      default: return (
-        <div className="bg-white rounded-lg border border-gray-200 p-16 text-center">
-          <h1 className="text-xl font-semibold text-gray-900">Welcome to PXL</h1>
-          <p className="text-sm text-gray-500 mt-1">Philippine Accounting ERP</p>
-          <p className="text-xs text-gray-400 mt-3">Select a module from the navigation above</p>
-        </div>
-      )
-    }
-  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -335,7 +270,7 @@ function AppShellInner({ session }: { session: Session }) {
 
         <div className="flex items-center h-14">
           {/* Logo */}
-          <span onClick={() => { setCurrentPage(''); setBreadcrumb(null); closeMenu() }}
+          <span onClick={() => { rrNavigate('/'); closeMenu() }}
             className="font-bold text-white text-sm tracking-tight px-4 cursor-pointer shrink-0">
             PXL
           </span>
@@ -348,7 +283,7 @@ function AppShellInner({ session }: { session: Session }) {
                 onMouseEnter={(e) => openMenu(item.label, (e.currentTarget as HTMLElement).getBoundingClientRect().left)}
                 onClick={() => { if (item.page) { navigate(item.page); closeMenu() } }}
                 className={`shrink-0 px-3 h-14 text-sm transition-colors border-b-2 whitespace-nowrap ${
-                  activeMenu === item.label || currentPage === item.page
+                  activeMenu === item.label || (item.page !== undefined && location.pathname === `/${item.page}`)
                     ? 'text-white border-blue-400 bg-gray-800'
                     : 'text-gray-300 border-transparent hover:text-white hover:bg-gray-800'
                 }`}>
@@ -400,7 +335,7 @@ function AppShellInner({ session }: { session: Session }) {
               </p>
               {currentGroupItems.map(mod => (
                 <button key={mod.name}
-                  onClick={() => navigate(mod.page, activeMenu)}
+                  onClick={() => navigate(mod.page)}
                   disabled={!mod.page}
                   className={`w-full text-left px-4 py-1.5 text-sm transition-colors whitespace-nowrap ${
                     mod.page
@@ -423,26 +358,26 @@ function AppShellInner({ session }: { session: Session }) {
           {/* Breadcrumb */}
           {currentPage && (
             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-4">
-              <button onClick={() => { setCurrentPage(''); setBreadcrumb(null) }} className="hover:text-gray-700">Home</button>
-              {breadcrumb && <>
+              <button onClick={() => rrNavigate('/')} className="hover:text-gray-700">Home</button>
+              {breadcrumbSection && <>
                 <span>›</span>
-                <span className="text-gray-500">{breadcrumb.section}</span>
+                <span className="text-gray-500">{breadcrumbSection}</span>
               </>}
               <span>›</span>
               <span className="text-gray-700 font-medium">{PAGE_LABELS[currentPage] || currentPage}</span>
             </div>
           )}
-          {renderPage()}
+          {children}
         </div>
       </main>
     </div>
   )
 }
 
-export default function AppShell({ session }: { session: Session }) {
+export default function AppShell({ session, children }: { session: Session; children: React.ReactNode }) {
   return (
     <AppContextProvider>
-      <AppShellInner session={session} />
+      <AppShellInner session={session}>{children}</AppShellInner>
     </AppContextProvider>
   )
 }

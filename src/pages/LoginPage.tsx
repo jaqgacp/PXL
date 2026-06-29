@@ -11,7 +11,7 @@ export default function LoginPage() {
     setLoading(true)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: 'https://upgraded-waddle-x57x5xw4px5wcvpgv-5173.app.github.dev' }
+      options: { redirectTo: `${window.location.origin}/auth/callback` }
     })
     if (error) setError(error.message)
     setLoading(false)
