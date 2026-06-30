@@ -101,6 +101,8 @@ const GoodsIssuePage                    = lazy(() => import('@/pages/GoodsIssueP
 const PhysicalCountPage                 = lazy(() => import('@/pages/PhysicalCountPage'))
 const InventoryMovementsPage            = lazy(() => import('@/pages/InventoryMovementsPage'))
 const InventoryValuationPage            = lazy(() => import('@/pages/InventoryValuationPage'))
+const WarehouseStockSettingsPage        = lazy(() => import('@/pages/WarehouseStockSettingsPage'))
+const EmployeesPage                     = lazy(() => import('@/pages/EmployeesPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -246,6 +248,8 @@ export default function App() {
             <Route path="/physical-count" element={<PhysicalCountPage />} />
             <Route path="/inventory-movements" element={<InventoryMovementsPage />} />
             <Route path="/inventory-valuation" element={<InventoryValuationPage />} />
+            <Route path="/warehouse-stock-settings" element={<WarehouseStockSettingsPage />} />
+            <Route path="/employees" element={<EmployeesPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

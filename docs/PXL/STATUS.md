@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-30
 Build: ✅ Clean (zero TS errors)
-Migrations applied to Supabase: 001–028
+Migrations applied to Supabase: 001–029
 Migrations pending (written, not yet pushed): none
 
 ---
@@ -21,7 +21,7 @@ Migrations pending (written, not yet pushed): none
 | App shell — mega-menu, context bar (Company/Branch/Period), breadcrumbs | ✅ |
 | Shared UI library (DataTable, StatusBadge, LookupDialog, FormSection, AmountCell, DateCell, ConfirmDialog, AuditTrailSection) | ✅ |
 | Error boundary | ✅ |
-| Lazy-loaded routing — all 97 pages | ✅ |
+| Lazy-loaded routing — all 99 pages | ✅ |
 
 ---
 
@@ -63,6 +63,7 @@ Migrations pending (written, not yet pushed): none
 | 20260630000026_amortization_revenuerecon.sql | Amortization & Revenue Recognition schedule tables, RLS, posting functions | ✅ |
 | 20260630000027_fixed_assets.sql | Fixed Assets — 6 tables, schedule generator, 5 posting RPCs | ✅ |
 | 20260630000028_inventory.sql | Inventory — 11 tables, WAC/FIFO/Specific ID costing, 6 posting RPCs | ✅ |
+| 20260630000029_master_data_completion.sql | warehouse_item_settings + employees tables | ✅ |
 
 ---
 
@@ -98,8 +99,8 @@ Migrations pending (written, not yet pushed): none
 | Payment Terms | PaymentTermsPage.tsx | ✅ |
 | Bank Accounts | BankAccountsPage.tsx | ✅ |
 | Warehouses | WarehousesPage.tsx | ✅ |
-| Warehouse Stock Settings | — | ❌ |
-| Personnel / Employees Lite | — | ❌ |
+| Warehouse Stock Settings | WarehouseStockSettingsPage.tsx | ✅ |
+| Employees (Personnel Lite) | EmployeesPage.tsx | ✅ |
 
 ## Dashboard
 | Page | File | Status |
@@ -353,7 +354,7 @@ Migrations pending (written, not yet pushed): none
 |---|---|---|
 | Infrastructure | 5 | 0 |
 | Setup | 11 | 0 |
-| Master Data | 5 | 3 |
+| Master Data | 8 | 0 |
 | Dashboard | 1 | 0 |
 | Sales / AR | 16 | 0 |
 | Purchasing / AP | 14 | 0 |
@@ -365,4 +366,4 @@ Migrations pending (written, not yet pushed): none
 | BIR Books | 0 | 13 |
 | Audit & CAS | 0 | 11 |
 | Reports | 0 | 43 |
-| **TOTAL** | **97** | **109** |
+| **TOTAL** | **99** | **107** |

@@ -61,9 +61,9 @@ const NAV: NavItem[] = [
   },
   {
     label: 'Master Data', groups: [
-      { group: 'Parties', items: [s('Customers', 'customers'), s('Suppliers', 'suppliers'), s('Personnel / Employees Lite')] },
+      { group: 'Parties', items: [s('Customers', 'customers'), s('Suppliers', 'suppliers'), s('Employees', 'employees')] },
       { group: 'Items & Services', items: [s('Item Categories', 'item-catalog'), s('Units of Measure', 'item-catalog'), s('Items', 'item-catalog'), s('Services', 'item-catalog')] },
-      { group: 'Inventory Master', items: [s('Warehouses'), s('Warehouse Stock Settings')] },
+      { group: 'Inventory Master', items: [s('Warehouses', 'warehouses'), s('Warehouse Stock Settings', 'warehouse-stock-settings')] },
       { group: 'Shared', items: [s('Payment Terms', 'payment-terms')] },
       { group: 'Banking', items: [s('Bank Accounts', 'bank-accounts')] },
     ]
@@ -318,6 +318,8 @@ const PAGE_LABELS: Record<string, string> = {
   'physical-count':                    'Physical Count',
   'inventory-movements':               'Inventory Movements',
   'inventory-valuation':               'Inventory Valuation',
+  'warehouse-stock-settings':          'Warehouse Stock Settings',
+  'employees':                         'Employees',
 }
 
 function findSection(page: string): string | null {
