@@ -787,6 +787,7 @@ GROUP BY vc.id, vc.company_id, vc.credit_date, vc.supplier_tin_snapshot,
 
 -- ── vw_ewt_summary_ap: rebase on tax_detail_entries ───────────────────────────
 -- Eliminates reverse-derived tax base; uses actual stored base, rate, and ATC.
+DROP VIEW IF EXISTS vw_ewt_summary_ap;
 CREATE OR REPLACE VIEW vw_ewt_summary_ap AS
 SELECT
   tde.source_doc_id    AS transaction_id,
