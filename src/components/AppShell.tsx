@@ -139,8 +139,20 @@ const NAV: NavItem[] = [
   },
   {
     label: 'Fixed Assets', feature: 'fixed_assets', groups: [
-      { group: 'Operations', items: [s('Fixed Asset Dashboard'), s('Asset Register'), s('Asset Acquisition'), s('Depreciation'), s('Disposal'), s('Transfer'), s('Impairment')] },
-      { group: 'Setup', items: [s('Asset Categories'), s('Depreciation Profiles')] },
+      { group: 'Overview', items: [
+        s('Fixed Asset Dashboard', 'fixed-asset-dashboard'),
+        s('Asset Register', 'asset-register'),
+      ]},
+      { group: 'Transactions', items: [
+        s('Asset Acquisition', 'asset-acquisition'),
+        s('Depreciation Run', 'depreciation-run'),
+        s('Asset Disposal', 'asset-disposal'),
+        s('Asset Transfer', 'asset-transfer'),
+        s('Asset Impairment', 'asset-impairment'),
+      ]},
+      { group: 'Setup', items: [
+        s('Asset Categories', 'asset-categories'),
+      ]},
     ]
   },
   {
@@ -279,6 +291,14 @@ const PAGE_LABELS: Record<string, string> = {
   'amortization-run':                  'Amortization Run',
   'revenue-recognition-run':           'Revenue Recognition Run',
   'auto-reversal-run':                 'Auto Reversal Run',
+  'asset-categories':                  'Asset Categories Setup',
+  'fixed-asset-dashboard':             'Fixed Asset Dashboard',
+  'asset-register':                    'Asset Register',
+  'asset-acquisition':                 'Asset Acquisition',
+  'depreciation-run':                  'Depreciation Run',
+  'asset-disposal':                    'Asset Disposal',
+  'asset-transfer':                    'Asset Transfer',
+  'asset-impairment':                  'Asset Impairment (PAS 36)',
 }
 
 function findSection(page: string): string | null {

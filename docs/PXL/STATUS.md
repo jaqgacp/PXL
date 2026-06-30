@@ -2,8 +2,8 @@
 
 Last updated: 2026-06-30
 Build: ✅ Clean (zero TS errors)
-Migrations applied to Supabase: 001–020
-Migrations pending (written, not yet pushed): 021–026
+Migrations applied to Supabase: 001–026
+Migrations pending (written, not yet pushed): 027
 
 ---
 
@@ -54,12 +54,14 @@ Migrations pending (written, not yet pushed): 021–026
 | 20260629000018_purchasing_full.sql | Purchasing schema (full) | ✅ |
 | 20260629000019_hardening_v2.sql | C1 integrity hardening | ✅ |
 | 20260629000020_period_enforcement_ar.sql | Period enforcement for AR | ✅ |
-| 20260629000021_cm_dm_gl_pv_void_vc_apply.sql | CM/DM GL wiring, PV void, vendor credit apply | ⏳ |
-| 20260630000022_tax_ledger_completeness.sql | VAT breakdowns, form_2307_issuance_lines, rebased EWT views | ⏳ |
-| 20260630000023_banking_treasury_schema.sql | Banking & Treasury — 12 tables, RLS | ⏳ |
-| 20260630000024_banking_treasury_functions.sql | Banking & Treasury — posting functions, views | ⏳ |
-| 20260630000025_accounting_module.sql | Accounting — recurring templates, GL views, posting functions | ⏳ |
-| 20260630000026_amortization_revenuerecon.sql | Amortization & Revenue Recognition schedule tables, RLS, posting functions | ⏳ |
+| 20260629000021_cm_dm_gl_pv_void_vc_apply.sql | CM/DM GL wiring, PV void, vendor credit apply | ✅ |
+| 20260630000021_gap_fill.sql | Idempotent catch-up migration (content of 008–021) | ✅ |
+| 20260630000022_tax_ledger_completeness.sql | VAT breakdowns, form_2307_issuance_lines, rebased EWT views | ✅ |
+| 20260630000023_banking_treasury_schema.sql | Banking & Treasury — 12 tables, RLS | ✅ |
+| 20260630000024_banking_treasury_functions.sql | Banking & Treasury — posting functions, views | ✅ |
+| 20260630000025_accounting_module.sql | Accounting — recurring templates, GL views, posting functions | ✅ |
+| 20260630000026_amortization_revenuerecon.sql | Amortization & Revenue Recognition schedule tables, RLS, posting functions | ✅ |
+| 20260630000027_fixed_assets.sql | Fixed Assets — 6 tables, schedule generator, 5 posting RPCs | ⏳ |
 
 ---
 
@@ -176,18 +178,17 @@ Migrations pending (written, not yet pushed): 021–026
 
 ---
 
-## Fixed Assets Module
+## Fixed Assets Module (S11 — PAS 16 / PAS 36)
 | Page | File | Status |
 |---|---|---|
-| Fixed Asset Dashboard | — | ❌ |
-| Asset Register | — | ❌ |
-| Asset Acquisition | — | ❌ |
-| Depreciation | — | ❌ |
-| Asset Disposal | — | ❌ |
-| Asset Transfer | — | ❌ |
-| Impairment | — | ❌ |
-| Asset Categories (Setup) | — | ❌ |
-| Depreciation Profiles (Setup) | — | ❌ |
+| Fixed Asset Dashboard | FixedAssetDashboardPage.tsx | ✅ |
+| Asset Register | AssetRegisterPage.tsx | ✅ |
+| Asset Acquisition | AssetAcquisitionPage.tsx | ✅ |
+| Depreciation Run | DepreciationRunPage.tsx | ✅ |
+| Asset Disposal | AssetDisposalPage.tsx | ✅ |
+| Asset Transfer | AssetTransferPage.tsx | ✅ |
+| Asset Impairment (PAS 36) | AssetImpairmentPage.tsx | ✅ |
+| Asset Categories (Setup) | AssetCategoriesPage.tsx | ✅ |
 
 ---
 

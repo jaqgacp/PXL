@@ -84,6 +84,14 @@ const RevenueRecognitionSchedulesPage   = lazy(() => import('@/pages/RevenueReco
 const AmortizationRunPage               = lazy(() => import('@/pages/AmortizationRunPage'))
 const RevenueRecognitionRunPage         = lazy(() => import('@/pages/RevenueRecognitionRunPage'))
 const AutoReversalRunPage               = lazy(() => import('@/pages/AutoReversalRunPage'))
+const AssetCategoriesPage               = lazy(() => import('@/pages/AssetCategoriesPage'))
+const FixedAssetDashboardPage           = lazy(() => import('@/pages/FixedAssetDashboardPage'))
+const AssetRegisterPage                 = lazy(() => import('@/pages/AssetRegisterPage'))
+const AssetAcquisitionPage              = lazy(() => import('@/pages/AssetAcquisitionPage'))
+const DepreciationRunPage               = lazy(() => import('@/pages/DepreciationRunPage'))
+const AssetDisposalPage                 = lazy(() => import('@/pages/AssetDisposalPage'))
+const AssetTransferPage                 = lazy(() => import('@/pages/AssetTransferPage'))
+const AssetImpairmentPage               = lazy(() => import('@/pages/AssetImpairmentPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -212,6 +220,14 @@ export default function App() {
             <Route path="/amortization-run" element={<AmortizationRunPage />} />
             <Route path="/revenue-recognition-run" element={<RevenueRecognitionRunPage />} />
             <Route path="/auto-reversal-run" element={<AutoReversalRunPage />} />
+            <Route path="/asset-categories" element={<AssetCategoriesPage />} />
+            <Route path="/fixed-asset-dashboard" element={<FixedAssetDashboardPage />} />
+            <Route path="/asset-register" element={<AssetRegisterPage />} />
+            <Route path="/asset-acquisition" element={<AssetAcquisitionPage />} />
+            <Route path="/depreciation-run" element={<DepreciationRunPage />} />
+            <Route path="/asset-disposal" element={<AssetDisposalPage />} />
+            <Route path="/asset-transfer" element={<AssetTransferPage />} />
+            <Route path="/asset-impairment" element={<AssetImpairmentPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
