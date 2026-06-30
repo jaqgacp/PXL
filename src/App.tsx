@@ -70,6 +70,14 @@ const CheckVouchersPage       = lazy(() => import('@/pages/CheckVouchersPage'))
 const BankReconciliationPage  = lazy(() => import('@/pages/BankReconciliationPage'))
 const OutstandingChecksPage   = lazy(() => import('@/pages/OutstandingChecksPage'))
 const DepositsInTransitPage   = lazy(() => import('@/pages/DepositsInTransitPage'))
+const JournalEntriesPage            = lazy(() => import('@/pages/JournalEntriesPage'))
+const RecurringJournalTemplatesPage = lazy(() => import('@/pages/RecurringJournalTemplatesPage'))
+const GeneralLedgerPage             = lazy(() => import('@/pages/GeneralLedgerPage'))
+const AccountDetailLedgerPage       = lazy(() => import('@/pages/AccountDetailLedgerPage'))
+const TrialBalancePage              = lazy(() => import('@/pages/TrialBalancePage'))
+const PeriodClosingPage             = lazy(() => import('@/pages/PeriodClosingPage'))
+const PostingReviewPage             = lazy(() => import('@/pages/PostingReviewPage'))
+const ReversalReviewPage            = lazy(() => import('@/pages/ReversalReviewPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -184,6 +192,14 @@ export default function App() {
             <Route path="/bank-reconciliation" element={<BankReconciliationPage />} />
             <Route path="/outstanding-checks" element={<OutstandingChecksPage />} />
             <Route path="/deposits-in-transit" element={<DepositsInTransitPage />} />
+            <Route path="/journal-entries" element={<JournalEntriesPage />} />
+            <Route path="/recurring-journal-templates" element={<RecurringJournalTemplatesPage />} />
+            <Route path="/general-ledger" element={<GeneralLedgerPage />} />
+            <Route path="/account-detail-ledger" element={<AccountDetailLedgerPage />} />
+            <Route path="/trial-balance" element={<TrialBalancePage />} />
+            <Route path="/period-closing" element={<PeriodClosingPage />} />
+            <Route path="/posting-review" element={<PostingReviewPage />} />
+            <Route path="/reversal-review" element={<ReversalReviewPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

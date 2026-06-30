@@ -145,11 +145,34 @@ const NAV: NavItem[] = [
   },
   {
     label: 'Accounting', groups: [
-      { group: 'Journal Entries', items: [s('General Ledger Entries'), s('Journal Entries'), s('Recurring Journal Templates')] },
-      { group: 'Ledgers', items: [s('General Ledger'), s('Account Detail Ledger'), s('Trial Balance')] },
-      { group: 'Subsidiary Ledgers', items: [s('Customer Ledger (Accounting View)'), s('Supplier Ledger (Accounting View)'), s('Control Account Reconciliation')] },
-      { group: 'Schedules', items: [s('Amortization Schedules'), s('Revenue Recognition Schedules')] },
-      { group: 'Period Management', items: [s('Period Closing'), s('Fiscal Locks'), s('Posting Review'), s('Reversal Review'), s('Amortization Run'), s('Revenue Recognition Run'), s('Auto Reversal Run')] },
+      { group: 'Journal Entries', items: [
+        s('General Ledger Entries', 'journal-entries'),
+        s('Journal Entries', 'journal-entries'),
+        s('Recurring Journal Templates', 'recurring-journal-templates'),
+      ]},
+      { group: 'Ledgers', items: [
+        s('General Ledger', 'general-ledger'),
+        s('Account Detail Ledger', 'account-detail-ledger'),
+        s('Trial Balance', 'trial-balance'),
+      ]},
+      { group: 'Subsidiary Ledgers', items: [
+        s('Customer Ledger (Accounting View)', 'ar-aging'),
+        s('Supplier Ledger (Accounting View)', 'ap-aging'),
+        s('Control Account Reconciliation', 'trial-balance'),
+      ]},
+      { group: 'Schedules', items: [
+        s('Amortization Schedules', 'journal-entries'),
+        s('Revenue Recognition Schedules', 'journal-entries'),
+      ]},
+      { group: 'Period Management', items: [
+        s('Period Closing', 'period-closing'),
+        s('Fiscal Locks', 'period-closing'),
+        s('Posting Review', 'posting-review'),
+        s('Reversal Review', 'reversal-review'),
+        s('Amortization Run', 'posting-review'),
+        s('Revenue Recognition Run', 'posting-review'),
+        s('Auto Reversal Run', 'reversal-review'),
+      ]},
     ]
   },
   {
@@ -242,6 +265,14 @@ const PAGE_LABELS: Record<string, string> = {
   'bank-reconciliation':    'Bank Reconciliation',
   'outstanding-checks':     'Outstanding Checks',
   'deposits-in-transit':    'Deposits in Transit',
+  'journal-entries':               'Journal Entries',
+  'recurring-journal-templates':   'Recurring Journal Templates',
+  'general-ledger':                'General Ledger',
+  'account-detail-ledger':         'Account Detail Ledger',
+  'trial-balance':                 'Trial Balance',
+  'period-closing':                'Period Closing & Fiscal Locks',
+  'posting-review':                'Posting Review',
+  'reversal-review':               'Reversal Review',
 }
 
 function findSection(page: string): string | null {
