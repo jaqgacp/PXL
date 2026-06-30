@@ -2,8 +2,8 @@
 
 Last updated: 2026-06-30
 Build: ✅ Clean (zero TS errors)
-Migrations applied to Supabase: 001–026
-Migrations pending (written, not yet pushed): 027
+Migrations applied to Supabase: 001–027
+Migrations pending (written, not yet pushed): none
 
 ---
 
@@ -61,7 +61,7 @@ Migrations pending (written, not yet pushed): 027
 | 20260630000024_banking_treasury_functions.sql | Banking & Treasury — posting functions, views | ✅ |
 | 20260630000025_accounting_module.sql | Accounting — recurring templates, GL views, posting functions | ✅ |
 | 20260630000026_amortization_revenuerecon.sql | Amortization & Revenue Recognition schedule tables, RLS, posting functions | ✅ |
-| 20260630000027_fixed_assets.sql | Fixed Assets — 6 tables, schedule generator, 5 posting RPCs | ⏳ |
+| 20260630000027_fixed_assets.sql | Fixed Assets — 6 tables, schedule generator, 5 posting RPCs | ✅ |
 
 ---
 
