@@ -1,9 +1,9 @@
 # PXL ERP — Build Status
 
 Last updated: 2026-06-30
-Build: ✅ Clean (469 kB bundle)
+Build: ✅ Clean (zero TS errors)
 Migrations applied to Supabase: 001–020
-Migrations pending (written, not yet pushed): 021–025
+Migrations pending (written, not yet pushed): 021–026
 
 ---
 
@@ -59,6 +59,7 @@ Migrations pending (written, not yet pushed): 021–025
 | 20260630000023_banking_treasury_schema.sql | Banking & Treasury — 12 tables, RLS | ⏳ |
 | 20260630000024_banking_treasury_functions.sql | Banking & Treasury — posting functions, views | ⏳ |
 | 20260630000025_accounting_module.sql | Accounting — recurring templates, GL views, posting functions | ⏳ |
+| 20260630000026_amortization_revenuerecon.sql | Amortization & Revenue Recognition schedule tables, RLS, posting functions | ⏳ |
 
 ---
 
@@ -202,12 +203,12 @@ Migrations pending (written, not yet pushed): 021–025
 | Period Closing & Fiscal Locks | PeriodClosingPage.tsx | ✅ |
 | Posting Review | PostingReviewPage.tsx | ✅ |
 | Reversal Review | ReversalReviewPage.tsx | ✅ |
-| Control Account Reconciliation | — | ❌ |
-| Amortization Schedules | — | ❌ |
-| Revenue Recognition Schedules | — | ❌ |
-| Amortization Run | — | ❌ |
-| Revenue Recognition Run | — | ❌ |
-| Auto Reversal Run | — | ❌ |
+| Control Account Reconciliation | ControlAccountReconciliationPage.tsx | ✅ |
+| Amortization Schedules | AmortizationSchedulesPage.tsx | ✅ |
+| Revenue Recognition Schedules | RevenueRecognitionSchedulesPage.tsx | ✅ |
+| Amortization Run | AmortizationRunPage.tsx | ✅ |
+| Revenue Recognition Run | RevenueRecognitionRunPage.tsx | ✅ |
+| Auto Reversal Run | AutoReversalRunPage.tsx | ✅ |
 
 ---
 
@@ -355,9 +356,9 @@ Migrations pending (written, not yet pushed): 021–025
 | Inventory | 0 | 7 |
 | Banking & Treasury | 10 | 0 |
 | Fixed Assets | 0 | 9 |
-| Accounting | 9 | 6 |
+| Accounting | 15 | 0 |
 | Compliance | 3 | 39 |
 | BIR Books | 0 | 13 |
 | Audit & CAS | 0 | 11 |
 | Reports | 0 | 43 |
-| **TOTAL** | **74** | **131** |
+| **TOTAL** | **80** | **125** |

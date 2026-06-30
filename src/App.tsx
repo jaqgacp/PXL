@@ -70,14 +70,20 @@ const CheckVouchersPage       = lazy(() => import('@/pages/CheckVouchersPage'))
 const BankReconciliationPage  = lazy(() => import('@/pages/BankReconciliationPage'))
 const OutstandingChecksPage   = lazy(() => import('@/pages/OutstandingChecksPage'))
 const DepositsInTransitPage   = lazy(() => import('@/pages/DepositsInTransitPage'))
-const JournalEntriesPage            = lazy(() => import('@/pages/JournalEntriesPage'))
-const RecurringJournalTemplatesPage = lazy(() => import('@/pages/RecurringJournalTemplatesPage'))
-const GeneralLedgerPage             = lazy(() => import('@/pages/GeneralLedgerPage'))
-const AccountDetailLedgerPage       = lazy(() => import('@/pages/AccountDetailLedgerPage'))
-const TrialBalancePage              = lazy(() => import('@/pages/TrialBalancePage'))
-const PeriodClosingPage             = lazy(() => import('@/pages/PeriodClosingPage'))
-const PostingReviewPage             = lazy(() => import('@/pages/PostingReviewPage'))
-const ReversalReviewPage            = lazy(() => import('@/pages/ReversalReviewPage'))
+const JournalEntriesPage                = lazy(() => import('@/pages/JournalEntriesPage'))
+const RecurringJournalTemplatesPage     = lazy(() => import('@/pages/RecurringJournalTemplatesPage'))
+const GeneralLedgerPage                 = lazy(() => import('@/pages/GeneralLedgerPage'))
+const AccountDetailLedgerPage           = lazy(() => import('@/pages/AccountDetailLedgerPage'))
+const TrialBalancePage                  = lazy(() => import('@/pages/TrialBalancePage'))
+const PeriodClosingPage                 = lazy(() => import('@/pages/PeriodClosingPage'))
+const PostingReviewPage                 = lazy(() => import('@/pages/PostingReviewPage'))
+const ReversalReviewPage                = lazy(() => import('@/pages/ReversalReviewPage'))
+const ControlAccountReconciliationPage  = lazy(() => import('@/pages/ControlAccountReconciliationPage'))
+const AmortizationSchedulesPage         = lazy(() => import('@/pages/AmortizationSchedulesPage'))
+const RevenueRecognitionSchedulesPage   = lazy(() => import('@/pages/RevenueRecognitionSchedulesPage'))
+const AmortizationRunPage               = lazy(() => import('@/pages/AmortizationRunPage'))
+const RevenueRecognitionRunPage         = lazy(() => import('@/pages/RevenueRecognitionRunPage'))
+const AutoReversalRunPage               = lazy(() => import('@/pages/AutoReversalRunPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -200,6 +206,12 @@ export default function App() {
             <Route path="/period-closing" element={<PeriodClosingPage />} />
             <Route path="/posting-review" element={<PostingReviewPage />} />
             <Route path="/reversal-review" element={<ReversalReviewPage />} />
+            <Route path="/control-account-recon" element={<ControlAccountReconciliationPage />} />
+            <Route path="/amortization-schedules" element={<AmortizationSchedulesPage />} />
+            <Route path="/revenue-recognition-schedules" element={<RevenueRecognitionSchedulesPage />} />
+            <Route path="/amortization-run" element={<AmortizationRunPage />} />
+            <Route path="/revenue-recognition-run" element={<RevenueRecognitionRunPage />} />
+            <Route path="/auto-reversal-run" element={<AutoReversalRunPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
