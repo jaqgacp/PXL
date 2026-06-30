@@ -109,11 +109,21 @@ const NAV: NavItem[] = [
   },
   {
     label: 'Inventory', feature: 'inventory_management', groups: [
-      { group: 'Operations', items: [
-        s('Inventory Dashboard'), s('Stock Adjustment'), s('Stock Transfer'),
-        s('Goods Issue'), s('Physical Count'), s('Inventory Movements'), s('Inventory Valuation'),
+      { group: 'Overview', items: [
+        s('Inventory Dashboard', 'inventory-dashboard'),
+        s('Stock Balance', 'stock-balance'),
+        s('Inventory Valuation', 'inventory-valuation'),
+        s('Inventory Movements', 'inventory-movements'),
       ]},
-      { group: 'Master Data', items: [s('Items'), s('Warehouses')] },
+      { group: 'Transactions', items: [
+        s('Stock Adjustment', 'stock-adjustment'),
+        s('Stock Transfer', 'stock-transfer'),
+        s('Goods Issue', 'goods-issue'),
+        s('Physical Count', 'physical-count'),
+      ]},
+      { group: 'Setup', items: [
+        s('Warehouses', 'warehouses'),
+      ]},
     ]
   },
   {
@@ -299,6 +309,15 @@ const PAGE_LABELS: Record<string, string> = {
   'asset-disposal':                    'Asset Disposal',
   'asset-transfer':                    'Asset Transfer',
   'asset-impairment':                  'Asset Impairment (PAS 36)',
+  'warehouses':                        'Warehouse Setup',
+  'inventory-dashboard':               'Inventory Dashboard',
+  'stock-balance':                     'Stock Balance',
+  'stock-adjustment':                  'Stock Adjustment',
+  'stock-transfer':                    'Stock Transfer',
+  'goods-issue':                       'Goods Issue',
+  'physical-count':                    'Physical Count',
+  'inventory-movements':               'Inventory Movements',
+  'inventory-valuation':               'Inventory Valuation',
 }
 
 function findSection(page: string): string | null {

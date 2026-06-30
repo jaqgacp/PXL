@@ -92,6 +92,15 @@ const DepreciationRunPage               = lazy(() => import('@/pages/Depreciatio
 const AssetDisposalPage                 = lazy(() => import('@/pages/AssetDisposalPage'))
 const AssetTransferPage                 = lazy(() => import('@/pages/AssetTransferPage'))
 const AssetImpairmentPage               = lazy(() => import('@/pages/AssetImpairmentPage'))
+const WarehousesPage                    = lazy(() => import('@/pages/WarehousesPage'))
+const InventoryDashboardPage            = lazy(() => import('@/pages/InventoryDashboardPage'))
+const StockBalancePage                  = lazy(() => import('@/pages/StockBalancePage'))
+const StockAdjustmentPage               = lazy(() => import('@/pages/StockAdjustmentPage'))
+const StockTransferPage                 = lazy(() => import('@/pages/StockTransferPage'))
+const GoodsIssuePage                    = lazy(() => import('@/pages/GoodsIssuePage'))
+const PhysicalCountPage                 = lazy(() => import('@/pages/PhysicalCountPage'))
+const InventoryMovementsPage            = lazy(() => import('@/pages/InventoryMovementsPage'))
+const InventoryValuationPage            = lazy(() => import('@/pages/InventoryValuationPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -228,6 +237,15 @@ export default function App() {
             <Route path="/asset-disposal" element={<AssetDisposalPage />} />
             <Route path="/asset-transfer" element={<AssetTransferPage />} />
             <Route path="/asset-impairment" element={<AssetImpairmentPage />} />
+            <Route path="/warehouses" element={<WarehousesPage />} />
+            <Route path="/inventory-dashboard" element={<InventoryDashboardPage />} />
+            <Route path="/stock-balance" element={<StockBalancePage />} />
+            <Route path="/stock-adjustment" element={<StockAdjustmentPage />} />
+            <Route path="/stock-transfer" element={<StockTransferPage />} />
+            <Route path="/goods-issue" element={<GoodsIssuePage />} />
+            <Route path="/physical-count" element={<PhysicalCountPage />} />
+            <Route path="/inventory-movements" element={<InventoryMovementsPage />} />
+            <Route path="/inventory-valuation" element={<InventoryValuationPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

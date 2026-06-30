@@ -2,7 +2,7 @@
 
 Last updated: 2026-06-30
 Build: ✅ Clean (zero TS errors)
-Migrations applied to Supabase: 001–027
+Migrations applied to Supabase: 001–028
 Migrations pending (written, not yet pushed): none
 
 ---
@@ -62,6 +62,7 @@ Migrations pending (written, not yet pushed): none
 | 20260630000025_accounting_module.sql | Accounting — recurring templates, GL views, posting functions | ✅ |
 | 20260630000026_amortization_revenuerecon.sql | Amortization & Revenue Recognition schedule tables, RLS, posting functions | ✅ |
 | 20260630000027_fixed_assets.sql | Fixed Assets — 6 tables, schedule generator, 5 posting RPCs | ✅ |
+| 20260630000028_inventory.sql | Inventory — 11 tables, WAC/FIFO/Specific ID costing, 6 posting RPCs | ✅ |
 
 ---
 
@@ -96,7 +97,7 @@ Migrations pending (written, not yet pushed): none
 | Item Catalog (Items / Services / Categories / UoM) | ItemCatalogPage.tsx | ✅ |
 | Payment Terms | PaymentTermsPage.tsx | ✅ |
 | Bank Accounts | BankAccountsPage.tsx | ✅ |
-| Warehouses | — | ❌ |
+| Warehouses | WarehousesPage.tsx | ✅ |
 | Warehouse Stock Settings | — | ❌ |
 | Personnel / Employees Lite | — | ❌ |
 
@@ -149,16 +150,18 @@ Migrations pending (written, not yet pushed): none
 
 ---
 
-## Inventory Module
+## Inventory Module (S12 — WAC / FIFO / Specific Identification)
 | Page | File | Status |
 |---|---|---|
-| Inventory Dashboard | — | ❌ |
-| Stock Adjustment | — | ❌ |
-| Stock Transfer | — | ❌ |
-| Goods Issue | — | ❌ |
-| Physical Count | — | ❌ |
-| Inventory Movements | — | ❌ |
-| Inventory Valuation | — | ❌ |
+| Inventory Dashboard | InventoryDashboardPage.tsx | ✅ |
+| Stock Balance | StockBalancePage.tsx | ✅ |
+| Stock Adjustment | StockAdjustmentPage.tsx | ✅ |
+| Stock Transfer | StockTransferPage.tsx | ✅ |
+| Goods Issue | GoodsIssuePage.tsx | ✅ |
+| Physical Count | PhysicalCountPage.tsx | ✅ |
+| Inventory Movements | InventoryMovementsPage.tsx | ✅ |
+| Inventory Valuation | InventoryValuationPage.tsx | ✅ |
+| Warehouses (Setup) | WarehousesPage.tsx | ✅ |
 
 ---
 
