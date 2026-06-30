@@ -57,6 +57,11 @@ export default function VendorCreditsPage() {
   const [vendorBills, setVendorBills] = useState<VBRef[]>([])
   const [fStatus, setFStatus] = useState('')
   const [fSearch, setFSearch] = useState('')
+  const [applyModal, setApplyModal] = useState<{ vc: VC; bills: VBRef[] } | null>(null)
+  const [applyBillId, setApplyBillId] = useState('')
+  const [applyAmount, setApplyAmount] = useState('')
+  const [applying, setApplying] = useState(false)
+  const [applyError, setApplyError] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
   const readOnly = mode === 'view'
 
@@ -124,6 +129,37 @@ export default function VendorCreditsPage() {
     const { error: e } = await supabase.rpc('fn_post_vendor_credit', { p_vc_id: vc.id })
     if (e) { alert(e.message); return }
     loadCredits()
+  }
+
+  const openApplyModal = async (vc: VC) => {
+    const { data } = await supabase
+      .from('vendor_bills')
+      .select('id,bill_number,total_amount')
+      .eq('company_id', companyId)
+      .eq('supplier_id', vc.supplier_id)
+      .eq('status', 'posted')
+      .order('bill_date', { ascending: false })
+    setApplyModal({ vc, bills: (data as VBRef[]) || [] })
+    setApplyBillId('')
+    setApplyAmount(String(vc.remaining_balance))
+    setApplyError('')
+  }
+
+  const applyCredit = async () => {
+    if (!applyModal || !applyBillId || !applyAmount) { setApplyError('Select a bill and enter amount'); return }
+    setApplying(true); setApplyError('')
+    try {
+      const { error: e } = await supabase.rpc('fn_apply_vendor_credit', {
+        p_credit_id: applyModal.vc.id,
+        p_bill_id: applyBillId,
+        p_amount: parseFloat(applyAmount),
+      })
+      if (e) throw e
+      setApplyModal(null)
+      loadCredits()
+    } catch (e: any) {
+      setApplyError(e.message || 'Apply failed')
+    } finally { setApplying(false) }
   }
 
   const STATUS_COLORS: Record<string, string> = { draft: 'draft', open: 'approved', applied: 'posted', cancelled: 'error' }
@@ -212,6 +248,7 @@ export default function VendorCreditsPage() {
                     <div className="flex gap-2 justify-end">
                       <button onClick={() => { setEditVC({ ...vc }); supabase.from('vendor_credit_lines').select('*').eq('vc_id', vc.id).order('line_number').then(({ data }) => setLines(data?.map(l => ({ ...l, _key: l.id, vat_classification: 'regular', vat_rate: 12 })) as VCLine[] || [])); setMode('view') }} className="text-blue-600 hover:text-blue-800">View</button>
                       {vc.status === 'draft' && <><button onClick={() => { setEditVC({ ...vc }); supabase.from('vendor_credit_lines').select('*').eq('vc_id', vc.id).order('line_number').then(({ data }) => setLines(data?.map(l => ({ ...l, _key: l.id, vat_classification: 'regular', vat_rate: 12 })) as VCLine[] || [])); setError(''); setMode('edit') }} className="text-gray-600 hover:text-gray-800">Edit</button><button onClick={() => post(vc)} className="text-green-600 hover:text-green-800">Post</button></>}
+                      {vc.status === 'open' && <button onClick={() => openApplyModal(vc)} className="text-blue-600 hover:text-blue-800">Apply to Bill</button>}
                     </div>
                   </td>
                 </tr>
@@ -220,6 +257,41 @@ export default function VendorCreditsPage() {
           </table>
         )}
       </div>
+
+      {applyModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-md p-6 space-y-4">
+            <h3 className="text-sm font-semibold text-gray-900">Apply Vendor Credit to Bill</h3>
+            <div className="text-xs text-gray-600">
+              <span className="font-medium">{applyModal.vc.vc_number}</span> — Remaining: <span className="font-mono font-medium">{fmt(applyModal.vc.remaining_balance)}</span>
+            </div>
+            {applyError && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{applyError}</div>}
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Vendor Bill *</label>
+                <select value={applyBillId} onChange={e => setApplyBillId(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900">
+                  <option value="">— Select posted vendor bill —</option>
+                  {applyModal.bills.map(b => <option key={b.id} value={b.id}>{b.bill_number} ({fmt(b.total_amount)})</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Amount to Apply *</label>
+                <input type="number" value={applyAmount} min={0.01} step="0.01"
+                  onChange={e => setApplyAmount(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-gray-900" />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <button onClick={() => setApplyModal(null)} className="px-4 py-2 text-sm border border-gray-300 rounded hover:bg-gray-50">Cancel</button>
+              <button onClick={applyCredit} disabled={applying}
+                className="px-4 py-2 text-sm bg-gray-900 text-white rounded hover:bg-gray-700 disabled:opacity-50">
+                {applying ? 'Applying…' : 'Apply'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

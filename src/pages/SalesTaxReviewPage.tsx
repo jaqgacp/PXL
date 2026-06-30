@@ -13,7 +13,9 @@ type InvoiceRow = {
 
 type CMAdjRow = {
   cm_number: string; cm_date: string; customer_name_snapshot: string
-  customer_tin_snapshot: string; total_net_amount: number; total_vat_amount: number; total_amount: number
+  customer_tin_snapshot: string
+  total_taxable_amount: number; total_zero_rated_amount: number
+  total_exempt_amount: number; total_vat_amount: number; total_amount: number
 }
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -51,8 +53,8 @@ export default function SalesTaxReviewPage() {
         .gte('date', startDate).lte('date', endDate)
         .order('date').order('si_number'),
       supabase.from('credit_memos')
-        .select('cm_number,cm_date,customer_name_snapshot,customer_tin_snapshot,total_net_amount,total_vat_amount,total_amount')
-        .eq('company_id', companyId).in('status', ['approved', 'applied'])
+        .select('cm_number,cm_date,customer_name_snapshot,customer_tin_snapshot,total_taxable_amount,total_zero_rated_amount,total_exempt_amount,total_vat_amount,total_amount')
+        .eq('company_id', companyId).eq('status', 'applied')
         .gte('cm_date', startDate).lte('cm_date', endDate)
         .order('cm_date'),
     ])
@@ -71,10 +73,14 @@ export default function SalesTaxReviewPage() {
   const totalExempt    = posted.reduce((s, i) => s + Number(i.total_exempt_amount), 0)
   const totalOutputVAT = posted.reduce((s, i) => s + Number(i.total_vat_amount), 0)
 
-  const cmVatable   = cmAdjs.reduce((s, c) => s + Number(c.total_net_amount), 0)
+  const cmVatable   = cmAdjs.reduce((s, c) => s + Number(c.total_taxable_amount), 0)
+  const cmZeroRated = cmAdjs.reduce((s, c) => s + Number(c.total_zero_rated_amount), 0)
+  const cmExempt    = cmAdjs.reduce((s, c) => s + Number(c.total_exempt_amount), 0)
   const cmOutputVAT = cmAdjs.reduce((s, c) => s + Number(c.total_vat_amount), 0)
 
   const netVatable   = totalVatable - cmVatable
+  const netZeroRated = totalZeroRated - cmZeroRated
+  const netExempt    = totalExempt - cmExempt
   const netOutputVAT = totalOutputVAT - cmOutputVAT
 
   const yearRange = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i)
@@ -104,8 +110,8 @@ export default function SalesTaxReviewPage() {
       <div className="bg-white border-b border-gray-200 grid grid-cols-2 md:grid-cols-4 divide-x divide-gray-200">
         {[
           { label: 'Total Vatable Sales', value: netVatable, note: cmVatable > 0 ? `Less CM: ${fmt(cmVatable)}` : undefined },
-          { label: 'Zero-Rated Sales', value: totalZeroRated, note: undefined },
-          { label: 'Exempt Sales', value: totalExempt, note: undefined },
+          { label: 'Zero-Rated Sales', value: netZeroRated, note: cmZeroRated > 0 ? `Less CM: ${fmt(cmZeroRated)}` : undefined },
+          { label: 'Exempt Sales', value: netExempt, note: cmExempt > 0 ? `Less CM: ${fmt(cmExempt)}` : undefined },
           { label: 'Net Output VAT', value: netOutputVAT, note: cmOutputVAT > 0 ? `Less CM: ${fmt(cmOutputVAT)}` : undefined, accent: true },
         ].map(kpi => (
           <div key={kpi.label} className="px-5 py-3">
@@ -160,9 +166,9 @@ export default function SalesTaxReviewPage() {
                   <td className="px-4 py-2 font-mono text-xs font-semibold text-amber-700 whitespace-nowrap">{cm.cm_number}</td>
                   <td className="px-4 py-2 text-xs text-gray-700 max-w-[160px] truncate">{cm.customer_name_snapshot}</td>
                   <td className="px-4 py-2 font-mono text-xs text-gray-500">{cm.customer_tin_snapshot || '—'}</td>
-                  <td className="px-4 py-2 text-right font-mono text-xs tabular-nums text-red-600">({fmt(Number(cm.total_net_amount))})</td>
-                  <td className="px-4 py-2 text-right text-gray-300 text-xs">—</td>
-                  <td className="px-4 py-2 text-right text-gray-300 text-xs">—</td>
+                  <td className="px-4 py-2 text-right font-mono text-xs tabular-nums text-red-600">{cm.total_taxable_amount ? `(${fmt(Number(cm.total_taxable_amount))})` : '—'}</td>
+                  <td className="px-4 py-2 text-right font-mono text-xs tabular-nums text-red-600">{cm.total_zero_rated_amount ? `(${fmt(Number(cm.total_zero_rated_amount))})` : '—'}</td>
+                  <td className="px-4 py-2 text-right font-mono text-xs tabular-nums text-red-600">{cm.total_exempt_amount ? `(${fmt(Number(cm.total_exempt_amount))})` : '—'}</td>
                   <td className="px-4 py-2 text-right font-mono text-xs tabular-nums text-red-600">({fmt(Number(cm.total_vat_amount))})</td>
                   <td className="px-4 py-2 text-right font-mono text-xs tabular-nums text-red-600 font-semibold">({fmt(Number(cm.total_amount))})</td>
                   <td className="px-4 py-2"><span className="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase bg-amber-50 text-amber-700">CM</span></td>
@@ -173,8 +179,8 @@ export default function SalesTaxReviewPage() {
               <tr>
                 <td colSpan={4} className="px-4 py-2.5 text-xs font-semibold text-gray-700">NET TOTALS — {invoices.filter(i => i.status === 'posted').length} posted invoice{invoices.filter(i => i.status === 'posted').length !== 1 ? 's' : ''}</td>
                 <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-bold text-gray-900">{fmt(netVatable)}</td>
-                <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-bold text-gray-900">{fmt(totalZeroRated)}</td>
-                <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-bold text-gray-900">{fmt(totalExempt)}</td>
+                <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-bold text-gray-900">{fmt(netZeroRated)}</td>
+                <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-bold text-gray-900">{fmt(netExempt)}</td>
                 <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-bold text-blue-700">{fmt(netOutputVAT)}</td>
                 <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-bold text-gray-900">{fmt(posted.reduce((s, i) => s + Number(i.total_amount), 0) - cmAdjs.reduce((s, c) => s + Number(c.total_amount), 0))}</td>
                 <td />

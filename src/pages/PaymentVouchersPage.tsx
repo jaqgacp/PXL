@@ -64,6 +64,7 @@ export default function PaymentVouchersPage() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [fStatus, setFStatus] = useState('')
   const [fSearch, setFSearch] = useState('')
+  const [voiding, setVoiding] = useState(false)
 
   const readOnly = mode === 'view'
 
@@ -236,6 +237,19 @@ export default function PaymentVouchersPage() {
     }
   }
 
+  const voidVoucher = async () => {
+    if (!editPV?.id) return
+    if (!confirm(`Void payment voucher ${editPV.voucher_number}? This will create a reversing journal entry.`)) return
+    setVoiding(true); setError('')
+    try {
+      const { error: e } = await supabase.rpc('fn_cancel_payment_voucher', { p_voucher_id: editPV.id })
+      if (e) throw e
+      await load(); setMode('list')
+    } catch (e: any) {
+      setError(e.message || 'Void failed')
+    } finally { setVoiding(false) }
+  }
+
   const filtered = vouchers.filter(v =>
     !fSearch || v.voucher_number.includes(fSearch) ||
     v.supplier_name_snapshot.toLowerCase().includes(fSearch.toLowerCase())
@@ -331,6 +345,12 @@ export default function PaymentVouchersPage() {
                 {saving ? 'Posting…' : 'Save & Post'}
               </button>
             </>
+          )}
+          {readOnly && editPV?.status === 'posted' && (
+            <button onClick={voidVoucher} disabled={voiding}
+              className="px-3 py-1.5 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50 disabled:opacity-50">
+              {voiding ? 'Voiding…' : 'Void'}
+            </button>
           )}
         </div>
       </div>
