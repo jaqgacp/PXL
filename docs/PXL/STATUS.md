@@ -21,7 +21,7 @@ Migrations pending (written, not yet pushed): none
 | App shell — mega-menu, context bar (Company/Branch/Period), breadcrumbs | ✅ |
 | Shared UI library (DataTable, StatusBadge, LookupDialog, FormSection, AmountCell, DateCell, ConfirmDialog, AuditTrailSection) | ✅ |
 | Error boundary | ✅ |
-| Lazy-loaded routing — all 71 pages | ✅ |
+| Lazy-loaded routing — all 97 pages | ✅ |
 
 ---
 
@@ -357,12 +357,12 @@ Migrations pending (written, not yet pushed): none
 | Dashboard | 1 | 0 |
 | Sales / AR | 16 | 0 |
 | Purchasing / AP | 14 | 0 |
-| Inventory | 0 | 7 |
+| Inventory | 9 | 0 |
 | Banking & Treasury | 10 | 0 |
-| Fixed Assets | 0 | 9 |
+| Fixed Assets | 8 | 0 |
 | Accounting | 15 | 0 |
 | Compliance | 3 | 39 |
 | BIR Books | 0 | 13 |
 | Audit & CAS | 0 | 11 |
 | Reports | 0 | 43 |
-| **TOTAL** | **80** | **125** |
+| **TOTAL** | **97** | **109** |
