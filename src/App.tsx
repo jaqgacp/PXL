@@ -58,6 +58,18 @@ const InputVATReviewPage      = lazy(() => import('@/pages/InputVATReviewPage'))
 const EWTSummaryPage          = lazy(() => import('@/pages/EWTSummaryPage'))
 const Form2307IssuedPage      = lazy(() => import('@/pages/Form2307IssuedPage'))
 const PurchaseRegistersPage   = lazy(() => import('@/pages/PurchaseRegistersPage'))
+const BankAccountsPage        = lazy(() => import('@/pages/BankAccountsPage'))
+const PettyCashFundSetupPage  = lazy(() => import('@/pages/PettyCashFundSetupPage'))
+const PettyCashVouchersPage   = lazy(() => import('@/pages/PettyCashVouchersPage'))
+const PettyCashReplenishmentPage = lazy(() => import('@/pages/PettyCashReplenishmentPage'))
+const CashCountSheetPage      = lazy(() => import('@/pages/CashCountSheetPage'))
+const FundTransfersPage       = lazy(() => import('@/pages/FundTransfersPage'))
+const InterBranchTransfersPage = lazy(() => import('@/pages/InterBranchTransfersPage'))
+const BankAdjustmentsPage     = lazy(() => import('@/pages/BankAdjustmentsPage'))
+const CheckVouchersPage       = lazy(() => import('@/pages/CheckVouchersPage'))
+const BankReconciliationPage  = lazy(() => import('@/pages/BankReconciliationPage'))
+const OutstandingChecksPage   = lazy(() => import('@/pages/OutstandingChecksPage'))
+const DepositsInTransitPage   = lazy(() => import('@/pages/DepositsInTransitPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -160,6 +172,18 @@ export default function App() {
             <Route path="/ewt-summary" element={<EWTSummaryPage />} />
             <Route path="/2307-issued-review" element={<Form2307IssuedPage />} />
             <Route path="/purchase-registers" element={<PurchaseRegistersPage />} />
+            <Route path="/bank-accounts" element={<BankAccountsPage />} />
+            <Route path="/petty-cash-funds" element={<PettyCashFundSetupPage />} />
+            <Route path="/petty-cash-vouchers" element={<PettyCashVouchersPage />} />
+            <Route path="/petty-cash-replenishment" element={<PettyCashReplenishmentPage />} />
+            <Route path="/cash-count-sheet" element={<CashCountSheetPage />} />
+            <Route path="/fund-transfers" element={<FundTransfersPage />} />
+            <Route path="/inter-branch-transfers" element={<InterBranchTransfersPage />} />
+            <Route path="/bank-adjustments" element={<BankAdjustmentsPage />} />
+            <Route path="/check-vouchers" element={<CheckVouchersPage />} />
+            <Route path="/bank-reconciliation" element={<BankReconciliationPage />} />
+            <Route path="/outstanding-checks" element={<OutstandingChecksPage />} />
+            <Route path="/deposits-in-transit" element={<DepositsInTransitPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

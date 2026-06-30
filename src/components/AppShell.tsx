@@ -55,6 +55,7 @@ const NAV: NavItem[] = [
         s('Percentage Tax Codes', 'tax-setup'), s('ATC Codes', 'tax-setup'),
         s('Tax Calendar', 'tax-calendar'),
       ]},
+      { group: 'Treasury', items: [s('Petty Cash Fund Setup', 'petty-cash-funds')] },
       { group: 'System', items: [s('System Audit Log', 'audit-log')] },
     ]
   },
@@ -64,6 +65,7 @@ const NAV: NavItem[] = [
       { group: 'Items & Services', items: [s('Item Categories', 'item-catalog'), s('Units of Measure', 'item-catalog'), s('Items', 'item-catalog'), s('Services', 'item-catalog')] },
       { group: 'Inventory Master', items: [s('Warehouses'), s('Warehouse Stock Settings')] },
       { group: 'Shared', items: [s('Payment Terms', 'payment-terms')] },
+      { group: 'Banking', items: [s('Bank Accounts', 'bank-accounts')] },
     ]
   },
   {
@@ -116,9 +118,23 @@ const NAV: NavItem[] = [
   },
   {
     label: 'Banking & Treasury', feature: 'banking_module', groups: [
-      { group: 'Petty Cash', items: [s('Petty Cash Fund Setup'), s('Petty Cash Vouchers'), s('Petty Cash Replenishment'), s('Cash Count Sheet')] },
-      { group: 'Bank Operations', items: [s('Fund Transfers'), s('Inter-Branch Transfers'), s('Bank Adjustments'), s('Bank Reconciliation'), s('Outstanding Checks'), s('Deposits in Transit')] },
-      { group: 'Payables', items: [s('Check Vouchers')] },
+      { group: 'Petty Cash', items: [
+        s('Petty Cash Fund Setup', 'petty-cash-funds'),
+        s('Petty Cash Vouchers', 'petty-cash-vouchers'),
+        s('Petty Cash Replenishment', 'petty-cash-replenishment'),
+        s('Cash Count Sheet', 'cash-count-sheet'),
+      ]},
+      { group: 'Bank Operations', items: [
+        s('Fund Transfers', 'fund-transfers'),
+        s('Inter-Branch Transfers', 'inter-branch-transfers'),
+        s('Bank Adjustments', 'bank-adjustments'),
+        s('Bank Reconciliation', 'bank-reconciliation'),
+        s('Outstanding Checks', 'outstanding-checks'),
+        s('Deposits in Transit', 'deposits-in-transit'),
+      ]},
+      { group: 'Payables', items: [
+        s('Check Vouchers', 'check-vouchers'),
+      ]},
     ]
   },
   {
@@ -214,6 +230,18 @@ const PAGE_LABELS: Record<string, string> = {
   'ewt-summary':            'EWT Summary',
   '2307-issued-review':     '2307 Issued Review',
   'purchase-registers':     'Purchase Registers',
+  'bank-accounts':          'Bank Accounts',
+  'petty-cash-funds':       'Petty Cash Fund Setup',
+  'petty-cash-vouchers':    'Petty Cash Vouchers',
+  'petty-cash-replenishment': 'Petty Cash Replenishment',
+  'cash-count-sheet':       'Cash Count Sheet',
+  'fund-transfers':         'Fund Transfers',
+  'inter-branch-transfers': 'Inter-Branch Transfers',
+  'bank-adjustments':       'Bank Adjustments',
+  'check-vouchers':         'Check Vouchers',
+  'bank-reconciliation':    'Bank Reconciliation',
+  'outstanding-checks':     'Outstanding Checks',
+  'deposits-in-transit':    'Deposits in Transit',
 }
 
 function findSection(page: string): string | null {
