@@ -203,7 +203,7 @@ const NAV: NavItem[] = [
       { group: 'VAT', items: [s('VAT Dashboard', 'vat-dashboard'), s('VAT Working Papers', 'vat-working-papers'), s('Output VAT Summary', 'vat-output-summary'), s('Input VAT Summary', 'vat-input-summary'), s('VAT Reconciliation', 'vat-reconciliation'), s('VAT Return 2550M', 'vat-return-2550m'), s('VAT Return 2550Q', 'vat-return-2550q'), s('SLS', 'sls'), s('SLP', 'vat-slp'), s('SLSP Export', 'vat-slsp-export'), s('RELIEF Export', 'vat-relief-export')] },
       { group: 'Withholding Tax', items: [s('WT Dashboard', 'wt-dashboard'), s('EWT Working Papers', 'ewt-working-papers'), s('EWT Payable Summary', 'ewt-summary'), s('EWT Receivable Summary', 'wt-ewt-receivable-summary'), s('ATC Summary', 'wt-atc-summary'), s('1601EQ Working Papers', 'wt-1601eq-working-papers'), s('1601EQ Quarterly Return', 'wt-1601eq-return'), s('QAP', 'wt-qap'), s('SAWT', 'wt-sawt'), s('2307 Certificates Issued', '2307-issued-review'), s('2307 Certificates Received', '2307-received-review'), s('2306 Certificates', 'wt-2306-certificates'), s('FWT Working Papers', 'wt-fwt-working-papers'), s('1601FQ Working Papers', 'wt-1601fq-working-papers'), s('1601FQ Quarterly Return', 'wt-1601fq-return')] },
       { group: 'Income Tax', items: [s('Income Tax Dashboard', 'inc-tax-dashboard'), s('Taxable Income Computation', 'inc-tax-computation'), s('Book-to-Tax Reconciliation', 'inc-tax-book-to-tax-recon'), s('OSD Computation', 'inc-tax-osd'), s('NOLCO Schedule', 'inc-tax-nolco'), s('Tax Credits Schedule', 'inc-tax-credits'), s('1701Q Quarterly ITR', 'inc-tax-1701q'), s('1701 Annual ITR', 'inc-tax-1701'), s('1702Q Quarterly ITR', 'inc-tax-1702q'), s('1702RT Annual ITR', 'inc-tax-1702rt'), s('MCIT Computation', 'inc-tax-mcit')] },
-      { group: 'BIR Books', items: [s('Books Dashboard'), s('General Journal'), s('General Ledger Book'), s('Cash Receipts Book'), s('Cash Disbursements Book'), s('Sales Journal'), s('Cash Sales Journal'), s('Purchase Journal'), s('Cash Purchases Journal'), s('AR Subsidiary Ledger'), s('AP Subsidiary Ledger'), s('Inventory Subsidiary Ledger'), s('Fixed Asset Register')] },
+      { group: 'BIR Books', items: [s('Books Dashboard', 'books-dashboard'), s('General Journal', 'books-general-journal'), s('General Ledger Book', 'general-ledger'), s('Cash Receipts Book', 'books-cash-receipts'), s('Cash Disbursements Book', 'books-cash-disbursements'), s('Sales Journal', 'books-sales-journal'), s('Cash Sales Journal', 'books-cash-sales-journal'), s('Purchase Journal', 'books-purchase-journal'), s('Cash Purchases Journal', 'books-cash-purchases-journal'), s('AR Subsidiary Ledger', 'ar-aging'), s('AP Subsidiary Ledger', 'ap-aging'), s('Inventory Subsidiary Ledger', 'inventory-movements'), s('Fixed Asset Register', 'asset-register')] },
       { group: 'Audit & CAS', items: [s('CAS Dashboard'), s('Transaction Audit Log'), s('Master Data Change Log'), s('System Parameter Logs'), s('User Activity Log'), s('Attachment Register'), s('Document Void Register'), s('ATP Usage Log'), s('DAT File Generation'), s('CAS Audit Report'), s('Export History')] },
     ]
   },
@@ -357,6 +357,14 @@ const PAGE_LABELS: Record<string, string> = {
   'inc-tax-1702q':                     '1702Q Quarterly ITR',
   'inc-tax-1702rt':                    '1702RT Annual ITR',
   'inc-tax-mcit':                      'MCIT Computation',
+  'books-dashboard':                   'Books Dashboard',
+  'books-general-journal':             'General Journal',
+  'books-cash-receipts':               'Cash Receipts Book',
+  'books-cash-disbursements':          'Cash Disbursements Book',
+  'books-sales-journal':               'Sales Journal',
+  'books-cash-sales-journal':          'Cash Sales Journal',
+  'books-purchase-journal':            'Purchase Journal',
+  'books-cash-purchases-journal':      'Cash Purchases Journal',
 }
 
 function findSection(page: string): string | null {

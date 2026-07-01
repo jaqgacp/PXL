@@ -140,6 +140,14 @@ const ITR1701Page                       = lazy(() => import('@/pages/ITR1701Page
 const ITR1702QPage                      = lazy(() => import('@/pages/ITR1702QPage'))
 const ITR1702RTPage                     = lazy(() => import('@/pages/ITR1702RTPage'))
 const MCITComputationPage               = lazy(() => import('@/pages/MCITComputationPage'))
+const BooksDashboardPage                = lazy(() => import('@/pages/BooksDashboardPage'))
+const BooksGeneralJournalPage           = lazy(() => import('@/pages/BooksGeneralJournalPage'))
+const BooksCashReceiptsPage             = lazy(() => import('@/pages/BooksCashReceiptsPage'))
+const BooksCashDisbursementsPage        = lazy(() => import('@/pages/BooksCashDisbursementsPage'))
+const BooksSalesJournalPage             = lazy(() => import('@/pages/BooksSalesJournalPage'))
+const BooksCashSalesJournalPage         = lazy(() => import('@/pages/BooksCashSalesJournalPage'))
+const BooksPurchaseJournalPage          = lazy(() => import('@/pages/BooksPurchaseJournalPage'))
+const BooksCashPurchasesJournalPage     = lazy(() => import('@/pages/BooksCashPurchasesJournalPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -324,6 +332,14 @@ export default function App() {
             <Route path="/inc-tax-1702q" element={<ITR1702QPage />} />
             <Route path="/inc-tax-1702rt" element={<ITR1702RTPage />} />
             <Route path="/inc-tax-mcit" element={<MCITComputationPage />} />
+            <Route path="/books-dashboard" element={<BooksDashboardPage />} />
+            <Route path="/books-general-journal" element={<BooksGeneralJournalPage />} />
+            <Route path="/books-cash-receipts" element={<BooksCashReceiptsPage />} />
+            <Route path="/books-cash-disbursements" element={<BooksCashDisbursementsPage />} />
+            <Route path="/books-sales-journal" element={<BooksSalesJournalPage />} />
+            <Route path="/books-cash-sales-journal" element={<BooksCashSalesJournalPage />} />
+            <Route path="/books-purchase-journal" element={<BooksPurchaseJournalPage />} />
+            <Route path="/books-cash-purchases-journal" element={<BooksCashPurchasesJournalPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

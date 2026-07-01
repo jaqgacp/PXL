@@ -275,22 +275,24 @@ Migrations pending (written, not yet pushed): none
 
 ---
 
-## BIR Books
+## BIR Books — COMPLETE (S18, 2026-07-01)
 | Page | File | Status |
 |---|---|---|
-| Books Dashboard | — | ❌ |
-| General Journal Book | — | ❌ |
-| General Ledger Book | — | ❌ |
-| Cash Receipts Book | — | ❌ |
-| Cash Disbursements Book | — | ❌ |
-| Sales Journal | — | ❌ |
-| Cash Sales Journal | — | ❌ |
-| Purchase Journal | — | ❌ |
-| Cash Purchases Journal | — | ❌ |
-| AR Subsidiary Ledger Book | — | ❌ |
-| AP Subsidiary Ledger Book | — | ❌ |
-| Inventory Subsidiary Ledger Book | — | ❌ |
-| Fixed Asset Register Book | — | ❌ |
+| Books Dashboard | BooksDashboardPage.tsx | ✅ |
+| General Journal Book | BooksGeneralJournalPage.tsx | ✅ |
+| General Ledger Book | GeneralLedgerPage.tsx (reused) | ✅ |
+| Cash Receipts Book | BooksCashReceiptsPage.tsx | ✅ |
+| Cash Disbursements Book | BooksCashDisbursementsPage.tsx | ✅ |
+| Sales Journal | BooksSalesJournalPage.tsx | ✅ |
+| Cash Sales Journal | BooksCashSalesJournalPage.tsx | ✅ |
+| Purchase Journal | BooksPurchaseJournalPage.tsx | ✅ |
+| Cash Purchases Journal | BooksCashPurchasesJournalPage.tsx | ✅ |
+| AR Subsidiary Ledger Book | ARAgingPage.tsx (Customer Ledger tab, reused) | ✅ |
+| AP Subsidiary Ledger Book | APAgingPage.tsx (Supplier Ledger tab, reused) | ✅ |
+| Inventory Subsidiary Ledger Book | InventoryMovementsPage.tsx (reused) | ✅ |
+| Fixed Asset Register Book | AssetRegisterPage.tsx (reused) | ✅ |
+
+No new migration required — all books are read-only registers/views over existing posted-transaction tables.
 
 ---
 
@@ -374,7 +376,7 @@ Migrations pending (written, not yet pushed): none
 | Fixed Assets | 8 | 0 |
 | Accounting | 15 | 0 |
 | Compliance | 41 | 0 |
-| BIR Books | 0 | 13 |
+| BIR Books | 13 | 0 |
 | Audit & CAS | 0 | 11 |
 | Reports | 0 | 43 |
-| **TOTAL** | **137** | **69** |
+| **TOTAL** | **150** | **54** |
