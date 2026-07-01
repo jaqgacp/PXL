@@ -1,5 +1,7 @@
 # PXL ERP — Build Status
 
+**BUILD COMPLETE — 205/205 pages** ✅
+
 Last updated: 2026-07-01
 Build: ✅ Clean (zero TS errors)
 Migrations applied to Supabase: 001–029, 20260701000001–20260701000005
@@ -324,44 +326,44 @@ No new migration required — all books are read-only registers/views over exist
 | Statement of Cash Flows | StatementOfCashFlowsPage.tsx | ✅ |
 | Statement of Changes in Equity | StatementOfChangesInEquityPage.tsx | ✅ |
 | Comparative Financial Statements | ComparativeFinancialStatementsPage.tsx | ✅ |
-| Unadjusted Trial Balance | — | ❌ |
-| Adjusted Trial Balance | — | ❌ |
-| Post-Closing Trial Balance | — | ❌ |
-| Output VAT Summary Report | — | ❌ |
-| Input VAT Summary Report | — | ❌ |
-| Percentage Tax Summary Report | — | ❌ |
-| EWT Summary Report | — | ❌ |
-| FWT Summary Report | — | ❌ |
-| 2307 Issued Listing | — | ❌ |
-| 2307 Received Listing | — | ❌ |
-| AR Aging Report | — | ❌ |
-| AP Aging Report | — | ❌ |
-| Bank Position Report | — | ❌ |
-| Bank Reconciliation Summary | — | ❌ |
-| Outstanding Checks Report | — | ❌ |
-| Inventory Valuation Report | — | ❌ |
-| Stock Movement Report | — | ❌ |
-| Inventory Ledger Report | — | ❌ |
-| Slow Moving Inventory Report | — | ❌ |
-| Fixed Asset Register Report | — | ❌ |
-| Depreciation Schedule Report | — | ❌ |
-| Book vs Tax Depreciation Report | — | ❌ |
-| Asset Disposal Report | — | ❌ |
-| Branch P&L | — | ❌ |
-| Department Report | — | ❌ |
-| Cost Center Report | — | ❌ |
-| Gross Margin Analysis | — | ❌ |
-| Journal Register | — | ❌ |
-| Sales Invoice Register | — | ❌ |
-| Receipt Register | — | ❌ |
-| Purchase Register | — | ❌ |
-| Payment Register | — | ❌ |
-| Credit Memo Register | — | ❌ |
-| Debit Memo Register | — | ❌ |
-| Check Register | — | ❌ |
-| Period Close Checklist Report | — | ❌ |
-| Audit Support Package | — | ❌ |
-| User Activity Report | — | ❌ |
+| Unadjusted Trial Balance | TrialBalancePage.tsx (reused) | ✅ |
+| Adjusted Trial Balance | TrialBalancePage.tsx (reused) | ✅ |
+| Post-Closing Trial Balance | TrialBalancePage.tsx (reused) | ✅ |
+| Output VAT Summary Report | VATOutputSummaryPage.tsx (reused) | ✅ |
+| Input VAT Summary Report | VATInputSummaryPage.tsx (reused) | ✅ |
+| Percentage Tax Summary Report | PTSummaryRegisterPage.tsx (reused) | ✅ |
+| EWT Summary Report | EWTSummaryPage.tsx (reused) | ✅ |
+| FWT Summary Report | FWTSummaryReportPage.tsx | ✅ |
+| 2307 Issued Listing | Form2307IssuedPage.tsx (reused) | ✅ |
+| 2307 Received Listing | Form2307ReceivedPage.tsx (reused) | ✅ |
+| AR Aging Report | ARAgingPage.tsx (reused) | ✅ |
+| AP Aging Report | APAgingPage.tsx (reused) | ✅ |
+| Bank Position Report | BankPositionReportPage.tsx | ✅ |
+| Bank Reconciliation Summary | BankReconciliationPage.tsx (reused) | ✅ |
+| Outstanding Checks Report | OutstandingChecksPage.tsx (reused) | ✅ |
+| Inventory Valuation Report | InventoryValuationPage.tsx (reused) | ✅ |
+| Stock Movement Report | InventoryMovementsPage.tsx (reused) | ✅ |
+| Inventory Ledger Report | InventoryMovementsPage.tsx (reused) | ✅ |
+| Slow Moving Inventory Report | SlowMovingInventoryReportPage.tsx | ✅ |
+| Fixed Asset Register Report | AssetRegisterPage.tsx (reused) | ✅ |
+| Depreciation Schedule Report | DepreciationScheduleReportPage.tsx | ✅ |
+| Book vs Tax Depreciation Report | BookVsTaxDepreciationReportPage.tsx | ✅ |
+| Asset Disposal Report | AssetDisposalReportPage.tsx | ✅ |
+| Branch P&L | BranchPnLReportPage.tsx | ✅ |
+| Department Report | DepartmentReportPage.tsx | ✅ |
+| Cost Center Report | CostCenterReportPage.tsx | ✅ |
+| Gross Margin Analysis | GrossMarginAnalysisPage.tsx | ✅ |
+| Journal Register | BooksGeneralJournalPage.tsx (reused) | ✅ |
+| Sales Invoice Register | SalesRegistersPage.tsx (reused) | ✅ |
+| Receipt Register | SalesRegistersPage.tsx (reused) | ✅ |
+| Purchase Register | PurchaseRegistersPage.tsx (reused) | ✅ |
+| Payment Register | PurchaseRegistersPage.tsx (reused) | ✅ |
+| Credit Memo Register | SalesRegistersPage.tsx (reused) | ✅ |
+| Debit Memo Register | SalesRegistersPage.tsx (reused) | ✅ |
+| Check Register | CheckRegisterReportPage.tsx | ✅ |
+| Period Close Checklist Report | PeriodClosingPage.tsx (reused) | ✅ |
+| Audit Support Package | AuditSupportPackagePage.tsx | ✅ |
+| User Activity Report | CASUserActivityLogPage.tsx (reused) | ✅ |
 
 ---
 
@@ -381,5 +383,5 @@ No new migration required — all books are read-only registers/views over exist
 | Compliance | 41 | 0 |
 | BIR Books | 13 | 0 |
 | Audit & CAS | 11 | 0 |
-| Reports | 5 | 38 |
-| **TOTAL** | **166** | **38** |
+| Reports | 43 | 0 |
+| **TOTAL** | **205** | **0** |

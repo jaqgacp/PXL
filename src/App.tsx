@@ -164,6 +164,18 @@ const IncomeStatementPage               = lazy(() => import('@/pages/IncomeState
 const StatementOfCashFlowsPage          = lazy(() => import('@/pages/StatementOfCashFlowsPage'))
 const StatementOfChangesInEquityPage    = lazy(() => import('@/pages/StatementOfChangesInEquityPage'))
 const ComparativeFinancialStatementsPage = lazy(() => import('@/pages/ComparativeFinancialStatementsPage'))
+const FWTSummaryReportPage              = lazy(() => import('@/pages/FWTSummaryReportPage'))
+const BankPositionReportPage            = lazy(() => import('@/pages/BankPositionReportPage'))
+const SlowMovingInventoryReportPage     = lazy(() => import('@/pages/SlowMovingInventoryReportPage'))
+const DepreciationScheduleReportPage    = lazy(() => import('@/pages/DepreciationScheduleReportPage'))
+const BookVsTaxDepreciationReportPage   = lazy(() => import('@/pages/BookVsTaxDepreciationReportPage'))
+const AssetDisposalReportPage           = lazy(() => import('@/pages/AssetDisposalReportPage'))
+const BranchPnLReportPage               = lazy(() => import('@/pages/BranchPnLReportPage'))
+const DepartmentReportPage              = lazy(() => import('@/pages/DepartmentReportPage'))
+const CostCenterReportPage              = lazy(() => import('@/pages/CostCenterReportPage'))
+const GrossMarginAnalysisPage           = lazy(() => import('@/pages/GrossMarginAnalysisPage'))
+const CheckRegisterReportPage           = lazy(() => import('@/pages/CheckRegisterReportPage'))
+const AuditSupportPackagePage           = lazy(() => import('@/pages/AuditSupportPackagePage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -372,6 +384,18 @@ export default function App() {
             <Route path="/statement-of-cash-flows" element={<StatementOfCashFlowsPage />} />
             <Route path="/statement-of-changes-in-equity" element={<StatementOfChangesInEquityPage />} />
             <Route path="/comparative-financial-statements" element={<ComparativeFinancialStatementsPage />} />
+            <Route path="/reports-fwt-summary" element={<FWTSummaryReportPage />} />
+            <Route path="/reports-bank-position" element={<BankPositionReportPage />} />
+            <Route path="/reports-slow-moving-inventory" element={<SlowMovingInventoryReportPage />} />
+            <Route path="/reports-depreciation-schedule" element={<DepreciationScheduleReportPage />} />
+            <Route path="/reports-book-vs-tax-depreciation" element={<BookVsTaxDepreciationReportPage />} />
+            <Route path="/reports-asset-disposal" element={<AssetDisposalReportPage />} />
+            <Route path="/reports-branch-pnl" element={<BranchPnLReportPage />} />
+            <Route path="/reports-department" element={<DepartmentReportPage />} />
+            <Route path="/reports-cost-center" element={<CostCenterReportPage />} />
+            <Route path="/reports-gross-margin" element={<GrossMarginAnalysisPage />} />
+            <Route path="/reports-check-register" element={<CheckRegisterReportPage />} />
+            <Route path="/reports-audit-support-package" element={<AuditSupportPackagePage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

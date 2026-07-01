@@ -210,15 +210,15 @@ const NAV: NavItem[] = [
   {
     label: 'Reports', groups: [
       { group: 'Financial Statements', items: [s('Balance Sheet', 'balance-sheet'), s('Income Statement', 'income-statement'), s('Statement of Cash Flows', 'statement-of-cash-flows'), s('Statement of Changes in Equity', 'statement-of-changes-in-equity'), s('Comparative Financial Statements', 'comparative-financial-statements')] },
-      { group: 'Trial Balance', items: [s('Unadjusted Trial Balance'), s('Adjusted Trial Balance'), s('Post-Closing Trial Balance')] },
-      { group: 'Tax Reports', items: [s('Output VAT Summary'), s('Input VAT Summary'), s('Percentage Tax Summary'), s('EWT Summary'), s('FWT Summary'), s('2307 Issued Listing'), s('2307 Received Listing')] },
-      { group: 'Aging Reports', items: [s('AR Aging'), s('AP Aging')] },
-      { group: 'Bank Reports', items: [s('Bank Position Report'), s('Bank Reconciliation Summary'), s('Outstanding Checks Report')] },
-      { group: 'Inventory Reports', items: [s('Inventory Valuation'), s('Stock Movement'), s('Inventory Ledger'), s('Slow Moving Inventory')] },
-      { group: 'Fixed Asset Reports', items: [s('Fixed Asset Register'), s('Depreciation Schedule'), s('Book vs Tax Depreciation'), s('Asset Disposal Report')] },
-      { group: 'Management Reports', items: [s('Branch P&L'), s('Department Report'), s('Cost Center Report'), s('Gross Margin Analysis')] },
-      { group: 'Transaction Registers', items: [s('Journal Register'), s('Sales Invoice Register'), s('Receipt Register'), s('Purchase Register'), s('Payment Register'), s('Credit Memo Register'), s('Debit Memo Register'), s('Check Register')] },
-      { group: 'Audit Reports', items: [s('Period Close Checklist'), s('Audit Support Package'), s('User Activity Report')] },
+      { group: 'Trial Balance', items: [s('Unadjusted Trial Balance', 'trial-balance'), s('Adjusted Trial Balance', 'trial-balance'), s('Post-Closing Trial Balance', 'trial-balance')] },
+      { group: 'Tax Reports', items: [s('Output VAT Summary', 'vat-output-summary'), s('Input VAT Summary', 'vat-input-summary'), s('Percentage Tax Summary', 'pt-summary-register'), s('EWT Summary', 'ewt-summary'), s('FWT Summary', 'reports-fwt-summary'), s('2307 Issued Listing', '2307-issued-review'), s('2307 Received Listing', '2307-received-review')] },
+      { group: 'Aging Reports', items: [s('AR Aging', 'ar-aging'), s('AP Aging', 'ap-aging')] },
+      { group: 'Bank Reports', items: [s('Bank Position Report', 'reports-bank-position'), s('Bank Reconciliation Summary', 'bank-reconciliation'), s('Outstanding Checks Report', 'outstanding-checks')] },
+      { group: 'Inventory Reports', items: [s('Inventory Valuation', 'inventory-valuation'), s('Stock Movement', 'inventory-movements'), s('Inventory Ledger', 'inventory-movements'), s('Slow Moving Inventory', 'reports-slow-moving-inventory')] },
+      { group: 'Fixed Asset Reports', items: [s('Fixed Asset Register', 'asset-register'), s('Depreciation Schedule', 'reports-depreciation-schedule'), s('Book vs Tax Depreciation', 'reports-book-vs-tax-depreciation'), s('Asset Disposal Report', 'reports-asset-disposal')] },
+      { group: 'Management Reports', items: [s('Branch P&L', 'reports-branch-pnl'), s('Department Report', 'reports-department'), s('Cost Center Report', 'reports-cost-center'), s('Gross Margin Analysis', 'reports-gross-margin')] },
+      { group: 'Transaction Registers', items: [s('Journal Register', 'books-general-journal'), s('Sales Invoice Register', 'sales-registers'), s('Receipt Register', 'sales-registers'), s('Purchase Register', 'purchase-registers'), s('Payment Register', 'purchase-registers'), s('Credit Memo Register', 'sales-registers'), s('Debit Memo Register', 'sales-registers'), s('Check Register', 'reports-check-register')] },
+      { group: 'Audit Reports', items: [s('Period Close Checklist', 'period-closing'), s('Audit Support Package', 'reports-audit-support-package'), s('User Activity Report', 'cas-user-activity-log')] },
     ]
   },
 ]
@@ -381,6 +381,18 @@ const PAGE_LABELS: Record<string, string> = {
   'statement-of-cash-flows':           'Statement of Cash Flows',
   'statement-of-changes-in-equity':    'Statement of Changes in Equity',
   'comparative-financial-statements':  'Comparative Financial Statements',
+  'reports-fwt-summary':               'FWT Summary Report',
+  'reports-bank-position':             'Bank Position Report',
+  'reports-slow-moving-inventory':     'Slow Moving Inventory Report',
+  'reports-depreciation-schedule':     'Depreciation Schedule Report',
+  'reports-book-vs-tax-depreciation':  'Book vs Tax Depreciation Report',
+  'reports-asset-disposal':            'Asset Disposal Report',
+  'reports-branch-pnl':                'Branch P&L',
+  'reports-department':                'Department Report',
+  'reports-cost-center':               'Cost Center Report',
+  'reports-gross-margin':              'Gross Margin Analysis',
+  'reports-check-register':            'Check Register',
+  'reports-audit-support-package':     'Audit Support Package',
 }
 
 function findSection(page: string): string | null {
