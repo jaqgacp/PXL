@@ -3,7 +3,7 @@
 Last updated: 2026-07-01
 Build: ✅ Clean (zero TS errors)
 Migrations applied to Supabase: 001–029, 20260701000001–20260701000004
-Migrations pending (written, not yet pushed): none
+Migrations pending (written, not yet pushed): 20260701000005 (Audit & CAS)
 
 ---
 
@@ -68,6 +68,7 @@ Migrations pending (written, not yet pushed): none
 | 20260701000002_vat.sql | VAT working papers, vat_returns (2550M/Q), vw_output_vat_review | ✅ |
 | 20260701000003_withholding_tax.sql | 1601EQ/FWT/1601FQ working papers, ewt_returns, fwt_returns, form_2306_issuances | ✅ |
 | 20260701000004_income_tax.sql | income_tax_computations, book_tax_reconciliation, nolco_schedule, tax_credits_schedule, mcit_computations, itr_filings | ✅ |
+| 20260701000005_audit_cas.sql | Expanded audit trigger coverage, cas_attachment_register, cas_export_log | ⏳ |
 
 ---
 
@@ -296,20 +297,22 @@ No new migration required — all books are read-only registers/views over exist
 
 ---
 
-## Audit & CAS
+## Audit & CAS — COMPLETE (S19, 2026-07-01)
 | Page | File | Status |
 |---|---|---|
-| CAS Dashboard | — | ❌ |
-| Transaction Audit Log | — | ❌ |
-| Master Data Change Log | — | ❌ |
-| System Parameter Logs | — | ❌ |
-| User Activity Log | — | ❌ |
-| Attachment Register | — | ❌ |
-| Document Void Register | — | ❌ |
-| ATP Usage Log | — | ❌ |
-| DAT File Generation | — | ❌ |
-| CAS Audit Report | — | ❌ |
-| Export History | — | ❌ |
+| CAS Dashboard | CASDashboardPage.tsx | ✅ |
+| Transaction Audit Log | CASTransactionAuditLogPage.tsx | ✅ |
+| Master Data Change Log | CASMasterDataChangeLogPage.tsx | ✅ |
+| System Parameter Logs | CASSystemParameterLogsPage.tsx | ✅ |
+| User Activity Log | CASUserActivityLogPage.tsx | ✅ |
+| Attachment Register | CASAttachmentRegisterPage.tsx | ✅ |
+| Document Void Register | CASDocumentVoidRegisterPage.tsx | ✅ |
+| ATP Usage Log | CASATPUsageLogPage.tsx | ✅ |
+| DAT File Generation | CASDATFileGenerationPage.tsx | ✅ |
+| CAS Audit Report | CASAuditReportPage.tsx | ✅ |
+| Export History | CASExportHistoryPage.tsx | ✅ |
+
+**New migration:** `20260701000005_audit_cas.sql` — expands `fn_audit_trigger` coverage to 27 more master-data/transaction/system-parameter tables; adds `cas_attachment_register` and `cas_export_log` tables. Validated locally against a fresh Postgres instance (full migration chain applied cleanly).
 
 ---
 
@@ -377,6 +380,6 @@ No new migration required — all books are read-only registers/views over exist
 | Accounting | 15 | 0 |
 | Compliance | 41 | 0 |
 | BIR Books | 13 | 0 |
-| Audit & CAS | 0 | 11 |
+| Audit & CAS | 11 | 0 |
 | Reports | 0 | 43 |
-| **TOTAL** | **150** | **54** |
+| **TOTAL** | **161** | **43** |

@@ -204,7 +204,7 @@ const NAV: NavItem[] = [
       { group: 'Withholding Tax', items: [s('WT Dashboard', 'wt-dashboard'), s('EWT Working Papers', 'ewt-working-papers'), s('EWT Payable Summary', 'ewt-summary'), s('EWT Receivable Summary', 'wt-ewt-receivable-summary'), s('ATC Summary', 'wt-atc-summary'), s('1601EQ Working Papers', 'wt-1601eq-working-papers'), s('1601EQ Quarterly Return', 'wt-1601eq-return'), s('QAP', 'wt-qap'), s('SAWT', 'wt-sawt'), s('2307 Certificates Issued', '2307-issued-review'), s('2307 Certificates Received', '2307-received-review'), s('2306 Certificates', 'wt-2306-certificates'), s('FWT Working Papers', 'wt-fwt-working-papers'), s('1601FQ Working Papers', 'wt-1601fq-working-papers'), s('1601FQ Quarterly Return', 'wt-1601fq-return')] },
       { group: 'Income Tax', items: [s('Income Tax Dashboard', 'inc-tax-dashboard'), s('Taxable Income Computation', 'inc-tax-computation'), s('Book-to-Tax Reconciliation', 'inc-tax-book-to-tax-recon'), s('OSD Computation', 'inc-tax-osd'), s('NOLCO Schedule', 'inc-tax-nolco'), s('Tax Credits Schedule', 'inc-tax-credits'), s('1701Q Quarterly ITR', 'inc-tax-1701q'), s('1701 Annual ITR', 'inc-tax-1701'), s('1702Q Quarterly ITR', 'inc-tax-1702q'), s('1702RT Annual ITR', 'inc-tax-1702rt'), s('MCIT Computation', 'inc-tax-mcit')] },
       { group: 'BIR Books', items: [s('Books Dashboard', 'books-dashboard'), s('General Journal', 'books-general-journal'), s('General Ledger Book', 'general-ledger'), s('Cash Receipts Book', 'books-cash-receipts'), s('Cash Disbursements Book', 'books-cash-disbursements'), s('Sales Journal', 'books-sales-journal'), s('Cash Sales Journal', 'books-cash-sales-journal'), s('Purchase Journal', 'books-purchase-journal'), s('Cash Purchases Journal', 'books-cash-purchases-journal'), s('AR Subsidiary Ledger', 'ar-aging'), s('AP Subsidiary Ledger', 'ap-aging'), s('Inventory Subsidiary Ledger', 'inventory-movements'), s('Fixed Asset Register', 'asset-register')] },
-      { group: 'Audit & CAS', items: [s('CAS Dashboard'), s('Transaction Audit Log'), s('Master Data Change Log'), s('System Parameter Logs'), s('User Activity Log'), s('Attachment Register'), s('Document Void Register'), s('ATP Usage Log'), s('DAT File Generation'), s('CAS Audit Report'), s('Export History')] },
+      { group: 'Audit & CAS', items: [s('CAS Dashboard', 'cas-dashboard'), s('Transaction Audit Log', 'cas-transaction-audit-log'), s('Master Data Change Log', 'cas-master-data-change-log'), s('System Parameter Logs', 'cas-system-parameter-logs'), s('User Activity Log', 'cas-user-activity-log'), s('Attachment Register', 'cas-attachment-register'), s('Document Void Register', 'cas-document-void-register'), s('ATP Usage Log', 'cas-atp-usage-log'), s('DAT File Generation', 'cas-dat-file-generation'), s('CAS Audit Report', 'cas-audit-report'), s('Export History', 'cas-export-history')] },
     ]
   },
   {
@@ -365,6 +365,17 @@ const PAGE_LABELS: Record<string, string> = {
   'books-cash-sales-journal':          'Cash Sales Journal',
   'books-purchase-journal':            'Purchase Journal',
   'books-cash-purchases-journal':      'Cash Purchases Journal',
+  'cas-dashboard':                     'CAS Dashboard',
+  'cas-transaction-audit-log':         'Transaction Audit Log',
+  'cas-master-data-change-log':        'Master Data Change Log',
+  'cas-system-parameter-logs':         'System Parameter Logs',
+  'cas-user-activity-log':             'User Activity Log',
+  'cas-attachment-register':           'Attachment Register',
+  'cas-document-void-register':        'Document Void Register',
+  'cas-atp-usage-log':                 'ATP Usage Log',
+  'cas-dat-file-generation':           'DAT File Generation',
+  'cas-audit-report':                  'CAS Audit Report',
+  'cas-export-history':                'Export History',
 }
 
 function findSection(page: string): string | null {

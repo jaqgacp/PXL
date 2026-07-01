@@ -148,6 +148,17 @@ const BooksSalesJournalPage             = lazy(() => import('@/pages/BooksSalesJ
 const BooksCashSalesJournalPage         = lazy(() => import('@/pages/BooksCashSalesJournalPage'))
 const BooksPurchaseJournalPage          = lazy(() => import('@/pages/BooksPurchaseJournalPage'))
 const BooksCashPurchasesJournalPage     = lazy(() => import('@/pages/BooksCashPurchasesJournalPage'))
+const CASDashboardPage                  = lazy(() => import('@/pages/CASDashboardPage'))
+const CASTransactionAuditLogPage        = lazy(() => import('@/pages/CASTransactionAuditLogPage'))
+const CASMasterDataChangeLogPage        = lazy(() => import('@/pages/CASMasterDataChangeLogPage'))
+const CASSystemParameterLogsPage        = lazy(() => import('@/pages/CASSystemParameterLogsPage'))
+const CASUserActivityLogPage            = lazy(() => import('@/pages/CASUserActivityLogPage'))
+const CASAttachmentRegisterPage         = lazy(() => import('@/pages/CASAttachmentRegisterPage'))
+const CASDocumentVoidRegisterPage       = lazy(() => import('@/pages/CASDocumentVoidRegisterPage'))
+const CASATPUsageLogPage                = lazy(() => import('@/pages/CASATPUsageLogPage'))
+const CASDATFileGenerationPage          = lazy(() => import('@/pages/CASDATFileGenerationPage'))
+const CASAuditReportPage                = lazy(() => import('@/pages/CASAuditReportPage'))
+const CASExportHistoryPage              = lazy(() => import('@/pages/CASExportHistoryPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -340,6 +351,17 @@ export default function App() {
             <Route path="/books-cash-sales-journal" element={<BooksCashSalesJournalPage />} />
             <Route path="/books-purchase-journal" element={<BooksPurchaseJournalPage />} />
             <Route path="/books-cash-purchases-journal" element={<BooksCashPurchasesJournalPage />} />
+            <Route path="/cas-dashboard" element={<CASDashboardPage />} />
+            <Route path="/cas-transaction-audit-log" element={<CASTransactionAuditLogPage />} />
+            <Route path="/cas-master-data-change-log" element={<CASMasterDataChangeLogPage />} />
+            <Route path="/cas-system-parameter-logs" element={<CASSystemParameterLogsPage />} />
+            <Route path="/cas-user-activity-log" element={<CASUserActivityLogPage />} />
+            <Route path="/cas-attachment-register" element={<CASAttachmentRegisterPage />} />
+            <Route path="/cas-document-void-register" element={<CASDocumentVoidRegisterPage />} />
+            <Route path="/cas-atp-usage-log" element={<CASATPUsageLogPage />} />
+            <Route path="/cas-dat-file-generation" element={<CASDATFileGenerationPage />} />
+            <Route path="/cas-audit-report" element={<CASAuditReportPage />} />
+            <Route path="/cas-export-history" element={<CASExportHistoryPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
