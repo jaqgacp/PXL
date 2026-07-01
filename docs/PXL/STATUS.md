@@ -2,8 +2,8 @@
 
 Last updated: 2026-07-01
 Build: ✅ Clean (zero TS errors)
-Migrations applied to Supabase: 001–029, 20260701000001–20260701000004
-Migrations pending (written, not yet pushed): 20260701000005 (Audit & CAS)
+Migrations applied to Supabase: 001–029, 20260701000001–20260701000005
+Migrations pending (written, not yet pushed): none
 
 ---
 
@@ -68,7 +68,7 @@ Migrations pending (written, not yet pushed): 20260701000005 (Audit & CAS)
 | 20260701000002_vat.sql | VAT working papers, vat_returns (2550M/Q), vw_output_vat_review | ✅ |
 | 20260701000003_withholding_tax.sql | 1601EQ/FWT/1601FQ working papers, ewt_returns, fwt_returns, form_2306_issuances | ✅ |
 | 20260701000004_income_tax.sql | income_tax_computations, book_tax_reconciliation, nolco_schedule, tax_credits_schedule, mcit_computations, itr_filings | ✅ |
-| 20260701000005_audit_cas.sql | Expanded audit trigger coverage, cas_attachment_register, cas_export_log | ⏳ |
+| 20260701000005_audit_cas.sql | Expanded audit trigger coverage, cas_attachment_register, cas_export_log | ✅ |
 
 ---
 
