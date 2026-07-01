@@ -159,6 +159,11 @@ const CASATPUsageLogPage                = lazy(() => import('@/pages/CASATPUsage
 const CASDATFileGenerationPage          = lazy(() => import('@/pages/CASDATFileGenerationPage'))
 const CASAuditReportPage                = lazy(() => import('@/pages/CASAuditReportPage'))
 const CASExportHistoryPage              = lazy(() => import('@/pages/CASExportHistoryPage'))
+const BalanceSheetPage                  = lazy(() => import('@/pages/BalanceSheetPage'))
+const IncomeStatementPage               = lazy(() => import('@/pages/IncomeStatementPage'))
+const StatementOfCashFlowsPage          = lazy(() => import('@/pages/StatementOfCashFlowsPage'))
+const StatementOfChangesInEquityPage    = lazy(() => import('@/pages/StatementOfChangesInEquityPage'))
+const ComparativeFinancialStatementsPage = lazy(() => import('@/pages/ComparativeFinancialStatementsPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -362,6 +367,11 @@ export default function App() {
             <Route path="/cas-dat-file-generation" element={<CASDATFileGenerationPage />} />
             <Route path="/cas-audit-report" element={<CASAuditReportPage />} />
             <Route path="/cas-export-history" element={<CASExportHistoryPage />} />
+            <Route path="/balance-sheet" element={<BalanceSheetPage />} />
+            <Route path="/income-statement" element={<IncomeStatementPage />} />
+            <Route path="/statement-of-cash-flows" element={<StatementOfCashFlowsPage />} />
+            <Route path="/statement-of-changes-in-equity" element={<StatementOfChangesInEquityPage />} />
+            <Route path="/comparative-financial-statements" element={<ComparativeFinancialStatementsPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

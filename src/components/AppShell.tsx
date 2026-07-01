@@ -209,7 +209,7 @@ const NAV: NavItem[] = [
   },
   {
     label: 'Reports', groups: [
-      { group: 'Financial Statements', items: [s('Balance Sheet'), s('Income Statement'), s('Statement of Cash Flows'), s('Statement of Changes in Equity'), s('Comparative Financial Statements')] },
+      { group: 'Financial Statements', items: [s('Balance Sheet', 'balance-sheet'), s('Income Statement', 'income-statement'), s('Statement of Cash Flows', 'statement-of-cash-flows'), s('Statement of Changes in Equity', 'statement-of-changes-in-equity'), s('Comparative Financial Statements', 'comparative-financial-statements')] },
       { group: 'Trial Balance', items: [s('Unadjusted Trial Balance'), s('Adjusted Trial Balance'), s('Post-Closing Trial Balance')] },
       { group: 'Tax Reports', items: [s('Output VAT Summary'), s('Input VAT Summary'), s('Percentage Tax Summary'), s('EWT Summary'), s('FWT Summary'), s('2307 Issued Listing'), s('2307 Received Listing')] },
       { group: 'Aging Reports', items: [s('AR Aging'), s('AP Aging')] },
@@ -376,6 +376,11 @@ const PAGE_LABELS: Record<string, string> = {
   'cas-dat-file-generation':           'DAT File Generation',
   'cas-audit-report':                  'CAS Audit Report',
   'cas-export-history':                'Export History',
+  'balance-sheet':                     'Balance Sheet',
+  'income-statement':                  'Income Statement',
+  'statement-of-cash-flows':           'Statement of Cash Flows',
+  'statement-of-changes-in-equity':    'Statement of Changes in Equity',
+  'comparative-financial-statements':  'Comparative Financial Statements',
 }
 
 function findSection(page: string): string | null {

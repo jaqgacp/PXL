@@ -319,11 +319,11 @@ No new migration required — all books are read-only registers/views over exist
 ## Reports
 | Page | File | Status |
 |---|---|---|
-| Balance Sheet | — | ❌ |
-| Income Statement | — | ❌ |
-| Statement of Cash Flows | — | ❌ |
-| Statement of Changes in Equity | — | ❌ |
-| Comparative Financial Statements | — | ❌ |
+| Balance Sheet | BalanceSheetPage.tsx | ✅ |
+| Income Statement | IncomeStatementPage.tsx | ✅ |
+| Statement of Cash Flows | StatementOfCashFlowsPage.tsx | ✅ |
+| Statement of Changes in Equity | StatementOfChangesInEquityPage.tsx | ✅ |
+| Comparative Financial Statements | ComparativeFinancialStatementsPage.tsx | ✅ |
 | Unadjusted Trial Balance | — | ❌ |
 | Adjusted Trial Balance | — | ❌ |
 | Post-Closing Trial Balance | — | ❌ |
@@ -381,5 +381,5 @@ No new migration required — all books are read-only registers/views over exist
 | Compliance | 41 | 0 |
 | BIR Books | 13 | 0 |
 | Audit & CAS | 11 | 0 |
-| Reports | 0 | 43 |
-| **TOTAL** | **161** | **43** |
+| Reports | 5 | 38 |
+| **TOTAL** | **166** | **38** |
