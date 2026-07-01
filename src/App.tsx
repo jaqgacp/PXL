@@ -103,6 +103,43 @@ const InventoryMovementsPage            = lazy(() => import('@/pages/InventoryMo
 const InventoryValuationPage            = lazy(() => import('@/pages/InventoryValuationPage'))
 const WarehouseStockSettingsPage        = lazy(() => import('@/pages/WarehouseStockSettingsPage'))
 const EmployeesPage                     = lazy(() => import('@/pages/EmployeesPage'))
+const PTDashboardPage                   = lazy(() => import('@/pages/PTDashboardPage'))
+const PTWorkingPapersPage               = lazy(() => import('@/pages/PTWorkingPapersPage'))
+const PTReturnPage                      = lazy(() => import('@/pages/PTReturnPage'))
+const PTReconciliationPage              = lazy(() => import('@/pages/PTReconciliationPage'))
+const PTSummaryRegisterPage             = lazy(() => import('@/pages/PTSummaryRegisterPage'))
+const VATDashboardPage                  = lazy(() => import('@/pages/VATDashboardPage'))
+const VATWorkingPapersPage              = lazy(() => import('@/pages/VATWorkingPapersPage'))
+const VATOutputSummaryPage              = lazy(() => import('@/pages/VATOutputSummaryPage'))
+const VATInputSummaryPage               = lazy(() => import('@/pages/VATInputSummaryPage'))
+const VATReconciliationPage             = lazy(() => import('@/pages/VATReconciliationPage'))
+const VATReturn2550MPage                = lazy(() => import('@/pages/VATReturn2550MPage'))
+const VATReturn2550QPage                = lazy(() => import('@/pages/VATReturn2550QPage'))
+const SLPPage                           = lazy(() => import('@/pages/SLPPage'))
+const SLSPExportPage                    = lazy(() => import('@/pages/SLSPExportPage'))
+const RELIEFExportPage                  = lazy(() => import('@/pages/RELIEFExportPage'))
+const WTDashboardPage                   = lazy(() => import('@/pages/WTDashboardPage'))
+const EWTReceivableSummaryPage          = lazy(() => import('@/pages/EWTReceivableSummaryPage'))
+const ATCSummaryPage                    = lazy(() => import('@/pages/ATCSummaryPage'))
+const EWT1601EQWorkingPapersPage        = lazy(() => import('@/pages/EWT1601EQWorkingPapersPage'))
+const EWT1601EQReturnPage               = lazy(() => import('@/pages/EWT1601EQReturnPage'))
+const QAPPage                           = lazy(() => import('@/pages/QAPPage'))
+const SAWTPage                          = lazy(() => import('@/pages/SAWTPage'))
+const Form2306Page                      = lazy(() => import('@/pages/Form2306Page'))
+const FWTWorkingPapersPage              = lazy(() => import('@/pages/FWTWorkingPapersPage'))
+const FWT1601FQWorkingPapersPage        = lazy(() => import('@/pages/FWT1601FQWorkingPapersPage'))
+const FWT1601FQReturnPage               = lazy(() => import('@/pages/FWT1601FQReturnPage'))
+const IncomeTaxDashboardPage            = lazy(() => import('@/pages/IncomeTaxDashboardPage'))
+const TaxableIncomeComputationPage      = lazy(() => import('@/pages/TaxableIncomeComputationPage'))
+const BookToTaxReconciliationPage       = lazy(() => import('@/pages/BookToTaxReconciliationPage'))
+const OSDComputationPage                = lazy(() => import('@/pages/OSDComputationPage'))
+const NOLCOSchedulePage                 = lazy(() => import('@/pages/NOLCOSchedulePage'))
+const TaxCreditsSchedulePage            = lazy(() => import('@/pages/TaxCreditsSchedulePage'))
+const ITR1701QPage                      = lazy(() => import('@/pages/ITR1701QPage'))
+const ITR1701Page                       = lazy(() => import('@/pages/ITR1701Page'))
+const ITR1702QPage                      = lazy(() => import('@/pages/ITR1702QPage'))
+const ITR1702RTPage                     = lazy(() => import('@/pages/ITR1702RTPage'))
+const MCITComputationPage               = lazy(() => import('@/pages/MCITComputationPage'))
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-64">
@@ -250,6 +287,43 @@ export default function App() {
             <Route path="/inventory-valuation" element={<InventoryValuationPage />} />
             <Route path="/warehouse-stock-settings" element={<WarehouseStockSettingsPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
+            <Route path="/pt-dashboard" element={<PTDashboardPage />} />
+            <Route path="/pt-working-papers" element={<PTWorkingPapersPage />} />
+            <Route path="/pt-return-2551q" element={<PTReturnPage />} />
+            <Route path="/pt-reconciliation" element={<PTReconciliationPage />} />
+            <Route path="/pt-summary-register" element={<PTSummaryRegisterPage />} />
+            <Route path="/vat-dashboard" element={<VATDashboardPage />} />
+            <Route path="/vat-working-papers" element={<VATWorkingPapersPage />} />
+            <Route path="/vat-output-summary" element={<VATOutputSummaryPage />} />
+            <Route path="/vat-input-summary" element={<VATInputSummaryPage />} />
+            <Route path="/vat-reconciliation" element={<VATReconciliationPage />} />
+            <Route path="/vat-return-2550m" element={<VATReturn2550MPage />} />
+            <Route path="/vat-return-2550q" element={<VATReturn2550QPage />} />
+            <Route path="/vat-slp" element={<SLPPage />} />
+            <Route path="/vat-slsp-export" element={<SLSPExportPage />} />
+            <Route path="/vat-relief-export" element={<RELIEFExportPage />} />
+            <Route path="/wt-dashboard" element={<WTDashboardPage />} />
+            <Route path="/wt-ewt-receivable-summary" element={<EWTReceivableSummaryPage />} />
+            <Route path="/wt-atc-summary" element={<ATCSummaryPage />} />
+            <Route path="/wt-1601eq-working-papers" element={<EWT1601EQWorkingPapersPage />} />
+            <Route path="/wt-1601eq-return" element={<EWT1601EQReturnPage />} />
+            <Route path="/wt-qap" element={<QAPPage />} />
+            <Route path="/wt-sawt" element={<SAWTPage />} />
+            <Route path="/wt-2306-certificates" element={<Form2306Page />} />
+            <Route path="/wt-fwt-working-papers" element={<FWTWorkingPapersPage />} />
+            <Route path="/wt-1601fq-working-papers" element={<FWT1601FQWorkingPapersPage />} />
+            <Route path="/wt-1601fq-return" element={<FWT1601FQReturnPage />} />
+            <Route path="/inc-tax-dashboard" element={<IncomeTaxDashboardPage />} />
+            <Route path="/inc-tax-computation" element={<TaxableIncomeComputationPage />} />
+            <Route path="/inc-tax-book-to-tax-recon" element={<BookToTaxReconciliationPage />} />
+            <Route path="/inc-tax-osd" element={<OSDComputationPage />} />
+            <Route path="/inc-tax-nolco" element={<NOLCOSchedulePage />} />
+            <Route path="/inc-tax-credits" element={<TaxCreditsSchedulePage />} />
+            <Route path="/inc-tax-1701q" element={<ITR1701QPage />} />
+            <Route path="/inc-tax-1701" element={<ITR1701Page />} />
+            <Route path="/inc-tax-1702q" element={<ITR1702QPage />} />
+            <Route path="/inc-tax-1702rt" element={<ITR1702RTPage />} />
+            <Route path="/inc-tax-mcit" element={<MCITComputationPage />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>

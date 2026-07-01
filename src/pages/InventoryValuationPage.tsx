@@ -96,7 +96,6 @@ export default function InventoryValuationPage() {
   })
 
   const totalValue = visible.reduce((s, r) => s + r.total_cost, 0)
-  const totalQty = visible.reduce((s, r) => s + r.qty_on_hand, 0)
 
   // Group by logic
   const grouped = (() => {

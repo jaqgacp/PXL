@@ -209,7 +209,7 @@ export default function WarehouseStockSettingsPage() {
                 <tbody className="divide-y divide-gray-100">
                   {visible.length === 0 ? (
                     <tr><td colSpan={10} className="py-12 text-center text-gray-400">No items</td></tr>
-                  ) : visible.map((r, visIdx) => {
+                  ) : visible.map((r) => {
                     const idx = rows.findIndex(x => x.item_id === r.item_id)
                     const isLow = r.min_stock_level !== '' && r.qty_on_hand <= Number(r.min_stock_level)
                     return (

@@ -84,7 +84,7 @@ export default function RevenueRecognitionSchedulesPage() {
     const { data } = await supabase.from('revenue_recognition_entries')
       .select('id,period_number,entry_date,amount,status,je_id,journal_entries(je_number)')
       .eq('schedule_id', schedule.id).order('period_number')
-    setEntries((data as Entry[]) || [])
+    setEntries((data as unknown as Entry[]) || [])
     setEntriesLoading(false)
   }
 

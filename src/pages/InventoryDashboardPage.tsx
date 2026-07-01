@@ -114,7 +114,6 @@ export default function InventoryDashboardPage() {
 
   useEffect(() => { load() }, [load])
 
-  const totalItems = [...new Set(summaries.flatMap(() => []))].length
   const totalValue = summaries.reduce((s, w) => s + w.total_value, 0)
   const totalWh = summaries.length
 

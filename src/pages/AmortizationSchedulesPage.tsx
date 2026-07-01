@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge } from '@/components/ui/shared'
 
 type Schedule = {
   id: string; company_id: string; branch_id: string | null
@@ -85,7 +84,7 @@ export default function AmortizationSchedulesPage() {
     const { data } = await supabase.from('amortization_entries')
       .select('id,period_number,entry_date,amount,status,je_id,journal_entries(je_number)')
       .eq('schedule_id', schedule.id).order('period_number')
-    setEntries((data as Entry[]) || [])
+    setEntries((data as unknown as Entry[]) || [])
     setEntriesLoading(false)
   }
 

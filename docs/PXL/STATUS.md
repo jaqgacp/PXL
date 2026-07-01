@@ -1,8 +1,8 @@
 # PXL ERP — Build Status
 
-Last updated: 2026-06-30
+Last updated: 2026-07-01
 Build: ✅ Clean (zero TS errors)
-Migrations applied to Supabase: 001–029
+Migrations applied to Supabase: 001–029, 20260701000001–20260701000004
 Migrations pending (written, not yet pushed): none
 
 ---
@@ -64,6 +64,10 @@ Migrations pending (written, not yet pushed): none
 | 20260630000027_fixed_assets.sql | Fixed Assets — 6 tables, schedule generator, 5 posting RPCs | ✅ |
 | 20260630000028_inventory.sql | Inventory — 11 tables, WAC/FIFO/Specific ID costing, 6 posting RPCs | ✅ |
 | 20260630000029_master_data_completion.sql | warehouse_item_settings + employees tables | ✅ |
+| 20260701000001_percentage_tax.sql | PT working papers, pt_returns (2551Q) | ✅ |
+| 20260701000002_vat.sql | VAT working papers, vat_returns (2550M/Q), vw_output_vat_review | ✅ |
+| 20260701000003_withholding_tax.sql | 1601EQ/FWT/1601FQ working papers, ewt_returns, fwt_returns, form_2306_issuances | ✅ |
+| 20260701000004_income_tax.sql | income_tax_computations, book_tax_reconciliation, nolco_schedule, tax_credits_schedule, mcit_computations, itr_filings | ✅ |
 
 ---
 
@@ -217,50 +221,57 @@ Migrations pending (written, not yet pushed): none
 
 ---
 
-## Compliance Module
+## Compliance Module — COMPLETE (S14–S17, 2026-07-01)
 | Page | File | Status |
 |---|---|---|
 | EWT Working Papers | EWTWorkingPapersPage.tsx | ✅ |
 | 2307 Certificates Issued | Form2307IssuedPage.tsx | ✅ |
 | 2307 Certificates Received | Form2307ReceivedPage.tsx | ✅ |
-| PT Dashboard | — | ❌ |
-| PT Working Papers | — | ❌ |
-| PT Quarterly Return (2551Q) | — | ❌ |
-| PT Reconciliation | — | ❌ |
-| PT Summary Register | — | ❌ |
-| VAT Dashboard | — | ❌ |
-| VAT Working Papers | — | ❌ |
-| Output VAT Summary | — | ❌ |
-| Input VAT Summary | — | ❌ |
-| VAT Reconciliation | — | ❌ |
-| VAT Return 2550M | — | ❌ |
-| VAT Return 2550Q | — | ❌ |
-| SLP (Summary List of Purchases) | — | ❌ |
-| SLSP Export | — | ❌ |
-| RELIEF Export | — | ❌ |
-| WT Dashboard | — | ❌ |
-| EWT Payable Summary | — | ❌ |
-| EWT Receivable Summary | — | ❌ |
-| ATC Summary | — | ❌ |
-| 1601EQ Working Papers | — | ❌ |
-| 1601EQ Quarterly Return | — | ❌ |
-| QAP (Quarterly Alphalist of Payees) | — | ❌ |
-| SAWT (Summary Alphalist of Withholding Tax) | — | ❌ |
-| 2306 Certificates | — | ❌ |
-| FWT Working Papers | — | ❌ |
-| 1601FQ Working Papers | — | ❌ |
-| 1601FQ Quarterly Return | — | ❌ |
-| Income Tax Dashboard | — | ❌ |
-| Taxable Income Computation | — | ❌ |
-| Book-to-Tax Reconciliation | — | ❌ |
-| OSD Computation | — | ❌ |
-| NOLCO Schedule | — | ❌ |
-| Tax Credits Schedule | — | ❌ |
-| 1701Q Quarterly ITR | — | ❌ |
-| 1701 Annual ITR | — | ❌ |
-| 1702Q Quarterly ITR | — | ❌ |
-| 1702RT Annual ITR | — | ❌ |
-| MCIT Computation | — | ❌ |
+| PT Dashboard | PTDashboardPage.tsx | ✅ |
+| PT Working Papers | PTWorkingPapersPage.tsx | ✅ |
+| PT Quarterly Return (2551Q) | PTReturnPage.tsx | ✅ |
+| PT Reconciliation | PTReconciliationPage.tsx | ✅ |
+| PT Summary Register | PTSummaryRegisterPage.tsx | ✅ |
+| VAT Dashboard | VATDashboardPage.tsx | ✅ |
+| VAT Working Papers | VATWorkingPapersPage.tsx | ✅ |
+| Output VAT Summary | VATOutputSummaryPage.tsx | ✅ |
+| Input VAT Summary | VATInputSummaryPage.tsx | ✅ |
+| VAT Reconciliation | VATReconciliationPage.tsx | ✅ |
+| VAT Return 2550M | VATReturn2550MPage.tsx | ✅ |
+| VAT Return 2550Q | VATReturn2550QPage.tsx | ✅ |
+| SLP (Summary List of Purchases) | SLPPage.tsx | ✅ |
+| SLSP Export | SLSPExportPage.tsx | ✅ |
+| RELIEF Export | RELIEFExportPage.tsx | ✅ |
+| WT Dashboard | WTDashboardPage.tsx | ✅ |
+| EWT Payable Summary | EWTSummaryPage.tsx (reused) | ✅ |
+| EWT Receivable Summary | EWTReceivableSummaryPage.tsx | ✅ |
+| ATC Summary | ATCSummaryPage.tsx | ✅ |
+| 1601EQ Working Papers | EWT1601EQWorkingPapersPage.tsx | ✅ |
+| 1601EQ Quarterly Return | EWT1601EQReturnPage.tsx | ✅ |
+| QAP (Quarterly Alphalist of Payees) | QAPPage.tsx | ✅ |
+| SAWT (Summary Alphalist of Withholding Tax) | SAWTPage.tsx | ✅ |
+| 2306 Certificates | Form2306Page.tsx | ✅ |
+| FWT Working Papers | FWTWorkingPapersPage.tsx | ✅ |
+| 1601FQ Working Papers | FWT1601FQWorkingPapersPage.tsx | ✅ |
+| 1601FQ Quarterly Return | FWT1601FQReturnPage.tsx | ✅ |
+| Income Tax Dashboard | IncomeTaxDashboardPage.tsx | ✅ |
+| Taxable Income Computation | TaxableIncomeComputationPage.tsx | ✅ |
+| Book-to-Tax Reconciliation | BookToTaxReconciliationPage.tsx | ✅ |
+| OSD Computation | OSDComputationPage.tsx | ✅ |
+| NOLCO Schedule | NOLCOSchedulePage.tsx | ✅ |
+| Tax Credits Schedule | TaxCreditsSchedulePage.tsx | ✅ |
+| 1701Q Quarterly ITR | ITR1701QPage.tsx | ✅ |
+| 1701 Annual ITR | ITR1701Page.tsx | ✅ |
+| 1702Q Quarterly ITR | ITR1702QPage.tsx | ✅ |
+| 1702RT Annual ITR | ITR1702RTPage.tsx | ✅ |
+| MCIT Computation | MCITComputationPage.tsx | ✅ |
+
+**New migrations:**
+- `20260701000001_percentage_tax.sql` — PT working papers + pt_returns
+- `20260701000002_vat.sql` — VAT working papers + vat_returns + vw_output_vat_review
+- `20260701000003_withholding_tax.sql` — 1601EQ/FWT/1601FQ working papers, ewt_returns, fwt_returns, form_2306_issuances
+- `20260701000004_income_tax.sql` — income_tax_computations, book_tax_reconciliation, nolco_schedule, tax_credits_schedule, mcit_computations, itr_filings
+- ✅ Applied to hosted Supabase (2026-07-01).
 
 ---
 
@@ -362,8 +373,8 @@ Migrations pending (written, not yet pushed): none
 | Banking & Treasury | 10 | 0 |
 | Fixed Assets | 8 | 0 |
 | Accounting | 15 | 0 |
-| Compliance | 3 | 39 |
+| Compliance | 41 | 0 |
 | BIR Books | 0 | 13 |
 | Audit & CAS | 0 | 11 |
 | Reports | 0 | 43 |
-| **TOTAL** | **99** | **107** |
+| **TOTAL** | **137** | **69** |
