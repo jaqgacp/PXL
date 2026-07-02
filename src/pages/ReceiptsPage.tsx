@@ -28,18 +28,20 @@ type ApplicationLine = {
 
 type CustomerRef = {
   id: string; registered_name: string; tin: string; tin_branch_code: string; registered_address: string
+  is_subject_to_cwt: boolean; default_cwt_atc_code_id: string | null
 }
 
 type PaymentMode = { id: string; code: string; name: string }
 type COAAccount  = { id: string; account_code: string; account_name: string }
 type Branch      = { id: string; branch_code: string; branch_name: string }
-type ATCCode     = { id: string; code: string; description: string }
+type ATCCode     = { id: string; code: string; description: string; rate: number }
 
 // ── Helpers ──────────────────────────────────────────────────
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 
 const today = () => new Date().toISOString().split('T')[0]
+const round2 = (n: number) => Math.round(n * 100) / 100
 
 const inp = 'w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white'
 const ro  = 'w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm bg-gray-50 text-gray-600 cursor-default'
@@ -101,7 +103,7 @@ export default function ReceiptsPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
-      supabase.from('customers').select('id,registered_name,tin,tin_branch_code,registered_address')
+      supabase.from('customers').select('id,registered_name,tin,tin_branch_code,registered_address,is_subject_to_cwt,default_cwt_atc_code_id')
         .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
       supabase.from('ref_payment_modes').select('id,code,name').eq('is_active', true).order('sort_order'),
       supabase.from('chart_of_accounts')
@@ -110,7 +112,7 @@ export default function ReceiptsPage() {
         .order('account_code'),
       supabase.from('branches').select('id,branch_code,branch_name')
         .eq('company_id', companyId).eq('is_active', true),
-      supabase.from('atc_codes').select('id,code,description').eq('is_active', true).order('code'),
+      supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code'),
     ]).then(([{ data: cos }, { data: pms }, { data: coa }, { data: brs }, { data: atcs }]) => {
       setCustomers(cos as CustomerRef[] || [])
       setPaymentModes(pms as PaymentMode[] || [])
@@ -165,6 +167,10 @@ export default function ReceiptsPage() {
       .in('invoice_id', siIds)
       .in('status', ['applied'])
 
+    const customer = customers.find(c => c.id === customerId)
+    const defaultAtcId = customer?.is_subject_to_cwt ? customer.default_cwt_atc_code_id : null
+    const defaultAtc = atcCodes.find(a => a.id === defaultAtcId)
+
     const openLines: ApplicationLine[] = sis.map(si => {
       const totalPaid = (applied || [])
         .filter(a => a.invoice_id === si.id)
@@ -173,10 +179,14 @@ export default function ReceiptsPage() {
         .filter(a => a.invoice_id === si.id)
         .reduce((s, a) => s + Number(a.total_amount), 0)
       const balance = Number(si.total_amount) - totalPaid - totalCM
+      const defaultCwt = defaultAtc ? round2(balance * defaultAtc.rate / 100) : 0
       return {
         invoice_id: si.id, si_number: si.si_number, si_date: si.date,
         original_amount: Number(si.total_amount), balance_due: balance,
-        payment_amount: 0, cwt_amount: 0, forex_adjustment: 0, atc_code_id: null,
+        payment_amount: defaultAtc ? round2(Math.max(balance - defaultCwt, 0)) : 0,
+        cwt_amount: defaultCwt,
+        forex_adjustment: 0,
+        atc_code_id: defaultAtcId,
       }
     }).filter(l => l.balance_due > 0.005)
 
@@ -239,7 +249,15 @@ export default function ReceiptsPage() {
   }
 
   const setLineField = (invoiceId: string, field: 'payment_amount' | 'cwt_amount' | 'forex_adjustment', val: number) => {
-    setLines(prev => prev.map(l => l.invoice_id === invoiceId ? { ...l, [field]: val } : l))
+    setLines(prev => prev.map(l => {
+      if (l.invoice_id !== invoiceId) return l
+      const next = { ...l, [field]: val }
+      if (field === 'cwt_amount' && val > 0 && !next.atc_code_id) {
+        const customer = customers.find(c => c.id === fCustomer)
+        next.atc_code_id = customer?.default_cwt_atc_code_id || null
+      }
+      return next
+    }))
   }
 
   const setLineAtc = (invoiceId: string, atcCodeId: string | null) => {
@@ -273,6 +291,21 @@ export default function ReceiptsPage() {
     if (appliedLines.length === 0) {
       setError('At least one invoice must have a payment amount.')
       return
+    }
+    for (const line of appliedLines) {
+      if (line.cwt_amount > 0 && !line.atc_code_id) {
+        setError(`ATC code is required when CWT is recorded for ${line.si_number}.`)
+        return
+      }
+      const atc = atcCodes.find(a => a.id === line.atc_code_id)
+      if (line.cwt_amount > 0 && atc) {
+        const base = round2(line.payment_amount + line.cwt_amount)
+        const expected = round2(base * atc.rate / 100)
+        if (Math.abs(expected - line.cwt_amount) > 0.02) {
+          setError(`CWT for ${line.si_number} should be ${fmt(expected)} for ATC ${atc.code}.`)
+          return
+        }
+      }
     }
     setSaving(true); setError('')
     try {
