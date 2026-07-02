@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import VATReconciliationPanel from '@/components/VATReconciliationPanel'
 
 type Status = 'draft' | 'final' | 'filed'
 type TaxRegistration = 'vat' | 'non_vat' | 'exempt'
@@ -163,6 +164,10 @@ export default function VATReturn2550QPage() {
 
   const isView = mode === 'view'
   const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 4 + i)
+  const qStartMonth = (form.period_quarter - 1) * 3 + 1
+  const qEndMonth = form.period_quarter * 3
+  const periodStart = `${form.period_year}-${String(qStartMonth).padStart(2, '0')}-01`
+  const periodEnd = `${form.period_year}-${String(qEndMonth).padStart(2, '0')}-${String(new Date(form.period_year, qEndMonth, 0).getDate()).padStart(2, '0')}`
 
   if (mode === 'new' || mode === 'edit' || mode === 'view') {
     return (
@@ -227,6 +232,11 @@ export default function VATReturn2550QPage() {
             <div><label className={lbl}>VAT Still Due</label><div className="text-xl font-bold font-mono tabular-nums text-gray-900">{fmtNum(form.net_vat_payable - form.vat_paid_prior_months)}</div></div>
           </div>
         </div>
+
+        {companyId && (
+          <VATReconciliationPanel companyId={companyId} dateFrom={periodStart} dateTo={periodEnd}
+            returnOutputVat={form.output_vat} returnInputVat={form.input_vat} />
+        )}
 
         <div className={sec}>
           <h2 className={hd}>Filing</h2>

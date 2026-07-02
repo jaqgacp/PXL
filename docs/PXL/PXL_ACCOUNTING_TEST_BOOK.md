@@ -182,3 +182,26 @@ Scenario (posted PV EWT detail from PV-EWT-PARTIAL-style flow, both vouchers in 
 | 5 | Direct UPDATE of the issuance or INSERT of a line as an authenticated user | Denied (42501); writes only through the RPCs. |
 
 Remaining under PXL-AUD-015: certificate version/supersede workflow beyond the sent/acknowledged lock.
+
+## VAT-RECON-001 - VAT Tax-Ledger-to-GL Reconciliation and Return Gate
+
+Status: Executed Passing (2026-07-02) in `supabase/tests/008_vat_ledger_gl_reconciliation_test.sql`.
+
+Related findings: PXL-AUD-014, PXL-DA-008.
+
+Scenario (VAT company; SI 2026-01-15 for 10,000.00 + 1,200.00 output VAT; VB 2026-01-20 for 5,000.00 + 600.00 input VAT):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Run `fn_vat_gl_reconciliation` for January | Output VAT: ledger 1,200.00 = GL control 1,200.00; input VAT: ledger 600.00 = GL control 600.00; variance 0, reconciled. |
+| 2 | Save January 2550M draft with matching figures, then mark final | Both allowed. |
+| 3 | Save a final 2550M whose output VAT (999.00) diverges from the tax ledger | Rejected: return figures must match the tax ledger. |
+| 4 | Post a manual JE crediting the output VAT control account 500.00 with no tax detail (2026-02-10) | Posts; February reconciliation shows ledger 0.00 vs GL 500.00, variance -500.00, not reconciled. |
+| 5 | Save February 2550M draft | Allowed: drafts are never blocked by reconciliation. |
+| 6 | Mark the February return final, then filed | Both rejected while the period tax ledger does not reconcile to the GL control account. |
+
+Notes:
+
+- Reconciliation uses `tax_detail_entries.document_date` (accounting date aligned with `je_date`); `posting_date` stores the system date at posting time (logged as PXL-AUD-025).
+- GL amounts use `je.status = 'posted'` to match `vw_general_ledger`/`vw_trial_balance`; the JE reversal double-count defect in those views is logged as PXL-AUD-024.
+- Remaining under the related findings: ledger-backed standardization of VAT review/report pages and filed/exported snapshot provenance (PXL-DA-015).

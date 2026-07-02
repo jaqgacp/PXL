@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import VATReconciliationPanel from '@/components/VATReconciliationPanel'
 
 type Status = 'draft' | 'final' | 'filed'
 type TaxRegistration = 'vat' | 'non_vat' | 'exempt'
@@ -160,6 +161,8 @@ export default function VATReturn2550MPage() {
 
   const isView = mode === 'view'
   const years = Array.from({ length: 6 }, (_, i) => now.getFullYear() - 4 + i)
+  const periodStart = `${form.period_year}-${String(form.period_month).padStart(2, '0')}-01`
+  const periodEnd = `${form.period_year}-${String(form.period_month).padStart(2, '0')}-${String(new Date(form.period_year, form.period_month, 0).getDate()).padStart(2, '0')}`
 
   if (mode === 'new' || mode === 'edit' || mode === 'view') {
     return (
@@ -236,6 +239,11 @@ export default function VATReturn2550MPage() {
           <div className="text-2xl font-bold font-mono tabular-nums text-gray-900">{fmtNum(form.net_vat_payable)}</div>
           <p className="text-xs text-gray-400">{form.net_vat_payable < 0 ? 'Excess input VAT — carried over to next period' : 'Amount due to BIR'}</p>
         </div>
+
+        {companyId && (
+          <VATReconciliationPanel companyId={companyId} dateFrom={periodStart} dateTo={periodEnd}
+            returnOutputVat={form.output_vat} returnInputVat={form.input_vat} />
+        )}
 
         <div className={sec}>
           <h2 className={hd}>Filing</h2>
