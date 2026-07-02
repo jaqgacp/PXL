@@ -4,7 +4,19 @@ import { useAppCtx } from '@/lib/context'
 
 type TaxCode = { id: string; code: string; description: string; tax_type: string; rate: number; is_active: boolean }
 type VatCode = { id: string; tax_code_id: string; vat_code: string; description: string; vat_classification: string; transaction_type: string; relief_category: string | null; is_active: boolean; tax_codes?: { code: string; rate: number } }
-type ATCCode = { id: string; code: string; description: string; tax_category: string; rate: number; is_active: boolean }
+type ATCCode = {
+  id: string
+  code: string
+  description: string
+  tax_category: string
+  rate: number
+  is_active: boolean
+  effective_from: string | null
+  effective_to: string | null
+  deprecated_at: string | null
+  deprecated_reason: string | null
+  supersedes_atc_code_id: string | null
+}
 type EWTCode = { id: string; company_id: string; tax_code_id: string; ewt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { code: string }; tax_codes?: { code: string } }
 type FWTCode = { id: string; company_id: string; tax_code_id: string; fwt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { code: string }; tax_codes?: { code: string } }
 type PTCode  = { id: string; company_id: string; tax_code_id: string; pt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { code: string }; tax_codes?: { code: string } }
@@ -27,6 +39,8 @@ const badge = (active: boolean) => (
     {active ? 'Active' : 'Inactive'}
   </span>
 )
+
+const fmtDate = (value?: string | null) => value ? new Date(value).toLocaleDateString() : '—'
 
 function emptyTC() { return { code: '', description: '', tax_type: 'vat', rate: '' } }
 function emptyVC() { return { tax_code_id: '', vat_code: '', description: '', vat_classification: 'regular', transaction_type: 'output_vat', relief_category: '' } }
@@ -391,7 +405,7 @@ export default function TaxSetupPage() {
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>{['ATC Code','Description','Tax Type','Rate (%)','Status'].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>)}</tr>
+              <tr>{['ATC Code','Description','Tax Type','Rate (%)','Effective','Status','Deprecated'].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {filtATC.map(r => (
@@ -400,10 +414,18 @@ export default function TaxSetupPage() {
                   <td className="px-4 py-3 text-gray-700">{r.description}</td>
                   <td className="px-4 py-3"><span className="uppercase text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded">{r.tax_category}</span></td>
                   <td className="px-4 py-3 font-mono">{r.rate}%</td>
+                  <td className="px-4 py-3 text-xs text-gray-600">{fmtDate(r.effective_from)} - {fmtDate(r.effective_to)}</td>
                   <td className="px-4 py-3">{badge(r.is_active)}</td>
+                  <td className="px-4 py-3">
+                    {r.deprecated_at ? (
+                      <span title={r.deprecated_reason || undefined} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-100 text-amber-800">Deprecated</span>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
-              {!filtATC.length && <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No ATC codes found</td></tr>}
+              {!filtATC.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No ATC codes found</td></tr>}
             </tbody>
           </table>
         </div>
