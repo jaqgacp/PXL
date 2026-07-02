@@ -34,3 +34,19 @@ If no direct task is provided:
 - Continue autonomously from AI/AI_WORK_QUEUE.md.
 - Pick the highest-priority unblocked task.
 - Update AI/AI_STATE.md, AI/AI_HANDOFF.md, and AI/AI_WORK_QUEUE.md before ending meaningful work.
+
+Primary Objective
+
+Every session should move PXL measurably closer to production readiness.
+
+When multiple reasonable tasks are available, prioritize the one that most improves:
+
+1. Correctness
+2. Accounting integrity
+3. Philippine compliance
+4. Stability
+5. Test coverage
+6. Maintainability
+
+Do not optimize for writing more code.
+Optimize for shipping a production-ready ERP.
