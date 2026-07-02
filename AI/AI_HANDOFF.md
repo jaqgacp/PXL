@@ -14,17 +14,16 @@ Audit fix session 28 (AIQ-008): while starting PXL-AUD-014, found and fixed new 
 
 ## What Remains
 
-- Push migration `20260702000009` to the hosted Supabase project (no access token in this workspace — run `supabase login`, then `supabase db push --linked`).
 - AIQ-008 continues: PXL-AUD-014 VAT ledger completeness, or `can_perform` enforcement (PXL-DA-003, needs a user business-role decision).
 - Approval segregation-of-duties (PXL-DA-012); summary docs AIQ-005–007 when audit work pauses.
 
 ## Known Errors / Blockers
 
-None locally. Hosted migration push blocked on Supabase login only.
+None. Remote synced 2026-07-02: migrations 008 and 009 pushed with a user-provided token and verified via `supabase migration list --linked` (008 had NOT actually been pushed before, despite the session-27 claim).
 
 ## Exact Next Recommended Task
 
-Push migration 009 to the hosted project, then continue `AIQ-008` with PXL-AUD-014 VAT ledger completeness: per-classification VAT bases on `tax_detail_entries`, rows for zero-VAT documents of VAT companies, CS/CP writers, backfill, then rebuild `vw_output_vat_review`/`vw_input_vat_review` on the ledger keeping names/columns.
+Continue `AIQ-008` with PXL-AUD-014 VAT ledger completeness: per-classification VAT bases on `tax_detail_entries`, rows for zero-VAT documents of VAT companies, CS/CP writers, backfill, then rebuild `vw_output_vat_review`/`vw_input_vat_review` on the ledger keeping names/columns.
 
 ## Exact Next Prompt
 

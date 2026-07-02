@@ -24,8 +24,8 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
   - `docs/PXL/PXL_TAX_RULES_PH.md`
 - `README.md` stack table is stale (says React 18 / Vite 8, migrations 001–015); `package.json` shows React 19, react-router-dom v7, TanStack Query, Zustand, Zod, and 61 migrations exist. The architecture summary reflects actuals; consider refreshing README separately.
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
-- Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue); no Supabase access token exists in this workspace, so `--linked` commands cannot run here.
-- Migration `20260702000009_tax_ledger_void_reversal.sql` is NOT yet pushed to the hosted project (needs `supabase login` + `supabase db push --linked`).
+- Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
+- Remote is in sync as of 2026-07-02: migrations 20260702000008 and 20260702000009 pushed and verified via `supabase migration list --linked` (session 27's earlier "008 pushed" claim was false until this sync).
 - PXL-AUD-014 prerequisites documented in session 28: the tax ledger writes no rows for zero-VAT documents of VAT companies, stores no exempt/zero-rated bases, and cash sales/purchases have no tax-detail writers — required before review views can be ledger-backed.
 
 ## Last Files Changed
@@ -43,7 +43,7 @@ None. `npm test` 182/182 across 12 files on a fresh local database; `npm run bui
 
 ## Next Recommended Step
 
-Push migration `20260702000009` to the hosted project (`supabase login` needed), then continue AIQ-008: PXL-AUD-014 VAT ledger completeness (classification bases, zero-VAT rows, CS/CP writers, then ledger-backed review views) or `can_perform` enforcement (PXL-DA-003).
+Continue AIQ-008: PXL-AUD-014 VAT ledger completeness (classification bases, zero-VAT rows, CS/CP writers, then ledger-backed review views) or `can_perform` enforcement (PXL-DA-003, needs a user business-role decision).
 
 ## Open Questions / Decisions
 
