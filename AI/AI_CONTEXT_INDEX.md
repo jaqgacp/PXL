@@ -32,7 +32,7 @@ Read `AI/AI_CACHE_CONTEXT_PLAN.md` only when cache setup, prompt structure, or A
 
 Read `AI/AI_DOCUMENTATION_RULES.md` before creating, growing, or restructuring any documentation. `AI/AIOS_VERSION.md` defines the current AI Operating System version; verify it exists at session start.
 
-Some summary documents referenced below are recommended but may not exist yet, such as `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`, `docs/PXL/PXL_SCHEMA_SUMMARY.md`, `docs/PXL/PXL_ACCOUNTING_RULES.md`, and `docs/PXL/PXL_TAX_RULES_PH.md`. If a summary is missing, use the detailed existing documents listed in the same work mode and avoid broad repository search unless those documents are insufficient.
+Some summary documents referenced below are recommended but may not exist yet, such as `docs/PXL/PXL_SCHEMA_SUMMARY.md`, `docs/PXL/PXL_ACCOUNTING_RULES.md`, and `docs/PXL/PXL_TAX_RULES_PH.md` (`docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` exists). If a summary is missing, use the detailed existing documents listed in the same work mode and avoid broad repository search unless those documents are insufficient.
 
 ## Work Modes
 

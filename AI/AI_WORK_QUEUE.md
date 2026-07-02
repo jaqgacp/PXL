@@ -24,7 +24,7 @@ The agent should choose the highest-priority unblocked task that fits the curren
 | AIQ-001 | P1 | Done | Autonomy | Create `AI/AGENT_SYSTEM_PROMPT.md` with bounded-autonomy rules, PXL role, no-random-feature rule, reading order, and end-of-session update protocol. | `AI/AI_CACHE_CONTEXT_PLAN.md`, `AI/AI_AUTONOMY_PLAYBOOK.md` | Done 2026-07-02. |
 | AIQ-002 | P1 | Done | Autonomy | Create `AI/AI_STATE.md` with current project status, active task, known issues, last changed files, and next step. | `AI/AI_CACHE_CONTEXT_PLAN.md`, `docs/PXL/STATUS.md` | Done 2026-07-02. |
 | AIQ-003 | P1 | Done | Autonomy | Create `AI/AI_HANDOFF.md` with concise session handoff and exact next prompt. | `AI/AI_CACHE_CONTEXT_PLAN.md`, `AI/AI_AUTONOMY_PLAYBOOK.md` | Done 2026-07-02. |
-| AIQ-004 | P1 | Todo | Context | Create `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`. | `README.md`, `docs/PXL/PXL_PRINCIPLES.md`, `docs/PXL/STATUS.md` | Concise stable summary exists; `AI/AI_CONTEXT_INDEX.md` links remain valid. |
+| AIQ-004 | P1 | Done | Context | Create `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`. | `README.md`, `docs/PXL/PXL_PRINCIPLES.md`, `docs/PXL/STATUS.md`, `package.json` | Done 2026-07-02. Concise stable summary exists; `AI/AI_CONTEXT_INDEX.md` links now resolve. |
 | AIQ-005 | P1 | Todo | Context | Create `docs/PXL/PXL_SCHEMA_SUMMARY.md`. | `supabase/migrations/`, `docs/PXL/PXL_TRANSACTION_MATRIX.md`, `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` | Concise table/RPC/view/test map exists without pasting full migrations. |
 | AIQ-006 | P1 | Todo | Accounting | Create `docs/PXL/PXL_ACCOUNTING_RULES.md`. | `README.md`, `docs/PXL/PXL_PRINCIPLES.md`, `docs/PXL/PXL_TRANSACTION_MATRIX.md`, accounting docs | Concise accounting rules summary exists and points to source docs. |
 | AIQ-007 | P1 | Todo | VAT/EWT | Create `docs/PXL/PXL_TAX_RULES_PH.md`. | `docs/PXL/10. Compliance/`, `docs/PXL/PXL_TRANSACTION_MATRIX.md`, audit/test docs | Concise Philippine tax rules summary exists and points to source docs. |
@@ -46,4 +46,4 @@ When no direct user task is provided:
 
 ## Current Recommended Next Task
 
-AIQ-004: Create `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`.
+AIQ-005: Create `docs/PXL/PXL_SCHEMA_SUMMARY.md`.

@@ -581,7 +581,7 @@ Create or improve:
 
 | File | Recommendation |
 | --- | --- |
-| `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` | Create a concise architecture summary: React/Vite/Supabase stack, module boundaries, RLS model, posting/RPC pattern, source-of-truth docs, testing commands, build commands, where core components live. |
+| `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` | Created 2026-07-02. Concise architecture summary: stack, layout, RLS model, posting/RPC pattern, data flow, commands, source-of-truth links. |
 | `docs/PXL/PXL_SCHEMA_SUMMARY.md` | Create a concise schema/RPC map by module: key tables, views, RPCs, triggers, migration references, test references. This should summarize migrations instead of caching all 60 SQL files. |
 | `docs/PXL/PXL_ACCOUNTING_RULES.md` | Create a concise accounting rules summary: JE invariants, GL/subledger reconciliation rules, immutability, reversal/void conventions, posting preview requirements, period locks, AR/AP aging as-of rules. |
 | `docs/PXL/PXL_TAX_RULES_PH.md` | Create a concise Philippine tax rules summary: VAT, non-VAT gating, input/output VAT, EWT/CWT/FWT, ATC effective dates, 2307/2306, SAWT/QAP, SLSP/RELIEF, PT, income tax, BIR books/CAS. |
