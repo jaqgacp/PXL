@@ -40,8 +40,8 @@ export default function BooksDashboardPage() {
     const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
 
     const [{ count: jeCount }, { data: jeSums }, { count: periodCount }] = await Promise.all([
-      supabase.from('journal_entries').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('status', 'posted').gte('je_date', startDate).lte('je_date', endDate),
-      supabase.from('journal_entries').select('total_debit').eq('company_id', companyId).eq('status', 'posted').gte('je_date', startDate).lte('je_date', endDate),
+      supabase.from('journal_entries').select('id', { count: 'exact', head: true }).eq('company_id', companyId).in('status', ['posted', 'reversed']).gte('je_date', startDate).lte('je_date', endDate),
+      supabase.from('journal_entries').select('total_debit').eq('company_id', companyId).in('status', ['posted', 'reversed']).gte('je_date', startDate).lte('je_date', endDate),
       supabase.from('fiscal_periods').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('is_locked', false),
     ])
 
@@ -66,7 +66,7 @@ export default function BooksDashboardPage() {
         <>
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <p className="text-xs text-gray-500 uppercase tracking-wide">Posted JEs — This Month</p>
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Journal Entries — This Month</p>
               <p className="text-xl font-bold text-gray-900 mt-1">{loading ? '—' : postedJeCount}</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg p-4">
