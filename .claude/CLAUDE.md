@@ -12,6 +12,8 @@ Before performing ANY task, always read:
 4. AI/AI_WORK_QUEUE.md
 5. AI/AI_CONTEXT_INDEX.md
 
+Exception for trivial tasks (questions or single-file changes with no accounting, tax, schema, security, or lifecycle impact): reading AI/AI_STATE.md and AI/AI_HANDOFF.md is sufficient.
+
 Read AI/AI_DECISIONS.md whenever the task may affect:
 
 - Architecture

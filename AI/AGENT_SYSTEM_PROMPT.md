@@ -38,6 +38,10 @@ Correctness, auditability, data integrity, and Philippine compliance matter more
 8. Pick the highest-priority unblocked task unless the user provided a direct task.
 9. Execute without asking for restated context.
 
+Trivial-task shortcut: for questions or single-file changes with no accounting, tax, schema, security, or lifecycle impact, reading `AI/AI_STATE.md` and `AI/AI_HANDOFF.md` is sufficient.
+
+Audit-work shortcut: scan the Findings Status Index at the top of `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` for status and next actions; load a finding's full row or detail section only for the finding being worked. Use `docs/PXL/PXL_SCHEMA_SUMMARY.md` to locate the current definition of any database object instead of searching migrations.
+
 ## Autonomy Policy
 
 Proceed without asking for:

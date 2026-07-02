@@ -18,10 +18,9 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 
 ## Current Broken / Missing AI Operating Areas
 
-- Concise stable summary docs still missing (`docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` now exists):
-  - `docs/PXL/PXL_SCHEMA_SUMMARY.md`
-  - `docs/PXL/PXL_ACCOUNTING_RULES.md`
-  - `docs/PXL/PXL_TAX_RULES_PH.md`
+- Concise stable summary docs still missing (`PXL_ARCHITECTURE_SUMMARY.md` and generated `PXL_SCHEMA_SUMMARY.md` now exist):
+  - `docs/PXL/PXL_ACCOUNTING_RULES.md` (AIQ-006)
+  - `docs/PXL/PXL_TAX_RULES_PH.md` (AIQ-007)
 - `README.md` stack table is stale (says React 18 / Vite 8, migrations 001–015); `package.json` shows React 19, react-router-dom v7, TanStack Query, Zustand, Zod, and 61 migrations exist. The architecture summary reflects actuals; consider refreshing README separately.
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
 - Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
@@ -30,12 +29,16 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 
 ## Last Files Changed
 
-- `supabase/migrations/20260702000009_tax_ledger_void_reversal.sql` (new: PXL-AUD-027 fix — counter-rows for SI void/VB void/PV cancel/OR bounce, uniform `is_reversal` semantics, `vw_ewt_summary_ap` exclusion, backfill)
-- `supabase/tests/012_tax_ledger_void_reversal_test.sql` (new: TAX-LEDGER-VOID-001, 17 assertions)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-AUD-027 detail, Fix Session Log row 28)
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (TAX-LEDGER-VOID-001 scenario)
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md` (SI/OR/VB/PV void/cancel/bounce cells)
-- `AI/AI_STATE.md`, `AI/AI_HANDOFF.md` (session bookkeeping)
+AIOS 1.1.0 tuning session (2026-07-02):
+
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (Findings Status Index + Production Readiness Gate added; PXL-AUD-020 status contradiction fixed; PXL-DA-020 → In Progress)
+- `docs/PXL/PXL_SCHEMA_SUMMARY.md` (new, GENERATED — closes AIQ-005)
+- `scripts/gen_schema_summary.sh`, `scripts/check_docs_consistency.sh` (new)
+- `.github/workflows/ci.yml` (docs-consistency gate step)
+- `AI/AI_AUTONOMY_PLAYBOOK.md` (External-Action Evidence Rule; end-loop steps 6–7)
+- `AI/AGENT_SYSTEM_PROMPT.md`, `.claude/CLAUDE.md` (trivial-task and audit reading shortcuts)
+- `AI/AI_CONTEXT_INDEX.md` (schema summary registered; audit mode reads the index first)
+- `AI/AIOS_VERSION.md` (1.1.0), `AI/AI_WORK_QUEUE.md` (AIQ-005 Done, AIQ-013 Done), `AI/AI_STATE.md`, `AI/AI_HANDOFF.md`
 
 ## Last Known Errors
 
@@ -45,8 +48,13 @@ None. `npm test` 182/182 across 12 files on a fresh local database; `npm run bui
 
 Continue AIQ-008: PXL-AUD-014 VAT ledger completeness (classification bases, zero-VAT rows, CS/CP writers, then ledger-backed review views) or `can_perform` enforcement (PXL-DA-003, needs a user business-role decision).
 
-## Open Questions / Decisions
+## Decisions Needed From User
 
-- Decide whether future autonomous agents should be allowed to open pull requests automatically or only prepare local changes.
-- Decide whether `AI/AI_WORK_QUEUE.md` should be manually curated by the user or automatically maintained by agents after every session.
-- Decide when to implement actual Claude API `cache_control` support if a Claude/Fable wrapper is later added.
+These block autonomous progress on specific findings (Level 4 items). Answering them in one message unblocks multiple fix sessions:
+
+1. **Business role matrix** (PXL-DA-003, PXL-AUD-004): which roles (owner/admin/member/viewer, or new roles like accountant/bookkeeper) may create/edit operational master data (customers, suppliers, items), and which may approve/post/void/reverse, per document type. Unblocks `can_perform` enforcement.
+2. **Approval segregation-of-duties** (PXL-DA-012): which document types require approval before posting, and whether the approver must differ from the creator. Unblocks approval-gate enforcement in posting RPCs.
+3. **Branch semantics** (PXL-DA-017): is branch a security boundary (users restricted per branch) or a reporting dimension only. Unblocks dimension enforcement design.
+4. **Workflow**: agents currently commit and push directly to `main` with CI as the gate; say if you prefer pull requests instead.
+
+Settled by practice: agents maintain the work queue and state files each session; Claude API `cache_control` work stays parked until an API integration exists.

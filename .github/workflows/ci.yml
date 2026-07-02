@@ -18,6 +18,9 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run build
+      # Docs-consistency gate (PXL-DA-020): findings status index must agree
+      # with finding rows; test book must match the pgTAP files on disk.
+      - run: bash scripts/check_docs_consistency.sh
 
   db-tests:
     # A fresh runner replays the entire migration chain from scratch before the

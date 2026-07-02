@@ -32,8 +32,13 @@ Before stopping:
 3. Update `AI/AI_WORK_QUEUE.md`.
 4. Update `AI/AI_DECISIONS.md` only if a permanent architectural or business decision was made.
 5. Update `docs/PXL/PXL_TRANSACTION_MATRIX.md` when transaction behavior, posting, tax, reports, lifecycle, audit trail, or tests changed.
-6. Update audit/test docs when a finding or test expectation changed.
-7. Record commands run, verification status, known errors, and exact next task.
+6. Update audit/test docs when a finding or test expectation changed, including the Findings Status Index; run `scripts/check_docs_consistency.sh`.
+7. If a migration was added: regenerate `docs/PXL/PXL_SCHEMA_SUMMARY.md` (`scripts/gen_schema_summary.sh`), and push to hosted Supabase when credentials allow (`supabase db push --linked`, verify with `supabase migration list --linked`); otherwise record the pending push in `AI/AI_STATE.md`.
+8. Record commands run, verification status, known errors, and exact next task.
+
+## External-Action Evidence Rule
+
+Never record a remote or external action (hosted migration push, CI result, deployment, filing) as done without command output as evidence from the session that claims it. If it cannot be verified in-session (missing credentials, pending run), record it as PENDING with what is needed to verify. A false "done" claim is treated as a Critical process defect (see PXL-AUD-026's false "pushed to remote" history).
 
 ## Autonomy Levels
 
