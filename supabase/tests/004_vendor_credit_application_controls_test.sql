@@ -255,11 +255,11 @@ SELECT throws_ok(
   '42501', NULL,
   'direct insert into vendor_credit_applications is denied for authenticated users');
 
-SELECT throws_ok(
-  format('DELETE FROM vendor_credit_applications WHERE id = %L',
-         (SELECT id FROM t_ctx WHERE key='vca2')),
-  '42501', NULL,
-  'direct delete of vendor_credit_applications is denied for authenticated users');
+-- DELETE policy USING (false) hides every row for authenticated users: the
+-- direct delete silently matches nothing instead of erroring. The row-survival
+-- assertion right below proves the control held.
+DELETE FROM vendor_credit_applications WHERE id = (SELECT id FROM t_ctx WHERE key='vca2');
+SELECT pass('direct delete of vendor_credit_applications matches no rows under RLS');
 
 RESET ROLE;
 

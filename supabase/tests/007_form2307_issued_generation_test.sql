@@ -222,11 +222,14 @@ SELECT is(
 -- ── Direct table writes are denied for authenticated users ─────────────────────
 SET LOCAL ROLE authenticated;
 
-SELECT throws_ok(
-  format($q$UPDATE form_2307_issuances SET status = 'acknowledged' WHERE id = %L$q$,
-         (SELECT id FROM t_ctx WHERE key='issuance')),
-  '42501', NULL,
-  'direct status update on form_2307_issuances is denied');
+-- UPDATE policy USING (false) hides every row: the direct write silently
+-- matches nothing instead of erroring.
+UPDATE form_2307_issuances SET status = 'acknowledged'
+WHERE id = (SELECT id FROM t_ctx WHERE key='issuance');
+SELECT is(
+  (SELECT status FROM form_2307_issuances WHERE id = (SELECT id FROM t_ctx WHERE key='issuance')),
+  'sent',
+  'direct status update on form_2307_issuances has no effect (RLS hides the row)');
 
 SELECT throws_ok(
   format($q$INSERT INTO form_2307_issuance_lines

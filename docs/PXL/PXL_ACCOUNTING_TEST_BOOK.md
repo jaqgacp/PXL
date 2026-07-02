@@ -242,3 +242,31 @@ Notes:
 
 - Convention: both the original (`reversed`) and its counter-JE (`posted`) stay visible in report views; drafts stay excluded. Every reversal/void path was verified to post a counter-JE before this convention was adopted.
 - Period-crossing reversals net to zero only across the two periods combined — each period correctly retains its own activity.
+
+## RLS-ROLES-001 - Role-Based Access Controls
+
+Status: Executed Passing (2026-07-02) in `supabase/tests/011_role_based_access_test.sql`.
+
+Related findings: PXL-AUD-004, PXL-DA-003, PXL-AUD-026.
+
+Scenario (company A with owner, admin, member, and viewer memberships; an outsider owns company B; every assertion runs as the `authenticated` role with per-user JWT claims — the first seeded test to exercise RLS itself rather than running as superuser):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Outsider queries company A and its customers | Zero rows through RLS: cross-company isolation. |
+| 2 | Member and viewer read company A branches | Allowed. |
+| 3 | Member and viewer insert a branch | Rejected (42501): setup writes require owner/admin. |
+| 4 | Admin inserts a branch | Allowed. |
+| 5 | Member updates `fiscal_periods.is_locked` | Silently matches no rows under RLS; no period becomes locked. |
+| 6 | Member inserts a number series | Rejected (42501). |
+| 7 | Member saves a draft SI via `fn_save_sales_invoice` | Allowed: members may enter drafts. |
+| 8 | Member approves the accounting-ready SI | Allowed — approval is not yet role-restricted (documented gap, tracked under PXL-DA-012). |
+| 9 | Member posts the SI | Rejected by the lifecycle trigger: restricted status transitions require owner/admin. |
+| 10 | Admin posts the SI | Posted. |
+| 11 | Outsider calls `fn_save_sales_invoice` against company A | Rejected: Access denied. |
+
+Notes:
+
+- The first `SET ROLE authenticated` query in this scenario exposed PXL-AUD-026: the migration chain never granted table privileges to `authenticated`, so a migrations-only database rejects every PostgREST query. Fixed by `20260702000008_authenticated_table_grants.sql`; RLS was verified enabled on all public tables before granting, and `anon` receives no grants.
+- With grants restored, `UPDATE`/`DELETE` policies with `USING (false)` silently match no rows instead of raising 42501, while `INSERT` `WITH CHECK` violations still raise 42501. The direct-write denial assertions in tests 004/007/010 were rewritten as effect-based checks (row survives / row unchanged) accordingly.
+- Approval segregation-of-duties remains open under PXL-DA-012; operational master-data role policy and `can_perform(company, action, document_type)` remain open under PXL-AUD-004/PXL-DA-003.

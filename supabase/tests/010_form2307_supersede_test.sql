@@ -246,11 +246,14 @@ SELECT throws_like(
   'an already-superseded certificate cannot be superseded again');
 
 SET LOCAL ROLE authenticated;
-SELECT throws_ok(
-  format($q$UPDATE form_2307_issuances SET status = 'generated' WHERE id = %L$q$,
-         (SELECT id FROM t_ctx WHERE key='v1')),
-  '42501', NULL,
-  'direct un-superseding through the table remains denied');
+-- UPDATE policy USING (false) hides every row: the direct write silently
+-- matches nothing instead of erroring.
+UPDATE form_2307_issuances SET status = 'generated'
+WHERE id = (SELECT id FROM t_ctx WHERE key='v1');
+SELECT is(
+  (SELECT status FROM form_2307_issuances WHERE id = (SELECT id FROM t_ctx WHERE key='v1')),
+  'superseded',
+  'direct un-superseding through the table has no effect (RLS hides the row)');
 RESET ROLE;
 
 SELECT * FROM finish();
