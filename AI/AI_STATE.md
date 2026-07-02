@@ -44,6 +44,8 @@ AIOS 1.1.0 tuning session (2026-07-02):
 
 None. `npm test` 182/182 across 12 files on a fresh local database; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39).
 
+AIOS 1.1.0 landed on `main` as commit `082652b` (2026-07-02); CI run 28609465374 passed both jobs (`build-lint` including the new docs-consistency gate, `db-tests` on a fresh migration replay), verified via `gh run view`.
+
 ## Next Recommended Step
 
 Continue AIQ-008: PXL-AUD-014 VAT ledger completeness (classification bases, zero-VAT rows, CS/CP writers, then ledger-backed review views) or `can_perform` enforcement (PXL-DA-003, needs a user business-role decision).

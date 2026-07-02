@@ -8,7 +8,7 @@ AIOS 1.1.0 tuning (AIQ-013), following the user-approved assessment: (1) Finding
 
 ## What Changed
 
-- AIOS is at 1.1.0 (`AI/AIOS_VERSION.md` changelog).
+- AIOS is at 1.1.0 (`AI/AIOS_VERSION.md` changelog), landed on `main` as commit `082652b` with CI run 28609465374 green (docs-consistency gate ran in CI for the first time and passed).
 - Prior session 28 (PXL-AUD-027 tax ledger void counter-entries) is fully landed, CI green, and both pending migrations are verified on hosted Supabase.
 
 ## What Remains
