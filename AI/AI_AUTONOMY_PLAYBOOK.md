@@ -72,19 +72,18 @@ Required before editing:
 - Identify affected tables, RPCs, pages, tests, and transaction matrix rows.
 - State the intended narrow scope in the handoff/state when done.
 
-### Level 4 - Architecture or Product Direction Changes
+### Level 4 - Architecture or Business-Policy Decisions (Delegated per DEC-008)
 
-Agent must stop and ask the user unless the decision is already approved in `AI/AI_DECISIONS.md` or explicitly requested by the user.
+The user has granted a standing delegation (DEC-008): when a task requires an architectural or business-policy decision, the agent decides using the standard-accounting-practice, Philippine-compliance-conservative default, records the decision as a DEC entry in `AI/AI_DECISIONS.md`, and proceeds. Do not park work as "needs user decision".
 
-Examples:
+Already decided (do not re-ask): role/action matrix (DEC-009), approval segregation of duties (DEC-010), branch as reporting dimension (DEC-011), direct commits to `main` with CI as gate (DEC-008).
 
-- Changing posting philosophy.
-- Changing document lifecycle rules.
-- Changing tax architecture.
-- Adding a new module.
-- Removing compliance controls.
-- Changing tenant/security model.
-- Replacing core framework or database strategy.
+The delegation never covers:
+
+- Weakening or removing accounting, tax, audit-trail, or security controls.
+- Destructive or irreversible operations on real user data.
+- Spending money or external legal/compliance actions (e.g., actual BIR filings).
+- Recording an external action as done without evidence (see External-Action Evidence Rule).
 
 ## What the Agent Should Do Without Asking
 
@@ -99,12 +98,12 @@ Examples:
 
 Ask only when:
 
-- The documents conflict.
-- The next task is ambiguous and multiple choices have similar risk.
-- The change would alter permanent architecture or business policy.
-- The task requires secrets, credentials, production access, or external approvals.
-- The agent cannot verify a high-risk change locally.
-- The work requires deleting user data or destructive operations.
+- The documents conflict and the conflict cannot be resolved from evidence in the repository.
+- The task requires secrets or credentials the agent does not hold (record the action as PENDING and continue with other work).
+- The work would weaken accounting/tax/security controls, delete user data, or perform destructive/irreversible operations.
+- The action spends money or has external legal effect (e.g., filing with the BIR).
+
+Everything else — including business-policy choices — is delegated per DEC-008: decide, record the DEC entry, proceed.
 
 ## Stop Conditions
 
@@ -112,8 +111,7 @@ Stop and update handoff when:
 
 - The selected task is complete and verified.
 - Verification is blocked by missing tools, credentials, or environment.
-- Continuing would require a Level 4 decision.
-- The next step is unsafe without user confirmation.
+- Continuing would require something outside the DEC-008 delegation (control weakening, destructive action, money, external legal effect).
 - The work queue has no unblocked next task.
 
 ## Default Task Selection

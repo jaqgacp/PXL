@@ -297,3 +297,141 @@ Related Documents:
 Related Source Files:
 
 - None.
+
+## DEC-008 - Standing Autonomy Delegation for Business-Policy Decisions
+
+Date: 2026-07-02
+Status: Approved
+
+Decision:
+
+The user has delegated business-policy and prioritization decisions to the AI agent. When a task requires a business-policy choice (role permissions, workflow rules, defaults, scope of a fix), the agent adopts the standard-accounting-practice, Philippine-compliance-conservative default, records it as a DEC entry in this file, and proceeds without asking. Agents commit and push directly to `main` with CI as the gate.
+
+The delegation covers decisions that strengthen or specify controls. It does NOT cover, and the agent must still stop for:
+
+- weakening or removing accounting, tax, audit-trail, or security controls,
+- destructive or irreversible operations on real user data,
+- actions requiring secrets/credentials the agent does not hold (record as PENDING instead),
+- spending money or performing external legal/compliance actions (e.g., actual BIR filings).
+
+Business Reason:
+
+User directive 2026-07-02: "remove everything that requires my manual decision or work; be autonomous as long as all aligns with the goal — fix all, make it production-ready, a true accounting system, PH-compliance friendly." Pending-decision queues were stalling Critical audit fixes.
+
+Technical Reason:
+
+Every delegated decision is durably recorded as a DEC entry, so it remains reviewable and reversible by the user; the audit findings log records where each decision was applied.
+
+Alternatives Considered:
+
+- Keep a "Decisions Needed From User" queue. Rejected by the user; it blocked P0 findings on responses that may never come.
+- Unbounded autonomy including control weakening and destructive actions. Rejected; incompatible with an auditable accounting system.
+
+Related Documents:
+
+- `AI/AI_AUTONOMY_PLAYBOOK.md`
+- `AI/AGENT_SYSTEM_PROMPT.md`
+- `AI/AI_STATE.md`
+
+Related Source Files:
+
+- None.
+
+## DEC-009 - Role/Action Permission Matrix on Existing Roles
+
+Date: 2026-07-02
+Status: Approved (delegated per DEC-008)
+
+Decision:
+
+PXL enforces role/action permissions using the existing `owner`/`admin`/`member`/`viewer` roles, via a `can_perform(company_id, action, document_type)` check inside every posting/void/reversal/approval RPC and the operational master-data policies:
+
+- `owner`, `admin`: full authority — setup/control tables, operational master data, create/edit, approve, post, void, reverse, compliance generation.
+- `member`: may create and edit draft operational documents and create/edit operational master data (customers, suppliers, items, services); may NOT approve, post, void, reverse, or modify setup/control tables (COA, fiscal periods, number series, tax setup, approval setup, posting configuration).
+- `viewer`: read-only.
+
+Finer-grained named roles (accountant, bookkeeper) may be added later as mappings onto `can_perform` actions without changing the enforcement surface.
+
+Business Reason:
+
+Standard SME segregation: clerks capture, admins/owners authorize. Master-data capture by members is operationally necessary; posting authority is restricted because posting affects the books and BIR outputs.
+
+Technical Reason:
+
+Reuses the deployed role model (`user_company_memberships`), so no data migration is needed; centralizing checks in `can_perform` fixes PXL-DA-003's per-RPC inconsistency.
+
+Alternatives Considered:
+
+- New accountant/bookkeeper roles now. Deferred; adds migration and UI scope without unblocking the Critical finding.
+- Members may post their own documents. Rejected; removes segregation of duties.
+
+Related Documents:
+
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-003, PXL-AUD-004)
+
+Related Source Files:
+
+- `supabase/migrations/20260701000006_permissions_hardening.sql`
+- `supabase/migrations/20260701000007_lifecycle_permissions_broaden.sql`
+- `supabase/tests/011_role_based_access_test.sql`
+
+## DEC-010 - Approval Segregation of Duties
+
+Date: 2026-07-02
+Status: Approved (delegated per DEC-008)
+
+Decision:
+
+Approval requirements are configured per company and document type through the existing approval workflow tables (`approval_workflows`, `approval_workflow_steps`, `approval_instances`). When a workflow is configured for a document type, posting requires an approved instance and the approver must differ from the document creator (self-approval blocked). When no workflow is configured, the DEC-009 role gate still applies (only owner/admin may approve/post). Approval workflows are not force-enabled by default, so single-user companies remain operable.
+
+Business Reason:
+
+Approver-not-creator is the minimum segregation of duties an auditor expects wherever approval is claimed; cosmetic approval is worse than none because it implies a control that does not operate.
+
+Technical Reason:
+
+Enforcement belongs in the approve/post RPCs (with actor and timestamp), not the UI; the workflow tables already exist, so this is a gate, not a new subsystem.
+
+Alternatives Considered:
+
+- Mandatory approval for all document types. Rejected; unusable for single-user companies.
+- Allow self-approval with a warning. Rejected; not a control.
+
+Related Documents:
+
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-012)
+
+Related Source Files:
+
+- `supabase/migrations/20260701000008_accounting_readiness_approval.sql`
+
+## DEC-011 - Branch Is a Reporting Dimension, Not a Security Boundary
+
+Date: 2026-07-02
+Status: Approved (delegated per DEC-008)
+
+Decision:
+
+The company is the tenant and security boundary (DEC-003). Branch, department, and cost center are reporting/organizational dimensions: they must be validated for company consistency and propagated from source documents to journal entry lines so branch P&L and cost-center reports reconcile to the GL, but users are not access-restricted per branch. Per-branch access control is out of scope unless explicitly requested later.
+
+Business Reason:
+
+PH SME multi-branch bookkeeping needs branch-accurate reports (including BIR branch reporting) far more than intra-company branch secrecy; branch-level security would multiply the RLS/testing surface without a documented requirement.
+
+Technical Reason:
+
+Keeps RLS company-scoped and simple; dimension integrity becomes a posting-engine validation concern (PXL-DA-017) instead of a security model change.
+
+Alternatives Considered:
+
+- Branch as a security boundary. Rejected; no requirement, large RLS/test surface.
+- Leave semantics undecided. Rejected; it blocked dimension-propagation work.
+
+Related Documents:
+
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-017)
+
+Related Source Files:
+
+- `supabase/migrations/20260629000013_gl_core.sql`
+

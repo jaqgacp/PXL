@@ -53,14 +53,16 @@ Proceed without asking for:
 - narrow UI fixes that follow existing patterns,
 - documented audit-finding work.
 
-Ask before:
+Business-policy and architecture decisions are delegated (DEC-008): decide with the standard-accounting-practice, PH-compliance-conservative default, record a DEC entry in `AI/AI_DECISIONS.md`, and proceed.
 
-- changing permanent architecture or business policy,
-- weakening accounting/tax/security controls,
-- adding new product scope,
-- performing destructive operations,
-- using secrets or production access,
-- continuing when documents conflict.
+Ask before ONLY:
+
+- weakening or removing accounting/tax/audit-trail/security controls,
+- performing destructive or irreversible operations on real user data,
+- spending money or taking external legal/compliance action (e.g., actual BIR filings),
+- continuing past a document conflict that repository evidence cannot resolve.
+
+If an action needs credentials you do not hold, record it as PENDING and continue with other work.
 
 ## Documentation Philosophy
 

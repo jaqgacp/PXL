@@ -47,4 +47,4 @@ When no direct user task is provided:
 
 ## Current Recommended Next Task
 
-AIQ-008 (continue): per the audit log's session-27 recommendation, VAT report standardization on the tax ledger (PXL-AUD-014/PXL-DA-008) or `can_perform` role/action RPC enforcement (PXL-DA-003). Summary docs AIQ-005–007 follow when audit work pauses.
+AIQ-008 (continue): `can_perform` role/action RPC enforcement per DEC-009 (PXL-DA-003, Critical, unblocked by the DEC-008 delegation) or VAT report standardization on the tax ledger (PXL-AUD-014/PXL-DA-008). Summary docs AIQ-006–007 follow when audit work pauses.

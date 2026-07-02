@@ -10,7 +10,7 @@ Current documented build status in `docs/PXL/STATUS.md` says 205/205 pages are b
 
 ## Completed AI Operating Files
 
-All files listed in `AI/AI_DOCUMENTATION_RULES.md` exist under `AI/`. The AI Operating System is at version 1.0.0 (`AI/AIOS_VERSION.md`) and is finalized as the permanent operating system for AI sessions.
+All files listed in `AI/AI_DOCUMENTATION_RULES.md` exist under `AI/`. The AI Operating System is at version 1.2.0 (`AI/AIOS_VERSION.md`) and is finalized as the permanent operating system for AI sessions.
 
 ## Current Active Task
 
@@ -29,16 +29,14 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 
 ## Last Files Changed
 
-AIOS 1.1.0 tuning session (2026-07-02):
+AIOS 1.2.0 delegation session (session 29, 2026-07-02):
 
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (Findings Status Index + Production Readiness Gate added; PXL-AUD-020 status contradiction fixed; PXL-DA-020 → In Progress)
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md` (new, GENERATED — closes AIQ-005)
-- `scripts/gen_schema_summary.sh`, `scripts/check_docs_consistency.sh` (new)
-- `.github/workflows/ci.yml` (docs-consistency gate step)
-- `AI/AI_AUTONOMY_PLAYBOOK.md` (External-Action Evidence Rule; end-loop steps 6–7)
-- `AI/AGENT_SYSTEM_PROMPT.md`, `.claude/CLAUDE.md` (trivial-task and audit reading shortcuts)
-- `AI/AI_CONTEXT_INDEX.md` (schema summary registered; audit mode reads the index first)
-- `AI/AIOS_VERSION.md` (1.1.0), `AI/AI_WORK_QUEUE.md` (AIQ-005 Done, AIQ-013 Done), `AI/AI_STATE.md`, `AI/AI_HANDOFF.md`
+- `AI/AI_DECISIONS.md` (DEC-008 standing autonomy delegation; DEC-009 role/action matrix; DEC-010 approval SoD; DEC-011 branch = reporting dimension)
+- `AI/AI_AUTONOMY_PLAYBOOK.md` (Level 4 rewritten as delegated decisions; must-ask list reduced to hard safety stops)
+- `AI/AGENT_SYSTEM_PROMPT.md` (ask-before list reduced; PENDING rule for missing credentials)
+- `AI/AI_STATE.md` ("Decisions Needed From User" → "Standing Autonomy Delegation")
+- `AI/AIOS_VERSION.md` (1.2.0)
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (index Next Action for PXL-DA-003/PXL-AUD-004/PXL-DA-012/PXL-DA-017 now cite DEC-009/010/011; session 29 log row)
 
 ## Last Known Errors
 
@@ -48,15 +46,10 @@ AIOS 1.1.0 landed on `main` as commit `082652b` (2026-07-02); CI run 28609465374
 
 ## Next Recommended Step
 
-Continue AIQ-008: PXL-AUD-014 VAT ledger completeness (classification bases, zero-VAT rows, CS/CP writers, then ledger-backed review views) or `can_perform` enforcement (PXL-DA-003, needs a user business-role decision).
+Continue AIQ-008: implement PXL-DA-003 `can_perform(company_id, action, document_type)` per DEC-009 in every posting/void/reversal RPC (Critical, now unblocked), then PXL-DA-012 approval gates per DEC-010. PXL-AUD-014 VAT ledger completeness remains the parallel P0 track.
 
-## Decisions Needed From User
+## Standing Autonomy Delegation
 
-These block autonomous progress on specific findings (Level 4 items). Answering them in one message unblocks multiple fix sessions:
+No user decisions are pending. On 2026-07-02 the user delegated all business-policy and prioritization decisions to the agent (DEC-008): decide with standard-accounting-practice, PH-compliance-conservative defaults, record a DEC entry, proceed. The former open questions are decided: role/action matrix DEC-009, approval segregation of duties DEC-010, branch as reporting dimension DEC-011, direct commits to `main` with CI as gate DEC-008. PXL-DA-003, PXL-AUD-004, PXL-DA-012, and PXL-DA-017 are now unblocked for implementation.
 
-1. **Business role matrix** (PXL-DA-003, PXL-AUD-004): which roles (owner/admin/member/viewer, or new roles like accountant/bookkeeper) may create/edit operational master data (customers, suppliers, items), and which may approve/post/void/reverse, per document type. Unblocks `can_perform` enforcement.
-2. **Approval segregation-of-duties** (PXL-DA-012): which document types require approval before posting, and whether the approver must differ from the creator. Unblocks approval-gate enforcement in posting RPCs.
-3. **Branch semantics** (PXL-DA-017): is branch a security boundary (users restricted per branch) or a reporting dimension only. Unblocks dimension enforcement design.
-4. **Workflow**: agents currently commit and push directly to `main` with CI as the gate; say if you prefer pull requests instead.
-
-Settled by practice: agents maintain the work queue and state files each session; Claude API `cache_control` work stays parked until an API integration exists.
+Hard stops that remain: weakening controls, destructive/irreversible operations on user data, spending money, external legal/compliance actions, and missing credentials (record PENDING). Claude API `cache_control` work stays parked until an API integration exists.
