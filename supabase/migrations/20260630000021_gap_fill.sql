@@ -1857,29 +1857,37 @@ ALTER TABLE atc_codes ADD CONSTRAINT atc_codes_tax_category_check
 -- Insert ref_atc_codes rows that don't already exist in atc_codes by code.
 -- Uses the ref_atc_codes UUID so FK references stay valid after FK migration.
 
-INSERT INTO atc_codes (id, code, description, tax_category, rate, is_active)
-SELECT r.id, r.atc_code, r.description, 'ewt', r.tax_rate, r.is_active
-FROM ref_atc_codes r
-WHERE NOT EXISTS (SELECT 1 FROM atc_codes a WHERE a.code = r.atc_code);
+-- Fresh-database replay guard: 20260629000014_hardening.sql already consolidated
+-- and dropped ref_atc_codes, so this block only runs when the table still exists.
+DO $$
+BEGIN
+  IF to_regclass('public.ref_atc_codes') IS NOT NULL THEN
+    INSERT INTO atc_codes (id, code, description, tax_category, rate, is_active)
+    SELECT r.id, r.atc_code, r.description, 'ewt', r.tax_rate, r.is_active
+    FROM ref_atc_codes r
+    WHERE NOT EXISTS (SELECT 1 FROM atc_codes a WHERE a.code = r.atc_code);
 
--- For codes that exist in both (same code, different UUIDs):
--- remap receipt_lines.atc_code_id from ref_atc_codes UUID → atc_codes UUID
-UPDATE receipt_lines rl
-SET atc_code_id = (
-  SELECT a.id FROM atc_codes a
-  INNER JOIN ref_atc_codes r ON r.atc_code = a.code
-  WHERE r.id = rl.atc_code_id
-)
-WHERE rl.atc_code_id IN (SELECT id FROM ref_atc_codes);
+    -- For codes that exist in both (same code, different UUIDs):
+    -- remap receipt_lines.atc_code_id from ref_atc_codes UUID → atc_codes UUID
+    UPDATE receipt_lines rl
+    SET atc_code_id = (
+      SELECT a.id FROM atc_codes a
+      INNER JOIN ref_atc_codes r ON r.atc_code = a.code
+      WHERE r.id = rl.atc_code_id
+    )
+    WHERE rl.atc_code_id IN (SELECT id FROM ref_atc_codes);
 
--- Same for form_2307_tracking
-UPDATE form_2307_tracking ft
-SET atc_code_id = (
-  SELECT a.id FROM atc_codes a
-  INNER JOIN ref_atc_codes r ON r.atc_code = a.code
-  WHERE r.id = ft.atc_code_id
-)
-WHERE ft.atc_code_id IN (SELECT id FROM ref_atc_codes);
+    -- Same for form_2307_tracking
+    UPDATE form_2307_tracking ft
+    SET atc_code_id = (
+      SELECT a.id FROM atc_codes a
+      INNER JOIN ref_atc_codes r ON r.atc_code = a.code
+      WHERE r.id = ft.atc_code_id
+    )
+    WHERE ft.atc_code_id IN (SELECT id FROM ref_atc_codes);
+  END IF;
+END;
+$$;
 
 -- Migrate receipt_lines FK from ref_atc_codes → atc_codes
 ALTER TABLE receipt_lines
@@ -1891,9 +1899,16 @@ ALTER TABLE form_2307_tracking
   DROP CONSTRAINT IF EXISTS form_2307_tracking_atc_code_id_fkey,
   ADD CONSTRAINT form_2307_tracking_atc_code_id_fkey FOREIGN KEY (atc_code_id) REFERENCES atc_codes(id);
 
--- Drop ref_atc_codes (policies must be dropped first)
-DROP POLICY IF EXISTS "read_ref_atc_codes" ON ref_atc_codes;
-DROP TABLE IF EXISTS ref_atc_codes;
+-- Drop ref_atc_codes (policies must be dropped first).
+-- Fresh-database replay guard: DROP POLICY errors when the table is already gone.
+DO $$
+BEGIN
+  IF to_regclass('public.ref_atc_codes') IS NOT NULL THEN
+    DROP POLICY IF EXISTS "read_ref_atc_codes" ON ref_atc_codes;
+    DROP TABLE ref_atc_codes;
+  END IF;
+END;
+$$;
 
 -- ── 3. Fix vw_customer_ledger: receipt credit should clear total_amount + total_cwt ─
 -- AR is debited at total_amount + total_cwt when posting (CWT clears AR too).

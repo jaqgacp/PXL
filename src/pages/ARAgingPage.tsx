@@ -65,38 +65,21 @@ export default function ARAgingPage() {
   const runAging = useCallback(async () => {
     if (!companyId) return
     setAgingLoading(true); setAgingRows([]); setExpandedCustomer(null); setCustomerInvoices([])
-    const asOf = new Date(asOfDate)
 
-    let q = supabase.from('sales_invoices').select('id,si_number,date,due_date,customer_id,customer_name_snapshot,total_amount')
-      .eq('company_id', companyId).eq('status', 'posted').lte('date', asOfDate)
-    if (agingCustomer) q = q.eq('customer_id', agingCustomer)
-    const { data: invoices } = await q
+    const { data } = await supabase.rpc('fn_ar_aging_asof', {
+      p_company_id: companyId,
+      p_as_of: asOfDate,
+      p_customer_id: agingCustomer || null,
+    })
 
-    if (!invoices || invoices.length === 0) { setAgingLoading(false); return }
+    if (!data || data.length === 0) { setAgingLoading(false); return }
 
-    const invoiceIds = invoices.map(i => i.id)
-    const { data: rlines } = await supabase.from('receipt_lines')
-      .select('invoice_id,payment_amount,cwt_amount,receipts!inner(receipt_date,status,company_id)')
-      .in('invoice_id', invoiceIds)
-      .eq('receipts.company_id', companyId)
-      .eq('receipts.status', 'posted')
-      .lte('receipts.receipt_date', asOfDate)
-    const { data: clines } = await supabase.from('credit_memos')
-      .select('invoice_id,total_amount').in('invoice_id', invoiceIds)
-      .in('status', ['applied'])
-      .lte('cm_date', asOfDate)
-
-    const applied: Record<string, number> = {}
-    for (const rl of (rlines as any[]) || []) applied[rl.invoice_id] = (applied[rl.invoice_id] || 0) + Number(rl.payment_amount) + Number(rl.cwt_amount)
-    for (const cl of (clines as any[]) || []) applied[cl.invoice_id] = (applied[cl.invoice_id] || 0) + Number(cl.total_amount)
-
-    const balances: InvoiceBalance[] = (invoices as InvoiceBalance[]).map(inv => {
-      const paid = applied[inv.id] || 0
-      const balance_due = Math.max(0, Number(inv.total_amount) - paid)
-      const dueDate = inv.due_date ? new Date(inv.due_date) : null
-      const days_overdue = dueDate ? Math.floor((asOf.getTime() - dueDate.getTime()) / 86_400_000) : 0
-      return { ...inv, total_amount: Number(inv.total_amount), balance_due, days_overdue }
-    }).filter(b => b.balance_due > 0.005)
+    const balances: InvoiceBalance[] = (data as any[]).map(r => ({
+      id: r.invoice_id, si_number: r.si_number, date: r.invoice_date, due_date: r.due_date,
+      customer_id: r.customer_id, customer_name_snapshot: r.customer_name,
+      total_amount: Number(r.original_amount), balance_due: Number(r.balance_due),
+      days_overdue: r.days_overdue,
+    }))
 
     // Group by customer
     const byCustomer: Record<string, AgingRow> = {}
@@ -122,34 +105,17 @@ export default function ARAgingPage() {
   const expandCustomer = async (customerId: string) => {
     if (expandedCustomer === customerId) { setExpandedCustomer(null); return }
     setExpandedCustomer(customerId)
-    const asOf = new Date(asOfDate)
-    const { data: invoices } = await supabase.from('sales_invoices')
-      .select('id,si_number,date,due_date,customer_id,customer_name_snapshot,total_amount')
-      .eq('company_id', companyId!).eq('customer_id', customerId).eq('status', 'posted').lte('date', asOfDate)
-    if (!invoices) return
-    const invoiceIds = invoices.map(i => i.id)
-    const { data: rlines } = await supabase.from('receipt_lines')
-      .select('invoice_id,payment_amount,cwt_amount,receipts!inner(receipt_date,status,company_id)')
-      .in('invoice_id', invoiceIds)
-      .eq('receipts.company_id', companyId!)
-      .eq('receipts.status', 'posted')
-      .lte('receipts.receipt_date', asOfDate)
-    const { data: clines } = await supabase.from('credit_memos')
-      .select('invoice_id,total_amount')
-      .in('invoice_id', invoiceIds)
-      .in('status', ['applied'])
-      .lte('cm_date', asOfDate)
-    const applied: Record<string, number> = {}
-    for (const rl of (rlines as any[]) || []) applied[rl.invoice_id] = (applied[rl.invoice_id] || 0) + Number(rl.payment_amount) + Number(rl.cwt_amount)
-    for (const cl of (clines as any[]) || []) applied[cl.invoice_id] = (applied[cl.invoice_id] || 0) + Number(cl.total_amount)
-    const results = (invoices as InvoiceBalance[]).map(inv => {
-      const paid = applied[inv.id] || 0
-      const balance_due = Math.max(0, Number(inv.total_amount) - paid)
-      const dueDate = inv.due_date ? new Date(inv.due_date) : null
-      const days_overdue = dueDate ? Math.floor((asOf.getTime() - dueDate.getTime()) / 86_400_000) : 0
-      return { ...inv, total_amount: Number(inv.total_amount), balance_due, days_overdue }
-    }).filter(b => b.balance_due > 0.005)
-    setCustomerInvoices(results)
+    const { data } = await supabase.rpc('fn_ar_aging_asof', {
+      p_company_id: companyId!,
+      p_as_of: asOfDate,
+      p_customer_id: customerId,
+    })
+    setCustomerInvoices(((data as any[]) || []).map(r => ({
+      id: r.invoice_id, si_number: r.si_number, date: r.invoice_date, due_date: r.due_date,
+      customer_id: r.customer_id, customer_name_snapshot: r.customer_name,
+      total_amount: Number(r.original_amount), balance_due: Number(r.balance_due),
+      days_overdue: r.days_overdue,
+    })))
   }
 
   const runLedger = useCallback(async () => {
