@@ -4,26 +4,27 @@ Last updated: 2026-07-02
 
 ## What Was Done
 
-Verified and landed audit fix session 27 (AIQ-008, user-authorized audit priority): seeded scenario RLS-ROLES-001 (`supabase/tests/011_role_based_access_test.sql`) — the first test to exercise RLS as the `authenticated` role — plus the PXL-AUD-026 fix `20260702000008_authenticated_table_grants.sql` (migration chain had never granted table privileges; a fresh environment was dead through PostgREST and production would break on Supabase's 2026-10-30 legacy-default removal). Rewrote direct-write denial assertions in tests 004/007/010 to effect-based checks, documented RLS-ROLES-001 in the test book, and added Fix Session Log row 27.
+Audit fix session 28 (AIQ-008): while starting PXL-AUD-014, found and fixed new Critical PXL-AUD-027 — void/cancel/bounce paths posted counter-JEs on the GL but left the tax ledger un-netted (SI void/PV cancel/OR bounce never touched tax rows; VB void mutated originals), so voided documents broke VAT reconciliation and blocked returns, cancelled PVs kept feeding 2307 data, and bounced ORs kept claiming CWT. `20260702000009_tax_ledger_void_reversal.sql` adds a shared counter-row helper wired into all four paths, uniform `is_reversal` semantics, `vw_ewt_summary_ap` exclusion of reversed originals, and a backfill for existing environments. Seeded scenario TAX-LEDGER-VOID-001 (test 012, 17 assertions) proves per-period ledger/GL parity through voids.
 
 ## What Changed
 
-- Verification this session: fresh `supabase db reset --local` replay clean; `npm test` 165/165 across 11 files; `npm run build` passed; `npm run lint` pre-existing warnings only.
-- The user reprioritized AIQ-008 to P0 (audit fixes before summary docs), matching the Primary Objective in `.claude/CLAUDE.md`.
+- Verification: fresh `supabase db reset --local` replay clean; `npm test` 182/182 across 12 files; build passed; lint pre-existing warnings only (39).
+- Matrix SI/OR/VB/PV cells, test book, findings detail + session log row 28 all updated.
+- PXL-AUD-014 prerequisites documented: zero-VAT documents write no ledger rows, no exempt/zero-rated bases stored, no CS/CP writers — ledger completeness must precede ledger-backed review views.
 
 ## What Remains
 
-- AIQ-008 continues: next per audit log — VAT report standardization on the tax ledger (PXL-AUD-014/PXL-DA-008) or `can_perform` role/action RPC enforcement (PXL-DA-003).
-- Approval segregation-of-duties is still open (PXL-DA-012); remote grant posture vs legacy defaults not diffed (PXL-AUD-026 residue).
-- Summary docs AIQ-005–007 resume when audit work pauses.
+- Push migration `20260702000009` to the hosted Supabase project (no access token in this workspace — run `supabase login`, then `supabase db push --linked`).
+- AIQ-008 continues: PXL-AUD-014 VAT ledger completeness, or `can_perform` enforcement (PXL-DA-003, needs a user business-role decision).
+- Approval segregation-of-duties (PXL-DA-012); summary docs AIQ-005–007 when audit work pauses.
 
 ## Known Errors / Blockers
 
-None locally. No Supabase access token in this workspace, so `--linked` remote verification cannot run here.
+None locally. Hosted migration push blocked on Supabase login only.
 
 ## Exact Next Recommended Task
 
-Continue `AIQ-008`: pick VAT report standardization (PXL-AUD-014/PXL-DA-008) or `can_perform` enforcement (PXL-DA-003) from `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`, fix, add seeded pgTAP coverage, and update the matrix/test book/session log.
+Push migration 009 to the hosted project, then continue `AIQ-008` with PXL-AUD-014 VAT ledger completeness: per-classification VAT bases on `tax_detail_entries`, rows for zero-VAT documents of VAT companies, CS/CP writers, backfill, then rebuild `vw_output_vat_review`/`vw_input_vat_review` on the ledger keeping names/columns.
 
 ## Exact Next Prompt
 
