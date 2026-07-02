@@ -2,6 +2,9 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 
 // ── Types ─────────────────────────────────────────────────────
 type VBStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
@@ -45,9 +48,12 @@ type ItemRef = {
 }
 
 type VATRef = { id: string; vat_code: string; description: string; vat_classification: 'regular' | 'zero_rated' | 'exempt'; rate: number }
+type TaxRegistration = 'vat' | 'non_vat' | 'exempt'
 type COARef = { id: string; account_code: string; account_name: string; account_type: string }
 type Branch = { id: string; branch_code: string; branch_name: string }
 type VoidReason = { id: string; code: string; description: string }
+
+const VB_REQUIRED_CONFIG: ConfigField[] = ['ap_account_id', 'input_vat_account_id']
 
 // ── Helpers ───────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -89,6 +95,7 @@ export default function VendorBillsPage() {
   const [suppliers, setSuppliers] = useState<SupplierRef[]>([])
   const [items, setItems] = useState<ItemRef[]>([])
   const [vatCodes, setVatCodes] = useState<VATRef[]>([])
+  const [taxRegistration, setTaxRegistration] = useState<TaxRegistration>('vat')
   const [expenseAccounts, setExpenseAccounts] = useState<COARef[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
   const [voidReasons, setVoidReasons] = useState<VoidReason[]>([])
@@ -98,6 +105,24 @@ export default function VendorBillsPage() {
   const listRef = useRef<HTMLDivElement>(null)
 
   const readOnly = mode === 'view'
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: mode === 'list' ? branchId : (editVB?.branch_id || branchId || ''),
+    documentCode: 'VB',
+    postingDate: editVB?.bill_date || today(),
+    requiredConfig: VB_REQUIRED_CONFIG,
+  })
+  const allowsVatCode = useCallback((code: VATRef) => taxRegistration === 'vat' || code.rate === 0, [taxRegistration])
+  const defaultVatCode = useCallback(() => vatCodes.find(allowsVatCode) || null, [allowsVatCode, vatCodes])
+  const emptyLine = useCallback((): VBLine => {
+    const vat = defaultVatCode()
+    return {
+      ...newLine(),
+      vat_code_id: vat?.id || '',
+      vat_classification: vat?.vat_classification || 'exempt',
+      vat_rate: vat?.rate ?? 0,
+    }
+  }, [defaultVatCode])
 
   const load = useCallback(async () => {
     if (!companyId) return
@@ -112,15 +137,20 @@ export default function VendorBillsPage() {
 
   const loadRefs = useCallback(async () => {
     if (!companyId) return
-    const [suppRes, vatRes, coaRes, brRes, vrRes] = await Promise.all([
+    const [companyRes, suppRes, vatRes, coaRes, brRes, vrRes] = await Promise.all([
+      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('suppliers').select('id,registered_name,tin,registered_address,default_tax_type,default_terms_id,default_gl_account_id,payment_terms(days_to_due)').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('is_active', true),
+      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true),
       supabase.from('chart_of_accounts').select('id,account_code,account_name,account_type').eq('company_id', companyId).eq('is_active', true).eq('is_postable', true).order('account_code'),
       supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
       supabase.from('void_reason_codes').select('id,code,description'),
     ])
+    const companyTaxRegistration = ((companyRes.data?.tax_registration as TaxRegistration) || 'vat')
+    setTaxRegistration(companyTaxRegistration)
     setSuppliers((suppRes.data || []).map((s: any) => ({ ...s, payment_terms: s.payment_terms })))
-    setVatCodes((vatRes.data || []).map((v: any) => ({ id: v.id, vat_code: v.vat_code, description: v.description, vat_classification: v.vat_classification, rate: v.tax_codes?.rate ?? 0 })))
+    setVatCodes((vatRes.data || [])
+      .map((v: any) => ({ id: v.id, vat_code: v.vat_code, description: v.description, vat_classification: v.vat_classification, rate: v.tax_codes?.rate ?? 0 }))
+      .filter((v: VATRef) => companyTaxRegistration === 'vat' || v.rate === 0))
     setExpenseAccounts(coaRes.data as COARef[] || [])
     setBranches(brRes.data as Branch[] || [])
     setVoidReasons(vrRes.data as VoidReason[] || [])
@@ -133,8 +163,12 @@ export default function VendorBillsPage() {
   useEffect(() => { if (companyId) load() }, [load, fStatus, companyId])
 
   const openNew = () => {
+    if (readiness.blockers.length > 0) {
+      setError('Complete company, branch, fiscal period, number series, and GL posting setup before creating a vendor bill.')
+      return
+    }
     setEditVB({ company_id: companyId!, branch_id: branchId || '', bill_date: today(), currency_code: 'PHP', status: 'draft' })
-    setLines([newLine()])
+    setLines([emptyLine()])
     setError('')
     setMode('edit')
   }
@@ -159,7 +193,7 @@ export default function VendorBillsPage() {
         })
         setLines(mapped)
       } else {
-        setLines([newLine()])
+        setLines([emptyLine()])
       }
     })
     setError('')
@@ -178,13 +212,14 @@ export default function VendorBillsPage() {
   const pickItem = (lineKey: string, itemId: string) => {
     const item = items.find(i => i.id === itemId)
     if (!item) return
-    const vc = vatCodes.find(v => v.id === item.default_purchase_vat_id)
+    const itemVat = vatCodes.find(v => v.id === item.default_purchase_vat_id)
+    const vc = itemVat && allowsVatCode(itemVat) ? itemVat : defaultVatCode()
     setLines(ls => ls.map(l => l._key !== lineKey ? l : computeLine({
       ...l, item_id: item.id, description: item.description,
       uom_id: item.uom_id, uom_label: item.uom_label,
       unit_price: item.standard_selling_price,
-      vat_code_id: vc?.id || '', vat_classification: vc?.vat_classification || 'regular',
-      vat_rate: vc?.rate ?? 12,
+      vat_code_id: vc?.id || '', vat_classification: vc?.vat_classification || 'exempt',
+      vat_rate: vc?.rate ?? 0,
       expense_account_id: item.purchase_account_id || l.expense_account_id,
     })))
   }
@@ -211,9 +246,55 @@ export default function VendorBillsPage() {
     vat: acc.vat + l.input_vat_amount,
     total: acc.total + l.total_amount,
   }), { taxable: 0, zero: 0, exempt: 0, vat: 0, total: 0 })
+  const expenseImpactRows: GLImpactRow[] = Array.from(
+    lines.reduce((map, line) => {
+      const key = line.expense_account_id || 'missing_expense_account'
+      const existing = map.get(key) || {
+        accountId: line.expense_account_id || null,
+        accountLabel: line.expense_account_id ? undefined : 'Missing expense account',
+        description: 'Expense / inventory',
+        debit: 0,
+        credit: 0,
+      }
+      existing.debit += line.net_amount
+      map.set(key, existing)
+      return map
+    }, new Map<string, GLImpactRow>()).values()
+  )
+  const glImpactRows: GLImpactRow[] = [
+    ...expenseImpactRows,
+    ...(totals.vat > 0
+      ? [{ configKey: 'input_vat_account_id' as const, description: 'Input VAT', debit: totals.vat, credit: 0 }]
+      : []),
+    { configKey: 'ap_account_id', description: 'Accounts payable', debit: 0, credit: totals.total },
+  ]
+
+  const getAccountingReadinessErrors = () => {
+    const activeLines = lines.filter(l => l.description.trim())
+    const errors: string[] = []
+    if (activeLines.length === 0) errors.push('At least one bill line is required.')
+    if (activeLines.some(l => !l.expense_account_id || !expenseAccounts.some(a => a.id === l.expense_account_id))) {
+      errors.push('Every bill line needs an active expense account before approval or posting.')
+    }
+    if (activeLines.some(l => !l.vat_code_id || !vatCodes.some(v => v.id === l.vat_code_id))) {
+      errors.push('Every bill line needs an active input VAT code before approval or posting.')
+    }
+    return errors
+  }
 
   const save = async (nextStatus: string) => {
     if (!companyId || !editVB) return
+    if (readiness.blockers.length > 0) {
+      setError('Complete setup readiness blockers before saving or posting this vendor bill.')
+      return
+    }
+    if (nextStatus === 'approved' || nextStatus === 'posted') {
+      const accountingErrors = getAccountingReadinessErrors()
+      if (accountingErrors.length > 0) {
+        setError(accountingErrors[0])
+        return
+      }
+    }
     setSaving(true); setError('')
     try {
       const header = {
@@ -302,11 +383,18 @@ export default function VendorBillsPage() {
           <option value="posted">Posted</option>
           <option value="cancelled">Void</option>
         </select>
-        <button onClick={openNew} className="ml-auto px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800">
+        <button onClick={openNew} disabled={readiness.loading || readiness.blockers.length > 0}
+          className="ml-auto px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed">
           + New Vendor Bill
         </button>
         {!companyId && <span className="text-xs text-gray-400">Select a company first</span>}
       </div>
+
+      {companyId && readiness.blockers.length > 0 && (
+        <div className="px-5 py-3 border-b border-gray-100">
+          <SetupReadinessBanner readiness={readiness} />
+        </div>
+      )}
 
       <div ref={listRef}>
         {loading ? (
@@ -398,7 +486,7 @@ export default function VendorBillsPage() {
             <>
               <button onClick={doRevertToDraft} disabled={saving}
                 className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-50">Revert to Draft</button>
-              <button onClick={() => save('posted')} disabled={saving}
+              <button onClick={() => save('posted')} disabled={saving || readiness.blockers.length > 0}
                 className="px-3 py-1.5 bg-green-700 text-white rounded text-sm font-medium hover:bg-green-800 disabled:opacity-50">
                 {saving ? 'Posting…' : 'Post'}
               </button>
@@ -410,11 +498,11 @@ export default function VendorBillsPage() {
           )}
           {!readOnly && (
             <>
-              <button onClick={() => save('draft')} disabled={saving}
+              <button onClick={() => save('draft')} disabled={saving || readiness.blockers.length > 0}
                 className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-50">
                 {saving ? 'Saving…' : 'Save Draft'}
               </button>
-              <button onClick={() => save('approved')} disabled={saving}
+              <button onClick={() => save('approved')} disabled={saving || readiness.blockers.length > 0}
                 className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
                 {saving ? 'Saving…' : 'Save & Approve'}
               </button>
@@ -422,6 +510,12 @@ export default function VendorBillsPage() {
           )}
         </div>
       </div>
+
+      {readiness.blockers.length > 0 && (
+        <div className="px-5 py-3 border-b border-gray-100 bg-white">
+          <SetupReadinessBanner readiness={readiness} />
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
         {/* Header */}
@@ -534,7 +628,7 @@ export default function VendorBillsPage() {
           </table>
           {!readOnly && (
             <div className="px-4 py-2 border-t border-gray-100">
-              <button onClick={() => setLines(ls => [...ls, newLine()])}
+              <button onClick={() => setLines(ls => [...ls, emptyLine()])}
                 className="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Line</button>
             </div>
           )}
@@ -559,6 +653,13 @@ export default function VendorBillsPage() {
             <span className="text-right font-mono font-bold text-gray-900">{fmt(totals.total)}</span>
           </div>
         </div>
+
+        <GLImpactPanel
+          companyId={companyId}
+          sourceDocType="VB"
+          sourceDocId={editVB?.id}
+          previewRows={glImpactRows}
+        />
       </div>
     </div>
   )

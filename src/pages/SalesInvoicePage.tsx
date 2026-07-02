@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 
 // ── Types ─────────────────────────────────────────────────────
 type SIStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
@@ -56,6 +59,7 @@ type VATRef = {
   vat_classification: 'regular' | 'zero_rated' | 'exempt'; rate: number
 }
 
+type TaxRegistration = 'vat' | 'non_vat' | 'exempt'
 type Branch = { id: string; branch_code: string; branch_name: string }
 type VoidReason = { id: string; code: string; description: string }
 
@@ -99,6 +103,8 @@ const celInp = 'w-full bg-transparent border-0 text-sm py-0 px-0 focus:outline-n
 const statusToShared: Record<SIStatus, string> = {
   draft: 'draft', approved: 'approved', posted: 'posted', cancelled: 'error',
 }
+
+const SI_REQUIRED_CONFIG: ConfigField[] = ['ar_account_id', 'vat_payable_account_id']
 
 // ── Item search dropdown ──────────────────────────────────────
 function ItemSearch({ items, value, onChange }: {
@@ -156,6 +162,7 @@ export default function SalesInvoicePage() {
   const [customers, setCustomers] = useState<CustomerRef[]>([])
   const [items, setItems] = useState<ItemRef[]>([])
   const [vatCodes, setVatCodes] = useState<VATRef[]>([])
+  const [taxRegistration, setTaxRegistration] = useState<TaxRegistration>('vat')
   const [branches, setBranches] = useState<Branch[]>([])
   const [voidReasons, setVoidReasons] = useState<VoidReason[]>([])
 
@@ -196,13 +203,32 @@ export default function SalesInvoicePage() {
   const [showVoid, setShowVoid] = useState(false)
   const [voidReason, setVoidReason] = useState('')
   const [voidMemo, setVoidMemo] = useState('')
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: mode === 'list' ? branchId : fBranch,
+    documentCode: 'SI',
+    postingDate: mode === 'list' ? today() : fDate,
+    requiredConfig: SI_REQUIRED_CONFIG,
+  })
+  const allowsVatCode = useCallback((code: VATRef) => taxRegistration === 'vat' || code.rate === 0, [taxRegistration])
+  const defaultVatCode = useCallback(() => vatCodes.find(allowsVatCode) || null, [allowsVatCode, vatCodes])
+  const emptyLine = useCallback((): SILine => {
+    const vat = defaultVatCode()
+    return {
+      ...newLine(),
+      vat_code_id: vat?.id || '',
+      vat_classification: vat?.vat_classification || 'exempt',
+      vat_rate: vat?.rate ?? 0,
+    }
+  }, [defaultVatCode])
 
   // Load reference data
   useEffect(() => {
     if (!companyId) return
     const load = async () => {
-      const [{ data: cos }, { data: itms }, { data: vcs }, { data: brs }, { data: vrs }] =
+      const [{ data: company }, { data: cos }, { data: itms }, { data: vcs }, { data: brs }, { data: vrs }] =
         await Promise.all([
+          supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
           supabase.from('customers')
             .select('id,registered_name,tin,tin_branch_code,registered_address,default_tax_type,is_withholding_agent,default_terms_id,default_gl_account_id,payment_terms(days_to_due,term_name)')
             .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
@@ -220,6 +246,7 @@ export default function SalesInvoicePage() {
         ...c,
         payment_terms: Array.isArray(c.payment_terms) ? c.payment_terms[0] : c.payment_terms,
       })) as unknown as CustomerRef[])
+      setTaxRegistration((company?.tax_registration as TaxRegistration) || 'vat')
 
       setItems((itms || []).map(i => ({
         ...i,
@@ -228,11 +255,12 @@ export default function SalesInvoicePage() {
           : (i.units_of_measure as { uom_code?: string } | null)?.uom_code) ?? '',
       })) as unknown as ItemRef[])
 
+      const companyTaxRegistration = ((company?.tax_registration as TaxRegistration) || 'vat')
       setVatCodes((vcs || []).map(v => ({
         id: v.id, vat_code: v.vat_code, description: v.description,
         vat_classification: v.vat_classification,
         rate: (Array.isArray(v.tax_codes) ? v.tax_codes[0]?.rate : (v.tax_codes as { rate?: number } | null)?.rate) ?? 0,
-      })) as VATRef[])
+      })).filter(v => companyTaxRegistration === 'vat' || v.rate === 0) as VATRef[])
 
       setBranches(brs as Branch[] || [])
       setVoidReasons(vrs as VoidReason[] || [])
@@ -266,12 +294,16 @@ export default function SalesInvoicePage() {
 
   // Open form
   const openNew = () => {
+    if (readiness.blockers.length > 0) {
+      setError('Complete company, branch, fiscal period, number series, and GL posting setup before creating a sales invoice.')
+      return
+    }
     setEditSI(null)
     setFDate(today()); setFBranch(branchId); setFCustomer(''); setFCustomerName('')
     setFCustomerTIN(''); setFCustomerAddr(''); setFTerms(''); setFDueDate('')
     setFCurrency('PHP'); setFRef(''); setFMemo('')
     setFIsWithholdingAgent(false); setFCwtExpected(0)
-    setLines([newLine()])
+    setLines([emptyLine()])
     setError('')
     setMode('new')
   }
@@ -314,7 +346,7 @@ export default function SalesInvoicePage() {
       })
       setLines(mapped)
     } else {
-      setLines([newLine()])
+      setLines([emptyLine()])
     }
 
     setMode(si.status === 'draft' ? 'edit' : 'view')
@@ -341,7 +373,8 @@ export default function SalesInvoicePage() {
 
   // Item auto-fill per line
   const onItemChange = (key: string, item: ItemRef) => {
-    const vc = vatCodes.find(v => v.id === item.default_sales_vat_id)
+    const itemVat = vatCodes.find(v => v.id === item.default_sales_vat_id)
+    const vc = itemVat && allowsVatCode(itemVat) ? itemVat : defaultVatCode()
     setLines(prev => prev.map(l => {
       if (l._key !== key) return l
       const updated: SILine = {
@@ -352,8 +385,8 @@ export default function SalesInvoicePage() {
         uom_label: item.uom_label,
         unit_price: item.standard_selling_price,
         vat_code_id: vc?.id || '',
-        vat_classification: vc?.vat_classification || 'regular',
-        vat_rate: vc?.rate || 12,
+        vat_classification: vc?.vat_classification || 'exempt',
+        vat_rate: vc?.rate ?? 0,
         revenue_account_id: item.sales_account_id || '',
       }
       return computeLine(updated)
@@ -366,10 +399,23 @@ export default function SalesInvoicePage() {
       if (l._key !== key) return l
       if (field === 'vat_code_id') {
         const vc = vatCodes.find(v => v.id === value)
-        return computeLine({ ...l, vat_code_id: value as string, vat_classification: vc?.vat_classification || 'regular', vat_rate: vc?.rate || 12 })
+        return computeLine({ ...l, vat_code_id: value as string, vat_classification: vc?.vat_classification || 'exempt', vat_rate: vc?.rate ?? 0 })
       }
       return computeLine({ ...l, [field]: value })
     }))
+  }
+
+  const getAccountingReadinessErrors = () => {
+    const activeLines = lines.filter(l => l.description.trim())
+    const errors: string[] = []
+    if (activeLines.length === 0) errors.push('At least one line item is required.')
+    if (activeLines.some(l => !l.revenue_account_id)) {
+      errors.push('Every line needs a revenue account. Set the item sales account before approval or posting.')
+    }
+    if (activeLines.some(l => !l.vat_code_id || !vatCodes.some(v => v.id === l.vat_code_id))) {
+      errors.push('Every line needs an active output VAT code before approval or posting.')
+    }
+    return errors
   }
 
   // Save — atomic via RPC; status transitions are separate RPC calls
@@ -378,9 +424,20 @@ export default function SalesInvoicePage() {
       setError('Company, Branch, and Customer are required.')
       return
     }
+    if (readiness.blockers.length > 0) {
+      setError('Complete setup readiness blockers before saving or posting this sales invoice.')
+      return
+    }
     if (lines.every(l => !l.description.trim())) {
       setError('At least one line item is required.')
       return
+    }
+    if (nextStatus === 'approved' || nextStatus === 'posted') {
+      const accountingErrors = getAccountingReadinessErrors()
+      if (accountingErrors.length > 0) {
+        setError(accountingErrors[0])
+        return
+      }
     }
     setSaving(true)
     setError('')
@@ -473,6 +530,28 @@ export default function SalesInvoicePage() {
   }
 
   const totals = computeTotals(lines)
+  const revenueImpactRows: GLImpactRow[] = Array.from(
+    lines.reduce((map, line) => {
+      const key = line.revenue_account_id || 'missing_revenue_account'
+      const existing = map.get(key) || {
+        accountId: line.revenue_account_id || null,
+        accountLabel: line.revenue_account_id ? undefined : 'Missing revenue account',
+        description: 'Sales revenue',
+        debit: 0,
+        credit: 0,
+      }
+      existing.credit += line.net_amount
+      map.set(key, existing)
+      return map
+    }, new Map<string, GLImpactRow>()).values()
+  )
+  const glImpactRows: GLImpactRow[] = [
+    { configKey: 'ar_account_id', description: 'Accounts receivable', debit: totals.total_amount, credit: 0 },
+    ...revenueImpactRows,
+    ...(totals.total_vat_amount > 0
+      ? [{ configKey: 'vat_payable_account_id' as const, description: 'Output VAT payable', debit: 0, credit: totals.total_vat_amount }]
+      : []),
+  ]
   const readOnly = mode === 'view'
   const canEdit = mode === 'edit' || mode === 'new'
   const siStatus = editSI?.status || 'draft'
@@ -498,13 +577,19 @@ export default function SalesInvoicePage() {
           {!companyId ? (
             <span className="text-xs text-gray-400">Select a company first</span>
           ) : (
-            <button onClick={openNew}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800">
+            <button onClick={openNew} disabled={readiness.loading || readiness.blockers.length > 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed">
               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12h14" /></svg>
               New Sales Invoice
             </button>
           )}
         </div>
+
+        {companyId && readiness.blockers.length > 0 && (
+          <div className="px-5 py-3 border-b border-gray-100">
+            <SetupReadinessBanner readiness={readiness} />
+          </div>
+        )}
 
         {!companyId ? (
           <div className="py-16 text-center text-sm text-gray-400">Select a company to view Sales Invoices.</div>
@@ -526,7 +611,8 @@ export default function SalesInvoicePage() {
               {search || filterStatus ? 'No records match the current filters.' : 'Create your first Sales Invoice to get started.'}
             </p>
             {!search && !filterStatus && (
-              <button onClick={openNew} className="mt-4 px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800">
+              <button onClick={openNew} disabled={readiness.loading || readiness.blockers.length > 0}
+                className="mt-4 px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed">
                 New Sales Invoice
               </button>
             )}
@@ -608,15 +694,15 @@ export default function SalesInvoicePage() {
         {/* Status-based actions */}
         {(mode === 'new' || siStatus === 'draft') && !readOnly && (
           <>
-            <button onClick={() => save('draft')} disabled={saving}
+            <button onClick={() => save('draft')} disabled={saving || readiness.blockers.length > 0}
               className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
               {saving ? 'Saving…' : 'Save Draft'}
             </button>
-            <button onClick={() => save('approved')} disabled={saving}
+            <button onClick={() => save('approved')} disabled={saving || readiness.blockers.length > 0}
               className="px-3 py-1.5 border border-blue-500 text-blue-700 rounded text-sm hover:bg-blue-50 font-medium disabled:opacity-50">
               Submit for Approval
             </button>
-            <button onClick={() => save('posted')} disabled={saving}
+            <button onClick={() => save('posted')} disabled={saving || readiness.blockers.length > 0}
               className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
               Post
             </button>
@@ -628,7 +714,7 @@ export default function SalesInvoicePage() {
               className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
               {saving ? 'Reverting…' : 'Revert to Draft'}
             </button>
-            <button onClick={() => save('posted')} disabled={saving}
+            <button onClick={() => save('posted')} disabled={saving || readiness.blockers.length > 0}
               className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
               Post
             </button>
@@ -641,6 +727,12 @@ export default function SalesInvoicePage() {
           </button>
         )}
       </div>
+
+      {readiness.blockers.length > 0 && (
+        <div className="px-5 py-3 border-b border-gray-100 bg-white">
+          <SetupReadinessBanner readiness={readiness} />
+        </div>
+      )}
 
       <div className="divide-y divide-gray-200">
 
@@ -748,7 +840,7 @@ export default function SalesInvoicePage() {
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Line Items</span>
             {canEdit && (
-              <button type="button" onClick={() => setLines(prev => [...prev, newLine()])}
+              <button type="button" onClick={() => setLines(prev => [...prev, emptyLine()])}
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 border border-gray-300 rounded px-2 py-1 hover:bg-gray-50">
                 <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12h14" /></svg>
                 Add Line
@@ -904,6 +996,15 @@ export default function SalesInvoicePage() {
               </div>
             )}
           </div>
+        </div>
+
+        <div className="px-5 py-4 bg-gray-50 border-t border-gray-100">
+          <GLImpactPanel
+            companyId={companyId}
+            sourceDocType="SI"
+            sourceDocId={editSI?.id}
+            previewRows={glImpactRows}
+          />
         </div>
 
         {/* Void footer for posted SIs */}

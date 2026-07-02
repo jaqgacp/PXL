@@ -13,6 +13,16 @@ type AgingBill = {
   days_overdue: number
 }
 
+type VendorBillAgingSource = {
+  id: string
+  bill_number: string
+  bill_date: string
+  due_date: string | null
+  supplier_id: string
+  supplier_name_snapshot: string
+  total_amount: number
+}
+
 type AgingRow = {
   supplier_id: string; supplier_name: string
   current_bal: number; days_1_30: number; days_31_60: number
@@ -31,6 +41,61 @@ const firstOfMonth = () => { const d = new Date(); d.setDate(1); return d.toISOS
 
 const DOC_LABELS: Record<string, string> = {
   vendor_bill: 'Vendor Bill', payment_voucher: 'Payment Voucher', vendor_credit: 'Vendor Credit',
+}
+
+const toAgingBills = async (
+  companyId: string,
+  asOfDate: string,
+  supplierId?: string
+): Promise<AgingBill[]> => {
+  let q = supabase.from('vendor_bills')
+    .select('id,bill_number,bill_date,due_date,supplier_id,supplier_name_snapshot,total_amount')
+    .eq('company_id', companyId)
+    .eq('status', 'posted')
+    .lte('bill_date', asOfDate)
+  if (supplierId) q = q.eq('supplier_id', supplierId)
+
+  const { data: bills } = await q
+  if (!bills || bills.length === 0) return []
+
+  const billIds = bills.map(b => b.id)
+  const { data: paymentLines } = await supabase.from('payment_voucher_lines')
+    .select('vendor_bill_id,payment_amount,ewt_amount,payment_vouchers!inner(voucher_date,status,company_id)')
+    .in('vendor_bill_id', billIds)
+    .eq('payment_vouchers.company_id', companyId)
+    .eq('payment_vouchers.status', 'posted')
+    .lte('payment_vouchers.voucher_date', asOfDate)
+
+  const { data: creditApplications } = await supabase.from('vendor_credit_applications')
+    .select('vendor_bill_id,applied_amount,vendor_credits!inner(status,company_id)')
+    .eq('company_id', companyId)
+    .in('vendor_bill_id', billIds)
+    .is('reversed_at', null)
+    .in('vendor_credits.status', ['open', 'applied'])
+    .eq('vendor_credits.company_id', companyId)
+    .lte('applied_date', asOfDate)
+
+  const applied: Record<string, number> = {}
+  for (const line of (paymentLines as any[]) || []) {
+    applied[line.vendor_bill_id] = (applied[line.vendor_bill_id] || 0) + Number(line.payment_amount) + Number(line.ewt_amount)
+  }
+  for (const credit of (creditApplications as any[]) || []) {
+    applied[credit.vendor_bill_id] = (applied[credit.vendor_bill_id] || 0) + Number(credit.applied_amount)
+  }
+
+  return (bills as VendorBillAgingSource[])
+    .map(bill => ({
+      id: bill.id,
+      bill_number: bill.bill_number,
+      bill_date: bill.bill_date,
+      due_date: bill.due_date,
+      supplier_id: bill.supplier_id,
+      supplier_name: bill.supplier_name_snapshot,
+      total_amount: Number(bill.total_amount),
+      balance_due: Math.max(0, Number(bill.total_amount) - (applied[bill.id] || 0)),
+      days_overdue: 0,
+    }))
+    .filter(bill => bill.balance_due > 0.005)
 }
 
 export default function APAgingPage() {
@@ -60,13 +125,11 @@ export default function APAgingPage() {
     setAgingLoading(true); setAgingRows([]); setExpandedSupplier(null); setSupplierBills([])
     const asOf = new Date(asOfDate)
 
-    let q = supabase.from('vw_ap_aging').select('id,bill_number,bill_date,due_date,supplier_id,supplier_name,total_amount,balance_due').eq('company_id', companyId).gt('balance_due', 0)
-    if (agingSupplier) q = q.eq('supplier_id', agingSupplier)
-    const { data: bills } = await q
-    if (!bills || bills.length === 0) { setAgingLoading(false); return }
+    const bills = await toAgingBills(companyId, asOfDate, agingSupplier || undefined)
+    if (bills.length === 0) { setAgingLoading(false); return }
 
     const grouped: Record<string, AgingRow> = {}
-    for (const b of bills as any[]) {
+    for (const b of bills) {
       const bal = b.balance_due || 0
       if (bal <= 0) continue
       const dueDate = b.due_date ? new Date(b.due_date) : null
@@ -90,11 +153,11 @@ export default function APAgingPage() {
     if (expandedSupplier === sid) { setExpandedSupplier(null); return }
     setExpandedSupplier(sid)
     const asOf = new Date(asOfDate)
-    const { data: bills } = await supabase.from('vw_ap_aging').select('id,bill_number,bill_date,due_date,supplier_id,supplier_name,total_amount,balance_due').eq('company_id', companyId).eq('supplier_id', sid).gt('balance_due', 0)
-    setSupplierBills((bills || []).map((b: any) => ({
+    const bills = await toAgingBills(companyId!, asOfDate, sid)
+    setSupplierBills(bills.map(b => ({
       ...b,
       days_overdue: b.due_date ? Math.floor((asOf.getTime() - new Date(b.due_date).getTime()) / 86400000) : 0,
-    })) as AgingBill[])
+    })))
   }
 
   const runLedger = useCallback(async () => {

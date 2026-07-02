@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
 type Status = 'draft' | 'final' | 'filed'
+type TaxRegistration = 'vat' | 'non_vat' | 'exempt'
 
 type ReturnRow = {
   id: string
@@ -60,12 +61,18 @@ export default function VATReturn2550QPage() {
   const [form, setForm] = useState<FormData>({ ...EMPTY_FORM })
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [taxRegistration, setTaxRegistration] = useState<TaxRegistration>('vat')
+  const isVatRegistered = taxRegistration === 'vat'
 
   const load = async () => {
     if (!companyId) return
     setLoading(true)
-    const { data } = await supabase.from('vat_returns').select('*').eq('company_id', companyId).eq('return_type', '2550Q')
-      .order('period_year', { ascending: false }).order('period_quarter', { ascending: false })
+    const [{ data: company }, { data }] = await Promise.all([
+      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
+      supabase.from('vat_returns').select('*').eq('company_id', companyId).eq('return_type', '2550Q')
+        .order('period_year', { ascending: false }).order('period_quarter', { ascending: false }),
+    ])
+    setTaxRegistration((company?.tax_registration as TaxRegistration) || 'vat')
     setReturns((data as ReturnRow[]) || [])
     setLoading(false)
   }
@@ -74,12 +81,22 @@ export default function VATReturn2550QPage() {
 
   const set = (k: keyof FormData, v: string | number) => setForm(f => ({ ...f, [k]: v }))
 
-  const openNew = () => { setForm({ ...EMPTY_FORM }); setEditId(null); setMode('new') }
+  const openNew = () => {
+    if (!isVatRegistered) {
+      alert('Cannot create VAT Return.\nReason: 2550Q is only available for VAT-registered companies.')
+      return
+    }
+    setForm({ ...EMPTY_FORM }); setEditId(null); setMode('new')
+  }
   const openEdit = (r: ReturnRow) => { setForm({ ...r, filed_date: r.filed_date || '', reference_no: r.reference_no || '', remarks: '' }); setEditId(r.id); setMode('edit') }
   const openView = (r: ReturnRow) => { openEdit(r); setMode('view') }
 
   const handleGenerate = async () => {
     if (!companyId) return
+    if (!isVatRegistered) {
+      alert('Cannot generate VAT Return.\nReason: 2550Q is only available for VAT-registered companies.')
+      return
+    }
     setGenerating(true)
     const months = quarterMonths(form.period_quarter)
     const startDate = `${form.period_year}-${String(months[0]).padStart(2, '0')}-01`
@@ -121,6 +138,7 @@ export default function VATReturn2550QPage() {
 
   const handleSave = async () => {
     if (!companyId) { alert('Cannot save.\nReason: Select a company first.'); return }
+    if (!isVatRegistered) { alert('Cannot save VAT Return.\nReason: 2550Q is only available for VAT-registered companies.'); return }
     setSaving(true)
     const payload = {
       company_id: companyId, return_type: '2550Q',
@@ -164,9 +182,9 @@ export default function VATReturn2550QPage() {
               </>
             ) : (
               <>
-                <button onClick={handleGenerate} disabled={generating} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50">{generating ? 'Generating...' : '⚡ Generate'}</button>
+                <button onClick={handleGenerate} disabled={generating || !isVatRegistered} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50">{generating ? 'Generating...' : 'Generate'}</button>
                 <button onClick={() => setMode('list')} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Cancel</button>
-                <button onClick={handleSave} disabled={saving} className="bg-gray-900 text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{saving ? 'Saving...' : editId ? 'Update' : 'Save'}</button>
+                <button onClick={handleSave} disabled={saving || !isVatRegistered} className="bg-gray-900 text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{saving ? 'Saving...' : editId ? 'Update' : 'Save'}</button>
               </>
             )}
           </div>
@@ -228,7 +246,7 @@ export default function VATReturn2550QPage() {
           <h1 className="text-xl font-semibold text-gray-900">VAT Return — 2550Q</h1>
           <p className="text-sm text-gray-500 mt-0.5">Quarterly VAT Return</p>
         </div>
-        <button onClick={openNew} className="bg-gray-900 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-gray-800">+ New Return</button>
+        <button onClick={openNew} disabled={!isVatRegistered} className="bg-gray-900 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50">+ New Return</button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">

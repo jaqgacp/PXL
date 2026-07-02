@@ -68,22 +68,27 @@ export default function ARAgingPage() {
     const asOf = new Date(asOfDate)
 
     let q = supabase.from('sales_invoices').select('id,si_number,date,due_date,customer_id,customer_name_snapshot,total_amount')
-      .eq('company_id', companyId).eq('status', 'posted')
+      .eq('company_id', companyId).eq('status', 'posted').lte('date', asOfDate)
     if (agingCustomer) q = q.eq('customer_id', agingCustomer)
     const { data: invoices } = await q
 
     if (!invoices || invoices.length === 0) { setAgingLoading(false); return }
 
     const invoiceIds = invoices.map(i => i.id)
-    const { data: rlines } = await supabase.from('receipt_lines').select('invoice_id,payment_amount,cwt_amount')
+    const { data: rlines } = await supabase.from('receipt_lines')
+      .select('invoice_id,payment_amount,cwt_amount,receipts!inner(receipt_date,status,company_id)')
       .in('invoice_id', invoiceIds)
+      .eq('receipts.company_id', companyId)
+      .eq('receipts.status', 'posted')
+      .lte('receipts.receipt_date', asOfDate)
     const { data: clines } = await supabase.from('credit_memos')
       .select('invoice_id,total_amount').in('invoice_id', invoiceIds)
       .in('status', ['applied'])
+      .lte('cm_date', asOfDate)
 
     const applied: Record<string, number> = {}
-    for (const rl of rlines || []) applied[rl.invoice_id] = (applied[rl.invoice_id] || 0) + Number(rl.payment_amount) + Number(rl.cwt_amount)
-    for (const cl of clines || []) applied[cl.invoice_id] = (applied[cl.invoice_id] || 0) + Number(cl.total_amount)
+    for (const rl of (rlines as any[]) || []) applied[rl.invoice_id] = (applied[rl.invoice_id] || 0) + Number(rl.payment_amount) + Number(rl.cwt_amount)
+    for (const cl of (clines as any[]) || []) applied[cl.invoice_id] = (applied[cl.invoice_id] || 0) + Number(cl.total_amount)
 
     const balances: InvoiceBalance[] = (invoices as InvoiceBalance[]).map(inv => {
       const paid = applied[inv.id] || 0
@@ -120,14 +125,23 @@ export default function ARAgingPage() {
     const asOf = new Date(asOfDate)
     const { data: invoices } = await supabase.from('sales_invoices')
       .select('id,si_number,date,due_date,customer_id,customer_name_snapshot,total_amount')
-      .eq('company_id', companyId!).eq('customer_id', customerId).eq('status', 'posted')
+      .eq('company_id', companyId!).eq('customer_id', customerId).eq('status', 'posted').lte('date', asOfDate)
     if (!invoices) return
     const invoiceIds = invoices.map(i => i.id)
-    const { data: rlines } = await supabase.from('receipt_lines').select('invoice_id,payment_amount,cwt_amount').in('invoice_id', invoiceIds)
-    const { data: clines } = await supabase.from('credit_memos').select('invoice_id,total_amount').in('invoice_id', invoiceIds).in('status', ['applied'])
+    const { data: rlines } = await supabase.from('receipt_lines')
+      .select('invoice_id,payment_amount,cwt_amount,receipts!inner(receipt_date,status,company_id)')
+      .in('invoice_id', invoiceIds)
+      .eq('receipts.company_id', companyId!)
+      .eq('receipts.status', 'posted')
+      .lte('receipts.receipt_date', asOfDate)
+    const { data: clines } = await supabase.from('credit_memos')
+      .select('invoice_id,total_amount')
+      .in('invoice_id', invoiceIds)
+      .in('status', ['applied'])
+      .lte('cm_date', asOfDate)
     const applied: Record<string, number> = {}
-    for (const rl of rlines || []) applied[rl.invoice_id] = (applied[rl.invoice_id] || 0) + Number(rl.payment_amount) + Number(rl.cwt_amount)
-    for (const cl of clines || []) applied[cl.invoice_id] = (applied[cl.invoice_id] || 0) + Number(cl.total_amount)
+    for (const rl of (rlines as any[]) || []) applied[rl.invoice_id] = (applied[rl.invoice_id] || 0) + Number(rl.payment_amount) + Number(rl.cwt_amount)
+    for (const cl of (clines as any[]) || []) applied[cl.invoice_id] = (applied[cl.invoice_id] || 0) + Number(cl.total_amount)
     const results = (invoices as InvoiceBalance[]).map(inv => {
       const paid = applied[inv.id] || 0
       const balance_due = Math.max(0, Number(inv.total_amount) - paid)

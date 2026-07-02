@@ -53,6 +53,7 @@ const EMPTY_FORM = {
   phone_number: '', mobile_number: '', signatory_name: '',
   signatory_position: '', signatory_tin: '',
 }
+type CompanyForm = typeof EMPTY_FORM
 
 const CSV_COLUMNS = [
   'registered_name','trade_name','entity_type','tin','tax_registration',
@@ -73,6 +74,37 @@ const REQUIRED_COLUMNS = [
 const VALID_ENTITY_TYPES = ['sole_proprietor','opc','corporation','partnership','cooperative']
 const VALID_TAX_REG = ['vat','non_vat','exempt']
 const VALID_PERIODS = ['calendar','fiscal']
+
+const hydrateCompanyForm = (data: Record<string, any>): CompanyForm => ({
+  parent_company_id: data.parent_company_id || '',
+  entity_type: data.entity_type || '',
+  registered_name: data.registered_name || '',
+  trade_name: data.trade_name || '',
+  line_of_business: data.line_of_business || '',
+  psic_code: data.psic_code || '',
+  tin: data.tin || '',
+  tax_registration: data.tax_registration || '',
+  rdo_id: data.rdo_id || '',
+  registration_number: data.registration_number || '',
+  bir_reg_date: data.bir_reg_date || '',
+  sec_dti_reg_date: data.sec_dti_reg_date || '',
+  lgu_reg_date: data.lgu_reg_date || '',
+  accounting_period: data.accounting_period || '',
+  fiscal_start_month: data.fiscal_start_month ? String(data.fiscal_start_month) : '',
+  cas_permit_no: data.cas_permit_no || '',
+  cas_date_issued: data.cas_date_issued || '',
+  address_line_1: data.address_line_1 || '',
+  address_line_2: data.address_line_2 || '',
+  city: data.city || '',
+  province: data.province || '',
+  zip_code: data.zip_code || '',
+  email: data.email || '',
+  phone_number: data.phone_number || '',
+  mobile_number: data.mobile_number || '',
+  signatory_name: data.signatory_name || '',
+  signatory_position: data.signatory_position || '',
+  signatory_tin: data.signatory_tin || '',
+})
 
 export default function CompanySetupPage() {
   const [companies, setCompanies] = useState<Company[]>([])
@@ -110,61 +142,31 @@ export default function CompanySetupPage() {
 
   const openCreate = () => { setForm({ ...EMPTY_FORM }); setEditId(null); setShowForm(true); setSaved(false) }
 
-  const openEdit = (c: Company) => {
-    setForm({
-      parent_company_id: c.parent_company_id || '',
-      entity_type: c.entity_type || '',
-      registered_name: c.registered_name || '',
-      trade_name: c.trade_name || '',
-      line_of_business: '', psic_code: '', tin: c.tin || '',
-      tax_registration: c.tax_registration || '',
-      rdo_id: c.rdo_id || '', registration_number: '',
-      bir_reg_date: '', sec_dti_reg_date: '', lgu_reg_date: '',
-      accounting_period: '', fiscal_start_month: '', cas_permit_no: '',
-      cas_date_issued: '', address_line_1: '', address_line_2: '',
-      city: '', province: '', zip_code: '', email: '',
-      phone_number: '', mobile_number: '', signatory_name: '',
-      signatory_position: '', signatory_tin: '',
-    })
+  const openEdit = async (c: Company) => {
+    setSaving(true)
+    const { data, error } = await supabase.from('companies').select('*').eq('id', c.id).single()
+    setSaving(false)
+    if (error || !data) {
+      alert('Cannot load company for editing.\nReason: ' + (error?.message || 'Company not found'))
+      return
+    }
+    setForm(hydrateCompanyForm(data))
     setEditId(c.id); setShowForm(true); setSaved(false)
   }
 
   const openView = async (c: Company) => {
     const { data } = await supabase.from('companies').select('*').eq('id', c.id).single()
-    if (data) setViewForm({
-      parent_company_id: data.parent_company_id || '',
-      entity_type: data.entity_type || '',
-      registered_name: data.registered_name || '',
-      trade_name: data.trade_name || '',
-      line_of_business: data.line_of_business || '',
-      psic_code: data.psic_code || '',
-      tin: data.tin || '',
-      tax_registration: data.tax_registration || '',
-      rdo_id: data.rdo_id || '',
-      registration_number: data.registration_number || '',
-      bir_reg_date: data.bir_reg_date || '',
-      sec_dti_reg_date: data.sec_dti_reg_date || '',
-      lgu_reg_date: data.lgu_reg_date || '',
-      accounting_period: data.accounting_period || '',
-      fiscal_start_month: data.fiscal_start_month ? String(data.fiscal_start_month) : '',
-      cas_permit_no: data.cas_permit_no || '',
-      cas_date_issued: data.cas_date_issued || '',
-      address_line_1: data.address_line_1 || '',
-      address_line_2: data.address_line_2 || '',
-      city: data.city || '',
-      province: data.province || '',
-      zip_code: data.zip_code || '',
-      email: data.email || '',
-      phone_number: data.phone_number || '',
-      mobile_number: data.mobile_number || '',
-      signatory_name: data.signatory_name || '',
-      signatory_position: data.signatory_position || '',
-      signatory_tin: data.signatory_tin || '',
-    })
+    if (data) setViewForm(hydrateCompanyForm(data))
     setShowView(true)
   }
 
   const handleSave = async () => {
+    const missingFields = validateRowFields(form)
+    if (missingFields.length > 0) {
+      alert('Cannot save company.\nMissing required fields: ' + missingFields.join(', '))
+      return
+    }
+
     setSaving(true)
     const payload = {
       ...form,

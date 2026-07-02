@@ -15,18 +15,11 @@ type Issuance = {
   form_2307_issuance_lines?: IssuanceLine[]
 }
 
-type EWTAggregate = {
-  supplier_id: string; supplier_name: string; supplier_tin: string | null
-  tax_base: number; ewt_withheld: number
-  lines: { atc_code_id: string | null; atc_code: string; nature_of_payment: string; tax_base: number; tax_rate: number | null; tax_withheld: number }[]
-}
-
 type IssuanceLine = {
   atc_code: string; nature_of_income: string; tax_base: number; tax_rate: number | null; tax_withheld: number
 }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
-const QUARTERS: Record<number, number[]> = { 1: [1,2,3], 2: [4,5,6], 3: [7,8,9], 4: [10,11,12] }
 const STATUS_COLORS: Record<string, string> = { pending: 'draft', generated: 'approved', sent: 'warning', acknowledged: 'posted' }
 
 export default function Form2307IssuedPage() {
@@ -56,69 +49,35 @@ export default function Form2307IssuedPage() {
   const generateBatch = async () => {
     if (!companyId) return
     setGenerating(true)
-    const months = QUARTERS[quarter]
-    const startDate = `${year}-${String(months[0]).padStart(2, '0')}-01`
-    const endDate = new Date(year, months[months.length - 1], 0).toISOString().split('T')[0]
-
-    // Pull EWT per supplier+ATC from tax_detail_entries (via rebased vw_ewt_summary_ap)
-    const { data: ewtData } = await supabase.from('vw_ewt_summary_ap')
-      .select('supplier_id,supplier_name,supplier_tin,atc_code_id,atc_code,nature_of_payment,tax_base,tax_rate,tax_withheld')
-      .eq('company_id', companyId).gte('invoice_date', startDate).lte('invoice_date', endDate)
-
-    if (!ewtData || ewtData.length === 0) { alert('No EWT data found for this period.'); setGenerating(false); return }
-
-    const bySupplier: Record<string, EWTAggregate> = {}
-    for (const row of ewtData as any[]) {
-      const sid = row.supplier_id
-      if (!bySupplier[sid]) bySupplier[sid] = { supplier_id: sid, supplier_name: row.supplier_name, supplier_tin: row.supplier_tin, tax_base: 0, ewt_withheld: 0, lines: [] }
-      bySupplier[sid].tax_base += Number(row.tax_base) || 0
-      bySupplier[sid].ewt_withheld += Number(row.tax_withheld) || 0
-      // Group by ATC within the supplier
-      const existing = bySupplier[sid].lines.find(l => l.atc_code === (row.atc_code || ''))
-      if (existing) {
-        existing.tax_base += Number(row.tax_base) || 0
-        existing.tax_withheld += Number(row.tax_withheld) || 0
-      } else {
-        bySupplier[sid].lines.push({
-          atc_code_id: row.atc_code_id, atc_code: row.atc_code || '',
-          nature_of_payment: row.nature_of_payment || '',
-          tax_base: Number(row.tax_base) || 0, tax_rate: row.tax_rate,
-          tax_withheld: Number(row.tax_withheld) || 0,
-        })
+    try {
+      const { data, error } = await supabase.rpc('fn_generate_form_2307_issued', {
+        p_company_id: companyId,
+        p_tax_year: year,
+        p_tax_quarter: quarter,
+      })
+      if (error) throw error
+      const result = data as { generated_count?: number; skipped_locked_count?: number } | null
+      if ((result?.generated_count || 0) === 0 && (result?.skipped_locked_count || 0) > 0) {
+        alert('No certificates were regenerated because all matching certificates are already sent or acknowledged.')
       }
+      await load()
+    } catch (err: any) {
+      alert(err?.message || 'Unable to generate Form 2307 certificates.')
+    } finally {
+      setGenerating(false)
     }
-
-    for (const s of Object.values(bySupplier)) {
-      const { data: upserted } = await supabase.from('form_2307_issuances').upsert({
-        company_id: companyId, supplier_id: s.supplier_id,
-        tax_year: year, tax_quarter: quarter,
-        total_tax_base: s.tax_base, total_ewt: s.ewt_withheld,
-        status: 'generated', date_generated: new Date().toISOString(),
-      }, { onConflict: 'company_id,supplier_id,tax_year,tax_quarter' }).select('id').single()
-
-      if (upserted?.id) {
-        // Replace per-ATC lines
-        await supabase.from('form_2307_issuance_lines').delete().eq('issuance_id', upserted.id)
-        if (s.lines.length > 0) {
-          await supabase.from('form_2307_issuance_lines').insert(s.lines.map(l => ({
-            issuance_id: upserted.id, company_id: companyId,
-            atc_code_id: l.atc_code_id, atc_code: l.atc_code,
-            nature_of_income: l.nature_of_payment,
-            tax_base: l.tax_base, tax_rate: l.tax_rate, tax_withheld: l.tax_withheld,
-          })))
-        }
-      }
-    }
-
-    load()
-    setGenerating(false)
   }
 
   const updateStatus = async (issuance: Issuance, status: 'sent' | 'acknowledged', date: string) => {
-    const update: any = { status, updated_by: null }
-    if (status === 'sent') update.date_sent = date
-    if (status === 'acknowledged') update.date_acknowledged = date
-    await supabase.from('form_2307_issuances').update(update).eq('id', issuance.id)
+    const { error } = await supabase.rpc('fn_update_form_2307_issued_status', {
+      p_issuance_id: issuance.id,
+      p_status: status,
+      p_action_date: date,
+    })
+    if (error) {
+      alert(error.message)
+      return
+    }
     setActionModal(null)
     load()
   }

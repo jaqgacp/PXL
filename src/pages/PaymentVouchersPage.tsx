@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 
 // ── Types ─────────────────────────────────────────────────────
 type PVStatus = 'draft' | 'posted' | 'cancelled'
@@ -21,9 +24,16 @@ type PVLine = {
   vendor_bill_id: string
   bill_number: string; bill_total: number; bill_outstanding: number
   payment_amount: number; ewt_amount: number; atc_code_id: string
+  ewt_tax_base: number; ewt_income_nature: string; ewt_variance_reason: string
 }
 
-type SupplierRef = { id: string; registered_name: string; tin: string }
+type SupplierRef = {
+  id: string
+  registered_name: string
+  tin: string
+  is_subject_to_ewt: boolean
+  default_atc_code_id: string | null
+}
 type VendorBillRef = {
   id: string; bill_number: string; total_amount: number; outstanding: number
   bill_date: string; supplier_invoice_number: string | null
@@ -33,15 +43,26 @@ type PaymentMode = { id: string; code: string; name: string }
 type ATCCode = { id: string; code: string; description: string; rate: number }
 type Branch = { id: string; branch_code: string; branch_name: string }
 
+const PV_REQUIRED_CONFIG: ConfigField[] = ['ap_account_id', 'default_cash_account_id', 'ewt_payable_account_id']
+const EWT_VARIANCE_REASONS = [
+  { value: 'rounding', label: 'Rounding' },
+  { value: 'partial_non_taxable', label: 'Partial non-taxable' },
+  { value: 'bir_ruling', label: 'BIR ruling' },
+  { value: 'supplier_exempt', label: 'Supplier exempt' },
+  { value: 'other_authorized', label: 'Other authorized' },
+]
+
 // ── Helpers ───────────────────────────────────────────────────
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 
 const today = () => new Date().toISOString().split('T')[0]
+const round2 = (n: number) => Math.round(n * 100) / 100
 
 const newLine = (): PVLine => ({
   _key: crypto.randomUUID(), vendor_bill_id: '', bill_number: '', bill_total: 0,
   bill_outstanding: 0, payment_amount: 0, ewt_amount: 0, atc_code_id: '',
+  ewt_tax_base: 0, ewt_income_nature: '', ewt_variance_reason: '',
 })
 
 // ── Component ─────────────────────────────────────────────────
@@ -67,6 +88,13 @@ export default function PaymentVouchersPage() {
   const [voiding, setVoiding] = useState(false)
 
   const readOnly = mode === 'view'
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: mode === 'list' ? branchId : (editPV?.branch_id || branchId || ''),
+    documentCode: 'PV',
+    postingDate: editPV?.voucher_date || today(),
+    requiredConfig: PV_REQUIRED_CONFIG,
+  })
 
   const load = useCallback(async () => {
     if (!companyId) return
@@ -82,10 +110,10 @@ export default function PaymentVouchersPage() {
   const loadRefs = useCallback(async () => {
     if (!companyId) return
     const [suppRes, coaRes, pmRes, atcRes, brRes] = await Promise.all([
-      supabase.from('suppliers').select('id,registered_name,tin').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
+      supabase.from('suppliers').select('id,registered_name,tin,is_subject_to_ewt,default_atc_code_id').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('is_active', true).eq('is_postable', true).in('account_type', ['asset']).order('account_code'),
       supabase.from('ref_payment_modes').select('id,code,name').eq('is_active', true).order('sort_order'),
-      supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).order('code'),
+      supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code'),
       supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
     ])
     setSuppliers(suppRes.data as SupplierRef[] || [])
@@ -134,6 +162,10 @@ export default function PaymentVouchersPage() {
   }, [companyId])
 
   const openNew = () => {
+    if (readiness.blockers.length > 0) {
+      setError('Complete company, branch, fiscal period, number series, and GL posting setup before creating a payment voucher.')
+      return
+    }
     setEditPV({ company_id: companyId!, branch_id: branchId || '', voucher_date: today(), status: 'draft' })
     setLines([newLine()])
     setOpenBills([])
@@ -156,6 +188,9 @@ export default function PaymentVouchersPage() {
           payment_amount: Number(l.payment_amount),
           ewt_amount: Number(l.ewt_amount),
           atc_code_id: l.atc_code_id || '',
+          ewt_tax_base: Number(l.ewt_tax_base || 0),
+          ewt_income_nature: l.ewt_income_nature || '',
+          ewt_variance_reason: l.ewt_variance_reason || '',
         }))
         setLines(mapped.length > 0 ? mapped : [newLine()])
       })
@@ -177,23 +212,99 @@ export default function PaymentVouchersPage() {
       setLines(ls => ls.map(l => l._key !== lineKey ? l : { ...l, vendor_bill_id: '', bill_number: '', bill_total: 0, bill_outstanding: 0, payment_amount: 0 }))
       return
     }
-    setLines(ls => ls.map(l => l._key !== lineKey ? l : {
-      ...l, vendor_bill_id: bill.id, bill_number: bill.bill_number,
+    const supplier = suppliers.find(s => s.id === editPV?.supplier_id)
+    const defaultAtc = supplier?.is_subject_to_ewt ? supplier.default_atc_code_id || '' : ''
+    setLines(ls => ls.map(l => l._key !== lineKey ? l : recalcLineEwt(l, {
+      vendor_bill_id: bill.id, bill_number: bill.bill_number,
       bill_total: bill.total_amount, bill_outstanding: bill.outstanding,
       payment_amount: bill.outstanding, ewt_amount: 0,
-    }))
+      ewt_tax_base: l.ewt_tax_base || bill.outstanding,
+      atc_code_id: l.atc_code_id || defaultAtc,
+    })))
+  }
+
+  const recalcLineEwt = (line: PVLine, patch: Partial<PVLine>) => {
+    const next = { ...line, ...patch }
+    const atc = atcCodes.find(a => a.id === next.atc_code_id)
+    if (!atc || atc.rate <= 0) {
+      return { ...next, ewt_amount: 0, atc_code_id: next.atc_code_id || '', ewt_income_nature: '' }
+    }
+
+    if (patch.atc_code_id !== undefined || patch.vendor_bill_id !== undefined || patch.ewt_tax_base !== undefined) {
+      const gross = next.bill_outstanding || next.payment_amount + next.ewt_amount
+      const base = next.ewt_tax_base || gross
+      const ewt = round2(base * atc.rate / 100)
+      return {
+        ...next,
+        ewt_tax_base: base,
+        ewt_amount: ewt,
+        payment_amount: next.bill_outstanding ? round2(Math.max(gross - ewt, 0)) : next.payment_amount,
+        ewt_income_nature: next.ewt_income_nature || atc.description,
+        ewt_variance_reason: '',
+      }
+    }
+
+    if (patch.payment_amount !== undefined) {
+      const gross = round2(next.payment_amount + next.ewt_amount)
+      const base = next.ewt_tax_base || gross
+      const ewt = round2(base * atc.rate / 100)
+      return { ...next, ewt_tax_base: base, ewt_amount: ewt, ewt_variance_reason: '' }
+    }
+
+    return next
   }
 
   const updateLine = (key: string, field: keyof PVLine, raw: string) => {
-    setLines(ls => ls.map(l => l._key !== key ? l : { ...l, [field]: ['payment_amount','ewt_amount'].includes(field) ? parseFloat(raw) || 0 : raw }))
+    setLines(ls => ls.map(l => {
+      if (l._key !== key) return l
+      const value = ['payment_amount','ewt_amount','ewt_tax_base'].includes(field) ? parseFloat(raw) || 0 : raw
+      return recalcLineEwt(l, { [field]: value } as Partial<PVLine>)
+    }))
   }
 
   const totalPayment = lines.reduce((s, l) => s + l.payment_amount, 0)
   const totalEWT     = lines.reduce((s, l) => s + l.ewt_amount, 0)
+  const glImpactRows: GLImpactRow[] = [
+    { configKey: 'ap_account_id', description: 'Accounts payable cleared', debit: totalPayment + totalEWT, credit: 0 },
+    {
+      accountId: editPV?.bank_account_id || null,
+      configKey: editPV?.bank_account_id ? undefined : 'default_cash_account_id',
+      description: 'Cash paid',
+      debit: 0,
+      credit: totalPayment,
+    },
+    { configKey: 'ewt_payable_account_id', description: 'EWT payable', debit: 0, credit: totalEWT },
+  ]
 
   const save = async (post: boolean) => {
     if (!companyId || !editPV) return
     if (!editPV.supplier_id) { setError('Please select a supplier'); return }
+    if (readiness.blockers.length > 0) {
+      setError('Complete setup readiness blockers before saving or posting this payment voucher.')
+      return
+    }
+    for (const line of lines.filter(l => l.payment_amount > 0 || l.ewt_amount > 0)) {
+      if (line.ewt_amount > 0 && !line.atc_code_id) {
+        setError('ATC code is required when EWT is withheld.')
+        return
+      }
+      const atc = atcCodes.find(a => a.id === line.atc_code_id)
+      if (line.ewt_amount > 0 && atc) {
+        if (line.ewt_tax_base <= 0) {
+          setError(`EWT taxable base is required for ${line.bill_number || 'selected bill'}.`)
+          return
+        }
+        if (!line.ewt_income_nature.trim()) {
+          setError(`Income nature is required for ${line.bill_number || 'selected bill'}.`)
+          return
+        }
+        const expected = round2(line.ewt_tax_base * atc.rate / 100)
+        if (Math.abs(expected - line.ewt_amount) > 0.02 && !line.ewt_variance_reason) {
+          setError(`EWT for ${line.bill_number || 'selected bill'} should be ${fmt(expected)} for ATC ${atc.code}, or a variance reason is required.`)
+          return
+        }
+      }
+    }
     setSaving(true); setError('')
     try {
       const header = {
@@ -216,6 +327,9 @@ export default function PaymentVouchersPage() {
           payment_amount: l.payment_amount,
           ewt_amount: l.ewt_amount,
           atc_code_id: l.atc_code_id || null,
+          ewt_tax_base: l.ewt_tax_base || null,
+          ewt_income_nature: l.ewt_income_nature || null,
+          ewt_variance_reason: l.ewt_variance_reason || null,
         }))
 
       const { data: pvId, error: saveErr } = await supabase.rpc('fn_save_payment_voucher', {
@@ -269,11 +383,18 @@ export default function PaymentVouchersPage() {
           <option value="posted">Posted</option>
           <option value="cancelled">Void</option>
         </select>
-        <button onClick={openNew} className="ml-auto px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800">
+        <button onClick={openNew} disabled={readiness.loading || readiness.blockers.length > 0}
+          className="ml-auto px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed">
           + New Payment Voucher
         </button>
         {!companyId && <span className="text-xs text-gray-400">Select a company first</span>}
       </div>
+
+      {companyId && readiness.blockers.length > 0 && (
+        <div className="px-5 py-3 border-b border-gray-100">
+          <SetupReadinessBanner readiness={readiness} />
+        </div>
+      )}
 
       {loading ? (
         <div className="divide-y divide-gray-100">{[...Array(5)].map((_, i) => (
@@ -336,11 +457,11 @@ export default function PaymentVouchersPage() {
           {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
           {!readOnly && (
             <>
-              <button onClick={() => save(false)} disabled={saving}
+              <button onClick={() => save(false)} disabled={saving || readiness.blockers.length > 0}
                 className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-50">
                 {saving ? 'Saving…' : 'Save Draft'}
               </button>
-              <button onClick={() => save(true)} disabled={saving}
+              <button onClick={() => save(true)} disabled={saving || readiness.blockers.length > 0}
                 className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
                 {saving ? 'Posting…' : 'Save & Post'}
               </button>
@@ -354,6 +475,12 @@ export default function PaymentVouchersPage() {
           )}
         </div>
       </div>
+
+      {readiness.blockers.length > 0 && (
+        <div className="px-5 py-3 border-b border-gray-100 bg-white">
+          <SetupReadinessBanner readiness={readiness} />
+        </div>
+      )}
 
       <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
         {/* Header */}
@@ -410,8 +537,8 @@ export default function PaymentVouchersPage() {
           <table className="w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Vendor Bill','Outstanding Balance','Payment Amount','EWT Withheld','EWT ATC','Net Cash',''].map(h => (
-                  <th key={h} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap ${['Outstanding Balance','Payment Amount','EWT Withheld','Net Cash'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
+                {['Vendor Bill','Outstanding Balance','Payment Amount','EWT Withheld','EWT Base','EWT ATC','Income Nature','Variance','Net Cash',''].map(h => (
+                  <th key={h} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap ${['Outstanding Balance','Payment Amount','EWT Withheld','EWT Base','Net Cash'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -440,11 +567,29 @@ export default function PaymentVouchersPage() {
                       className="border border-gray-300 rounded px-2 py-1 text-xs w-24 text-right focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50" />
                   </td>
                   <td className="px-3 py-2">
+                    <input type="number" value={l.ewt_tax_base} min={0} disabled={readOnly || l.ewt_amount === 0}
+                      onChange={e => updateLine(l._key, 'ewt_tax_base', e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs w-24 text-right focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50" />
+                  </td>
+                  <td className="px-3 py-2">
                     <select value={l.atc_code_id} disabled={readOnly || l.ewt_amount === 0}
                       onChange={e => updateLine(l._key, 'atc_code_id', e.target.value)}
                       className="border border-gray-300 rounded px-2 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50">
                       <option value="">—</option>
                       {atcCodes.map(a => <option key={a.id} value={a.id}>{a.code} — {a.description}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-3 py-2">
+                    <input value={l.ewt_income_nature} disabled={readOnly || l.ewt_amount === 0}
+                      onChange={e => updateLine(l._key, 'ewt_income_nature', e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs w-44 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50" />
+                  </td>
+                  <td className="px-3 py-2">
+                    <select value={l.ewt_variance_reason} disabled={readOnly || l.ewt_amount === 0}
+                      onChange={e => updateLine(l._key, 'ewt_variance_reason', e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50">
+                      <option value="">—</option>
+                      {EWT_VARIANCE_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                     </select>
                   </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums font-semibold text-gray-900">
@@ -482,6 +627,13 @@ export default function PaymentVouchersPage() {
             <span className="text-right font-mono font-bold text-gray-900 border-t border-gray-200 pt-1 mt-1">{fmt(totalPayment)}</span>
           </div>
         </div>
+
+        <GLImpactPanel
+          companyId={companyId}
+          sourceDocType="PV"
+          sourceDocId={editPV?.id}
+          previewRows={glImpactRows}
+        />
 
         {mode === 'view' && (
           <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-xs text-blue-700">

@@ -2,6 +2,9 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 
 // ── Types ─────────────────────────────────────────────────────
 type RStatus = 'draft' | 'posted' | 'bounced' | 'cancelled'
@@ -46,6 +49,8 @@ const statusMap: Record<RStatus, string> = {
   draft: 'draft', posted: 'posted', bounced: 'error', cancelled: 'error',
 }
 
+const OR_REQUIRED_CONFIG: ConfigField[] = ['ar_account_id', 'default_cash_account_id', 'ewt_withheld_account_id']
+
 // ── Main ──────────────────────────────────────────────────────
 export default function ReceiptsPage() {
   const { companyId, branchId } = useAppCtx()
@@ -84,6 +89,13 @@ export default function ReceiptsPage() {
   const [fRemarks, setFRemarks] = useState('')
   const [lines, setLines] = useState<ApplicationLine[]>([])
   const [openInvoicesLoading, setOpenInvoicesLoading] = useState(false)
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: mode === 'list' ? branchId : fBranch,
+    documentCode: 'OR',
+    postingDate: mode === 'list' ? today() : fDate,
+    requiredConfig: OR_REQUIRED_CONFIG,
+  })
 
   // Load reference data
   useEffect(() => {
@@ -183,6 +195,10 @@ export default function ReceiptsPage() {
 
   // Open form
   const openNew = () => {
+    if (readiness.blockers.length > 0) {
+      setError('Complete company, branch, fiscal period, number series, and GL posting setup before creating a receipt.')
+      return
+    }
     setEditDoc(null)
     setFCustomer(''); setFCustomerName(''); setFCustomerTIN('')
     setFDate(today()); setFBranch(branchId)
@@ -233,10 +249,25 @@ export default function ReceiptsPage() {
   const totalPayment = lines.reduce((s, l) => s + l.payment_amount, 0)
   const totalCWT = lines.reduce((s, l) => s + l.cwt_amount, 0)
   const appliedLines = lines.filter(l => l.payment_amount > 0 || l.cwt_amount > 0)
+  const glImpactRows: GLImpactRow[] = [
+    {
+      accountId: fBankAccount || null,
+      configKey: fBankAccount ? undefined : 'default_cash_account_id',
+      description: 'Cash received',
+      debit: totalPayment,
+      credit: 0,
+    },
+    { configKey: 'ewt_withheld_account_id', description: 'CWT withheld by customer', debit: totalCWT, credit: 0 },
+    { configKey: 'ar_account_id', description: 'Accounts receivable cleared', debit: 0, credit: totalPayment + totalCWT },
+  ]
 
   const save = async (nextStatus: RStatus = 'draft') => {
     if (!companyId || !fCustomer || !fMode) {
       setError('Customer and Payment Mode are required.')
+      return
+    }
+    if (readiness.blockers.length > 0) {
+      setError('Complete setup readiness blockers before saving or posting this receipt.')
       return
     }
     if (appliedLines.length === 0) {
@@ -317,13 +348,19 @@ export default function ReceiptsPage() {
           <div className="flex-1" />
           <span className="text-xs text-gray-400">{totalCount.toLocaleString()} records</span>
           {companyId ? (
-            <button onClick={openNew}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800">
+            <button onClick={openNew} disabled={readiness.loading || readiness.blockers.length > 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed">
               <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12h14" /></svg>
               Receive Payment
             </button>
           ) : <span className="text-xs text-gray-400">Select a company first</span>}
         </div>
+
+        {companyId && readiness.blockers.length > 0 && (
+          <div className="px-5 py-3 border-b border-gray-100">
+            <SetupReadinessBanner readiness={readiness} />
+          </div>
+        )}
 
         {!companyId ? (
           <div className="py-16 text-center text-sm text-gray-400">Select a company to view Receipts.</div>
@@ -344,7 +381,8 @@ export default function ReceiptsPage() {
               {search || filterStatus ? 'No records match the current filters.' : 'Record your first customer payment to get started.'}
             </p>
             {!search && !filterStatus && (
-              <button onClick={openNew} className="mt-4 px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800">
+              <button onClick={openNew} disabled={readiness.loading || readiness.blockers.length > 0}
+                className="mt-4 px-4 py-2 bg-gray-900 text-white rounded text-sm hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed">
                 Receive Payment
               </button>
             )}
@@ -411,11 +449,11 @@ export default function ReceiptsPage() {
         <div className="flex-1" />
         {error && <span className="text-xs text-red-600 font-medium">{error}</span>}
         {canEdit && <>
-          <button onClick={() => save('draft')} disabled={saving}
+          <button onClick={() => save('draft')} disabled={saving || readiness.blockers.length > 0}
             className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
             {saving ? 'Saving…' : 'Save Draft'}
           </button>
-          <button onClick={() => save('posted')} disabled={saving}
+          <button onClick={() => save('posted')} disabled={saving || readiness.blockers.length > 0}
             className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
             Post Receipt
           </button>
@@ -427,6 +465,12 @@ export default function ReceiptsPage() {
           </button>
         )}
       </div>
+
+      {readiness.blockers.length > 0 && (
+        <div className="px-5 py-3 border-b border-gray-100 bg-white">
+          <SetupReadinessBanner readiness={readiness} />
+        </div>
+      )}
 
       <div className="divide-y divide-gray-200">
         {/* Header */}
@@ -626,6 +670,15 @@ export default function ReceiptsPage() {
               <span className="text-sm font-mono tabular-nums font-semibold text-gray-900">{fmt(totalPayment + totalCWT)}</span>
             </div>
           </div>
+        </div>
+
+        <div className="px-5 py-4 bg-gray-50 border-t border-gray-100">
+          <GLImpactPanel
+            companyId={companyId}
+            sourceDocType="OR"
+            sourceDocId={editDoc?.id}
+            previewRows={glImpactRows}
+          />
         </div>
 
         {editDoc?.posted_at && (

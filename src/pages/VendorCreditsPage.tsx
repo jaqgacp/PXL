@@ -25,7 +25,7 @@ type SupplierRef = { id: string; registered_name: string; tin: string }
 
 type VATRef = { id: string; vat_code: string; description: string; vat_classification: 'regular' | 'zero_rated' | 'exempt'; rate: number }
 type COARef = { id: string; account_code: string; account_name: string }
-type VBRef = { id: string; bill_number: string; total_amount: number }
+type VBRef = { id: string; bill_number: string; bill_date: string; total_amount: number }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
@@ -59,6 +59,7 @@ export default function VendorCreditsPage() {
   const [fSearch, setFSearch] = useState('')
   const [applyModal, setApplyModal] = useState<{ vc: VC; bills: VBRef[] } | null>(null)
   const [applyBillId, setApplyBillId] = useState('')
+  const [applyDate, setApplyDate] = useState(today())
   const [applyAmount, setApplyAmount] = useState('')
   const [applying, setApplying] = useState(false)
   const [applyError, setApplyError] = useState('')
@@ -83,7 +84,7 @@ export default function VendorCreditsPage() {
     supabase.from('suppliers').select('id,registered_name,tin').eq('company_id', companyId).eq('is_active', true).order('registered_name').then(({ data }) => setSuppliers(data as SupplierRef[] || []))
     supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true).then(({ data }) => setVatCodes((data || []).map((v: any) => ({ ...v, rate: v.tax_codes?.rate || 0 }))))
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['expense','cost_of_goods']).eq('is_active', true).order('account_code').then(({ data }) => setExpenseAccounts(data as COARef[] || []))
-    supabase.from('vendor_bills').select('id,bill_number,total_amount').eq('company_id', companyId).eq('status', 'posted').order('bill_date', { ascending: false }).then(({ data }) => setVendorBills(data as VBRef[] || []))
+    supabase.from('vendor_bills').select('id,bill_number,bill_date,total_amount').eq('company_id', companyId).eq('status', 'posted').order('bill_date', { ascending: false }).then(({ data }) => setVendorBills(data as VBRef[] || []))
   }, [companyId])
 
   const selectSupplier = (id: string) => {
@@ -134,25 +135,41 @@ export default function VendorCreditsPage() {
   const openApplyModal = async (vc: VC) => {
     const { data } = await supabase
       .from('vendor_bills')
-      .select('id,bill_number,total_amount')
+      .select('id,bill_number,bill_date,total_amount')
       .eq('company_id', companyId)
       .eq('supplier_id', vc.supplier_id)
       .eq('status', 'posted')
       .order('bill_date', { ascending: false })
     setApplyModal({ vc, bills: (data as VBRef[]) || [] })
     setApplyBillId('')
+    setApplyDate(today())
     setApplyAmount(String(vc.remaining_balance))
     setApplyError('')
   }
 
   const applyCredit = async () => {
-    if (!applyModal || !applyBillId || !applyAmount) { setApplyError('Select a bill and enter amount'); return }
+    if (!applyModal || !applyBillId || !applyDate || !applyAmount) { setApplyError('Select a bill, application date, and amount'); return }
+    const selectedBill = applyModal.bills.find(b => b.id === applyBillId)
+    if (!selectedBill) { setApplyError('Selected bill was not found'); return }
+    if (applyDate < applyModal.vc.credit_date) { setApplyError('Application date cannot be before the vendor credit date'); return }
+    if (applyDate < selectedBill.bill_date) { setApplyError('Application date cannot be before the vendor bill date'); return }
     setApplying(true); setApplyError('')
     try {
+      const { data: openPeriods, error: periodError } = await supabase.from('fiscal_periods')
+        .select('id')
+        .eq('company_id', companyId)
+        .lte('start_date', applyDate)
+        .gte('end_date', applyDate)
+        .eq('is_locked', false)
+        .limit(1)
+      if (periodError) throw periodError
+      if (!openPeriods?.length) throw new Error(`No open fiscal period covers ${applyDate}`)
+
       const { error: e } = await supabase.rpc('fn_apply_vendor_credit', {
         p_credit_id: applyModal.vc.id,
         p_bill_id: applyBillId,
         p_amount: parseFloat(applyAmount),
+        p_date: applyDate,
       })
       if (e) throw e
       setApplyModal(null)
@@ -272,8 +289,14 @@ export default function VendorCreditsPage() {
                 <select value={applyBillId} onChange={e => setApplyBillId(e.target.value)}
                   className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900">
                   <option value="">— Select posted vendor bill —</option>
-                  {applyModal.bills.map(b => <option key={b.id} value={b.id}>{b.bill_number} ({fmt(b.total_amount)})</option>)}
+                  {applyModal.bills.map(b => <option key={b.id} value={b.id}>{b.bill_number} · {b.bill_date} ({fmt(b.total_amount)})</option>)}
                 </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">Application Date *</label>
+                <input type="date" value={applyDate}
+                  onChange={e => setApplyDate(e.target.value)}
+                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-700 mb-1">Amount to Apply *</label>
