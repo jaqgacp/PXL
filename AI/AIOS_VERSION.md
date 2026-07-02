@@ -1,0 +1,13 @@
+# AIOS Version
+
+- **AIOS Version:** 1.0.0
+- **Release Date:** 2026-07-02
+- **Compatible AI Agents:** Claude Code, Claude 5 (Fable/Mythos), Codex, GPT
+- **Repository:** https://github.com/jaqgacp/PXL
+- **Current Status:** Active — permanent operating system for AI sessions in this repository.
+
+## Changelog
+
+- **1.0.0 (2026-07-02):** Initial release. AI operating files consolidated under `AI/`, all references normalized to `AI/` paths, documentation governance (`AI/AI_DOCUMENTATION_RULES.md`) and version verification added.
+
+Update this file only when the AI Operating System structure or rules change in a way that affects how agents must operate. Keep changelog entries high level.
