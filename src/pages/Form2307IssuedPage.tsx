@@ -3,12 +3,13 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, DateCell } from '@/components/ui/shared'
 
-type IssuanceStatus = 'pending' | 'generated' | 'sent' | 'acknowledged'
+type IssuanceStatus = 'pending' | 'generated' | 'sent' | 'acknowledged' | 'superseded'
 
 type Issuance = {
   id: string; company_id: string; supplier_id: string
   tax_year: number; tax_quarter: number
   total_tax_base: number; total_ewt: number; status: IssuanceStatus
+  version: number; supersedes_issuance_id: string | null; superseded_by_issuance_id: string | null
   date_generated: string | null; date_sent: string | null; date_acknowledged: string | null
   remarks: string | null; created_at: string
   suppliers?: { registered_name: string; tin: string }
@@ -20,7 +21,7 @@ type IssuanceLine = {
 }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
-const STATUS_COLORS: Record<string, string> = { pending: 'draft', generated: 'approved', sent: 'warning', acknowledged: 'posted' }
+const STATUS_COLORS: Record<string, string> = { pending: 'draft', generated: 'approved', sent: 'warning', acknowledged: 'posted', superseded: 'inactive' }
 
 export default function Form2307IssuedPage() {
   const { companyId } = useAppCtx()
@@ -30,8 +31,9 @@ export default function Form2307IssuedPage() {
   const [issuances, setIssuances] = useState<Issuance[]>([])
   const [loading, setLoading] = useState(false)
   const [generating, setGenerating] = useState(false)
-  const [actionModal, setActionModal] = useState<{ issuance: Issuance; action: 'sent' | 'acknowledged' } | null>(null)
+  const [actionModal, setActionModal] = useState<{ issuance: Issuance; action: 'sent' | 'acknowledged' | 'supersede' } | null>(null)
   const [actionDate, setActionDate] = useState(now.toISOString().split('T')[0])
+  const [actionReason, setActionReason] = useState('')
 
   const load = useCallback(async () => {
     if (!companyId) return
@@ -82,6 +84,19 @@ export default function Form2307IssuedPage() {
     load()
   }
 
+  const supersede = async (issuance: Issuance, reason: string) => {
+    const { error } = await supabase.rpc('fn_supersede_form_2307_issued', {
+      p_issuance_id: issuance.id,
+      p_reason: reason || null,
+    })
+    if (error) {
+      alert(error.message)
+      return
+    }
+    setActionModal(null)
+    load()
+  }
+
   const inp = 'border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900'
 
   return (
@@ -107,7 +122,7 @@ export default function Form2307IssuedPage() {
           <table className="w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Supplier','TIN','Tax Base','EWT Withheld','Status','Generated','Sent','Acknowledged','Actions'].map(h => (
+                {['Supplier','TIN','Ver','Tax Base','EWT Withheld','Status','Generated','Sent','Acknowledged','Actions'].map(h => (
                   <th key={h} className={`px-3 py-2 font-medium text-gray-500 ${['Tax Base','EWT Withheld'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
@@ -117,6 +132,7 @@ export default function Form2307IssuedPage() {
                 <tr key={iss.id} className="hover:bg-gray-50">
                   <td className="px-3 py-2 text-gray-700">{(iss.suppliers as any)?.registered_name || '—'}</td>
                   <td className="px-3 py-2 font-mono text-gray-500">{(iss.suppliers as any)?.tin || '—'}</td>
+                  <td className="px-3 py-2 text-gray-500">v{iss.version ?? 1}</td>
                   <td className="px-3 py-2 text-right font-mono">{fmt(iss.total_tax_base)}</td>
                   <td className="px-3 py-2 text-right font-mono font-medium text-red-700">{fmt(iss.total_ewt)}</td>
                   <td className="px-3 py-2"><StatusBadge status={STATUS_COLORS[iss.status]} label={iss.status} /></td>
@@ -127,6 +143,7 @@ export default function Form2307IssuedPage() {
                     <div className="flex gap-2">
                       {iss.status === 'generated' && <button onClick={() => { setActionModal({ issuance: iss, action: 'sent' }); setActionDate(new Date().toISOString().split('T')[0]) }} className="text-orange-600 hover:text-orange-800">Mark Sent</button>}
                       {iss.status === 'sent' && <button onClick={() => { setActionModal({ issuance: iss, action: 'acknowledged' }); setActionDate(new Date().toISOString().split('T')[0]) }} className="text-green-600 hover:text-green-800">Mark Acknowledged</button>}
+                      {(iss.status === 'sent' || iss.status === 'acknowledged') && <button onClick={() => { setActionModal({ issuance: iss, action: 'supersede' }); setActionReason('') }} className="text-red-600 hover:text-red-800">Supersede</button>}
                     </div>
                   </td>
                 </tr>
@@ -139,15 +156,25 @@ export default function Form2307IssuedPage() {
       {actionModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg border border-gray-200 shadow-xl p-6 w-80 space-y-4">
-            <h3 className="text-sm font-semibold text-gray-900 capitalize">Mark as {actionModal.action}</h3>
+            <h3 className="text-sm font-semibold text-gray-900 capitalize">{actionModal.action === 'supersede' ? 'Supersede Certificate' : `Mark as ${actionModal.action}`}</h3>
             <p className="text-xs text-gray-600">Supplier: {(actionModal.issuance.suppliers as any)?.registered_name}</p>
-            <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1">{actionModal.action === 'sent' ? 'Date Sent' : 'Date Acknowledged'}</label>
-              <input type="date" value={actionDate} onChange={e => setActionDate(e.target.value)} className={inp + ' w-full'} />
-            </div>
+            {actionModal.action === 'supersede' ? (
+              <>
+                <p className="text-xs text-gray-600">A new version will be generated from the current EWT detail. This certificate (v{actionModal.issuance.version ?? 1}) is preserved as superseded evidence.</p>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1">Reason</label>
+                  <input value={actionReason} onChange={e => setActionReason(e.target.value)} placeholder="e.g. late PV posted for the quarter" className={inp + ' w-full'} />
+                </div>
+              </>
+            ) : (
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1">{actionModal.action === 'sent' ? 'Date Sent' : 'Date Acknowledged'}</label>
+                <input type="date" value={actionDate} onChange={e => setActionDate(e.target.value)} className={inp + ' w-full'} />
+              </div>
+            )}
             <div className="flex justify-end gap-2">
               <button onClick={() => setActionModal(null)} className="px-3 py-1.5 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
-              <button onClick={() => updateStatus(actionModal.issuance, actionModal.action, actionDate)} className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700">Confirm</button>
+              <button onClick={() => actionModal.action === 'supersede' ? supersede(actionModal.issuance, actionReason) : updateStatus(actionModal.issuance, actionModal.action, actionDate)} className="px-3 py-1.5 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700">Confirm</button>
             </div>
           </div>
         </div>

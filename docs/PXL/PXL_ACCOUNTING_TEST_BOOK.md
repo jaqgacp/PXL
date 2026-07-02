@@ -181,7 +181,24 @@ Scenario (posted PV EWT detail from PV-EWT-PARTIAL-style flow, both vouchers in 
 | 4 | Regenerate again | Sent certificate is locked: status and totals unchanged. |
 | 5 | Direct UPDATE of the issuance or INSERT of a line as an authenticated user | Denied (42501); writes only through the RPCs. |
 
-Remaining under PXL-AUD-015: certificate version/supersede workflow beyond the sent/acknowledged lock.
+The certificate version/supersede workflow is covered by F2307-SUPERSEDE-001 below.
+
+## F2307-SUPERSEDE-001 - Certificate Version/Supersede Workflow
+
+Status: Executed Passing (2026-07-02) in `supabase/tests/010_form2307_supersede_test.sql`.
+
+Related findings: PXL-AUD-015.
+
+Scenario (VB 11,200 in Q1 2026; PV1 2026-02-05 withholds 100.00 on base 5,000.00; certificate generated and marked sent; PV2 2026-03-05 withholds another 100.00):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Regenerate the quarter after the late PV | Sent certificate stays locked at 100.00. |
+| 2 | `fn_supersede_form_2307_issued` on the sent certificate with a reason | New version 2 in `generated` status with refreshed totals (200.00 withheld on 10,000.00) and one refreshed ATC line; old certificate becomes `superseded` with `superseded_at` and a two-way link; its original lines survive as evidence. |
+| 3 | Count active certificates for the supplier/quarter | Exactly one (partial unique index on non-superseded certificates). |
+| 4 | Regenerate the quarter again | Only the active version refreshes; the superseded certificate is never resurrected or altered. |
+| 5 | Supersede the generated v2, or the superseded v1 | Both rejected: only sent/acknowledged certificates can be superseded. |
+| 6 | Direct `UPDATE` to un-supersede as an authenticated user | Denied (42501). |
 
 ## VAT-RECON-001 - VAT Tax-Ledger-to-GL Reconciliation and Return Gate
 
