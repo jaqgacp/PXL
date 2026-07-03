@@ -2,10 +2,10 @@
 
 **BUILD COMPLETE — 205/205 pages** ✅
 
-Last updated: 2026-07-01
+Last updated: 2026-07-03
 Build: ✅ Clean (zero TS errors)
-Migrations applied to Supabase: 001–029, 20260701000001–20260701000005
-Migrations pending (written, not yet pushed): none
+Migrations: see `docs/PXL/PXL_SCHEMA_SUMMARY.md` (generated) for the full chain; hosted sync status is tracked in `AI/AI_STATE.md` (verify with `supabase migration list --linked`). As of 2026-07-03 hosted is synced through `20260702000009`; `20260702000010` and `20260703000001` are pending push (no access token in the workspace).
+Production hardening: audit findings standing and readiness gate live in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`; tests: 14 pgTAP files / 210 assertions (`npm test`).
 
 ---
 

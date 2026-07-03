@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-03. Migrations scanned: 63. Tests present: 13.
+Generated: 2026-07-03. Migrations scanned: 64. Tests present: 14.
 
-## Functions (128)
+## Functions (130)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -46,6 +46,7 @@ Generated: 2026-07-03. Migrations scanned: 63. Tests present: 13.
 | `fn_create_amortization_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_create_revenue_recognition_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_dispose_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
+| `fn_enforce_approval_sod` | `20260703000001_approval_sod_enforcement.sql` | 1 |
 | `fn_ensure_stock_balance` | `20260630000028_inventory.sql` | 1 |
 | `fn_execute_recurring_template` | `20260630000025_accounting_module.sql` | 1 |
 | `fn_generate_form_2307_issued` | `20260702000007_form2307_version_supersede.sql` | 2 |
@@ -95,6 +96,7 @@ Generated: 2026-07-03. Migrations scanned: 63. Tests present: 13.
 | `fn_require_vb_accounting_ready_status` | `20260701000008_accounting_readiness_approval.sql` | 1 |
 | `fn_require_vb_line_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_require_vb_vat_registration_status` | `20260701000012_vat_registration_enforcement.sql` | 1 |
+| `fn_required_approval_workflow` | `20260703000001_approval_sod_enforcement.sql` | 1 |
 | `fn_reverse_je` | `20260630000025_accounting_module.sql` | 1 |
 | `fn_reverse_tax_detail_entries` | `20260702000009_tax_ledger_void_reversal.sql` | 1 |
 | `fn_reverse_vendor_credit_application` | `20260701000011_vendor_credit_application_reversal.sql` | 1 |
@@ -168,7 +170,7 @@ Generated: 2026-07-03. Migrations scanned: 63. Tests present: 13.
 | ----- | ---------- | ------ | --------------- |
 | `amortization_entries` | `20260630000026_amortization_revenuerecon.sql` | 1 | `20260630000026_amortization_revenuerecon.sql` |
 | `amortization_schedules` | `20260630000026_amortization_revenuerecon.sql` | 1 | `20260630000026_amortization_revenuerecon.sql` |
-| `approval_instances` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
+| `approval_instances` | `20260628000002_sprint1.sql` | 2 | `20260703000001_approval_sod_enforcement.sql` |
 | `approval_workflow_steps` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `approval_workflows` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `asset_depreciation_entries` | `20260630000027_fixed_assets.sql` | 1 | `20260630000027_fixed_assets.sql` |
@@ -312,7 +314,7 @@ Generated: 2026-07-03. Migrations scanned: 63. Tests present: 13.
 | `warehouse_zones` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 
-## Triggers (136)
+## Triggers (137)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -354,6 +356,7 @@ Generated: 2026-07-03. Migrations scanned: 63. Tests present: 13.
 | `trg_admin_lifecycle_vendor_bills` | `20260701000006_permissions_hardening.sql` |
 | `trg_admin_lifecycle_vendor_bills_insert` | `20260701000006_permissions_hardening.sql` |
 | `trg_amort_sched_updated_at` | `20260630000026_amortization_revenuerecon.sql` |
+| `trg_approval_sod_` | `20260703000001_approval_sod_enforcement.sql` |
 | `trg_atc_code_history_guard` | `20260701000018_atc_effective_date_governance.sql` |
 | `trg_audit_` | `20260701000005_audit_cas.sql` |
 | `trg_audit_cash_purchases` | `20260630000021_gap_fill.sql` |

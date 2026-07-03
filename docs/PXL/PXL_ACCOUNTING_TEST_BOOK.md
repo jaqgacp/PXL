@@ -325,3 +325,31 @@ Notes:
 - The lifecycle trigger `fn_require_admin_for_accounting_lifecycle` now routes through `fn_can_perform`, and `approved` joined the default restricted-status list, closing the member-approval hole (see RLS-ROLES-001 step 8).
 - Migration `20260702000010_can_perform_role_actions.sql` also added previously missing lifecycle gates: petty cash voucher approval and `journal_entries` insert/status paths.
 - Items share the identical policy expression as customers/suppliers; the item insert path is not re-tested because its prerequisites (category/UoM) are admin-only setup.
+
+## APPROVAL-SOD-001 - Approval Segregation of Duties
+
+Status: Executed Passing (2026-07-03) in `supabase/tests/014_approval_sod_test.sql`.
+
+Related findings: PXL-DA-012. Decision: DEC-010.
+
+Scenario (company with owner, admin, and member; workflow W1 governs all `sales` documents `always`; workflow W2 governs Vendor Bills above 10,000; all assertions run as the `authenticated` role):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Match W1 for a Sales Invoice and an Official Receipt | Blank document type on a workflow covers every document of its module. |
+| 2 | Match W2 for a 5,000 vendor bill | NULL: below the `amount_exceeds` threshold, no approval required. |
+| 3 | Match W2 for a 15,000 vendor bill | W2 returned: approval required above the threshold. |
+| 4 | Member inserts an approval workflow | Rejected (42501): approval setup stays owner/admin. |
+| 5 | Owner (creator) approves their own SI via RPC | Rejected: "segregation of duties" — creator cannot approve. |
+| 6 | Admin approves the SI | Approved; an `approval_instances` row records workflow, actor, and timestamp. |
+| 7 | Owner (creator) posts the approved SI | Allowed: the approver differed from the creator, so the creator may post. |
+| 8 | Owner directly UPDATEs a second SI to `approved` | Rejected identically: trigger-based enforcement catches RPC shortcuts. |
+| 9 | Post with no instance and legacy `approved_by` = creator | Rejected: no qualifying approval. |
+| 10 | Post with legacy `approved_by` = a different admin | Allowed: pre-migration approvals qualify when the approver differed. |
+| 11 | Deactivate W1, owner approves their own new SI | Allowed: no active workflow means only the DEC-009 role gate applies. |
+
+Notes:
+
+- Enforcement lives in `fn_enforce_approval_sod` BEFORE triggers on sales_invoices, vendor_bills, receipts, payment_vouchers, purchase_orders, and petty_cash_vouchers (`20260703000001_approval_sod_enforcement.sql`); `fn_required_approval_workflow` resolves the governing workflow (specific document type beats blank; `amount_exceeds` compares the document total; other trigger conditions are conservatively treated as always-required until evaluators exist).
+- Receipts and payment vouchers post directly from draft, so for them posting is the approval act: the creator cannot post when a workflow is configured, and the posting is recorded as the approval instance.
+- `journal_entries` is not gated: system JEs from posting RPCs are indistinguishable from manual JEs, so a `journal` workflow would block every posting path. Multi-step workflows record the first step only. Approval invalidation on post-approval edits is tracked under PXL-AUD-005/PXL-DA-011.
