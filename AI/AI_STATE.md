@@ -45,7 +45,7 @@ SAWT/QAP export snapshot session (session 37, 2026-07-03):
 
 None. Fresh `supabase db reset --local` replay passed through `20260703000007`; `npm test` passed 257/257 across 16 files; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
 
-Session 31 landed as `8425d56` (CI 28634813215 green); session 32 as `f88a595` (CI 28636237029 green). Sessions 33-36 landed together as `d88f0df` (2026-07-03); CI run 28645009697 passed both jobs, verified via `gh run watch --exit-status`.
+Session 31 landed as `8425d56` (CI 28634813215 green); session 32 as `f88a595` (CI 28636237029 green). Sessions 33-36 landed together as `d88f0df` (CI 28645009697 green). Session 37 landed as `9110765` (2026-07-03); CI run 28645835919 passed both jobs, verified via `gh run watch --exit-status`.
 
 ## Next Recommended Step
 
