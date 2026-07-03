@@ -412,3 +412,27 @@ Notes:
 
 - SAWT previously aggregated `receipt_lines` through `sales_invoices` in the browser, so cash-sale CWT rows never reached the alphalist and income payments were net of CWT; the page now reads `vw_cwt_summary_ar` and both pages snapshot via `fn_snapshot_wht_export` before producing a CSV.
 - Same remittance caveat as VAT-RECON-001: legitimate 0619-E/1601EQ remittance JEs on the withholding control accounts surface as variance until a controlled remittance flow exists.
+
+## CAS-EXPORT-SNAP-001 - CAS DAT Export Snapshots and Server-Attested Export Log
+
+Status: Executed Passing (2026-07-03) in `supabase/tests/017_cas_export_snapshots_test.sql`.
+
+Related findings: PXL-DA-015 (report provenance, fifth slice); full CAS enforcement remains PXL-DA-019.
+
+Scenario (VAT company; February 2026 books: SI 10,000 + 1,200 output VAT, OR with 224.00 CWT, VB 5,000 + 600 input VAT, PV with 100.00 EWT):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Generate the SLSP DAT extract | `fn_snapshot_cas_export` creates an `exported` v1 `CAS_SLSP` snapshot (period 2026-02-01..2026-02-28, 64-character SHA-256 hash) and writes the `cas_export_log` row itself: server-attested row count, `generated_by`, and `snapshot_id` link. |
+| 2 | Compare the RPC response to the snapshot | The rows returned to the caller are exactly the frozen `export_rows` in the snapshot payload — the downloaded file is provably the hashed payload. |
+| 3 | Generate RELIEF and alphalist extracts | Separate `CAS_RELIEF` / `CAS_QAP` snapshots freeze the VB input VAT row (600.00) and PV EWT row (100.00). |
+| 4 | Generate the GL extract | `CAS_GL` snapshot freezes every GL line of the period and records the debit=credit balance check in its reconciliation payload; returned `row_count` matches the returned rows. |
+| 5 | Re-generate SLSP for the same month | v2 on the same deterministic logical source — export history is versioned, never overwritten. |
+| 6 | Attempt a direct `cas_export_log` insert as `authenticated` | Rejected (42501): the log is RPC-only evidence. |
+| 7 | Request an unknown report type or blank file name | Rejected with explicit errors. |
+| 8 | Post a manual JE crediting the output VAT control, then re-export | SLSP extract is blocked (`does not reconcile`); alphalist and GL extracts still succeed — gates are per-report. |
+
+Notes:
+
+- The page previously assembled CSVs in the browser and inserted its own `cas_export_log` rows (client-computed row counts, no hash). `CASDATFileGenerationPage` now renders the file from the RPC's frozen rows.
+- The extract is still CSV-shaped; the true BIR DAT record layout is PXL-DA-019 scope.

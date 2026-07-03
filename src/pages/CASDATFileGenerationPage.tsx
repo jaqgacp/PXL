@@ -41,37 +41,42 @@ export default function CASDATFileGenerationPage() {
   const generate = async () => {
     if (!companyId) return
     setGenerating(true)
-    const startDate = `${year}-${String(month + 1).padStart(2, '0')}-01`
-    const endDate = new Date(year, month + 1, 0).toISOString().split('T')[0]
     const fileName = `${reportType}-${MONTHS[month]}-${year}.csv`
-    let rowCount = 0
 
-    if (reportType === 'slsp') {
-      const { data } = await supabase.from('vw_output_vat_review').select('*').eq('company_id', companyId).gte('invoice_date', startDate).lte('invoice_date', endDate)
-      const rows = (data || []) as { invoice_date: string; system_no: string | null; customer_tin: string | null; customer_name: string | null; taxable_base: number; output_vat: number }[]
-      downloadCSV([['Date', 'Doc No.', 'TIN', 'Name', 'Taxable Base', 'VAT'], ...rows.map(r => [r.invoice_date, r.system_no || '', r.customer_tin || '', r.customer_name || '', r.taxable_base.toFixed(2), r.output_vat.toFixed(2)])], fileName)
-      rowCount = rows.length
-    } else if (reportType === 'relief') {
-      const { data } = await supabase.from('vw_input_vat_review').select('*').eq('company_id', companyId).gte('invoice_date', startDate).lte('invoice_date', endDate)
-      const rows = (data || []) as { invoice_date: string; system_no: string | null; supplier_tin: string | null; supplier_name: string | null; taxable_base: number; input_vat: number }[]
-      downloadCSV([['Date', 'Doc No.', 'TIN', 'Name', 'Taxable Base', 'VAT'], ...rows.map(r => [r.invoice_date, r.system_no || '', r.supplier_tin || '', r.supplier_name || '', r.taxable_base.toFixed(2), r.input_vat.toFixed(2)])], fileName)
-      rowCount = rows.length
-    } else if (reportType === 'general_ledger') {
-      const { data } = await supabase.from('vw_general_ledger').select('*').eq('company_id', companyId).gte('je_date', startDate).lte('je_date', endDate)
-      const rows = (data || []) as { je_date: string; je_number: string; account_code: string; account_name: string; debit_amount: number; credit_amount: number }[]
-      downloadCSV([['Date', 'JE No.', 'Account Code', 'Account Name', 'Debit', 'Credit'], ...rows.map(r => [r.je_date, r.je_number, r.account_code, r.account_name, r.debit_amount.toFixed(2), r.credit_amount.toFixed(2)])], fileName)
-      rowCount = rows.length
-    } else {
-      const { data } = await supabase.from('vw_ewt_summary_ap').select('*').eq('company_id', companyId).gte('invoice_date', startDate).lte('invoice_date', endDate)
-      const rows = (data || []) as { invoice_date: string; supplier_tin: string | null; supplier_name: string | null; atc_code: string | null; tax_base: number; tax_withheld: number }[]
-      downloadCSV([['Date', 'TIN', 'Name', 'ATC', 'Tax Base', 'Tax Withheld'], ...rows.map(r => [r.invoice_date, r.supplier_tin || '', r.supplier_name || '', r.atc_code || '', r.tax_base.toFixed(2), r.tax_withheld.toFixed(2)])], fileName)
-      rowCount = rows.length
+    // The RPC builds the payload server-side, gates on reconciliation, creates
+    // the immutable report snapshot + cas_export_log row, and returns the
+    // frozen rows — so the downloaded file is provably the hashed payload.
+    const { data, error } = await supabase.rpc('fn_snapshot_cas_export', {
+      p_company_id: companyId,
+      p_report_type: reportType,
+      p_year: year,
+      p_month: month + 1,
+      p_file_name: fileName,
+    })
+    if (error) {
+      setGenerating(false)
+      alert(error.message)
+      return
     }
 
-    await supabase.from('cas_export_log').insert([{
-      company_id: companyId, export_type: 'dat_file', report_name: REPORT_LABELS[reportType],
-      period_year: year, period_month: month + 1, file_name: fileName, row_count: rowCount,
-    }])
+    const payload = data as { rows: Record<string, string | number | null>[] }
+    const rows = payload.rows || []
+    const num = (v: string | number | null) => Number(v ?? 0).toFixed(2)
+    const str = (v: string | number | null) => (v ?? '') as string
+
+    if (reportType === 'slsp') {
+      downloadCSV([['Date', 'Doc No.', 'TIN', 'Name', 'Taxable Base', 'VAT'],
+        ...rows.map(r => [str(r.invoice_date), str(r.system_no), str(r.customer_tin), str(r.customer_name), num(r.taxable_base), num(r.output_vat)])], fileName)
+    } else if (reportType === 'relief') {
+      downloadCSV([['Date', 'Doc No.', 'TIN', 'Name', 'Taxable Base', 'VAT'],
+        ...rows.map(r => [str(r.invoice_date), str(r.system_no), str(r.supplier_tin), str(r.supplier_name), num(r.taxable_base), num(r.input_vat)])], fileName)
+    } else if (reportType === 'general_ledger') {
+      downloadCSV([['Date', 'JE No.', 'Account Code', 'Account Name', 'Debit', 'Credit'],
+        ...rows.map(r => [str(r.je_date), str(r.je_number), str(r.account_code), str(r.account_name), num(r.debit_amount), num(r.credit_amount)])], fileName)
+    } else {
+      downloadCSV([['Date', 'TIN', 'Name', 'ATC', 'Tax Base', 'Tax Withheld'],
+        ...rows.map(r => [str(r.invoice_date), str(r.supplier_tin), str(r.supplier_name), str(r.atc_code), num(r.tax_base), num(r.tax_withheld)])], fileName)
+    }
 
     setGenerating(false)
     loadLogs()
