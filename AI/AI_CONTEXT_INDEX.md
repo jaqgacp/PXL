@@ -32,7 +32,7 @@ Read `AI/AI_CACHE_CONTEXT_PLAN.md` only when cache setup, prompt structure, or A
 
 Read `AI/AI_DOCUMENTATION_RULES.md` before creating, growing, or restructuring any documentation. `AI/AIOS_VERSION.md` defines the current AI Operating System version; verify it exists at session start.
 
-Summary documents that exist: `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` and `docs/PXL/PXL_SCHEMA_SUMMARY.md` (generated — regenerate with `scripts/gen_schema_summary.sh`, never hand-edit). Still missing: `docs/PXL/PXL_ACCOUNTING_RULES.md` and `docs/PXL/PXL_TAX_RULES_PH.md`; where those are referenced, use the detailed documents listed in the same work mode instead. Avoid broad repository search unless the mode documents are insufficient — `PXL_SCHEMA_SUMMARY.md` maps every table/function/view/trigger to the migration holding its current definition.
+Summary documents that exist: `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` and `docs/PXL/PXL_SCHEMA_SUMMARY.md` (generated — regenerate with `scripts/gen_schema_summary.sh`, never hand-edit). `docs/PXL/PXL_PRODUCT_BACKLOG.md` holds future enhancements per DEC-012 — record enhancement ideas there, never in the audit findings. Still missing: `docs/PXL/PXL_ACCOUNTING_RULES.md` and `docs/PXL/PXL_TAX_RULES_PH.md`; where those are referenced, use the detailed documents listed in the same work mode instead. Avoid broad repository search unless the mode documents are insufficient — `PXL_SCHEMA_SUMMARY.md` maps every table/function/view/trigger to the migration holding its current definition.
 
 ## Work Modes
 

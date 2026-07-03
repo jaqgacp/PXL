@@ -24,6 +24,9 @@ export default defineConfig({
     },
   },
   server: {
+    // GitHub Codespaces port forwarding proxies requests with an
+    // *.app.github.dev Host header, which Vite blocks by default.
+    allowedHosts: ['.app.github.dev'],
     headers: {
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',

@@ -435,3 +435,38 @@ Related Source Files:
 
 - `supabase/migrations/20260629000013_gl_core.sql`
 
+## DEC-012 - Audit/Architecture/Backlog Separation with Continuous Architectural Review
+
+Date: 2026-07-03
+Status: Approved
+
+Decision:
+
+Three concerns stay in three places: audit findings (`docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`) hold production defects and release blockers only; architecture documents describe how the system works; product enhancements (GL Impact/Financial Summary/Tax Impact/Posting Validation panels, smart defaults, account determination, payment-method behaviour, drilldown, insights, timelines, reconciliation suite) live in `docs/PXL/PXL_PRODUCT_BACKLOG.md`, organized by module with value/dependency/priority/complexity/readiness/phase fields.
+
+Alongside every audit session, agents perform a lightweight architectural review of any module they touch: identify extension points toward the Standard Transaction Experience (documented in the backlog), prepare the architecture only when the risk is negligible and it avoids future refactoring, and otherwise record the opportunity in the backlog. Genuine bugs discovered during review become NEW audit findings and are not fixed unless they block the current finding. Future planning must never delay, re-prioritize, or expand the current audit session; audit work always takes priority.
+
+Business Reason:
+
+User directive 2026-07-03: while fixing audit findings, PXL should naturally evolve toward a world-class ERP architecture without accumulating future refactoring, and it must stay obvious what blocks release versus what merely improves the product.
+
+Technical Reason:
+
+Mixing enhancements into the findings file inflates the release gate and hides real blockers; a separate backlog with readiness fields lets Phase 2 be implemented with minimal refactoring because extension points were identified while the code was already in context.
+
+Alternatives Considered:
+
+- Log enhancements as audit findings. Rejected; distorts the production readiness gate.
+- Implement improvements opportunistically during audit sessions. Rejected; scope creep against bounded-finding discipline.
+- No forward planning until audit completes. Rejected by the user; loses architectural insight available while modules are being touched.
+
+Related Documents:
+
+- `docs/PXL/PXL_PRODUCT_BACKLOG.md`
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
+- `AI/AGENT_SYSTEM_PROMPT.md`
+
+Related Source Files:
+
+- None.
+
