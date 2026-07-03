@@ -14,6 +14,7 @@ export default function BooksPurchaseJournalPage() {
   const [dateTo, setDateTo] = useState(today())
   const [rows, setRows] = useState<Row[]>([])
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const run = useCallback(async () => {
     if (!companyId) return
@@ -31,14 +32,34 @@ export default function BooksPurchaseJournalPage() {
   const total = rows.reduce((s, r) => s + r.total_amount, 0)
   const totalVat = rows.reduce((s, r) => s + r.total_input_vat_amount, 0)
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
+    if (!companyId) return
+    setExporting(true)
+    const fileName = `purchase-journal-${dateFrom}-to-${dateTo}.csv`
+    // Server-side snapshot: freezes the book payload with a SHA-256 hash and
+    // returns the frozen rows, so the file is provably the hashed payload.
+    const { data, error } = await supabase.rpc('fn_snapshot_books_export', {
+      p_company_id: companyId,
+      p_book_type: 'purchase_journal',
+      p_date_from: dateFrom,
+      p_date_to: dateTo,
+      p_file_name: fileName,
+    })
+    setExporting(false)
+    if (error) {
+      alert(error.message)
+      return
+    }
+    const frozen = ((data as { rows: Record<string, string | number | null>[] }).rows) || []
+    const num = (v: string | number | null) => Number(v ?? 0).toFixed(2)
+    const str = (v: string | number | null) => (v ?? '') as string
     const header = ['Date', 'VB No.', 'Supplier', 'TIN', 'Input VAT', 'Total Amount']
-    const csvRows = rows.map(r => [r.bill_date, r.bill_number, r.supplier_name_snapshot, r.supplier_tin_snapshot || '', r.total_input_vat_amount.toFixed(2), r.total_amount.toFixed(2)])
+    const csvRows = frozen.map(r => [str(r.bill_date), str(r.bill_number), str(r.supplier_name), str(r.supplier_tin), num(r.total_input_vat_amount), num(r.total_amount)])
     const csv = [header, ...csvRows].map(row => row.map(c => `"${c}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
-    a.href = url; a.download = `purchase-journal-${dateFrom}-to-${dateTo}.csv`; a.click()
+    a.href = url; a.download = fileName; a.click()
     URL.revokeObjectURL(url)
   }
 
@@ -51,7 +72,7 @@ export default function BooksPurchaseJournalPage() {
         </div>
         <div className="flex gap-2">
           <button onClick={() => window.print()} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50">Print</button>
-          <button onClick={exportCSV} disabled={rows.length === 0} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">↓ Export CSV</button>
+          <button onClick={exportCSV} disabled={exporting || rows.length === 0} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">{exporting ? 'Exporting...' : '↓ Export CSV'}</button>
         </div>
       </div>
 

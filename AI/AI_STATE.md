@@ -14,7 +14,7 @@ All files listed in `AI/AI_DOCUMENTATION_RULES.md` exist under `AI/`. The AI Ope
 
 ## Current Active Task
 
-AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 38 (2026-07-03) continued PXL-DA-015 with the CAS DAT slice: `20260703000008_report_snapshots_cas_exports.sql` adds `fn_snapshot_cas_export`, which builds all four CAS extract payloads server-side, gates each on its own reconciliation (VAT for SLSP/RELIEF, EWT payable for the alphalist, debit=credit for the GL extract), creates versioned CAS_* snapshots with SHA-256 hashes, writes server-attested `cas_export_log` rows (direct client inserts closed; new `snapshot_id` link), and returns the frozen rows so the downloaded file is provably the hashed payload. Report provenance now covers VAT returns, Form 2307 issued, SLSP/RELIEF, SAWT/QAP, and CAS DAT; books journal exports plus a snapshot reader UI remain. Findings standing is 19 Retested Passed / 15 In Progress / 14 Open (48 findings); 11 Criticals remain.
+AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 39 (2026-07-03) continued PXL-DA-015 with the books slice: `20260703000009_report_snapshots_books_exports.sql` adds `fn_snapshot_books_export`, covering all seven BIR books (sales/purchase journals, cash receipts book gross of CWT, cash disbursements book net of EWT, balance-gated general journal, cash sales/purchases journals) with the frozen-rows contract: server-built payload, versioned `BOOKS_*` snapshot with SHA-256 hash, server-attested `cas_export_log` row, and the returned rows are what the page writes to the file. Every compliance export surface now snapshots; only the snapshot reader/drilldown UI remains under PXL-DA-015. Findings standing is 19 Retested Passed / 15 In Progress / 14 Open (48 findings); 11 Criticals remain.
 
 ## Current Broken / Missing AI Operating Areas
 
@@ -24,31 +24,31 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 - `README.md` stack table is stale (says React 18 / Vite 8, migrations 001–015); `package.json` shows React 19, react-router-dom v7, TanStack Query, Zustand, Zod, and 61 migrations exist. The architecture summary reflects actuals; consider refreshing README separately.
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
 - Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
-- Remote is in sync through migration 20260702000009 (verified 2026-07-02). PENDING: push `20260702000010` and `20260703000001` through `20260703000008` to hosted Supabase — no `SUPABASE_ACCESS_TOKEN` in this workspace. Run `supabase db push --linked` from a tokened workspace, then verify with `supabase migration list --linked`.
-- PXL-DA-015: VAT return, Form 2307 issued, SLSP/RELIEF, SAWT/QAP, and CAS DAT export snapshots are done. Remaining provenance work is the books journal exports plus a reader/drilldown UI.
+- Remote is in sync through migration 20260702000009 (verified 2026-07-02). PENDING: push `20260702000010` and `20260703000001` through `20260703000009` to hosted Supabase — no `SUPABASE_ACCESS_TOKEN` in this workspace. Run `supabase db push --linked` from a tokened workspace, then verify with `supabase migration list --linked`.
+- PXL-DA-015: every export surface snapshots (VAT returns, Form 2307, SLSP/RELIEF, SAWT/QAP, CAS DAT, seven BIR books). Remaining work is the snapshot reader/drilldown UI.
 
 ## Last Files Changed
 
-CAS DAT export snapshot session (session 38, 2026-07-03):
+Books export snapshot session (session 39, 2026-07-03):
 
-- `supabase/migrations/20260703000008_report_snapshots_cas_exports.sql` (new: `fn_snapshot_cas_export`, `cas_export_log.snapshot_id`, RPC-only log inserts)
-- `supabase/tests/017_cas_export_snapshots_test.sql` (new: CAS-EXPORT-SNAP-001, 15 assertions)
-- `src/pages/CASDATFileGenerationPage.tsx` (file rendered from the RPC's frozen rows; direct log insert removed)
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (CAS-EXPORT-SNAP-001 scenario)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-015 index/detail refreshed; session 38 log row)
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md` (new CAS DAT File Generation row)
+- `supabase/migrations/20260703000009_report_snapshots_books_exports.sql` (new: `fn_snapshot_books_export` for all seven BIR books)
+- `supabase/tests/018_books_export_snapshots_test.sql` (new: BOOKS-EXPORT-SNAP-001, 13 assertions)
+- The seven `src/pages/Books*Page.tsx` journal pages (files rendered from the RPC's frozen rows)
+- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (BOOKS-EXPORT-SNAP-001 scenario)
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-015 index/detail refreshed; session 39 log row)
+- `docs/PXL/PXL_TRANSACTION_MATRIX.md` (new BIR Books of Accounts Export row)
 - `docs/PXL/STATUS.md` (test count and pending migrations refreshed)
 - `docs/PXL/PXL_SCHEMA_SUMMARY.md` (regenerated)
 
 ## Last Known Errors
 
-None. Fresh `supabase db reset --local` replay passed through `20260703000008`; `npm test` passed 272/272 across 17 files; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
+None. Fresh `supabase db reset --local` replay passed through `20260703000009`; `npm test` passed 285/285 across 18 files; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
 
 Session 31 landed as `8425d56` (CI 28634813215 green); session 32 as `f88a595` (CI 28636237029 green). Sessions 33-36 landed together as `d88f0df` (CI 28645009697 green). Session 37 landed as `9110765` (CI 28645835919 green). Session 38 landed as `0f9ab83` (2026-07-03); CI run 28648390569 passed both jobs, verified via `gh run watch --exit-status`.
 
 ## Next Recommended Step
 
-Continue AIQ-008 by extending `report_snapshots` to the books journal exports, or build the snapshot reader/drilldown UI. Do not redo VAT return snapshots (`20260703000004`), Form 2307 issued snapshots (`20260703000005`), SLSP/RELIEF export snapshots (`20260703000006`), SAWT/QAP export snapshots (`20260703000007`), or CAS DAT export snapshots (`20260703000008`). PXL-DA-017 dimension propagation remains the next unblocked accounting architecture alternative.
+Continue AIQ-008 by building the snapshot reader/drilldown UI (the last PXL-DA-015 implementation piece; all six snapshot families exist through `20260703000009`). Do not redo any existing snapshot slice. PXL-DA-017 dimension propagation remains the next unblocked accounting architecture alternative.
 
 ## Standing Autonomy Delegation
 

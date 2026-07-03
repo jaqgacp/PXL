@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-03. Migrations scanned: 71. Tests present: 17.
+Generated: 2026-07-03. Migrations scanned: 72. Tests present: 18.
 
-## Functions (143)
+## Functions (144)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -123,6 +123,7 @@ Generated: 2026-07-03. Migrations scanned: 71. Tests present: 17.
 | `fn_send_supplier_debit_memo` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_set_updated_at` | `20260629000001_dashboard.sql` | 1 |
 | `fn_ship_purchase_return` | `20260630000021_gap_fill.sql` | 2 |
+| `fn_snapshot_books_export` | `20260703000009_report_snapshots_books_exports.sql` | 1 |
 | `fn_snapshot_cas_export` | `20260703000008_report_snapshots_cas_exports.sql` | 1 |
 | `fn_snapshot_form2307_issued` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_snapshot_vat_export` | `20260703000006_report_snapshots_vat_exports.sql` | 1 |

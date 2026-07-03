@@ -436,3 +436,28 @@ Notes:
 
 - The page previously assembled CSVs in the browser and inserted its own `cas_export_log` rows (client-computed row counts, no hash). `CASDATFileGenerationPage` now renders the file from the RPC's frozen rows.
 - The extract is still CSV-shaped; the true BIR DAT record layout is PXL-DA-019 scope.
+
+## BOOKS-EXPORT-SNAP-001 - BIR Books of Accounts Export Snapshots
+
+Status: Executed Passing (2026-07-03) in `supabase/tests/018_books_export_snapshots_test.sql`.
+
+Related findings: PXL-DA-015 (report provenance, sixth slice).
+
+Scenario (VAT company; February 2026 books: SI 11,200 gross, OR with 224.00 CWT, VB 5,600 gross, PV net 5,400 after 100.00 EWT):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Export the sales journal for Feb 1-28 | `fn_snapshot_books_export` creates an `exported` v1 `BOOKS_SALES_JOURNAL` snapshot (64-character SHA-256 hash) and writes the `cas_export_log` row itself (`csv_export`, server row count, range in remarks, `snapshot_id` link). |
+| 2 | Compare the RPC response to the snapshot | Returned rows are exactly the frozen `export_rows` — the file is provably the hashed payload. |
+| 3 | Export the purchase journal | Freezes the VB with its gross total (5,600.00) in the integrity payload. |
+| 4 | Export the cash receipts book | Freezes the OR collection gross of CWT (11,200.00), doc type `OR`. |
+| 5 | Export the cash disbursements book | Freezes the PV payment net of EWT (5,400.00), doc type `PV`. |
+| 6 | Export the general journal | Freezes every GL line of the range and records the debit=credit balance check; an unbalanced range would be blocked. |
+| 7 | Export the (empty) cash sales journal | Zero rows still produce hashed snapshot evidence. |
+| 8 | Re-export the sales journal for the same range | v2 on the same deterministic logical source. |
+| 9 | Request an unknown book type, inverted range, or blank file name | Rejected with explicit errors. |
+
+Notes:
+
+- All seven books pages previously assembled CSVs in the browser; they now render the file from the RPC's frozen rows. The print views still render live page data.
+- Cash receipts book = ORs (gross of CWT) plus cash-sale SIs; cash disbursements book = PVs (net of EWT) plus check vouchers (net check amount) plus cash purchases.
