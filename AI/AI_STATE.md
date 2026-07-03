@@ -42,7 +42,7 @@ Approval SoD session (session 31, 2026-07-03):
 
 None. `npm test` 210/210 across 14 files on a fresh local database; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
 
-Session 30 landed as `30e4c23` (CI run 28634301034 green). Session 31 landing evidence is recorded in `AI/AI_HANDOFF.md` once CI completes.
+Session 30 landed as `30e4c23` (CI run 28634301034 green). Session 31 landed as `8425d56` (2026-07-03); CI run 28634813215 passed both jobs (`build-lint`, `db-tests` on a fresh migration replay), verified via `gh run view`.
 
 ## Next Recommended Step
 
