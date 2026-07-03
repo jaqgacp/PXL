@@ -423,7 +423,10 @@ function ContextSelectors() {
       .then(({ data }) => setPeriods(data || []))
   }, [companyId])
 
-  const sel = 'border border-gray-700 bg-gray-800 text-gray-300 text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer max-w-[140px] truncate'
+  // Blue focus ring is intentional here: the app-wide gray-900 ring is
+  // invisible on the dark header. Widths tighten below xl so the selectors
+  // never collide with the nav at higher zoom levels.
+  const sel = 'border border-gray-700 bg-gray-800 text-gray-300 text-xs rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-400 cursor-pointer max-w-[104px] lg:max-w-[124px] xl:max-w-[150px] truncate'
 
   return (
     <div className="flex items-center gap-1.5 shrink-0">
@@ -479,7 +482,9 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
 
   const openMenu = (label: string, left = 0) => {
     setActiveMenu(label)
-    setMenuLeft(left)
+    // Clamp so the dropdown (w-52 + w-72 = 496px) never overflows the
+    // viewport at high zoom / narrow desktop widths.
+    setMenuLeft(Math.max(0, Math.min(left, window.innerWidth - 512)))
     const nav = NAV.find(n => n.label === label)
     if (nav && nav.groups.length > 0) setActiveGroup(nav.groups[0].group)
   }
@@ -501,8 +506,11 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
         Nav bar: mouseLeave on the <nav> element closes the menu.
         Dropdown is a direct child of <nav> (not inside the scroll container)
         so overflow-x-auto on the scroll container cannot clip it.
+        Must be position:fixed ONLY — a stray `relative` class used to override
+        `fixed` in the compiled CSS order, so the header scrolled away with the
+        page. The fixed nav is itself the containing block for the dropdown.
       */}
-      <nav className="fixed top-0 left-0 right-0 h-14 bg-gray-900 z-50 border-b border-gray-800 relative"
+      <nav className="fixed top-0 left-0 right-0 h-14 bg-gray-900 z-50 border-b border-gray-800"
         onMouseLeave={closeMenu}>
 
         <div className="flex items-center h-14">
@@ -519,7 +527,7 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
               <button key={item.label}
                 onMouseEnter={(e) => openMenu(item.label, (e.currentTarget as HTMLElement).getBoundingClientRect().left)}
                 onClick={() => { if (item.page) { navigate(item.page); closeMenu() } }}
-                className={`shrink-0 px-3 h-14 text-sm transition-colors border-b-2 whitespace-nowrap ${
+                className={`shrink-0 px-2.5 xl:px-3 h-14 text-sm transition-colors border-b-2 whitespace-nowrap ${
                   activeMenu === item.label || (item.page !== undefined && location.pathname === `/${item.page}`)
                     ? 'text-white border-blue-400 bg-gray-800'
                     : 'text-gray-300 border-transparent hover:text-white hover:bg-gray-800'
