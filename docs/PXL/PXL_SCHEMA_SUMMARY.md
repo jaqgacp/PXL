@@ -4,7 +4,7 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-03. Migrations scanned: 64. Tests present: 14.
+Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 
 ## Functions (130)
 
@@ -60,7 +60,7 @@ Generated: 2026-07-03. Migrations scanned: 64. Tests present: 14.
 | `fn_next_document_number` | `20260630000021_gap_fill.sql` | 3 |
 | `fn_post_amortization_entry` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_post_bank_adjustment` | `20260630000024_banking_treasury_functions.sql` | 1 |
-| `fn_post_cash_purchase` | `20260630000021_gap_fill.sql` | 3 |
+| `fn_post_cash_purchase` | `20260703000002_vat_ledger_completeness.sql` | 4 |
 | `fn_post_check_voucher` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_post_credit_memo` | `20260630000022_tax_ledger_completeness.sql` | 3 |
 | `fn_post_debit_memo` | `20260630000022_tax_ledger_completeness.sql` | 3 |
@@ -74,10 +74,10 @@ Generated: 2026-07-03. Migrations scanned: 64. Tests present: 14.
 | `fn_post_physical_count` | `20260630000028_inventory.sql` | 1 |
 | `fn_post_receipt` | `20260701000017_customer_cwt_defaults.sql` | 5 |
 | `fn_post_revenue_recognition_entry` | `20260630000026_amortization_revenuerecon.sql` | 1 |
-| `fn_post_sales_invoice` | `20260702000002_si_post_tax_base_column_fix.sql` | 5 |
+| `fn_post_sales_invoice` | `20260703000002_vat_ledger_completeness.sql` | 6 |
 | `fn_post_stock_adjustment` | `20260630000028_inventory.sql` | 1 |
 | `fn_post_stock_transfer` | `20260630000028_inventory.sql` | 1 |
-| `fn_post_vendor_bill` | `20260630000021_gap_fill.sql` | 3 |
+| `fn_post_vendor_bill` | `20260703000002_vat_ledger_completeness.sql` | 4 |
 | `fn_post_vendor_credit` | `20260630000022_tax_ledger_completeness.sql` | 4 |
 | `fn_receive_inventory` | `20260630000028_inventory.sql` | 1 |
 | `fn_record_impairment` | `20260630000027_fixed_assets.sql` | 1 |
@@ -103,7 +103,7 @@ Generated: 2026-07-03. Migrations scanned: 64. Tests present: 14.
 | `fn_revert_si_to_draft` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_revert_vendor_bill_to_draft` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_save_cash_purchase` | `20260630000021_gap_fill.sql` | 2 |
-| `fn_save_cash_sale` | `20260630000021_gap_fill.sql` | 3 |
+| `fn_save_cash_sale` | `20260703000002_vat_ledger_completeness.sql` | 4 |
 | `fn_save_credit_memo` | `20260630000022_tax_ledger_completeness.sql` | 4 |
 | `fn_save_debit_memo` | `20260630000022_tax_ledger_completeness.sql` | 4 |
 | `fn_save_payment_voucher` | `20260701000016_pv_ewt_explicit_basis.sql` | 3 |

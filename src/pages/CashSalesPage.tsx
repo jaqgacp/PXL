@@ -66,6 +66,8 @@ export default function CashSalesPage() {
   const [fPaymentMode, setFPaymentMode] = useState('')
   const [fBankAccount, setFBankAccount] = useState('')
   const [fCWT, setFCWT] = useState(0)
+  const [fCwtAtc, setFCwtAtc] = useState('')
+  const [atcCodes, setAtcCodes] = useState<{ id: string; code: string; description: string; rate: number }[]>([])
   const [fReference, setFReference] = useState('')
   const [fMemo, setFMemo] = useState('')
   const [lines, setLines] = useState<Line[]>([newLine()])
@@ -114,7 +116,8 @@ export default function CashSalesPage() {
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'asset').eq('is_postable', true).eq('is_active', true).order('account_code'),
       supabase.from('ref_payment_modes').select('id,name').eq('is_active', true).order('sort_order'),
       supabase.from('items').select('id,item_code,item_name,unit_price,vat_code_id').eq('company_id', companyId).eq('is_active', true).order('item_name'),
-    ]).then(([custR, vatR, accR, bankR, pmR, itemR]) => {
+      supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code'),
+    ]).then(([custR, vatR, accR, bankR, pmR, itemR, atcR]) => {
       setCustomers(custR.data as Customer[] || [])
       setVatCodes((vatR.data || []).map((v: Record<string, unknown>) => ({
         id: v.id as string, vat_code: v.vat_code as string, description: v.description as string,
@@ -125,6 +128,7 @@ export default function CashSalesPage() {
       setBankAccounts(bankR.data as COAAccount[] || [])
       setPaymentModes(pmR.data as PaymentMode[] || [])
       setItems(itemR.data as Item[] || [])
+      setAtcCodes(atcR.data as { id: string; code: string; description: string; rate: number }[] || [])
     })
   }, [companyId])
 
@@ -176,7 +180,9 @@ export default function CashSalesPage() {
       customer_tin_snapshot: fCustomerTIN, customer_address_snapshot: fCustomerAddr,
       date: fDate, payment_mode_id: fPaymentMode || '',
       bank_account_id: fBankAccount || '', reference: fReference, memo: fMemo,
+      cwt_atc_id: fCwtAtc || '',
     }
+    if (fCWT > 0 && !fCwtAtc) { setError('Select the CWT ATC code when a CWT amount is entered.'); setSaving(false); return }
     const linesPayload = lines.filter(l => l.description.trim()).map(l => ({
       item_id: l.item_id, description: l.description, quantity: l.quantity,
       unit_price: l.unit_price, discount_amount: l.discount_amount,
@@ -322,6 +328,15 @@ export default function CashSalesPage() {
               <label className="block text-xs text-gray-500 mb-1">CWT Amount</label>
               <input type="number" value={fCWT} onChange={e => setFCWT(Number(e.target.value))} min="0" step="0.01" className={inp} />
             </div>
+            {fCWT > 0 && (
+              <div>
+                <label className="block text-xs text-gray-500 mb-1">CWT ATC Code</label>
+                <select value={fCwtAtc} onChange={e => setFCwtAtc(e.target.value)} className={inp}>
+                  <option value="">Select ATC…</option>
+                  {atcCodes.map(a => <option key={a.id} value={a.id}>{a.code} ({a.rate}%) — {a.description}</option>)}
+                </select>
+              </div>
+            )}
             <div>
               <label className="block text-xs text-gray-500 mb-1">Reference</label>
               <input value={fReference} onChange={e => setFReference(e.target.value)} className={inp} placeholder="Check #, ref…" />

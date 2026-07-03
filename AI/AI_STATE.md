@@ -14,7 +14,7 @@ All files listed in `AI/AI_DOCUMENTATION_RULES.md` exist under `AI/`. The AI Ope
 
 ## Current Active Task
 
-AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 31 (2026-07-03) closed PXL-DA-012 (High): `20260703000001_approval_sod_enforcement.sql` implements DEC-010 — `fn_required_approval_workflow` + `fn_enforce_approval_sod` triggers on the six governed document tables; self-approval blocked, approval instances recorded, qualifying approval required to post, direct-post docs treat posting as the approval act. Verified by APPROVAL-SOD-001 — `npm test` 210/210 across 14 files on a fresh replay. Session 30 earlier closed PXL-DA-003 (Critical) and PXL-AUD-004 via `fn_can_perform` per DEC-009. Findings standing: 18 Retested Passed / 14 In Progress / 15 Open; 11 Criticals remain.
+AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 32 (2026-07-03) delivered VAT ledger completeness for PXL-AUD-014/PXL-DA-008 (`20260703000002_vat_ledger_completeness.sql`): per-VAT-code output/input rows with zero-rated/exempt bases for SI/VB, cash sale output VAT + CWT writers, cash purchase input VAT writers, posted-document backfill; and fixed new Critical PXL-AUD-028 (cash sale was runtime-dead: phantom columns, zero totals from UI payloads, AR over-application, missing ATC) — `fn_save_cash_sale` rebuilt on the server-side recompute pattern, `CashSalesPage` gained the CWT ATC selector. Verified by VAT-LEDGER-COMPLETE-001 — `npm test` 223/223 across 15 files on a fresh replay. Sessions 30–31 earlier closed PXL-DA-003/PXL-AUD-004 (DEC-009 `fn_can_perform`) and PXL-DA-012 (DEC-010 approval SoD). Findings standing: 19 Retested Passed / 14 In Progress / 15 Open (48 findings); 11 Criticals remain.
 
 ## Current Broken / Missing AI Operating Areas
 
@@ -24,31 +24,29 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 - `README.md` stack table is stale (says React 18 / Vite 8, migrations 001–015); `package.json` shows React 19, react-router-dom v7, TanStack Query, Zustand, Zod, and 61 migrations exist. The architecture summary reflects actuals; consider refreshing README separately.
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
 - Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
-- Remote is in sync through migration 20260702000009 (verified 2026-07-02). PENDING: push `20260702000010_can_perform_role_actions.sql` and `20260703000001_approval_sod_enforcement.sql` to hosted Supabase — no `SUPABASE_ACCESS_TOKEN` in this workspace. Run `supabase db push --linked` from a tokened workspace, then verify with `supabase migration list --linked`.
-- PXL-AUD-014 prerequisites documented in session 28: the tax ledger writes no rows for zero-VAT documents of VAT companies, stores no exempt/zero-rated bases, and cash sales/purchases have no tax-detail writers — required before review views can be ledger-backed.
+- Remote is in sync through migration 20260702000009 (verified 2026-07-02). PENDING: push `20260702000010_can_perform_role_actions.sql`, `20260703000001_approval_sod_enforcement.sql`, and `20260703000002_vat_ledger_completeness.sql` to hosted Supabase — no `SUPABASE_ACCESS_TOKEN` in this workspace. Run `supabase db push --linked` from a tokened workspace, then verify with `supabase migration list --linked`.
+- PXL-AUD-014: ledger completeness landed in session 32; the remaining step is rebasing `vw_output_vat_review`/`vw_input_vat_review` and the return generators on `tax_detail_entries` (treat NULL `vat_code_id` as regular), then filed-snapshot provenance with PXL-DA-015.
 
 ## Last Files Changed
 
-Approval SoD session (session 31, 2026-07-03):
+VAT ledger completeness session (session 32, 2026-07-03):
 
-- `supabase/migrations/20260703000001_approval_sod_enforcement.sql` (new: `fn_required_approval_workflow`, `fn_enforce_approval_sod`, 12 triggers on six document tables, `approval_instances.workflow_step_id` nullable)
-- `supabase/tests/014_approval_sod_test.sql` (new: APPROVAL-SOD-001, 14 assertions)
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (APPROVAL-SOD-001 added)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-012 → Retested Passed; standing recount; session 31 log row)
+- `supabase/migrations/20260703000002_vat_ledger_completeness.sql` (new: per-VAT-code writers for SI/VB/CS/CP, fn_save_cash_sale rebuilt per PXL-AUD-028, posted-document backfill)
+- `supabase/tests/015_vat_ledger_completeness_test.sql` (new: VAT-LEDGER-COMPLETE-001, 13 assertions)
+- `src/pages/CashSalesPage.tsx` (CWT ATC selector; `cwt_atc_id` in the header payload)
+- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (VAT-LEDGER-COMPLETE-001 added)
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-AUD-028 added Retested Passed; PXL-AUD-014 progress; standing recount; session 32 log row)
 - `docs/PXL/PXL_SCHEMA_SUMMARY.md` (regenerated: 130 functions)
-- `docs/PXL/STATUS.md` (stale migration header and Migrations table removed; the file is now the page build inventory only)
-- `docs/PXL/BUILD_ORDER.md` (deleted: pre-build planning artifact, never maintained after the build completed; its only reference in `AI/AI_CACHE_CONTEXT_PLAN.md` removed)
-- `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` (migration-status pointers now cite `PXL_SCHEMA_SUMMARY.md` + `AI/AI_STATE.md` instead of STATUS.md)
 
 ## Last Known Errors
 
-None. `npm test` 210/210 across 14 files on a fresh local database; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
+None. `npm test` 223/223 across 15 files on a fresh local database; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
 
-Session 30 landed as `30e4c23` (CI run 28634301034 green). Session 31 landed as `8425d56` (2026-07-03); CI run 28634813215 passed both jobs (`build-lint`, `db-tests` on a fresh migration replay), verified via `gh run view`.
+Session 30 landed as `30e4c23` (CI 28634301034 green); session 31 as `8425d56` (CI 28634813215 green). Session 32 landing evidence is recorded here once CI completes.
 
 ## Next Recommended Step
 
-Continue AIQ-008: PXL-AUD-014 VAT ledger completeness (zero-VAT rows, exempt/zero-rated bases, cash sales/purchases tax-detail writers — prerequisites documented in session 28), or PXL-DA-017 dimension propagation per DEC-011.
+Continue AIQ-008: rebase `vw_output_vat_review`/`vw_input_vat_review` and the 2550 return generators on `tax_detail_entries` (PXL-AUD-014 final step), or PXL-DA-017 dimension propagation per DEC-011.
 
 ## Standing Autonomy Delegation
 
