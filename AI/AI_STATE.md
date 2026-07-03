@@ -36,7 +36,9 @@ Approval SoD session (session 31, 2026-07-03):
 - `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (APPROVAL-SOD-001 added)
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-012 → Retested Passed; standing recount; session 31 log row)
 - `docs/PXL/PXL_SCHEMA_SUMMARY.md` (regenerated: 130 functions)
-- `docs/PXL/STATUS.md` (stale migration header replaced with pointers to the generated schema summary and AI_STATE sync status)
+- `docs/PXL/STATUS.md` (stale migration header and Migrations table removed; the file is now the page build inventory only)
+- `docs/PXL/BUILD_ORDER.md` (deleted: pre-build planning artifact, never maintained after the build completed; its only reference in `AI/AI_CACHE_CONTEXT_PLAN.md` removed)
+- `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` (migration-status pointers now cite `PXL_SCHEMA_SUMMARY.md` + `AI/AI_STATE.md` instead of STATUS.md)
 
 ## Last Known Errors
 

@@ -62,7 +62,6 @@ Therefore, do not modify code for prompt caching yet. If a future Claude API wra
 | `README.md` | Stack, local setup, migration summary, security model, posting model, module completion criteria, project structure, BIR notes. | Yes | Compact architecture primer. Stable enough for every coding session. |
 | `docs/PXL/PXL_PRINCIPLES.md` | Supreme engineering constitution: accounting-first, Philippine-compliance-first, immutable accounting, audit, RLS, professional ERP UX, no architectural drift. | Yes | Must be in every session. This is the strongest stable instruction file currently present. |
 | `docs/PXL/STATUS.md` | Build status, module/page completion, migration status, completed compliance/BIR/audit pages. | Yes, but update-aware | Needed so Claude knows the current build surface. It changes when modules/status change, so keep it later than permanent rules. |
-| `docs/PXL/BUILD_ORDER.md` | Original sprint/dependency order for modules. | Usually no | Useful background, but `STATUS.md` and `PXL_TRANSACTION_MATRIX.md` are more current. Cache only for planning/build-order work. |
 | `docs/PXL/UI_UX_PRINCIPLES.md` | Enterprise UI/UX/navigation rules and full navigation tree. | Task-specific | Very useful for UI work, but too large and not needed for database/accounting-only sessions. |
 
 ### Accounting, Transaction, Audit, and Test State

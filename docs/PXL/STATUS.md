@@ -11,7 +11,6 @@ Production hardening: audit findings standing and readiness gate live in `docs/P
 
 ## Legend
 - ✅ Built & committed
-- ⏳ Written but not yet applied (migrations)
 - ❌ Not yet built
 
 ---
@@ -24,53 +23,6 @@ Production hardening: audit findings standing and readiness gate live in `docs/P
 | Shared UI library (DataTable, StatusBadge, LookupDialog, FormSection, AmountCell, DateCell, ConfirmDialog, AuditTrailSection) | ✅ |
 | Error boundary | ✅ |
 | Lazy-loaded routing — all 99 pages | ✅ |
-
----
-
-## Migrations
-
-| File | Description | Applied |
-|---|---|---|
-| 20260628000001_companies.sql | Companies, RDO codes | ✅ |
-| 20260628000002_sprint1.sql | Setup module schema | ✅ |
-| 20260628000003_sprint2.sql | Master data schema | ✅ |
-| 20260628000004_fixes.sql | Schema fixes | ✅ |
-| 20260628000005_sprint2_tax.sql | Tax setup schema | ✅ |
-| 20260629000001_dashboard.sql | Dashboard views | ✅ |
-| 20260629000002_sprint5_sales.sql | Sales invoices, void reason codes | ✅ |
-| 20260629000003_sprint5_ar.sql | Receipts, CMs, DMs, ref tables | ✅ |
-| 20260629000004_sprint5_so_dr.sql | Quotations, SOs, Delivery Receipts | ✅ |
-| 20260629000005_sprint5_views.sql | AR/Sales reporting views | ✅ |
-| 20260629000006_ewt_working_papers.sql | EWT working papers | ✅ |
-| 20260629000007_cwt_2307.sql | CWT/2307 compliance | ✅ |
-| 20260629000008_rls_hardening.sql | RLS security hardening | ✅ |
-| 20260629000009_rls_reads_scope.sql | RLS read scope fixes | ✅ |
-| 20260629000010_posting_rpcs.sql | Atomic posting RPCs | ✅ |
-| 20260629000011_audit_triggers.sql | Audit trail triggers | ✅ |
-| 20260629000012_fn_numbering_hardening.sql | Number series hardening | ✅ |
-| 20260629000013_gl_core.sql | GL core schema + journal_entries | ✅ |
-| 20260629000014_hardening.sql | Accounting hardening | ✅ |
-| 20260629000015_cm_dm_rpcs.sql | CM/DM RPC functions | ✅ |
-| 20260629000016_cash_sales.sql | Cash sales schema | ✅ |
-| 20260629000017_purchasing.sql | Purchasing schema (initial) | ✅ |
-| 20260629000018_purchasing_full.sql | Purchasing schema (full) | ✅ |
-| 20260629000019_hardening_v2.sql | C1 integrity hardening | ✅ |
-| 20260629000020_period_enforcement_ar.sql | Period enforcement for AR | ✅ |
-| 20260629000021_cm_dm_gl_pv_void_vc_apply.sql | CM/DM GL wiring, PV void, vendor credit apply | ✅ |
-| 20260630000021_gap_fill.sql | Idempotent catch-up migration (content of 008–021) | ✅ |
-| 20260630000022_tax_ledger_completeness.sql | VAT breakdowns, form_2307_issuance_lines, rebased EWT views | ✅ |
-| 20260630000023_banking_treasury_schema.sql | Banking & Treasury — 12 tables, RLS | ✅ |
-| 20260630000024_banking_treasury_functions.sql | Banking & Treasury — posting functions, views | ✅ |
-| 20260630000025_accounting_module.sql | Accounting — recurring templates, GL views, posting functions | ✅ |
-| 20260630000026_amortization_revenuerecon.sql | Amortization & Revenue Recognition schedule tables, RLS, posting functions | ✅ |
-| 20260630000027_fixed_assets.sql | Fixed Assets — 6 tables, schedule generator, 5 posting RPCs | ✅ |
-| 20260630000028_inventory.sql | Inventory — 11 tables, WAC/FIFO/Specific ID costing, 6 posting RPCs | ✅ |
-| 20260630000029_master_data_completion.sql | warehouse_item_settings + employees tables | ✅ |
-| 20260701000001_percentage_tax.sql | PT working papers, pt_returns (2551Q) | ✅ |
-| 20260701000002_vat.sql | VAT working papers, vat_returns (2550M/Q), vw_output_vat_review | ✅ |
-| 20260701000003_withholding_tax.sql | 1601EQ/FWT/1601FQ working papers, ewt_returns, fwt_returns, form_2306_issuances | ✅ |
-| 20260701000004_income_tax.sql | income_tax_computations, book_tax_reconciliation, nolco_schedule, tax_credits_schedule, mcit_computations, itr_filings | ✅ |
-| 20260701000005_audit_cas.sql | Expanded audit trigger coverage, cas_attachment_register, cas_export_log | ✅ |
 
 ---
 

@@ -43,7 +43,7 @@ Source document (e.g. sales invoice) → save RPC (server-side VAT/EWT computati
 
 ## Where Behavior Is Defined
 
-- **Schema, RLS, RPCs, views, triggers:** `supabase/migrations/*.sql`, applied in filename order. Migrations are the executable source of truth; `docs/PXL/STATUS.md` tracks which are applied.
+- **Schema, RLS, RPCs, views, triggers:** `supabase/migrations/*.sql`, applied in filename order. Migrations are the executable source of truth; `docs/PXL/PXL_SCHEMA_SUMMARY.md` (generated) maps every object to its defining migration, and hosted sync status is tracked in `AI/AI_STATE.md`.
 - **Expected accounting/tax behavior:** `docs/PXL/PXL_TRANSACTION_MATRIX.md` (per transaction) and `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (test scenarios).
 - **Open production-hardening work:** `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`.
 - **Executable regression tests:** `supabase/tests/NNN_*_test.sql` (pgTAP) covering critical flows, aging as-of, vendor credit controls, non-VAT gating, EWT partial payments, 2307 generation/supersede, VAT-ledger-to-GL reconciliation, GL reversal visibility, and role-based access.
@@ -61,7 +61,7 @@ supabase db push  # apply migrations (hosted: link project first, then use --lin
 ## Related Documents
 
 - `docs/PXL/PXL_PRINCIPLES.md` — the 27-principle engineering constitution.
-- `docs/PXL/STATUS.md` — build/migration status per module and page.
+- `docs/PXL/STATUS.md` — page build inventory per module (205/205); migration status lives in `PXL_SCHEMA_SUMMARY.md` and `AI/AI_STATE.md`.
 - `docs/PXL/UI_UX_PRINCIPLES.md` — UI standards and navigation tree.
 - `AI/AI_CONTEXT_INDEX.md` — which documents to load per work mode.
 - `AI/AI_DECISIONS.md` — why the architecture is this way.
