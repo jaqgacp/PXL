@@ -44,7 +44,7 @@ CAS DAT export snapshot session (session 38, 2026-07-03):
 
 None. Fresh `supabase db reset --local` replay passed through `20260703000008`; `npm test` passed 272/272 across 17 files; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
 
-Session 31 landed as `8425d56` (CI 28634813215 green); session 32 as `f88a595` (CI 28636237029 green). Sessions 33-36 landed together as `d88f0df` (CI 28645009697 green). Session 37 landed as `9110765` (2026-07-03); CI run 28645835919 passed both jobs, verified via `gh run watch --exit-status`.
+Session 31 landed as `8425d56` (CI 28634813215 green); session 32 as `f88a595` (CI 28636237029 green). Sessions 33-36 landed together as `d88f0df` (CI 28645009697 green). Session 37 landed as `9110765` (CI 28645835919 green). Session 38 landed as `0f9ab83` (2026-07-03); CI run 28648390569 passed both jobs, verified via `gh run watch --exit-status`.
 
 ## Next Recommended Step
 
