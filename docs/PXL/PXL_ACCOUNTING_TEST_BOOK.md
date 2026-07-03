@@ -260,16 +260,17 @@ Scenario (company A with owner, admin, member, and viewer memberships; an outsid
 | 5 | Member updates `fiscal_periods.is_locked` | Silently matches no rows under RLS; no period becomes locked. |
 | 6 | Member inserts a number series | Rejected (42501). |
 | 7 | Member saves a draft SI via `fn_save_sales_invoice` | Allowed: members may enter drafts. |
-| 8 | Member approves the accounting-ready SI | Allowed — approval is not yet role-restricted (documented gap, tracked under PXL-DA-012). |
-| 9 | Member posts the SI | Rejected by the lifecycle trigger: restricted status transitions require owner/admin. |
-| 10 | Admin posts the SI | Posted. |
-| 11 | Outsider calls `fn_save_sales_invoice` against company A | Rejected: Access denied. |
+| 8 | Member approves the accounting-ready SI | Rejected by the `fn_can_perform` lifecycle gate: approval requires owner/admin (DEC-009). |
+| 9 | Admin approves the accounting-ready SI | Approved. |
+| 10 | Member posts the SI | Rejected by the lifecycle trigger: restricted status transitions require owner/admin. |
+| 11 | Admin posts the SI | Posted. |
+| 12 | Outsider calls `fn_save_sales_invoice` against company A | Rejected: Access denied. |
 
 Notes:
 
 - The first `SET ROLE authenticated` query in this scenario exposed PXL-AUD-026: the migration chain never granted table privileges to `authenticated`, so a migrations-only database rejects every PostgREST query. Fixed by `20260702000008_authenticated_table_grants.sql`; RLS was verified enabled on all public tables before granting, and `anon` receives no grants.
 - With grants restored, `UPDATE`/`DELETE` policies with `USING (false)` silently match no rows instead of raising 42501, while `INSERT` `WITH CHECK` violations still raise 42501. The direct-write denial assertions in tests 004/007/010 were rewritten as effect-based checks (row survives / row unchanged) accordingly.
-- Approval segregation-of-duties remains open under PXL-DA-012; operational master-data role policy and `can_perform(company, action, document_type)` remain open under PXL-AUD-004/PXL-DA-003.
+- `fn_can_perform` (DEC-009) now backs the lifecycle gate, so approval joined the owner/admin-only statuses; the role/action matrix itself is exercised by RBAC-CANPERFORM-001. Approver-not-creator segregation when a workflow is configured remains open under PXL-DA-012.
 
 ## TAX-LEDGER-VOID-001 - Void/Cancel/Bounce Tax Ledger Counter-Entries
 
@@ -295,3 +296,32 @@ Notes:
 - Counter-rows are dated on the reversal date, matching the reversal JE, so each period retains its own activity — the same convention GL-REVERSAL-001 proves for the GL views.
 - `is_reversal = true` now uniformly marks negative/corrective rows only (CM reversals and void/cancel/bounce counters); reversed originals are identified by an incoming `reverses_tax_detail_id` link, never by mutation.
 - The migration backfills existing environments: previously flag-flipped VB rows are restored and missing counter-rows are inserted for already-voided/cancelled/bounced documents, dated at their reversal JE.
+
+## RBAC-CANPERFORM-001 - fn_can_perform Role/Action Matrix
+
+Status: Executed Passing (2026-07-03) in `supabase/tests/013_can_perform_test.sql`.
+
+Related findings: PXL-DA-003, PXL-AUD-004. Decision: DEC-009.
+
+Scenario (company A with owner, admin, member, and viewer memberships plus a non-member; all assertions run as the `authenticated` role with per-user JWT claims):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Owner calls `fn_can_perform(company, 'post', 'sales_invoices')` | TRUE: owner/admin hold every action. |
+| 2 | Member checks `post` and `approve` | FALSE for both: capture-only authority. |
+| 3 | Member checks `master_data` | TRUE: members maintain operational master data. |
+| 4 | Viewer checks `master_data` | FALSE: read-only. |
+| 5 | Non-member checks `create` | FALSE: no membership, no authority. |
+| 6 | Member inserts a customer and edits an existing one | Allowed by the `fn_can_perform`-backed RLS policies. |
+| 7 | Member inserts a supplier | Allowed. |
+| 8 | Viewer inserts a customer | Rejected (42501). |
+| 9 | Viewer updates a customer | Silently matches no rows under RLS; name unchanged. |
+| 10 | Member deletes a customer | Silently matches no rows: master-data delete stays owner/admin. |
+| 11 | Admin deletes the customer | Deleted. |
+
+Notes:
+
+- `fn_can_perform(company_id, action, document_type)` is the DEC-009 matrix on the existing owner/admin/member/viewer roles; `document_type` is recorded for future per-document-type refinement (accountant/bookkeeper mappings) and not yet consulted.
+- The lifecycle trigger `fn_require_admin_for_accounting_lifecycle` now routes through `fn_can_perform`, and `approved` joined the default restricted-status list, closing the member-approval hole (see RLS-ROLES-001 step 8).
+- Migration `20260702000010_can_perform_role_actions.sql` also added previously missing lifecycle gates: petty cash voucher approval and `journal_entries` insert/status paths.
+- Items share the identical policy expression as customers/suppliers; the item insert path is not re-tested because its prerequisites (category/UoM) are admin-only setup.

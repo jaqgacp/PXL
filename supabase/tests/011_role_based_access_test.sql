@@ -5,12 +5,13 @@
 -- (earlier tests ran as superuser, so RLS policies were never exercised).
 -- Covers: cross-company read isolation, member/viewer reads, admin-only setup
 -- writes (branches, fiscal periods, number series), member draft entry through
--- RPCs, and the owner/admin lifecycle trigger for restricted statuses.
+-- RPCs, and the fn_can_perform lifecycle gate for restricted statuses
+-- (approve/post owner/admin-only per DEC-009; see also 013_can_perform_test.sql).
 -- ══════════════════════════════════════════════════════════════════════════════
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(16);
+SELECT plan(17);
 
 -- ── Users: owner, admin, member, viewer of company A; outsider owns company B ──
 INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password,
@@ -226,11 +227,19 @@ SELECT ok(
   (SELECT id FROM t_ctx WHERE key='si') IS NOT NULL,
   'member can save a draft sales invoice through the RPC');
 
--- Documents current design: approval is not yet role-restricted (PXL-DA-012).
+-- DEC-009: approval is owner/admin-only (fn_can_perform in the lifecycle gate).
+-- Approver-not-creator SoD when a workflow is configured continues under PXL-DA-012.
+SELECT throws_like(
+  format('SELECT fn_approve_sales_invoice(%L)', (SELECT id FROM t_ctx WHERE key='si')),
+  '%owner/admin role required%',
+  'member cannot approve: approval requires owner/admin (DEC-009)');
+
+SELECT pg_temp.as_user('11111111-1111-1111-1111-111111111132');
 SELECT lives_ok(
   format('SELECT fn_approve_sales_invoice(%L)', (SELECT id FROM t_ctx WHERE key='si')),
-  'member can approve an accounting-ready SI (approval SoD remains open under PXL-DA-012)');
+  'admin can approve the accounting-ready SI');
 
+SELECT pg_temp.as_user('11111111-1111-1111-1111-111111111133');
 SELECT throws_like(
   format('SELECT fn_post_sales_invoice(%L)', (SELECT id FROM t_ctx WHERE key='si')),
   '%owner/admin role required%',

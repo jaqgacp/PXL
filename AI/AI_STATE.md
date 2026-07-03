@@ -1,6 +1,6 @@
 # AI State
 
-Last updated: 2026-07-02
+Last updated: 2026-07-03
 
 ## Project Status
 
@@ -14,7 +14,7 @@ All files listed in `AI/AI_DOCUMENTATION_RULES.md` exist under `AI/`. The AI Ope
 
 ## Current Active Task
 
-AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 28 (2026-07-02) fixed new Critical PXL-AUD-027: void/cancel/bounce paths now net the tax ledger with counter-rows (`20260702000009_tax_ledger_void_reversal.sql`), verified by TAX-LEDGER-VOID-001 — `npm test` 182/182 across 12 files on a fresh replay, build/lint pass. The user reprioritized audit fixes above the remaining summary docs (AIQ-005–007).
+AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 30 (2026-07-03) closed PXL-DA-003 (Critical) and PXL-AUD-004 (High): `20260702000010_can_perform_role_actions.sql` adds `fn_can_perform` per DEC-009, reroutes the lifecycle gate through it (37 tables, `approved` now restricted, JE gate backstop), and applies the member/viewer master-data policy to customers/suppliers/items. Verified by RBAC-CANPERFORM-001 + extended RLS-ROLES-001 — `npm test` 196/196 across 13 files on a fresh replay, build/lint/docs-consistency pass. The user reprioritized audit fixes above the remaining summary docs (AIQ-006–007).
 
 ## Current Broken / Missing AI Operating Areas
 
@@ -29,24 +29,22 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 
 ## Last Files Changed
 
-AIOS 1.2.0 delegation session (session 29, 2026-07-02):
+can_perform enforcement session (session 30, 2026-07-03):
 
-- `AI/AI_DECISIONS.md` (DEC-008 standing autonomy delegation; DEC-009 role/action matrix; DEC-010 approval SoD; DEC-011 branch = reporting dimension)
-- `AI/AI_AUTONOMY_PLAYBOOK.md` (Level 4 rewritten as delegated decisions; must-ask list reduced to hard safety stops)
-- `AI/AGENT_SYSTEM_PROMPT.md` (ask-before list reduced; PENDING rule for missing credentials)
-- `AI/AI_STATE.md` ("Decisions Needed From User" → "Standing Autonomy Delegation")
-- `AI/AIOS_VERSION.md` (1.2.0)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (index Next Action for PXL-DA-003/PXL-AUD-004/PXL-DA-012/PXL-DA-017 now cite DEC-009/010/011; session 29 log row)
+- `supabase/migrations/20260702000010_can_perform_role_actions.sql` (new: `fn_can_perform`, lifecycle gate reroute, petty cash + journal_entries gates, master-data RLS policies)
+- `supabase/tests/013_can_perform_test.sql` (new: RBAC-CANPERFORM-001, 13 assertions)
+- `supabase/tests/011_role_based_access_test.sql` (member approval now denied, admin approves; plan 17)
+- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (RLS-ROLES-001 updated; RBAC-CANPERFORM-001 added)
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-003 and PXL-AUD-004 → Retested Passed; standing recount; session 30 log row)
+- `docs/PXL/PXL_SCHEMA_SUMMARY.md` (regenerated: 128 functions, 136 triggers)
 
 ## Last Known Errors
 
-None. `npm test` 182/182 across 12 files on a fresh local database; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39).
-
-AIOS 1.1.0 landed on `main` as commit `082652b` (2026-07-02); CI run 28609465374 passed both jobs (`build-lint` including the new docs-consistency gate, `db-tests` on a fresh migration replay), verified via `gh run view`.
+None. `npm test` 196/196 across 13 files on a fresh local database; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
 
 ## Next Recommended Step
 
-Continue AIQ-008: implement PXL-DA-003 `can_perform(company_id, action, document_type)` per DEC-009 in every posting/void/reversal RPC (Critical, now unblocked), then PXL-DA-012 approval gates per DEC-010. PXL-AUD-014 VAT ledger completeness remains the parallel P0 track.
+Continue AIQ-008: implement PXL-DA-012 approval SoD gates per DEC-010 (approved instance + approver ≠ creator when a workflow is configured), or PXL-AUD-014 VAT ledger completeness (parallel P0 track).
 
 ## Standing Autonomy Delegation
 

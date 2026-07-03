@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-02. Migrations scanned: 62. Tests present: 12.
+Generated: 2026-07-03. Migrations scanned: 63. Tests present: 13.
 
-## Functions (127)
+## Functions (128)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -29,6 +29,7 @@ Generated: 2026-07-02. Migrations scanned: 62. Tests present: 12.
 | `fn_block_vb_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` | 1 |
 | `fn_bounce_receipt` | `20260702000009_tax_ledger_void_reversal.sql` | 4 |
 | `fn_bt_reverse_je` | `20260630000024_banking_treasury_functions.sql` | 1 |
+| `fn_can_perform` | `20260702000010_can_perform_role_actions.sql` | 1 |
 | `fn_cancel_amortization_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_cancel_bank_adjustment` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_cancel_check_voucher` | `20260630000024_banking_treasury_functions.sql` | 1 |
@@ -80,7 +81,7 @@ Generated: 2026-07-02. Migrations scanned: 62. Tests present: 12.
 | `fn_receive_inventory` | `20260630000028_inventory.sql` | 1 |
 | `fn_record_impairment` | `20260630000027_fixed_assets.sql` | 1 |
 | `fn_register_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
-| `fn_require_admin_for_accounting_lifecycle` | `20260701000007_lifecycle_permissions_broaden.sql` | 2 |
+| `fn_require_admin_for_accounting_lifecycle` | `20260702000010_can_perform_role_actions.sql` | 3 |
 | `fn_require_customer_cwt_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |
 | `fn_require_pv_ewt_ready_status` | `20260701000013_pv_ewt_atc_validation.sql` | 1 |
 | `fn_require_pvl_ewt_validation` | `20260701000016_pv_ewt_explicit_basis.sql` | 2 |
@@ -311,7 +312,7 @@ Generated: 2026-07-02. Migrations scanned: 62. Tests present: 12.
 | `warehouse_zones` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 
-## Triggers (132)
+## Triggers (136)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -340,8 +341,12 @@ Generated: 2026-07-02. Migrations scanned: 62. Tests present: 12.
 | `tax_calendar_events_updated_at` | `20260628000005_sprint2_tax.sql` |
 | `tax_codes_updated_at` | `20260628000004_fixes.sql` |
 | `trg_` | `20260701000004_income_tax.sql` |
+| `trg_admin_lifecycle_journal_entries` | `20260702000010_can_perform_role_actions.sql` |
+| `trg_admin_lifecycle_journal_entries_insert` | `20260702000010_can_perform_role_actions.sql` |
 | `trg_admin_lifecycle_payment_vouchers` | `20260701000006_permissions_hardening.sql` |
 | `trg_admin_lifecycle_payment_vouchers_insert` | `20260701000006_permissions_hardening.sql` |
+| `trg_admin_lifecycle_petty_cash_vouchers` | `20260702000010_can_perform_role_actions.sql` |
+| `trg_admin_lifecycle_petty_cash_vouchers_insert` | `20260702000010_can_perform_role_actions.sql` |
 | `trg_admin_lifecycle_receipts` | `20260701000006_permissions_hardening.sql` |
 | `trg_admin_lifecycle_receipts_insert` | `20260701000006_permissions_hardening.sql` |
 | `trg_admin_lifecycle_sales_invoices` | `20260701000006_permissions_hardening.sql` |
