@@ -11,7 +11,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(13);
+SELECT plan(17);
 
 INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password,
                         email_confirmed_at, created_at, updated_at,
@@ -323,6 +323,44 @@ SELECT results_eq(
   $$VALUES (2000.00::numeric(15,2), 240.00::numeric(15,2))$$,
   'cash purchase writes its input VAT ledger row');
 
+-- 9. Output VAT review/2550 source is now ledger-backed, including cash sales
+SELECT results_eq(
+  $q$SELECT SUM(gross_sales)::numeric(15,2),
+            SUM(taxable_base)::numeric(15,2),
+            SUM(zero_rated_sales)::numeric(15,2),
+            SUM(exempt_sales)::numeric(15,2),
+            SUM(output_vat)::numeric(15,2)
+     FROM vw_output_vat_review
+     WHERE company_id='22222222-2222-2222-2222-222222222260'
+       AND invoice_date BETWEEN '2026-03-01' AND '2026-03-31'$q$,
+  $$VALUES (22820.00::numeric(15,2), 11000.00::numeric(15,2),
+            5000.00::numeric(15,2), 5500.00::numeric(15,2),
+            1320.00::numeric(15,2))$$,
+  'output VAT review derives 2550 source totals from tax_detail_entries');
+
+-- 10. Cash sales remain identifiable through the ledger-backed output view
+SELECT is(
+  (SELECT count(*)::int
+   FROM vw_output_vat_review
+   WHERE transaction_id=(SELECT (res->>'si_id')::uuid FROM t_cs)
+     AND source_module='cash_sale'),
+  1, 'ledger-backed output view identifies cash sale source rows');
+
+-- 11. Input VAT review/2550 source is now ledger-backed, including cash purchases
+SELECT results_eq(
+  $q$SELECT SUM(gross_purchases)::numeric(15,2),
+            SUM(taxable_base)::numeric(15,2),
+            SUM(zero_rated)::numeric(15,2),
+            SUM(exempt_purchases)::numeric(15,2),
+            SUM(input_vat)::numeric(15,2)
+     FROM vw_input_vat_review
+     WHERE company_id='22222222-2222-2222-2222-222222222260'
+       AND invoice_date BETWEEN '2026-03-01' AND '2026-03-31'$q$,
+  $$VALUES (8220.00::numeric(15,2), 6000.00::numeric(15,2),
+            1500.00::numeric(15,2), 0.00::numeric(15,2),
+            720.00::numeric(15,2))$$,
+  'input VAT review derives 2550 source totals from tax_detail_entries');
+
 -- ── March tax-ledger/GL reconciliation is exact despite zero-amount rows ───────
 -- Output ledger: 1,200 (si1) + 0 (si2) + 120 (cash sale) = 1,320
 -- Input ledger:  480 + 0 (vb1) + 240 (cash purchase)     = 720
@@ -337,14 +375,14 @@ SELECT results_eq(
 -- ── Void: every per-code row is netted by a counter-row ────────────────────────
 SELECT fn_void_sales_invoice((SELECT id FROM t_ctx WHERE key='si1'), NULL, 'completeness void test');
 
--- 10. Three counter-rows, one per original per-code row
+-- 13. Three counter-rows, one per original per-code row
 SELECT is(
   (SELECT count(*)::int FROM tax_detail_entries
    WHERE source_doc_type='SI' AND source_doc_id=(SELECT id FROM t_ctx WHERE key='si1')
      AND tax_kind='output_vat' AND is_reversal=true),
   3, 'voiding the mixed SI writes one counter-row per VAT code');
 
--- 11. Per-code net is zero for base and amount alike
+-- 14. Per-code net is zero for base and amount alike
 SELECT is(
   (SELECT count(*)::int FROM (
      SELECT t.vat_code_id
@@ -356,7 +394,7 @@ SELECT is(
      HAVING SUM(t.tax_base) <> 0 OR SUM(t.tax_amount) <> 0) x),
   0, 'after void, every VAT code nets to zero base and zero tax');
 
--- 12. Zero-rated/exempt evidence survives the void as linked pairs
+-- 15. Zero-rated/exempt evidence survives the void as linked pairs
 SELECT is(
   (SELECT count(*)::int FROM tax_detail_entries r
    JOIN tax_detail_entries o ON o.id = r.reverses_tax_detail_id
@@ -366,12 +404,27 @@ SELECT is(
      AND r.vat_code_id = o.vat_code_id),
   3, 'each counter-row links to its original row with the same VAT code');
 
--- 13. si2 (untouched) still carries its exempt evidence
+-- 16. si2 (untouched) still carries its exempt evidence
 SELECT is(
   (SELECT count(*)::int FROM tax_detail_entries
    WHERE source_doc_type='SI' AND source_doc_id=(SELECT id FROM t_ctx WHERE key='si2')
      AND is_reversal=false),
   1, 'unrelated zero-VAT evidence is untouched by the void');
+
+-- 17. Ledger-backed review views expose reversal rows in the reversal period
+SELECT results_eq(
+  $q$SELECT SUM(gross_sales)::numeric(15,2),
+            SUM(taxable_base)::numeric(15,2),
+            SUM(zero_rated_sales)::numeric(15,2),
+            SUM(exempt_sales)::numeric(15,2),
+            SUM(output_vat)::numeric(15,2)
+     FROM vw_output_vat_review
+     WHERE company_id='22222222-2222-2222-2222-222222222260'
+       AND invoice_date = CURRENT_DATE$q$,
+  $$VALUES (-19200.00::numeric(15,2), -10000.00::numeric(15,2),
+            -5000.00::numeric(15,2), -3000.00::numeric(15,2),
+            -1200.00::numeric(15,2))$$,
+  'output VAT review reads void reversal rows from tax_detail_entries');
 
 SELECT * FROM finish();
 ROLLBACK;

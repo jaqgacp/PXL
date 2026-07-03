@@ -9,7 +9,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(9);
+SELECT plan(21);
 
 -- ── Identity ───────────────────────────────────────────────────────────────────
 INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password,
@@ -183,7 +183,102 @@ SELECT lives_ok(
        AND return_type = '2550M' AND period_year = 2026 AND period_month = 1$q$,
   'reconciled January return with matching figures can be marked final');
 
--- ── 4. Return figures that diverge from the tax ledger are blocked ─────────────
+-- ── 4-7. Final/filed VAT returns create immutable source snapshots ────────────
+SELECT results_eq(
+  $q$SELECT snapshot_status, report_type, period_start, period_end,
+            source_row_count, length(source_hash)
+     FROM report_snapshots
+     WHERE source_table = 'vat_returns'
+       AND source_id = (
+         SELECT id FROM vat_returns
+         WHERE company_id = '22222222-2222-2222-2222-222222222229'
+           AND return_type = '2550M' AND period_year = 2026 AND period_month = 1
+       )$q$,
+  $$VALUES ('final'::text, '2550M'::text, '2026-01-01'::date, '2026-01-31'::date, 2, 64)$$,
+  'marking a VAT return final creates an immutable source snapshot with a SHA-256 hash');
+
+SELECT throws_like(
+  $q$UPDATE vat_returns SET output_vat = 1199.00
+     WHERE company_id = '22222222-2222-2222-2222-222222222229'
+       AND return_type = '2550M' AND period_year = 2026 AND period_month = 1$q$,
+  '%immutable report snapshot%',
+  'snapshot-backed VAT return amount fields cannot be changed');
+
+SELECT lives_ok(
+  $q$UPDATE vat_returns
+     SET status = 'filed', filed_date = '2026-02-20', reference_no = '2550M-JAN-2026'
+     WHERE company_id = '22222222-2222-2222-2222-222222222229'
+       AND return_type = '2550M' AND period_year = 2026 AND period_month = 1$q$,
+  'final VAT return can still be marked filed with filing metadata');
+
+SELECT results_eq(
+  $q$SELECT snapshot_status, count(*)::int
+     FROM report_snapshots
+     WHERE source_table = 'vat_returns'
+       AND source_id = (
+         SELECT id FROM vat_returns
+         WHERE company_id = '22222222-2222-2222-2222-222222222229'
+           AND return_type = '2550M' AND period_year = 2026 AND period_month = 1
+       )
+     GROUP BY snapshot_status
+     ORDER BY snapshot_status$q$,
+  $$VALUES ('filed'::text, 1), ('final'::text, 1)$$,
+  'filing a VAT return creates a separate filed snapshot without changing the final snapshot');
+
+-- ── 8-14. SLSP/RELIEF exports create versioned immutable snapshots ───────────
+SELECT lives_ok(
+  $q$SELECT fn_snapshot_vat_export('22222222-2222-2222-2222-222222222229',
+        'SLSP', 2026, 1, 'sales')$q$,
+  'SLSP sales export creates an exported snapshot for a reconciled period');
+
+SELECT lives_ok(
+  $q$SELECT fn_snapshot_vat_export('22222222-2222-2222-2222-222222222229',
+        'SLSP', 2026, 1, 'purchases')$q$,
+  'SLSP purchases export creates an exported snapshot for a reconciled period');
+
+SELECT results_eq(
+  $q$SELECT report_payload->>'export_part', snapshot_status, snapshot_version,
+            source_row_count, length(source_hash)
+     FROM report_snapshots
+     WHERE source_table = 'vat_export_periods'
+       AND report_type = 'SLSP'
+       AND company_id = '22222222-2222-2222-2222-222222222229'
+     ORDER BY report_payload->>'export_part'$q$,
+  $$VALUES ('purchases'::text, 'exported'::text, 1, 1, 64),
+           ('sales'::text,     'exported'::text, 1, 1, 64)$$,
+  'SLSP export snapshots are separated by export part with one source row each');
+
+SELECT lives_ok(
+  $q$SELECT fn_snapshot_vat_export('22222222-2222-2222-2222-222222222229',
+        'RELIEF', 2026, 1, 'all')$q$,
+  'RELIEF export creates an exported snapshot for a reconciled period');
+
+SELECT results_eq(
+  $q$SELECT report_type, report_payload->>'export_part', snapshot_status,
+            snapshot_version, source_row_count, length(source_hash)
+     FROM report_snapshots
+     WHERE source_table = 'vat_export_periods'
+       AND report_type = 'RELIEF'
+       AND company_id = '22222222-2222-2222-2222-222222222229'$q$,
+  $$VALUES ('RELIEF'::text, 'all'::text, 'exported'::text, 1, 2, 64)$$,
+  'RELIEF all export snapshot captures sales and purchases detail rows');
+
+SELECT lives_ok(
+  $q$SELECT fn_snapshot_vat_export('22222222-2222-2222-2222-222222222229',
+        'RELIEF', 2026, 1, 'all')$q$,
+  're-exporting the same RELIEF period creates a new export history version');
+
+SELECT results_eq(
+  $q$SELECT snapshot_version
+     FROM report_snapshots
+     WHERE source_table = 'vat_export_periods'
+       AND report_type = 'RELIEF'
+       AND company_id = '22222222-2222-2222-2222-222222222229'
+     ORDER BY snapshot_version$q$,
+  $$VALUES (1), (2)$$,
+  'repeated RELIEF exports keep versioned history for the same period');
+
+-- ── 15. Return figures that diverge from the tax ledger are blocked ───────────
 SELECT throws_like(
   $q$INSERT INTO vat_returns (company_id, return_type, period_year, period_month,
         output_taxable_sales, output_vat, input_taxable_purchases, input_vat,
@@ -193,7 +288,7 @@ SELECT throws_like(
   '%does not match the tax ledger%',
   'final return whose output VAT diverges from the tax ledger is rejected');
 
--- ── 5. Manual JE on the VAT control account without tax detail → variance ──────
+-- ── 16. Manual JE on the VAT control account without tax detail → variance ────
 SELECT lives_ok(
   $q$SELECT fn_post_manual_je('22222222-2222-2222-2222-222222222229',
         '33333333-3333-3333-3333-333333333339', '2026-02-10',
@@ -212,7 +307,7 @@ SELECT results_eq(
   $$VALUES (0.00::numeric(15,2), 500.00::numeric(15,2), -500.00::numeric(15,2), false)$$,
   'February output VAT shows a -500.00 GL variance with no tax ledger support');
 
--- ── 6-8. Unreconciled period: draft allowed, final/filed blocked ───────────────
+-- ── 17-19. Unreconciled period: draft allowed, final/filed blocked ────────────
 SELECT lives_ok(
   $q$INSERT INTO vat_returns (company_id, return_type, period_year, period_month,
         output_taxable_sales, output_vat, input_taxable_purchases, input_vat,
@@ -234,6 +329,13 @@ SELECT throws_like(
        AND return_type = '2550M' AND period_year = 2026 AND period_month = 2$q$,
   '%does not reconcile to GL account%',
   'unreconciled period blocks marking the return filed');
+
+-- ── 20. Unreconciled period: export snapshot blocked ──────────────────────────
+SELECT throws_like(
+  $q$SELECT fn_snapshot_vat_export('22222222-2222-2222-2222-222222222229',
+        'RELIEF', 2026, 2, 'all')$q$,
+  '%does not reconcile to GL account%',
+  'unreconciled period blocks VAT export snapshot creation');
 
 SELECT * FROM finish();
 ROLLBACK;

@@ -14,7 +14,7 @@ All files listed in `AI/AI_DOCUMENTATION_RULES.md` exist under `AI/`. The AI Ope
 
 ## Current Active Task
 
-AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 32 (2026-07-03) delivered VAT ledger completeness for PXL-AUD-014/PXL-DA-008 (`20260703000002_vat_ledger_completeness.sql`): per-VAT-code output/input rows with zero-rated/exempt bases for SI/VB, cash sale output VAT + CWT writers, cash purchase input VAT writers, posted-document backfill; and fixed new Critical PXL-AUD-028 (cash sale was runtime-dead: phantom columns, zero totals from UI payloads, AR over-application, missing ATC) — `fn_save_cash_sale` rebuilt on the server-side recompute pattern, `CashSalesPage` gained the CWT ATC selector. Verified by VAT-LEDGER-COMPLETE-001 — `npm test` 223/223 across 15 files on a fresh replay. Sessions 30–31 earlier closed PXL-DA-003/PXL-AUD-004 (DEC-009 `fn_can_perform`) and PXL-DA-012 (DEC-010 approval SoD). Findings standing: 19 Retested Passed / 14 In Progress / 15 Open (48 findings); 11 Criticals remain.
+AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Sessions 34-36 (2026-07-03) continued PXL-DA-015 immutable report provenance: `20260703000004_report_snapshots_vat_returns.sql` adds the generic append-only `report_snapshots` table and VAT return final/filed snapshot triggers; `20260703000005_report_snapshots_form2307.sql` extends the same model to Form 2307 issued sent/acknowledged certificates; `20260703000006_report_snapshots_vat_exports.sql` adds SLSP/RELIEF exported snapshots with export history versions and reconciliation blocking. These slices create SHA-256 source hashes over frozen report/export payloads plus source rows, and block or version post-snapshot evidence changes as appropriate. Findings standing is now 19 Retested Passed / 15 In Progress / 14 Open (48 findings); 11 Criticals remain.
 
 ## Current Broken / Missing AI Operating Areas
 
@@ -24,29 +24,33 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 - `README.md` stack table is stale (says React 18 / Vite 8, migrations 001–015); `package.json` shows React 19, react-router-dom v7, TanStack Query, Zustand, Zod, and 61 migrations exist. The architecture summary reflects actuals; consider refreshing README separately.
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
 - Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
-- Remote is in sync through migration 20260702000009 (verified 2026-07-02). PENDING: push `20260702000010_can_perform_role_actions.sql`, `20260703000001_approval_sod_enforcement.sql`, and `20260703000002_vat_ledger_completeness.sql` to hosted Supabase — no `SUPABASE_ACCESS_TOKEN` in this workspace. Run `supabase db push --linked` from a tokened workspace, then verify with `supabase migration list --linked`.
-- PXL-AUD-014: ledger completeness landed in session 32; the remaining step is rebasing `vw_output_vat_review`/`vw_input_vat_review` and the return generators on `tax_detail_entries` (treat NULL `vat_code_id` as regular), then filed-snapshot provenance with PXL-DA-015.
+- Remote is in sync through migration 20260702000009 (verified 2026-07-02). PENDING: push `20260702000010_can_perform_role_actions.sql`, `20260703000001_approval_sod_enforcement.sql`, `20260703000002_vat_ledger_completeness.sql`, `20260703000003_vat_review_views_ledger_backed.sql`, `20260703000004_report_snapshots_vat_returns.sql`, `20260703000005_report_snapshots_form2307.sql`, and `20260703000006_report_snapshots_vat_exports.sql` to hosted Supabase — no `SUPABASE_ACCESS_TOKEN` in this workspace. Run `supabase db push --linked` from a tokened workspace, then verify with `supabase migration list --linked`.
+- PXL-DA-015: VAT return final/filed snapshots, Form 2307 issued sent/acknowledged snapshots, and SLSP/RELIEF exported snapshots are done. Remaining provenance work is extending `report_snapshots` to SAWT, QAP, books, and CAS exports, plus a reader/drilldown UI.
 
 ## Last Files Changed
 
-VAT ledger completeness session (session 32, 2026-07-03):
+Report snapshot provenance sessions (sessions 34-36, 2026-07-03):
 
-- `supabase/migrations/20260703000002_vat_ledger_completeness.sql` (new: per-VAT-code writers for SI/VB/CS/CP, fn_save_cash_sale rebuilt per PXL-AUD-028, posted-document backfill)
-- `supabase/tests/015_vat_ledger_completeness_test.sql` (new: VAT-LEDGER-COMPLETE-001, 13 assertions)
-- `src/pages/CashSalesPage.tsx` (CWT ATC selector; `cwt_atc_id` in the header payload)
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (VAT-LEDGER-COMPLETE-001 added)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-AUD-028 added Retested Passed; PXL-AUD-014 progress; standing recount; session 32 log row)
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md` (regenerated: 130 functions)
+- `supabase/migrations/20260703000004_report_snapshots_vat_returns.sql` (new: `report_snapshots`, VAT return snapshot/immutability triggers)
+- `supabase/migrations/20260703000005_report_snapshots_form2307.sql` (new: Form 2307 issued snapshot/immutability triggers)
+- `supabase/migrations/20260703000006_report_snapshots_vat_exports.sql` (new: SLSP/RELIEF export snapshot RPC)
+- `supabase/tests/008_vat_ledger_gl_reconciliation_test.sql` (VAT-RECON-001 extended to 21 assertions)
+- `supabase/tests/010_form2307_supersede_test.sql` (F2307-SUPERSEDE-001 extended to 18 assertions)
+- `src/pages/SLSPExportPage.tsx` and `src/pages/RELIEFExportPage.tsx` (export buttons snapshot before CSV download)
+- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (VAT/export snapshot assertions documented)
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-015 marked In Progress; session 34-36 log rows)
+- `docs/PXL/STATUS.md` (test count and pending migrations refreshed)
+- `docs/PXL/PXL_SCHEMA_SUMMARY.md` (regenerated: 140 functions, 18 views, 146 tables, 141 triggers)
 
 ## Last Known Errors
 
-None. `npm test` 223/223 across 15 files on a fresh local database; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
+None. Fresh `supabase db reset --local` replay passed through `20260703000006`; `npm test` passed 243/243 across 15 files; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
 
 Session 30 landed as `30e4c23` (CI 28634301034 green); session 31 as `8425d56` (CI 28634813215 green). Session 32 landed as `f88a595` (2026-07-03); CI run 28636237029 passed both jobs on a fresh migration replay, verified via `gh run view`.
 
 ## Next Recommended Step
 
-Continue AIQ-008: rebase `vw_output_vat_review`/`vw_input_vat_review` and the 2550 return generators on `tax_detail_entries` (PXL-AUD-014 final step), or PXL-DA-017 dimension propagation per DEC-011.
+Continue AIQ-008 by extending `report_snapshots` to the next compliance output, preferably SAWT, QAP, books, or CAS exports. Do not redo VAT return snapshots (`20260703000004`), Form 2307 issued snapshots (`20260703000005`), or SLSP/RELIEF export snapshots (`20260703000006`). PXL-DA-017 dimension propagation remains the next unblocked accounting architecture alternative.
 
 ## Standing Autonomy Delegation
 

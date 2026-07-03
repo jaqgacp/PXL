@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
+Generated: 2026-07-03. Migrations scanned: 69. Tests present: 15.
 
-## Functions (130)
+## Functions (140)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -49,6 +49,8 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `fn_enforce_approval_sod` | `20260703000001_approval_sod_enforcement.sql` | 1 |
 | `fn_ensure_stock_balance` | `20260630000028_inventory.sql` | 1 |
 | `fn_execute_recurring_template` | `20260630000025_accounting_module.sql` | 1 |
+| `fn_form2307_period_bounds` | `20260703000005_report_snapshots_form2307.sql` | 1 |
+| `fn_form2307_report_payload` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_generate_form_2307_issued` | `20260702000007_form2307_version_supersede.sql` | 2 |
 | `fn_generate_tax_calendar` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_generate_tax_calendar_trigger` | `20260628000005_sprint2_tax.sql` | 1 |
@@ -56,6 +58,8 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `fn_grant_creator_company_ownership` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_grant_new_user_all_companies` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_guard_atc_code_history` | `20260701000018_atc_effective_date_governance.sql` | 1 |
+| `fn_guard_form2307_snapshot_immutable` | `20260703000005_report_snapshots_form2307.sql` | 1 |
+| `fn_guard_vat_return_snapshot_immutable` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
 | `fn_mark_tax_event_filed` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_next_document_number` | `20260630000021_gap_fill.sql` | 3 |
 | `fn_post_amortization_entry` | `20260630000026_amortization_revenuerecon.sql` | 1 |
@@ -82,6 +86,7 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `fn_receive_inventory` | `20260630000028_inventory.sql` | 1 |
 | `fn_record_impairment` | `20260630000027_fixed_assets.sql` | 1 |
 | `fn_register_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
+| `fn_report_snapshot_key_uuid` | `20260703000006_report_snapshots_vat_exports.sql` | 1 |
 | `fn_require_admin_for_accounting_lifecycle` | `20260702000010_can_perform_role_actions.sql` | 3 |
 | `fn_require_customer_cwt_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |
 | `fn_require_pv_ewt_ready_status` | `20260701000013_pv_ewt_atc_validation.sql` | 1 |
@@ -118,6 +123,9 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `fn_send_supplier_debit_memo` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_set_updated_at` | `20260629000001_dashboard.sql` | 1 |
 | `fn_ship_purchase_return` | `20260630000021_gap_fill.sql` | 2 |
+| `fn_snapshot_form2307_issued` | `20260703000005_report_snapshots_form2307.sql` | 1 |
+| `fn_snapshot_vat_export` | `20260703000006_report_snapshots_vat_exports.sql` | 1 |
+| `fn_snapshot_vat_return` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
 | `fn_supersede_form_2307_issued` | `20260702000007_form2307_version_supersede.sql` | 1 |
 | `fn_sync_number_series_shape` | `20260702000001_number_series_document_code_alignment.sql` | 1 |
 | `fn_transfer_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
@@ -135,6 +143,8 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `fn_validate_vendor_bill_accounting_ready` | `20260701000008_accounting_readiness_approval.sql` | 1 |
 | `fn_validate_vendor_bill_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_vat_gl_reconciliation` | `20260702000005_gl_reversal_visibility.sql` | 2 |
+| `fn_vat_return_period_bounds` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
+| `fn_vat_return_report_payload` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
 | `fn_void_sales_invoice` | `20260702000009_tax_ledger_void_reversal.sql` | 4 |
 | `fn_void_vendor_bill` | `20260702000009_tax_ledger_void_reversal.sql` | 4 |
 | `is_any_company_admin` | `20260630000021_gap_fill.sql` | 2 |
@@ -152,8 +162,8 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `vw_deposits_in_transit` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `vw_ewt_summary_ap` | `20260702000009_tax_ledger_void_reversal.sql` | 5 |
 | `vw_general_ledger` | `20260702000005_gl_reversal_visibility.sql` | 2 |
-| `vw_input_vat_review` | `20260630000022_tax_ledger_completeness.sql` | 3 |
-| `vw_output_vat_review` | `20260701000002_vat.sql` | 1 |
+| `vw_input_vat_review` | `20260703000003_vat_review_views_ledger_backed.sql` | 4 |
+| `vw_output_vat_review` | `20260703000003_vat_review_views_ledger_backed.sql` | 2 |
 | `vw_outstanding_checks` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `vw_payment_register` | `20260630000021_gap_fill.sql` | 2 |
 | `vw_receipt_register` | `20260629000005_sprint5_views.sql` | 1 |
@@ -164,7 +174,7 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `vw_trial_balance` | `20260702000005_gl_reversal_visibility.sql` | 2 |
 | `vw_vendor_bill_register` | `20260630000021_gap_fill.sql` | 2 |
 
-## Tables (145)
+## Tables (146)
 
 | Table | Created in | Alters | Last altered in |
 | ----- | ---------- | ------ | --------------- |
@@ -277,6 +287,7 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `ref_payment_modes` | `20260629000003_sprint5_ar.sql` | 1 | `20260629000003_sprint5_ar.sql` |
 | `ref_rdo_codes` | `20260628000001_companies.sql` | 1 | `20260628000001_companies.sql` |
 | `ref_reason_codes` | `20260629000003_sprint5_ar.sql` | 1 | `20260629000003_sprint5_ar.sql` |
+| `report_snapshots` | `20260703000004_report_snapshots_vat_returns.sql` | 2 | `20260703000005_report_snapshots_form2307.sql` |
 | `revenue_recognition_entries` | `20260630000026_amortization_revenuerecon.sql` | 1 | `20260630000026_amortization_revenuerecon.sql` |
 | `revenue_recognition_schedules` | `20260630000026_amortization_revenuerecon.sql` | 1 | `20260630000026_amortization_revenuerecon.sql` |
 | `sales_invoice_lines` | `20260629000002_sprint5_sales.sql` | 1 | `20260629000002_sprint5_sales.sql` |
@@ -314,7 +325,7 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `warehouse_zones` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 
-## Triggers (137)
+## Triggers (141)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -396,6 +407,8 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `trg_f2307_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_fa_updated_at` | `20260630000027_fixed_assets.sql` |
 | `trg_fac_updated_at` | `20260630000027_fixed_assets.sql` |
+| `trg_form2307_snapshot` | `20260703000005_report_snapshots_form2307.sql` |
+| `trg_form2307_snapshot_guard` | `20260703000005_report_snapshots_form2307.sql` |
 | `trg_form_2307_tracking_updated_at` | `20260629000007_cwt_2307.sql` |
 | `trg_fund_transfers_updated_at` | `20260630000023_banking_treasury_schema.sql` |
 | `trg_generate_calendar_on_profile_change` | `20260628000005_sprint2_tax.sql` |
@@ -441,6 +454,8 @@ Generated: 2026-07-03. Migrations scanned: 65. Tests present: 15.
 | `trg_stx_updated_at` | `20260630000028_inventory.sql` |
 | `trg_supplier_atc_default` | `20260701000014_supplier_atc_defaults.sql` |
 | `trg_sync_number_series_shape` | `20260702000001_number_series_document_code_alignment.sql` |
+| `trg_vat_return_snapshot` | `20260703000004_report_snapshots_vat_returns.sql` |
+| `trg_vat_return_snapshot_guard` | `20260703000004_report_snapshots_vat_returns.sql` |
 | `trg_vat_returns_registration` | `20260701000012_vat_registration_enforcement.sql` |
 | `trg_vat_returns_status_reconciled` | `20260702000004_vat_ledger_gl_reconciliation.sql` |
 | `trg_vat_returns_updated_at` | `20260701000002_vat.sql` |

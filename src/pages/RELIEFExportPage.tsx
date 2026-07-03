@@ -15,6 +15,7 @@ export default function RELIEFExportPage() {
   const [selYear, setSelYear] = useState(now.getFullYear())
   const [tab, setTab] = useState<'sales' | 'purchases'>('sales')
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [sales, setSales] = useState<SalesRow[]>([])
   const [purchases, setPurchases] = useState<PurchRow[]>([])
 
@@ -52,7 +53,22 @@ export default function RELIEFExportPage() {
     URL.revokeObjectURL(url)
   }
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
+    if (!companyId) return
+    setExporting(true)
+    const { error } = await supabase.rpc('fn_snapshot_vat_export', {
+      p_company_id: companyId,
+      p_report_type: 'RELIEF',
+      p_year: selYear,
+      p_month: selMonth + 1,
+      p_export_part: tab,
+    })
+    setExporting(false)
+    if (error) {
+      alert(error.message)
+      return
+    }
+
     if (tab === 'sales') {
       const header = ['Date', 'Doc No.', 'Customer TIN', 'Customer Name', 'Gross Amount', 'Taxable Base', 'Output VAT']
       downloadCSV([header, ...sales.map(r => [r.invoice_date, r.system_no || '', r.customer_tin || '', r.customer_name || '', r.gross_sales.toFixed(2), r.taxable_base.toFixed(2), r.output_vat.toFixed(2)])], `relief-sales-${MONTHS[selMonth]}-${selYear}.csv`)
@@ -69,7 +85,7 @@ export default function RELIEFExportPage() {
           <h1 className="text-xl font-semibold text-gray-900">RELIEF Export</h1>
           <p className="text-sm text-gray-500 mt-0.5">Reconciliation of Listings for Enforcement — per-transaction detail</p>
         </div>
-        <button onClick={exportCSV} disabled={(tab === 'sales' ? sales : purchases).length === 0} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">↓ Export CSV</button>
+        <button onClick={exportCSV} disabled={exporting || (tab === 'sales' ? sales : purchases).length === 0} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">{exporting ? 'Exporting...' : '↓ Export CSV'}</button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-center gap-3">

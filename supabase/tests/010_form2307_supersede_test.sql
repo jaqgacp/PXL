@@ -10,7 +10,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(14);
+SELECT plan(18);
 
 -- ── Identity ───────────────────────────────────────────────────────────────────
 INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password,
@@ -165,6 +165,23 @@ WHERE company_id = '22222222-2222-2222-2222-222222222231'
   AND tax_year = 2026 AND tax_quarter = 1;
 
 SELECT fn_update_form_2307_issued_status((SELECT id FROM t_ctx WHERE key='v1'), 'sent', '2026-04-05');
+
+SELECT results_eq(
+  format($q$SELECT report_type, snapshot_status, snapshot_version, period_start,
+                 period_end, source_row_count, length(source_hash)
+          FROM report_snapshots
+          WHERE source_table = 'form_2307_issuances'
+            AND source_id = %L$q$, (SELECT id FROM t_ctx WHERE key='v1')),
+  $$VALUES ('FORM_2307_ISSUED'::text, 'sent'::text, 1, '2026-01-01'::date,
+            '2026-03-31'::date, 1, 64)$$,
+  'sent certificate creates an immutable report snapshot with source hash');
+
+SELECT throws_like(
+  format($q$UPDATE form_2307_issuances SET total_ewt = 999
+          WHERE id = %L$q$, (SELECT id FROM t_ctx WHERE key='v1')),
+  '%immutable report snapshot%',
+  'sent certificate amounts cannot be mutated after snapshot');
+
 SELECT pg_temp.mk_pv('pv2', '2026-03-05');
 
 -- Regeneration still refuses to touch the sent certificate
@@ -244,6 +261,21 @@ SELECT throws_like(
   format($q$SELECT fn_supersede_form_2307_issued(%L)$q$, (SELECT id FROM t_ctx WHERE key='v1')),
   '%Only sent or acknowledged%',
   'an already-superseded certificate cannot be superseded again');
+
+SELECT lives_ok(
+  format($q$SELECT fn_update_form_2307_issued_status(%L, 'sent', '2026-04-10')$q$,
+         (SELECT id FROM t_ctx WHERE key='v2')),
+  'replacement certificate can be sent after generated-state negative checks');
+
+SELECT results_eq(
+  format($q$SELECT report_type, snapshot_status, snapshot_version, period_start,
+                 period_end, source_row_count, length(source_hash)
+          FROM report_snapshots
+          WHERE source_table = 'form_2307_issuances'
+            AND source_id = %L$q$, (SELECT id FROM t_ctx WHERE key='v2')),
+  $$VALUES ('FORM_2307_ISSUED'::text, 'sent'::text, 2, '2026-01-01'::date,
+            '2026-03-31'::date, 1, 64)$$,
+  'sent replacement certificate creates a separate versioned snapshot');
 
 SET LOCAL ROLE authenticated;
 -- UPDATE policy USING (false) hides every row: the direct write silently

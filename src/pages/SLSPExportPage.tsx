@@ -15,6 +15,7 @@ export default function SLSPExportPage() {
   const [selYear, setSelYear] = useState(now.getFullYear())
   const [tab, setTab] = useState<'sales' | 'purchases'>('sales')
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [sales, setSales] = useState<SalesRow[]>([])
   const [purchases, setPurchases] = useState<PurchaseRow[]>([])
 
@@ -52,7 +53,22 @@ export default function SLSPExportPage() {
   const totalPurchVat = purchases.reduce((s, r) => s + r.input_vat, 0)
   const yearRange = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i)
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
+    if (!companyId) return
+    setExporting(true)
+    const { error } = await supabase.rpc('fn_snapshot_vat_export', {
+      p_company_id: companyId,
+      p_report_type: 'SLSP',
+      p_year: selYear,
+      p_month: selMonth + 1,
+      p_export_part: tab === 'sales' ? 'sales' : 'purchases',
+    })
+    setExporting(false)
+    if (error) {
+      alert(error.message)
+      return
+    }
+
     if (tab === 'sales') {
       const header = ['Customer TIN', 'Customer Name', 'Gross Sales', 'Exempt', 'Zero-Rated', 'Taxable Base', 'Output VAT']
       const csvRows = sales.map(r => [r.tin, r.name, r.gross.toFixed(2), r.exempt.toFixed(2), r.zeroRated.toFixed(2), r.taxable.toFixed(2), r.vat.toFixed(2)])
@@ -80,7 +96,7 @@ export default function SLSPExportPage() {
           <h1 className="text-xl font-semibold text-gray-900">SLSP Export</h1>
           <p className="text-sm text-gray-500 mt-0.5">Summary List of Sales and Purchases — combined BIR attachment</p>
         </div>
-        <button onClick={exportCSV} disabled={(tab === 'sales' ? sales : purchases).length === 0} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">↓ Export {tab === 'sales' ? 'SLS' : 'SLP'} CSV</button>
+        <button onClick={exportCSV} disabled={exporting || (tab === 'sales' ? sales : purchases).length === 0} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">{exporting ? 'Exporting...' : `↓ Export ${tab === 'sales' ? 'SLS' : 'SLP'} CSV`}</button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-center gap-3">
