@@ -4,8 +4,8 @@
 
 Last updated: 2026-07-03
 Build: ✅ Clean (zero TS errors)
-Migrations: see `docs/PXL/PXL_SCHEMA_SUMMARY.md` (generated) for the full chain; hosted sync status is tracked in `AI/AI_STATE.md` (verify with `supabase migration list --linked`). As of 2026-07-03 hosted is synced through `20260702000009`; `20260702000010`, `20260703000001`, `20260703000002`, `20260703000003`, `20260703000004`, `20260703000005`, and `20260703000006` are pending push (no access token in the workspace).
-Production hardening: audit findings standing and readiness gate live in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`; tests: 15 pgTAP files / 243 assertions (`npm test`).
+Migrations: see `docs/PXL/PXL_SCHEMA_SUMMARY.md` (generated) for the full chain; hosted sync status is tracked in `AI/AI_STATE.md` (verify with `supabase migration list --linked`). As of 2026-07-03 hosted is synced through `20260702000009`; `20260702000010` and `20260703000001` through `20260703000007` are pending push (no access token in the workspace).
+Production hardening: audit findings standing and readiness gate live in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`; tests: 16 pgTAP files / 257 assertions (`npm test`).
 
 ---
 

@@ -4,31 +4,32 @@ Last updated: 2026-07-03
 
 ## What Was Done
 
-Session 36 continued PXL-DA-015 report provenance. Migration `20260703000006_report_snapshots_vat_exports.sql` adds `fn_snapshot_vat_export`, which creates append-only exported snapshots for SLSP and RELIEF before CSV download. Snapshots use deterministic logical source IDs per company/report/month/export part, incrementing export versions, SHA-256 source hashes, and VAT/GL reconciliation payloads. `SLSPExportPage` and `RELIEFExportPage` now call the RPC before producing CSVs; unreconciled periods are blocked. Sessions 34-35 already delivered VAT return final/filed snapshots and Form 2307 issued sent/acknowledged snapshots.
+Session 37 first landed the previously uncommitted sessions 33-36 work as commit `d88f0df` (CI run 28645009697 green), then continued PXL-DA-015 report provenance with the SAWT/QAP slice. Migration `20260703000007_report_snapshots_wht_exports.sql` adds `vw_cwt_summary_ar` (ledger-backed SAWT source view over `cwt_receivable` tax detail, security_invoker, gross income payments), `fn_wht_gl_reconciliation` (ewt_payable/cwt_receivable tax ledger vs the EWT Payable/CWT Receivable GL control accounts, same semantics as `fn_vat_gl_reconciliation`), and `fn_snapshot_wht_export` (versioned append-only `exported` snapshots per company/report/quarter with SHA-256 source hashes and reconciliation blocking scoped to the report's own control account). `SAWTPage` switched from a browser-side `receipt_lines`-through-`sales_invoices` aggregation — which missed cash-sale CWT and understated income payments by the CWT — to `vw_cwt_summary_ar`; both `SAWTPage` and `QAPPage` snapshot before CSV download.
 
 ## What Changed
 
 - Findings standing: 19 Retested Passed / 15 In Progress / 14 Open (48 findings); 11 Criticals remain.
-- VAT returns now have immutable final/filed report snapshots with source hashes and amount immutability.
-- Form 2307 issued certificates now have immutable sent/acknowledged snapshots with versioned source hashes.
-- SLSP and RELIEF exports now have exported snapshots with source hashes, export history versions, and reconciliation blocking.
-- VAT-RECON-001 and F2307-SUPERSEDE-001 include snapshot creation, hash length, immutable amount guard, export history, and versioned snapshot assertions.
-- `supabase/tests/` now has 15 files / 243 assertions.
+- SAWT and QAP exports now have versioned exported snapshots with source hashes and WHT/GL reconciliation blocking.
+- SAWT is now ledger-backed and reports gross income payments including cash-sale CWT.
+- New scenario WHT-EXPORT-SNAP-001 (`supabase/tests/016_wht_export_snapshots_test.sql`, 14 assertions).
+- `supabase/tests/` now has 16 files / 257 assertions.
 
 ## What Remains
 
-- PXL-DA-015 remains In Progress: extend `report_snapshots` to SAWT, QAP, books, and CAS exports; add reader/drilldown UI for snapshots. Do not redo VAT return, Form 2307 issued, or SLSP/RELIEF export snapshots.
+- PXL-DA-015 remains In Progress: extend `report_snapshots` to books and CAS exports; add a snapshot reader/drilldown UI. Do not redo VAT return (`20260703000004`), Form 2307 issued (`20260703000005`), SLSP/RELIEF export (`20260703000006`), or SAWT/QAP export (`20260703000007`) snapshots.
 - PXL-DA-017 dimension propagation to JE lines per DEC-011.
 - CM/DM/VC per-classification ledger rows follow the same writer pattern when needed.
 - Summary docs AIQ-006–007 when audit work pauses.
 
 ## Known Errors / Blockers
 
-None locally: fresh replay through `20260703000006` + `npm test` 243/243, build/lint/docs-consistency green. PENDING: hosted push of migrations `20260702000010`, `20260703000001`, `20260703000002`, `20260703000003`, `20260703000004`, `20260703000005`, and `20260703000006` — no `SUPABASE_ACCESS_TOKEN` in this workspace; run `supabase db push --linked` from a tokened workspace and verify with `supabase migration list --linked`.
+None locally: fresh replay through `20260703000007` + `npm test` 257/257, build/lint/docs-consistency green. PENDING: hosted push of migrations `20260702000010` and `20260703000001` through `20260703000007` — no `SUPABASE_ACCESS_TOKEN` in this workspace; run `supabase db push --linked` from a tokened workspace and verify with `supabase migration list --linked`.
+
+Same remittance caveat as the VAT slice: legitimate 0619-E/1601EQ remittance JEs on the withholding control accounts surface as reconciliation variance until a controlled remittance flow exists.
 
 ## Exact Next Recommended Task
 
-Continue `AIQ-008` by extending `report_snapshots` to SAWT, QAP, books, or CAS exports. Reuse the session-34/36 pattern: append-only snapshot row, canonical source payload, SHA-256 source hash, no direct writes, reconciliation where relevant, and immutable/versioned evidence after snapshot. Do not redo VAT return snapshots (`20260703000004`), Form 2307 issued snapshots (`20260703000005`), or SLSP/RELIEF export snapshots (`20260703000006`). If choosing a non-tax architecture task instead, PXL-DA-017 dimension propagation is the next unblocked candidate.
+Continue `AIQ-008` by extending `report_snapshots` to books or CAS exports, or build the snapshot reader/drilldown UI. Reuse the sessions-34/36/37 pattern: append-only snapshot row, canonical source payload, SHA-256 source hash, no direct writes, reconciliation where relevant, versioned export history. If choosing a non-tax architecture task instead, PXL-DA-017 dimension propagation is the next unblocked candidate.
 
 ## Exact Next Prompt
 

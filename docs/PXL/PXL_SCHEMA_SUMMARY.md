@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-03. Migrations scanned: 69. Tests present: 15.
+Generated: 2026-07-03. Migrations scanned: 70. Tests present: 16.
 
-## Functions (140)
+## Functions (142)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -126,6 +126,7 @@ Generated: 2026-07-03. Migrations scanned: 69. Tests present: 15.
 | `fn_snapshot_form2307_issued` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_snapshot_vat_export` | `20260703000006_report_snapshots_vat_exports.sql` | 1 |
 | `fn_snapshot_vat_return` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
+| `fn_snapshot_wht_export` | `20260703000007_report_snapshots_wht_exports.sql` | 1 |
 | `fn_supersede_form_2307_issued` | `20260702000007_form2307_version_supersede.sql` | 1 |
 | `fn_sync_number_series_shape` | `20260702000001_number_series_document_code_alignment.sql` | 1 |
 | `fn_transfer_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
@@ -147,17 +148,19 @@ Generated: 2026-07-03. Migrations scanned: 69. Tests present: 15.
 | `fn_vat_return_report_payload` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
 | `fn_void_sales_invoice` | `20260702000009_tax_ledger_void_reversal.sql` | 4 |
 | `fn_void_vendor_bill` | `20260702000009_tax_ledger_void_reversal.sql` | 4 |
+| `fn_wht_gl_reconciliation` | `20260703000007_report_snapshots_wht_exports.sql` | 1 |
 | `is_any_company_admin` | `20260630000021_gap_fill.sql` | 2 |
 | `is_company_member` | `20260630000021_gap_fill.sql` | 2 |
 | `update_updated_at` | `20260628000001_companies.sql` | 1 |
 
-## Views (18)
+## Views (19)
 
 | View | Latest definition | Defs |
 | ---- | ----------------- | ---- |
 | `vw_ap_aging` | `20260630000021_gap_fill.sql` | 2 |
 | `vw_credit_memo_register` | `20260629000005_sprint5_views.sql` | 1 |
 | `vw_customer_ledger` | `20260630000021_gap_fill.sql` | 3 |
+| `vw_cwt_summary_ar` | `20260703000007_report_snapshots_wht_exports.sql` | 1 |
 | `vw_debit_memo_register` | `20260629000005_sprint5_views.sql` | 1 |
 | `vw_deposits_in_transit` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `vw_ewt_summary_ap` | `20260702000009_tax_ledger_void_reversal.sql` | 5 |

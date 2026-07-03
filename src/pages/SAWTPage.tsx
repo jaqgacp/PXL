@@ -2,12 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
-type Row = {
-  invoice_id: string
-  payment_amount: number
-  cwt_amount: number
-  sales_invoices: { customer_name_snapshot: string; customer_tin_snapshot: string | null } | null
-}
+type Row = { customer_tin: string | null; customer_name: string | null; income_payment: number; cwt_withheld: number }
 type Agg = { customer_key: string; customer_name: string; customer_tin: string; payments: number; cwt: number }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
@@ -19,6 +14,7 @@ export default function SAWTPage() {
   const [year, setYear] = useState(now.getFullYear())
   const [quarter, setQuarter] = useState(Math.ceil((now.getMonth() + 1) / 3))
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [rows, setRows] = useState<Agg[]>([])
 
   const load = useCallback(async () => {
@@ -28,18 +24,17 @@ export default function SAWTPage() {
     const startDate = `${year}-${String(months[0]).padStart(2, '0')}-01`
     const endDate = new Date(year, months[2], 0).toISOString().split('T')[0]
 
-    const { data } = await supabase.from('receipt_lines')
-      .select('invoice_id,payment_amount,cwt_amount,receipts!inner(receipt_date,company_id,status),sales_invoices!inner(customer_name_snapshot,customer_tin_snapshot)')
-      .eq('receipts.company_id', companyId).eq('receipts.status', 'posted')
-      .gte('receipts.receipt_date', startDate).lte('receipts.receipt_date', endDate)
-      .gt('cwt_amount', 0)
+    const { data } = await supabase.from('vw_cwt_summary_ar')
+      .select('customer_tin,customer_name,income_payment,cwt_withheld')
+      .eq('company_id', companyId)
+      .gte('receipt_date', startDate).lte('receipt_date', endDate)
 
     const byCustomer: Record<string, Agg> = {}
     for (const r of (data || []) as unknown as Row[]) {
-      const tin = r.sales_invoices?.customer_tin_snapshot || 'unknown'
-      if (!byCustomer[tin]) byCustomer[tin] = { customer_key: tin, customer_name: r.sales_invoices?.customer_name_snapshot || 'Unknown', customer_tin: r.sales_invoices?.customer_tin_snapshot || '', payments: 0, cwt: 0 }
-      byCustomer[tin].payments += Number(r.payment_amount)
-      byCustomer[tin].cwt += Number(r.cwt_amount)
+      const tin = r.customer_tin || 'unknown'
+      if (!byCustomer[tin]) byCustomer[tin] = { customer_key: tin, customer_name: r.customer_name || 'Unknown', customer_tin: r.customer_tin || '', payments: 0, cwt: 0 }
+      byCustomer[tin].payments += Number(r.income_payment)
+      byCustomer[tin].cwt += Number(r.cwt_withheld)
     }
     setRows(Object.values(byCustomer).sort((a, b) => a.customer_name.localeCompare(b.customer_name)))
     setLoading(false)
@@ -51,7 +46,20 @@ export default function SAWTPage() {
   const totalCwt = rows.reduce((s, r) => s + r.cwt, 0)
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i)
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
+    if (!companyId) return
+    setExporting(true)
+    const { error } = await supabase.rpc('fn_snapshot_wht_export', {
+      p_company_id: companyId,
+      p_report_type: 'SAWT',
+      p_year: year,
+      p_quarter: quarter,
+    })
+    setExporting(false)
+    if (error) {
+      alert(error.message)
+      return
+    }
     const header = ['Customer TIN', 'Customer Name', 'Income Payments', 'CWT Withheld']
     const csvRows = rows.map(r => [r.customer_tin, r.customer_name, r.payments.toFixed(2), r.cwt.toFixed(2)])
     const csv = [header, ...csvRows].map(row => row.map(c => `"${c}"`).join(',')).join('\n')
@@ -69,7 +77,7 @@ export default function SAWTPage() {
           <h1 className="text-xl font-semibold text-gray-900">SAWT — Summary Alphalist of Withholding Tax</h1>
           <p className="text-sm text-gray-500 mt-0.5">Per-customer CWT withheld on collections — attachment to quarterly/annual ITR</p>
         </div>
-        <button onClick={exportCSV} disabled={rows.length === 0} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">↓ Export CSV</button>
+        <button onClick={exportCSV} disabled={exporting || rows.length === 0} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">{exporting ? 'Exporting...' : '↓ Export CSV'}</button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-center gap-3">

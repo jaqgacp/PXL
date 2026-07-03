@@ -14,6 +14,7 @@ export default function QAPPage() {
   const [year, setYear] = useState(now.getFullYear())
   const [quarter, setQuarter] = useState(Math.ceil((now.getMonth() + 1) / 3))
   const [loading, setLoading] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [rows, setRows] = useState<Agg[]>([])
 
   const load = useCallback(async () => {
@@ -44,7 +45,20 @@ export default function QAPPage() {
   const totalWithheld = rows.reduce((s, r) => s + r.tax_withheld, 0)
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i)
 
-  const exportCSV = () => {
+  const exportCSV = async () => {
+    if (!companyId) return
+    setExporting(true)
+    const { error } = await supabase.rpc('fn_snapshot_wht_export', {
+      p_company_id: companyId,
+      p_report_type: 'QAP',
+      p_year: year,
+      p_quarter: quarter,
+    })
+    setExporting(false)
+    if (error) {
+      alert(error.message)
+      return
+    }
     const header = ['TIN', 'Registered Name', 'ATC Codes', 'Income Payments', 'Tax Withheld']
     const csvRows = rows.map(r => [r.supplier_tin, r.supplier_name, Array.from(r.atc_codes).join('; '), r.tax_base.toFixed(2), r.tax_withheld.toFixed(2)])
     const csv = [header, ...csvRows].map(row => row.map(c => `"${c}"`).join(',')).join('\n')
@@ -62,7 +76,7 @@ export default function QAPPage() {
           <h1 className="text-xl font-semibold text-gray-900">QAP — Quarterly Alphalist of Payees</h1>
           <p className="text-sm text-gray-500 mt-0.5">Per-supplier EWT summary — attachment to 1601EQ filing</p>
         </div>
-        <button onClick={exportCSV} disabled={rows.length === 0} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">↓ Export CSV</button>
+        <button onClick={exportCSV} disabled={exporting || rows.length === 0} className="border border-gray-300 text-gray-700 px-3 py-1.5 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">{exporting ? 'Exporting...' : '↓ Export CSV'}</button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 flex items-center gap-3">
