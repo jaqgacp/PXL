@@ -24,7 +24,7 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 - `README.md` stack table is stale (says React 18 / Vite 8, migrations 001–015); `package.json` shows React 19, react-router-dom v7, TanStack Query, Zustand, Zod, and 61 migrations exist. The architecture summary reflects actuals; consider refreshing README separately.
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
 - Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
-- Remote is in sync as of 2026-07-02: migrations 20260702000008 and 20260702000009 pushed and verified via `supabase migration list --linked` (session 27's earlier "008 pushed" claim was false until this sync).
+- Remote is in sync through migration 20260702000009 (verified 2026-07-02). PENDING: push `20260702000010_can_perform_role_actions.sql` to hosted Supabase — no `SUPABASE_ACCESS_TOKEN` in the session-30 workspace (`supabase migration list --linked` rejected, 2026-07-03). Run `supabase link` + `supabase db push --linked` from a workspace with the token, then verify with `supabase migration list --linked`.
 - PXL-AUD-014 prerequisites documented in session 28: the tax ledger writes no rows for zero-VAT documents of VAT companies, stores no exempt/zero-rated bases, and cash sales/purchases have no tax-detail writers — required before review views can be ledger-backed.
 
 ## Last Files Changed
@@ -41,6 +41,8 @@ can_perform enforcement session (session 30, 2026-07-03):
 ## Last Known Errors
 
 None. `npm test` 196/196 across 13 files on a fresh local database; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
+
+Session 30 landed on `main` as commit `30e4c23` (2026-07-03); CI run 28634301034 passed both jobs (`build-lint`, `db-tests` on a fresh migration replay), verified via `gh run view`.
 
 ## Next Recommended Step
 

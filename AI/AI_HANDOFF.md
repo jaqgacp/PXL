@@ -20,7 +20,7 @@ Session 30 closed PXL-DA-003 (Critical) and PXL-AUD-004 (High) — both now Rete
 
 ## Known Errors / Blockers
 
-None locally: fresh replay + `npm test` 196/196, build/lint/docs-consistency green. Check hosted sync status for migration 20260702000010 in `AI/AI_STATE.md` (push attempted at end of session 30; PENDING if no token was available).
+None locally: fresh replay + `npm test` 196/196, build/lint/docs-consistency green. Landed as `30e4c23`; CI run 28634301034 green on both jobs. PENDING: hosted push of migration 20260702000010 — no `SUPABASE_ACCESS_TOKEN` in this workspace; run `supabase db push --linked` from a tokened workspace and verify with `supabase migration list --linked`.
 
 ## Exact Next Recommended Task
 
