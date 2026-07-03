@@ -42,7 +42,7 @@ VAT ledger completeness session (session 32, 2026-07-03):
 
 None. `npm test` 223/223 across 15 files on a fresh local database; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
 
-Session 30 landed as `30e4c23` (CI 28634301034 green); session 31 as `8425d56` (CI 28634813215 green). Session 32 landing evidence is recorded here once CI completes.
+Session 30 landed as `30e4c23` (CI 28634301034 green); session 31 as `8425d56` (CI 28634813215 green). Session 32 landed as `f88a595` (2026-07-03); CI run 28636237029 passed both jobs on a fresh migration replay, verified via `gh run view`.
 
 ## Next Recommended Step
 
