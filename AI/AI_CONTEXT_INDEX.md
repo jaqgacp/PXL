@@ -178,6 +178,7 @@ Use for page layout, navigation, visual consistency, component behavior, tables,
 Read:
 
 - `docs/PXL/UI_UX_PRINCIPLES.md`
+- `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md` (authoritative target for transaction pages; UI_UX_PRINCIPLES stack notes are aspirational — selective adoption per the backlog governs)
 - `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`
 - `docs/PXL/STATUS.md`
 - The specific module document for the page being changed.
