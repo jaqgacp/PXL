@@ -24,7 +24,7 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 - `README.md` stack table is stale (says React 18 / Vite 8, migrations 001–015); `package.json` shows React 19, react-router-dom v7, TanStack Query, Zustand, Zod, and 61 migrations exist. The architecture summary reflects actuals; consider refreshing README separately.
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
 - Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
-- Remote is fully in sync through migration 20260703000009 (pushed and verified 2026-07-04 via `supabase migration list --linked`; user supplied the access token, `link` + `db push --linked --yes`). Spot-checked hosted: `report_snapshots` responds 200 and `fn_snapshot_books_export` exists (access guard fires for non-members). Note: `db push` emitted harmless pg-delta CA-cert errors (`pgdelta-target-ca.crt` ENOENT) from the drift-check feature; migrations applied anyway — verify with `migration list --linked`, not the push output.
+- Remote is fully in sync through migration 20260704000001 (pushed and verified 2026-07-04 via `supabase migration list --linked`; user supplied the access token in-session, `link` + `db push --linked --yes`). Note: `db push` emits harmless pg-delta CA-cert errors from the drift-check feature; migrations apply anyway — verify with `migration list --linked`, not the push output.
 - PXL-AUD-029 (Open, Medium): `AppShell` feature gating fails open — small query fix pending.
 - Dev note: the CSP in `index.html` restricts `connect-src` to `*.supabase.co`, so running the frontend against the local Supabase stack (`127.0.0.1:54321`) requires a CSP bypass (Playwright `bypassCSP` was used for verification). Consider a dev-mode CSP if local frontend testing becomes routine.
 
@@ -47,7 +47,7 @@ None. `npm test` 299/299 across 19 files on a fresh `supabase db reset --local` 
 
 Note: `npm test` against a non-fresh local DB can fail with `users_pkey` duplicate-key collisions from earlier seeded runs — always `supabase db reset --local` first.
 
-Session 37 landed as `9110765` (CI 28645835919 green). Session 38 landed as `0f9ab83` (CI 28648390569 green). Session 39 landed as `c575c8b` (CI 28649086159 green). Session 40 landed as `7cfa494` (2026-07-04); CI run 28699881597 completed successfully, verified via `gh run watch --exit-status`.
+Session 38 landed as `0f9ab83` (CI 28648390569 green). Session 39 landed as `c575c8b` (CI 28649086159 green). Session 40 landed as `7cfa494` (CI 28699881597 green). Session 41 landed as `cb1fc3e` (2026-07-04); CI run 28701028419 completed successfully, verified via `gh run watch --exit-status`; migration `20260704000001` pushed to hosted and verified via `supabase migration list --linked`.
 
 ## Next Recommended Step
 

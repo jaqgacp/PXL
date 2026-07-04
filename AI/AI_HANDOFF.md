@@ -32,7 +32,7 @@ Session 40 (same day) closed PXL-DA-015 with the snapshot reader UI (`/report-sn
 
 ## Known Errors / Blockers
 
-None locally: fresh replay through `20260704000001` + `npm test` 299/299 across 19 files (reset the local DB first — leftover seeds collide with test UUIDs), build/lint/docs-consistency green. Hosted: synced through `20260703000009`; push `20260704000001` after landing (`SUPABASE_ACCESS_TOKEN` + `supabase db push --linked --yes`; the CLI's pg-delta CA-cert errors are noise — verify with `supabase migration list --linked`).
+None locally: fresh replay through `20260704000001` + `npm test` 299/299 across 19 files (reset the local DB first — leftover seeds collide with test UUIDs), build/lint/docs-consistency green. Hosted is fully in sync through `20260704000001` (pushed and verified 2026-07-04 via `supabase migration list --linked`). No pending credential items.
 
 ## Exact Next Recommended Task
 
