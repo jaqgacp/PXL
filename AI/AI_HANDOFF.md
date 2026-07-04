@@ -30,7 +30,7 @@ Session 42 (2026-07-04, user-directed bounded frontend-safety session — explic
 
 ## Known Errors / Blockers
 
-None locally: fresh replay through `20260704000001` + `npm test` 299/299 across 19 files (reset the local DB first — leftover seeds collide with test UUIDs), build/lint/docs-consistency green. Hosted is fully in sync through `20260704000001` (pushed and verified 2026-07-04 via `supabase migration list --linked`). No pending credential items.
+None locally: fresh replay through `20260704000001` + `npm test` 299/299 across 19 files (reset the local DB first — leftover seeds collide with test UUIDs), build/lint/docs-consistency green. Hosted is fully in sync through `20260704000001` (pushed and verified 2026-07-04 via `supabase migration list --linked`). No pending credential items. Session 42 landed as `bb6d96c`, CI run 28706337718 green (verified via `gh run watch --exit-status`).
 
 ## Exact Next Recommended Task
 
