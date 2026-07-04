@@ -70,6 +70,25 @@ Status values: `Open` (not started), `In Progress` (scoped fixes landed, work re
 | PXL-DA-018 | Medium | Open | Server-side heavy reports; pagination/materialization. |
 | PXL-DA-019 | Critical | Open | CAS enforcement end-to-end (numbering, void register, books, DAT, provenance). |
 | PXL-DA-020 | High | In Progress | Docs-consistency CI gate live; matrix row sync remains session discipline. |
+| PXL-AUD-031 | Critical | Open | Add explicit VAT-exclusive CWT base (+ variance path) to receipt lines; stop deriving base as payment + CWT. |
+| PXL-AUD-032 | Critical | Open | Link check-voucher EWT to a supplier and validate CV EWT like PV lines; unblock quarterly 2307 generation. |
+| PXL-AUD-033 | Critical | Open | Rewrite `fn_cancel_check_voucher` tax reversal to the counter-row convention (reverses link, reversal date). |
+| PXL-AUD-034 | Critical | Open | Server-compute 1601EQ figures and gate final/filed on WHT ledger/GL reconciliation (mirror `vat_returns`). |
+| PXL-AUD-035 | High | Open | Validate ATC effective window as of the document date, not CURRENT_DATE. |
+| PXL-AUD-036 | High | Open | Make ATC rate changes representable under the same official code (versioned uniqueness). |
+| PXL-AUD-037 | High | Open | Decide and implement withholding basis policy (payment vs accrual at VB) per RR 12-2001. |
+| PXL-AUD-038 | High | Open | Reconcile PV/OR header cash totals to line sums server-side before posting. |
+| PXL-AUD-039 | High | Open | Include applied CM/VC applications in receipt/PV over-apply guards. |
+| PXL-AUD-040 | High | Open | Add per-month-of-quarter breakdown to Form 2307 issuance data. |
+| PXL-AUD-041 | High | Open | Build a controlled EWT remittance / CWT application flow so control-account JEs stop blocking SAWT/QAP exports. |
+| PXL-AUD-042 | High | Open | Make the company withholding profile gate EWT surfaces; implement or remove TWA auto-EWT. |
+| PXL-AUD-043 | High | Open | Support EWT on cash purchases and withholding on advances/down-payments. |
+| PXL-AUD-044 | Medium | Open | Consolidate duplicate customer withholding flags and retire unused `ewt_codes`/`fwt_codes`/`default_ewt_code_id` masters. |
+| PXL-AUD-045 | Medium | Open | Default UI EWT/CWT bases to the VAT-exclusive amount; flow SI expected CWT to the receipt. |
+| PXL-AUD-046 | Medium | Open | Unify `receipts.total_amount` semantics between standard ORs and cash-sale ORs; fix cash-sale bounce JE totals. |
+| PXL-AUD-047 | Medium | Open | Control the 2307-received claim lifecycle (validation, over-claim guard, staleness on reversal). |
+| PXL-AUD-048 | Medium | Open | Align EWT save tolerances (0.02) with the WHT/GL reconciliation tolerance (0.01). |
+| PXL-AUD-049 | Medium | Open | Add GL Impact preview/drilldown for CV, cash purchase, and cash sale withholding postings. |
 
 ## Production Readiness Gate
 
@@ -82,7 +101,7 @@ PXL is production-ready when all of the following hold. Re-check this gate at th
 5. Hosted Supabase is in sync (`supabase migration list --linked` shows no pending migrations).
 6. Production Readiness Scores below have been re-assessed after the last Critical fix.
 
-Standing (2026-07-04, session 46): 27 Retested Passed / 13 In Progress / 10 Open (50 findings). Gate NOT met — 8 Critical findings are still In Progress or Open (AUD-002, AUD-006, DA-001, DA-002, DA-004, DA-008, DA-009, DA-019).
+Standing (2026-07-04, session 47 — EWT end-to-end audit): 27 Retested Passed / 13 In Progress / 29 Open (69 findings). Gate NOT met — 12 Critical findings are still In Progress or Open (AUD-002, AUD-006, AUD-031, AUD-032, AUD-033, AUD-034, DA-001, DA-002, DA-004, DA-008, DA-009, DA-019). Session 47 added PXL-AUD-031..049 from the definitive EWT audit (4 Critical / 9 High / 6 Medium); recommended EWT fix order: AUD-031 → AUD-032+033 → AUD-034 → AUD-035+036 → AUD-041 → AUD-037 (policy) → AUD-038+048 → AUD-039 → AUD-042/043 → AUD-040 → AUD-044..047/049.
 
 | Finding ID | Area | Severity | Status | Issue | Expected Behavior | Actual Behavior | Root Cause | Files Affected | Test Performed | Fix Plan | Fix Session Size |
 | ---------- | ---- | -------- | ------ | ----- | ----------------- | --------------- | ---------- | -------------- | -------------- | -------- | ---------------- |
@@ -294,6 +313,394 @@ Standing (2026-07-04, session 46): 27 Retested Passed / 13 In Progress / 10 Open
 | Tax Risk | Input VAT adjustment support tied to vendor credit application history can become incomplete or inconsistent. |
 | Security Risk | Ordinary company members with delete access can remove application rows directly instead of using an authorized accounting reversal workflow. |
 | Recommended Fix Plan | Scoped reversal controls are in place. Remaining work is seeded database validation for direct-delete denial, balance/status restoration, AP aging exclusion of reversed applications, and supplier-ledger reconciliation. |
+
+## EWT End-to-End Audit (2026-07-04, Session 47 — audit only)
+
+Definitive end-to-end audit of the Expanded Withholding Tax implementation: ATC/EWT master data and governance, supplier/customer withholding profiles, company withholding settings, PV/OR/CV/cash-sale/cash-purchase withholding flows, GL impact, tax ledger, void/cancel/bounce reversal, 2307 issued/received, SAWT/QAP/1601EQ, DAT/books exports, UX, and pgTAP coverage. No fixes were implemented.
+
+**What is genuinely strong** (verified in code and executed tests): PV EWT with explicit taxable base, income nature, and controlled variance reasons (PV-EWT-PARTIAL-001); proportional EWT on partial payments; multiple ATCs/EWT lines per document; ATC immutability after use with deprecation metadata (PXL-DA-010); the SI/VB/PV/OR void/cancel/bounce counter-row convention (TAX-LEDGER-VOID-001); server-side 2307 generation/supersede/snapshots (F2307-ISSUED-001/SUPERSEDE-001); ledger-backed SAWT/QAP exports with WHT/GL reconciliation and immutable snapshots (WHT-EXPORT-SNAP-001); EWT-payable/CWT-receivable GL account configuration checks at posting; and tax-detail date semantics (PXL-AUD-025).
+
+**Overall EWT maturity: ~55%.** The AP-side PV pipeline (withhold → GL → ledger → QAP/2307) is ~75% production-shaped; the AR-side CWT base is computed on a statutorily wrong basis, the check-voucher EWT path is broken end-to-end, the 1601EQ return has no integrity gate, and accrual-basis withholding does not exist. Findings PXL-AUD-031 through PXL-AUD-049 follow.
+
+### New Finding Detail - PXL-AUD-031
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | Critical |
+| Module | Sales / AR — Official Receipts, Cash Sales, SAWT |
+| Scenario | A VAT customer pays an 11,200 invoice (10,000 net + 1,200 VAT) and correctly withholds 2% CWT on the VAT-exclusive base per RR 2-98: CWT = 200, cash = 11,000. |
+| Expected Behavior | The OR records payment 11,000 + CWT 200, posts DR cash 11,000 / DR CWT receivable 200 / CR AR 11,200, and the tax ledger carries income payment 10,000 (net of VAT) for SAWT. |
+| Current Behavior | `fn_validate_receipt_line_cwt` derives the CWT base as `payment_amount + cwt_amount` (VAT-INCLUSIVE) and hard-rejects any CWT outside ±0.02 of `rate × (payment + cwt)` with no explicit-base column and no variance-reason escape (unlike PV lines). The statutorily correct 200 is rejected (expected 224 on base 11,200); the only accepted amounts assume withholding on gross-of-VAT. `fn_post_receipt` and `fn_save_cash_sale` then write `tax_base = payment + cwt` (gross) into `tax_detail_entries`, so SAWT/2307-received income payments are overstated by the VAT. |
+| Root Cause | Receipt CWT was modeled without an explicit taxable-base column; the PV-side fix (`ewt_tax_base`, `20260701000016`) was never mirrored to `receipt_lines`. |
+| Files Affected | `supabase/migrations/20260701000017_customer_cwt_defaults.sql`; `supabase/migrations/20260701000018_atc_effective_date_governance.sql` (`fn_validate_receipt_line_cwt`); `supabase/migrations/20260703000002_vat_ledger_completeness.sql` (`fn_save_cash_sale`); `src/pages/ReceiptsPage.tsx` |
+| Accounting Risk | GL amounts themselves stay balanced, but CWT receivable is recorded at amounts that only reconcile to customer 2307s if customers also withhold on gross — mismatched certificates guarantee reconciliation differences and unclaimable CWT. |
+| Tax Risk | CWT receivable claimed as ITR tax credit will not match customer-issued 2307s computed on the net base; SAWT income payments include VAT, misstating gross income payments to the BIR. |
+| Compliance Risk | SAWT/2307-received evidence diverges from certificates; BIR cross-matching (SAWT vs payor QAP) flags every VAT sale. |
+| Business Risk | Accountants cannot record the correct statutory CWT at all — the system blocks the legally right entry; users will be trained into over-withholding assumptions. |
+| Suggested Fix | Add `cwt_tax_base` (and optional variance reason) to `receipt_lines`; validate against the explicit base with the PV tolerance/variance mechanics; default the base to the invoice's VAT-exclusive proportion of the amount applied; write that base to `tax_detail_entries`; extend `fn_save_cash_sale` (`cwt_tax_base = total_taxable_amount` proportion). Backfill is not needed (historical rows keep their stated base) but SAWT re-export should be re-verified. |
+| Dependencies | None hard; coordinate with PXL-AUD-045 (UI defaults) and PXL-DA-009. |
+| Estimated Effort | 1 migration + 1 page + 1 pgTAP scenario (medium session). |
+
+### New Finding Detail - PXL-AUD-032
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | Critical |
+| Module | Banking & Treasury — Check Vouchers; Compliance — Form 2307 / QAP |
+| Scenario | A company pays rent by check voucher, withholding 5% EWT, then generates the quarter's Form 2307 batch. |
+| Expected Behavior | CV EWT is validated like PV EWT (current ATC, rate-on-base, explicit base), carries the supplier, feeds `vw_ewt_summary_ap`, and the quarterly 2307 batch includes it. |
+| Current Behavior | `fn_post_check_voucher` writes the `ewt_payable` tax detail row with `counterparty_id = NULL` (check vouchers store a free-text payee + TIN, no supplier FK), `tax_base = gross voucher amount` (no explicit base), and a `ewt_rate` snapshot taken by the UI. There is no rate/base/effective-date validation anywhere on the CV path (`trg_pvl_ewt_validation` applies only to `payment_voucher_lines`); `total_ewt_amount` is free-entry. Because `fn_generate_form_2307_issued` raises when any source row has `supplier_id IS NULL`, a single CV EWT row **blocks generation of the entire quarter's 2307 batch** for all suppliers. |
+| Root Cause | The CV module predates the PV EWT hardening (PXL-AUD-007/PXL-DA-010) and was never brought under it; 2307 generation assumes every EWT row is supplier-linked. |
+| Files Affected | `supabase/migrations/20260630000024_banking_treasury_functions.sql` (`fn_post_check_voucher`); `supabase/migrations/20260702000007_form2307_version_supersede.sql` (`fn_generate_form_2307_issued`); `src/pages/CheckVouchersPage.tsx` |
+| Accounting Risk | Unvalidated EWT amounts credit EWT payable at arbitrary values; base recorded as gross misstates QAP tax bases. |
+| Tax Risk | CV EWT can be withheld at wrong rates, against expired/deprecated ATCs, with no variance evidence. |
+| Compliance Risk | 2307 batch generation aborts for the whole quarter; suppliers paid by check get no certificate; QAP includes rows with blank payee identity that fail BIR alphalist validation. |
+| Business Risk | Companies that pay suppliers primarily by check (the PH norm) cannot run the certificate process at all. |
+| Suggested Fix | Add `supplier_id` to `check_vouchers` (or require selecting a supplier when EWT > 0); reuse `fn_validate_payment_voucher_line_ewt` (with explicit `ewt_tax_base`) on CV save/post; write `counterparty_id`; make 2307 generation skip-with-warning (not abort) on unlinked rows. |
+| Dependencies | PXL-AUD-033 (same module); PXL-AUD-035. |
+| Estimated Effort | 1 migration + 1 page + pgTAP (medium session). |
+
+### New Finding Detail - PXL-AUD-033
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | Critical |
+| Module | Banking & Treasury — Check Voucher Cancel; Tax Ledger |
+| Scenario | A posted check voucher with EWT is cancelled, then the quarter's QAP/2307/1601EQ figures are prepared. |
+| Expected Behavior | Per the PXL-AUD-027 convention, cancel inserts a negating counter-row with `reverses_tax_detail_id` pointing at the original, dated on the cancellation date, so `vw_ewt_summary_ap` drops both rows and each period retains its own activity. |
+| Current Behavior | `fn_cancel_check_voucher` inserts a bare negative row (`is_reversal = true`) with **no `reverses_tax_detail_id`** and `document_date = the original voucher_date` (not the cancel date). `vw_ewt_summary_ap` filters `is_reversal = false AND NOT EXISTS (reverses link)`, so the cancelled CV's ORIGINAL row still appears in QAP detail, 2307 sources, EWT summary, and 1601EQ prefill — a phantom certificate line — while `fn_wht_gl_reconciliation` (which sums all rows) still passes, so the snapshot gate does not catch it. Cross-period cancels also retroactively change the original period's ledger sum. |
+| Root Cause | `20260702000009_tax_ledger_void_reversal.sql` fixed SI/VB/PV/OR but never touched the CV path, which had its own older inline reversal. |
+| Files Affected | `supabase/migrations/20260630000024_banking_treasury_functions.sql` (`fn_cancel_check_voucher`); `supabase/migrations/20260702000009_tax_ledger_void_reversal.sql` (convention + view) |
+| Accounting Risk | GL nets correctly (JE reversal is fine); the tax subledger presentation diverges from the GL-reconciled totals. |
+| Tax Risk | Cancelled withholding still reported as withheld per payee. |
+| Compliance Risk | QAP/2307 overstate per-supplier withholding versus what is actually remitted; alphalist-to-return cross-check fails at the payee level while passing in total. |
+| Business Risk | Suppliers receive certificates for cancelled payments; BIR mismatch letters. |
+| Suggested Fix | Replace the inline insert with `PERFORM fn_reverse_tax_detail_entries('CV', id, CURRENT_DATE, v_fp_id)`; backfill legacy CV counter-rows with the reverses link (match on source_doc_id + negative amounts). Extend test 012 with a CV leg. |
+| Dependencies | PXL-AUD-032. |
+| Estimated Effort | Small migration + backfill + pgTAP (small session). |
+
+### New Finding Detail - PXL-AUD-034
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | Critical |
+| Module | Compliance — 1601EQ Return, EWT Working Papers |
+| Scenario | The accountant prepares the quarterly 1601EQ, edits the prefilled figures, and marks the return filed. |
+| Expected Behavior | Like `vat_returns` (VAT-RECON-001), the return's figures are computed server-side from the tax ledger and the status cannot advance to final/filed while they diverge from the ledger or the ledger does not reconcile to the EWT payable GL account. |
+| Current Behavior | `ewt_returns` rows are written by direct PostgREST insert/update from `EWT1601EQReturnPage`; `total_tax_base`/`total_ewt_withheld` are prefilled from `vw_ewt_summary_ap` but remain free-entry inputs; `remitted_prior` and `still_due` are client arithmetic; there is **no reconciliation trigger** equivalent to `trg_vat_returns_status_reconciled`. The PXL-DA-011 guard freezes the row after it leaves draft — it freezes whatever numbers the user typed. The EWT working papers (`compliance_ewt_working_papers_*`, 1601EQ working papers) are free-form amount lists with no tie to the ledger. |
+| Root Cause | The VAT-return integrity gate (session 23) was never mirrored to the withholding returns. |
+| Files Affected | `supabase/migrations/20260701000003_withholding_tax.sql`; `src/pages/EWT1601EQReturnPage.tsx`; `src/pages/EWT1601EQWorkingPapersPage.tsx` |
+| Accounting Risk | Filed-return evidence can contradict the GL and tax ledger with no system objection. |
+| Tax Risk | Under- or over-remittance of EWT versus what was actually withheld; `still_due` is whatever the user typed. |
+| Compliance Risk | 1601EQ, QAP, and 2307 can each tell a different story for the same quarter. |
+| Business Risk | Penalties/surcharges on under-remittance discovered at BIR audit. |
+| Suggested Fix | Add `fn_compute_ewt_return(company, year, quarter)` (server-side from the tax ledger) and a status trigger blocking final/filed unless figures match the ledger within 0.01 AND `fn_wht_gl_reconciliation` passes for the quarter; derive `remitted_prior` from the controlled remittance flow (PXL-AUD-041). |
+| Dependencies | PXL-AUD-041 (remittance flow feeds `remitted_prior`). |
+| Estimated Effort | 1 migration + page rework + pgTAP (medium session). |
+
+### New Finding Detail - PXL-AUD-035
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | High |
+| Module | Tax Master Data — ATC governance; PV/OR validation |
+| Scenario | On July 5 the accountant posts a backdated PV dated June 28 (open period) using an ATC whose `effective_to` was June 30, or an ATC that only became effective July 1. |
+| Expected Behavior | ATC validity (active, non-deprecated, effective window) is evaluated **as of the document date**, so historical documents reproduce historical validity (audit checklist Q17). |
+| Current Behavior | `fn_validate_payment_voucher_line_ewt` and `fn_validate_receipt_line_cwt` hardcode `effective_from <= CURRENT_DATE AND effective_to >= CURRENT_DATE`. The June-valid ATC is rejected for the backdated June PV; a July-only ATC is accepted on a June-dated document. `fn_atc_code_is_current` already accepts `p_as_of_date` but the transaction validators do not pass the document date. Supplier/customer default-ATC triggers also validate against CURRENT_DATE (acceptable for master data, wrong for documents). |
+| Root Cause | The governance layer (PXL-DA-010) added as-of capability, but the callers pin it to today. |
+| Files Affected | `supabase/migrations/20260701000018_atc_effective_date_governance.sql`; `supabase/migrations/20260701000016_pv_ewt_explicit_basis.sql` (trigger passes no date) |
+| Accounting Risk | None direct. |
+| Tax Risk | Documents can carry ATCs that were not legally in force on the transaction date; legitimate backdated entries in open periods are blocked. |
+| Compliance Risk | QAP/2307 rows can cite ATC/rate combinations invalid for the covered period. |
+| Business Risk | Month-end catch-up encoding fails intermittently depending on the calendar date of encoding. |
+| Suggested Fix | Thread the document date (PV `voucher_date`, OR `receipt_date`, CV `voucher_date`) through the validators and triggers; validate the effective window as of that date. |
+| Dependencies | None. |
+| Estimated Effort | Small migration + pgTAP additions to test 006 (small session). |
+
+### New Finding Detail - PXL-AUD-036
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | High |
+| Module | Tax Master Data — ATC rate versioning |
+| Scenario | The BIR revises an ATC rate (e.g., WI157 1% → 2%). The admin deprecates the old row and creates the successor, as the guard's own error message instructs. |
+| Expected Behavior | A successor ATC row with the SAME official code and the new rate, effective from the change date; historical documents keep the old rate, new documents use the new one; QAP/2307/SAWT keep reporting the official BIR code. |
+| Current Behavior | `atc_codes.code` is globally UNIQUE (`atc_codes_code_key`) and `trg_atc_code_history_guard` makes code/category/rate immutable once used. A successor row therefore **cannot reuse the official code** — the only options are mangling the code text (which corrupts every alphalist/certificate that reports it) or never changing the rate. `supersedes_atc_code_id` exists but nothing resolves "current version of code X" anywhere. There is also no seeded UI/flow for deprecate-and-succeed. |
+| Root Cause | Single-row-per-code design; versioning bolted on via immutability without a version key. |
+| Files Affected | `supabase/migrations/20260628000003_sprint2.sql` (unique key); `supabase/migrations/20260701000018_atc_effective_date_governance.sql` |
+| Accounting Risk | None direct. |
+| Tax Risk | The first real BIR rate change is unimplementable without schema surgery — the exact scenario the "low maintenance" principle (P11) promises to handle without a developer. |
+| Compliance Risk | Alphalists must carry official ATC codes; mangled successor codes fail DAT validation. |
+| Business Risk | Emergency migration under filing deadline pressure when a rate change lands. |
+| Suggested Fix | Replace the unique key with `UNIQUE (code, effective_from)` (or a partial unique index on current rows); resolve ATC pickers/validators to the version effective on the document date (combines with PXL-AUD-035); keep per-row immutability after use. |
+| Dependencies | PXL-AUD-035. |
+| Estimated Effort | 1 migration + picker updates (medium session). |
+
+### New Finding Detail - PXL-AUD-037
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | High |
+| Module | Purchasing — Vendor Bill / withholding basis policy |
+| Scenario | An accrual-basis company records December rent as a vendor bill on Dec 29 and pays it Jan 20. |
+| Expected Behavior | Under RR 2-98 as amended (RR 12-2001), the obligation to withhold arises at the earlier of payment or when the expense becomes payable/is accrued. The system should support (per company or per document) recognizing EWT payable at VB posting, and the January 1601EQ/QAP timing should follow the December accrual. At minimum the basis should be a configurable, documented policy (audit checklist Q2/Q3). |
+| Current Behavior | EWT exists ONLY at payment (PV/CV). `vendor_bills.ewt_amount_expected` is informational, posts nothing, and is validated against nothing. There is no configuration anywhere for withholding basis; year-end accruals silently defer withholding to the payment quarter. |
+| Root Cause | Payment-basis-only design; no DEC entry records this as a deliberate policy. |
+| Files Affected | `supabase/migrations/20260629000017_purchasing.sql`; PV/VB posting RPCs |
+| Accounting Risk | EWT payable is understated at period end for accrued expenses. |
+| Tax Risk | Late withholding/remittance versus the accrual trigger — penalties and disallowance exposure (unwithheld expenses can be disallowed as deductions under Sec. 34(K), NIRC). |
+| Compliance Risk | 1601EQ quarters misstate when withholding legally arose. |
+| Business Risk | Deduction disallowance at BIR audit is often the single largest EWT-related assessment item. |
+| Suggested Fix | Record a DEC deciding the supported basis. Minimum: keep payment basis but add an explicit year-end accrual-withholding workflow (post EWT payable from selected accrued VBs, then PVs settle net of already-withheld EWT). Full: per-company basis flag driving EWT recognition at VB post. |
+| Dependencies | Business-policy decision (DEC-008 delegation applies); PXL-DA-004 posting primitives would help. |
+| Estimated Effort | Large session (policy + schema + RPC + tests). |
+
+### New Finding Detail - PXL-AUD-038
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | High |
+| Module | Purchasing / Sales — PV and OR posting integrity |
+| Scenario | A buggy or crafted client calls `fn_save_payment_voucher` with header `total_amount = 10,000` but lines summing to 8,000 (or the receipt equivalent), then posts. |
+| Expected Behavior | Posting rejects any header/line divergence: header cash + EWT/CWT totals must equal line sums before a JE is written. |
+| Current Behavior | `fn_validate_payment_voucher_ewt_ready` / `fn_validate_receipt_cwt_ready` reconcile ONLY the EWT/CWT totals (±0.02). The cash `total_amount` is accepted from the client header and never compared to `SUM(line payment_amount)`. The JE debits/credits use HEADER totals while bill/invoice application tracking, aging, and the tax ledger use LINE amounts — so GL cash/AP/AR can diverge from the subledger by any amount while every existing test passes. The UI happens to compute headers from lines, so this is a server-integrity gap rather than a UI bug (defense-in-depth violation of P10/P25). |
+| Root Cause | Header totals treated as authoritative for the JE, line totals for application, with only the tax slice reconciled. |
+| Files Affected | `supabase/migrations/20260701000016_pv_ewt_explicit_basis.sql` (`fn_save/post_payment_voucher`); `supabase/migrations/20260701000017_customer_cwt_defaults.sql` (`fn_save/post_receipt`) |
+| Accounting Risk | GL-to-subledger divergence in AP/AR/cash with no detecting control until aging-to-GL reconciliation is run manually. |
+| Tax Risk | EWT totals are protected, but the net-cash context they sit in is not. |
+| Compliance Risk | Books cash disbursements/receipts (header-sourced) can misstate against the GL. |
+| Business Risk | Silent cash misstatement. |
+| Suggested Fix | In both post RPCs (or ready-validators): require `ABS(header.total_amount − SUM(lines.payment_amount)) <= 0.02` (or simply recompute header totals from lines server-side and ignore client values, the stronger fix). |
+| Dependencies | None. |
+| Estimated Effort | Small migration + negative pgTAP tests (small session). |
+
+### New Finding Detail - PXL-AUD-039
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | High |
+| Module | Sales / Purchasing — over-application guards vs credit documents |
+| Scenario | An 11,200 SI has a 2,000 credit memo applied (balance 9,200). A receipt then applies 11,200. Mirror case: vendor bill with vendor credit applied, then a PV pays the full original amount. |
+| Expected Behavior | The over-apply guard uses the same balance formula as AR/AP aging: invoice/bill total − payments − applied CM/VC. The 11,200 receipt is rejected. |
+| Current Behavior | `fn_save_receipt` computes outstanding as `si.total_amount − SUM(receipt lines)` — applied credit memos are ignored; `fn_save_payment_voucher` computes `vb.total_amount − SUM(pv lines)` — `vendor_credit_applications` are ignored. `fn_ar_aging_asof`/`fn_ap_aging_asof` DO subtract them, so the guard permits payments that drive aging negative. The receipts UI subtracts CMs client-side, so the normal path looks right, but the server accepts over-application (and computes CWT/EWT on the inflated amount). |
+| Root Cause | Guards written before the CM/VC application features and never updated. |
+| Files Affected | `supabase/migrations/20260701000017_customer_cwt_defaults.sql`; `supabase/migrations/20260701000016_pv_ewt_explicit_basis.sql`; `supabase/migrations/20260702000003_ar_ap_aging_asof_rpcs.sql` (reference formula) |
+| Accounting Risk | Negative AR/AP residuals; duplicate settlement of the credited portion. |
+| Tax Risk | EWT/CWT withheld on amounts exceeding the true payable/collectible. |
+| Compliance Risk | QAP/SAWT bases inflated for the affected payees. |
+| Business Risk | Overpayment of suppliers; over-collection disputes with customers. |
+| Suggested Fix | Reuse the aging formula (subtract applied CMs by status/date, non-reversed VC applications) inside both save-guards; add negative pgTAP cases. |
+| Dependencies | None. |
+| Estimated Effort | Small migration + tests (small session). |
+
+### New Finding Detail - PXL-AUD-040
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | High |
+| Module | Compliance — Form 2307 certificate content |
+| Scenario | A supplier is paid in January, February, and March; the Q1 certificate is printed for the supplier's ITR support. |
+| Expected Behavior | BIR Form 2307 reports income payments **per month of the quarter** (columns for the 1st, 2nd, and 3rd month) per ATC. The data model must retain the monthly split. |
+| Current Behavior | `form_2307_issuance_lines` stores one row per ATC with quarter-total `tax_base`/`tax_withheld`; the generation RPC groups the whole quarter. The monthly columns of the official form cannot be populated from the issuance data (the info still exists in `tax_detail_entries`, but the certificate/snapshot payloads do not carry it). `Form2307IssuedPage` renders quarter totals only. |
+| Root Cause | Certificate modeled as quarter summary rather than the official form layout. |
+| Files Affected | `supabase/migrations/20260630000022_tax_ledger_completeness.sql` (lines table); `supabase/migrations/20260702000007_form2307_version_supersede.sql`; `supabase/migrations/20260703000005_report_snapshots_form2307.sql`; `src/pages/Form2307IssuedPage.tsx` |
+| Accounting Risk | None. |
+| Tax Risk | Certificates issued to suppliers are not faithful reproductions of the prescribed form; suppliers' auditors reject them as ITR support. |
+| Compliance Risk | Non-compliant certificate format; QAP month mapping (for 0619-E tie-out) also unavailable. |
+| Business Risk | Suppliers demand corrected certificates; re-issuance churn every quarter. |
+| Suggested Fix | Add month-1/2/3 base+withheld columns (or a month dimension) to issuance lines; populate from `tax_detail_entries.document_date` months during generation; include in snapshot payloads and the printable certificate. |
+| Dependencies | PXL-AUD-032 (CV rows must be supplier-linked first to appear at all). |
+| Estimated Effort | 1 migration + generation update + page (medium session). |
+
+### New Finding Detail - PXL-AUD-041
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | High |
+| Module | Compliance — EWT remittance / CWT application; SAWT/QAP export gate |
+| Scenario | January EWT is remitted to the BIR on Feb 10 (0619-E) via a manual JE debiting EWT payable. In April the accountant exports the Q1 QAP. |
+| Expected Behavior | Remittances are a controlled flow the reconciliation understands, so withheld-vs-remitted is tracked and quarter exports still reconcile. |
+| Current Behavior | `fn_wht_gl_reconciliation` compares the quarter's tax-ledger sum to the NET GL movement on the control account for the same window. The Feb 10 remittance debit (inside Q1) makes GL ≠ ledger, and `fn_snapshot_wht_export` then **hard-blocks the Q1 QAP export** — the migration's own comment acknowledges this ("legitimate remittance JEs ... will surface as variance until a controlled remittance flow exists"). The same applies to SAWT once CWT receivable is credited when applied against income tax due. `ewt_returns.remitted_prior` is free-entry and disconnected from any remittance record. For any real filer remitting monthly, every quarter's QAP export deadlocks. |
+| Root Cause | Reconciliation reads gross GL movement; no remittance document type exists to classify control-account debits. |
+| Files Affected | `supabase/migrations/20260703000007_report_snapshots_wht_exports.sql`; manual JE flow |
+| Accounting Risk | To un-block exports, users will be tempted to post remittances OUTSIDE the control account, corrupting the EWT payable balance. |
+| Tax Risk | Withheld-vs-remitted tracking is manual; over/under-remittance invisible. |
+| Compliance Risk | QAP/SAWT snapshots (the BIR evidence trail) cannot be produced for normal operating quarters. |
+| Business Risk | Guaranteed operational failure the first quarter with a mid-quarter remittance. |
+| Suggested Fix | Add a controlled remittance document (per form 0619-E/1601EQ: period covered, amount, JE) and, for SAWT, a CWT-application document; teach `fn_wht_gl_reconciliation` to exclude (or separately reconcile) remittance/application JEs identified by source type. Feed `ewt_returns.remitted_prior` from remittance records. |
+| Dependencies | PXL-AUD-034 (return gate uses the same flow). |
+| Estimated Effort | Large session (new document type + RPC + reconciliation change + tests). |
+
+### New Finding Detail - PXL-AUD-042
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | High |
+| Module | Setup — Company withholding profile |
+| Scenario | A company that is NOT a withholding agent (not required to withhold) records a PV; a Top Withholding Agent (TWA) company with `twa_auto_ewt_enabled = true` buys goods from a regular supplier. |
+| Expected Behavior | Per DEC-005 (tax profile drives compliance scope), the compliance profile gates withholding surfaces: non-EWT-registered companies don't get EWT fields/dashboards/returns; TWA companies with auto-EWT get the 1%/2% goods/services EWT proposed automatically on qualifying supplier payments. |
+| Current Behavior | `compliance_profiles.ewt_registered`, `is_twa`, `twa_effective_date`, `twa_auto_ewt_enabled`, `files_0619e`, `qap_required`, `requires_1604e` are captured in setup and used ONLY by the tax-calendar generator and dashboards. No transaction, validation, RPC, or UI gate reads them: every company gets EWT fields on PV/OR/CV regardless, and TWA auto-EWT does nothing. Compare VAT, where non-VAT registration actively blocks VAT-bearing codes (PXL-AUD-006). |
+| Root Cause | Profile built for the calendar; enforcement never wired. |
+| Files Affected | `supabase/migrations/20260628000005_sprint2_tax.sql`; PV/OR/CV pages; withholding validators |
+| Accounting Risk | Companies not registered as withholding agents can accrue EWT payable they cannot remit under a 1601EQ registration they don't have. |
+| Tax Risk | TWA companies required to withhold 1%/2% on regular purchases get no system support — missed withholding is a disallowance risk (mirrors PXL-AUD-037). |
+| Compliance Risk | Withholding activity inconsistent with the company's BIR registration profile. |
+| Business Risk | Setup promises behavior (auto-EWT toggle) that silently does nothing. |
+| Suggested Fix | Gate EWT entry on `ewt_registered` (mirror the PXL-AUD-006 pattern); implement TWA auto-default (goods → WC158-type 1%, services → WC160-type 2%) as line defaults when `twa_auto_ewt_enabled`; or remove the dead toggles. |
+| Dependencies | ATC seed completeness; PXL-AUD-035/036. |
+| Estimated Effort | Medium session. |
+
+### New Finding Detail - PXL-AUD-043
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | High |
+| Module | Purchasing — Cash Purchases; AR/AP advances |
+| Scenario | (a) A company pays a professional's fee in cash on the spot (cash purchase) — withholding is mandatory at payment. (b) A customer pays a 50% advance and withholds CWT on it; (c) the company pays a supplier down-payment subject to EWT before any bill exists. |
+| Expected Behavior | Withholding can be recorded on cash purchases and on advances/unapplied payments (EWT on advances is due at payment per RR 2-98). |
+| Current Behavior | `CashPurchasesPage` and the cash-purchase RPCs have no ATC/EWT fields at all — a cash payment to an EWT-subject supplier records zero withholding with no warning. `fn_save_receipt` and `fn_save_payment_voucher` both skip lines without a posted SI/VB (`CONTINUE WHEN v_inv_id IS NULL`), so customer advances with CWT and supplier down-payments with EWT cannot be recorded at all. |
+| Root Cause | Withholding was implemented only on the invoice-application paths. |
+| Files Affected | `src/pages/CashPurchasesPage.tsx`; cash purchase RPCs (`20260630000021_gap_fill.sql`, `20260703000002_vat_ledger_completeness.sql`); receipt/PV save RPCs |
+| Accounting Risk | Advances sit outside AR/AP application flows entirely (broader gap), and their withholding leg is unrecordable. |
+| Tax Risk | Legally required withholding at payment is skipped for cash purchases and advances — under-withholding, disallowance exposure. |
+| Compliance Risk | QAP/2307 understate withholding for affected suppliers. |
+| Business Risk | The common "pay professional in cash" case silently bypasses the entire withholding system. |
+| Suggested Fix | Add EWT (ATC + explicit base + validation, tax detail, EWT payable JE line) to cash purchases, mirroring `fn_save_cash_sale`'s CWT treatment; design advance-payment documents (AR customer advance with CWT, AP down-payment with EWT) as a separate work item. |
+| Dependencies | Advances need an unapplied-credit design decision (DEC entry). |
+| Estimated Effort | Cash-purchase EWT: medium session. Advances: large session. |
+
+### New Finding Detail - PXL-AUD-044
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | Medium |
+| Module | Master Data — duplicate/vestigial withholding structures |
+| Scenario | An admin configures a customer as a withholding agent and sets up EWT codes in Tax Setup, expecting transactions to follow. |
+| Expected Behavior | One flag and one master drive all withholding behavior (P13, One Source of Truth). |
+| Current Behavior | Customers carry TWO uncoordinated flags: `is_withholding_agent` (sprint5; drives the SI page's informational CWT block) and `is_subject_to_cwt` (drives OR CWT/ATC prefill). Setting one does not set the other, so an SI can advertise expected CWT while the OR prefills nothing, and vice versa. Suppliers carry the vestigial `default_ewt_code_id` (→ `ewt_codes`) alongside the operative `default_atc_code_id` (→ `atc_codes`). The `ewt_codes` and `fwt_codes` tables are configurable in `TaxSetupPage` but NO transaction path reads them — the working master is `atc_codes`. |
+| Root Cause | Successive hardening added new structures without retiring the old ones. |
+| Files Affected | `customers`/`suppliers` columns; `ewt_codes`/`fwt_codes`; `src/pages/TaxSetupPage.tsx`, `SalesInvoicePage.tsx`, `ReceiptsPage.tsx`, `CustomersPage.tsx`, `SuppliersPage.tsx` |
+| Accounting Risk | None direct. |
+| Tax Risk | Inconsistent CWT capture depending on which flag was set. |
+| Compliance Risk | None direct. |
+| Business Risk | Setup effort silently wasted; support confusion. |
+| Suggested Fix | Collapse to `is_subject_to_cwt` + `default_cwt_atc_code_id` (migrate `is_withholding_agent` into it); drop or clearly deprecate `default_ewt_code_id`, `ewt_codes`, `fwt_codes` from setup UI until something consumes them. |
+| Dependencies | None. |
+| Estimated Effort | Small-medium session. |
+
+### New Finding Detail - PXL-AUD-045
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | Medium |
+| Module | UX — PV/OR/SI withholding defaults |
+| Scenario | A user picks a VAT vendor bill (11,200 gross / 10,000 net) on a PV with a 2% ATC and accepts the defaults. |
+| Expected Behavior | The default EWT base is the VAT-EXCLUSIVE portion of the amount being settled (10,000 → EWT 200); the SI's captured expected CWT flows to the receipt for the same invoice. |
+| Current Behavior | `PaymentVouchersPage` defaults `ewt_tax_base` to the bill's GROSS outstanding (11,200 → EWT 224 at 2%); the page never fetches the bill's net-of-VAT amount, so the correct base always requires manual retyping. `ReceiptsPage` defaults CWT to `rate × gross balance` (and the server then REJECTS the correct net-based amount — PXL-AUD-031). `SalesInvoicePage.cwt_amount_expected` is free-entry, validated against nothing (no ATC), and is never read by the receipt prefill. |
+| Root Cause | Bill/invoice net amounts not loaded in the pages; defaults written before the base semantics were settled. |
+| Files Affected | `src/pages/PaymentVouchersPage.tsx`; `src/pages/ReceiptsPage.tsx`; `src/pages/SalesInvoicePage.tsx` |
+| Accounting Risk | Systematic over-withholding by the VAT amount whenever defaults are accepted. |
+| Tax Risk | Over-withheld EWT on every defaulted VAT purchase (12% × rate too much). |
+| Compliance Risk | QAP bases overstated versus supplier invoices. |
+| Business Risk | Suppliers dispute short payments; unclaimable excess withholding for payees. |
+| Suggested Fix | Fetch VB `total_amount`/input-VAT (SI `total_taxable_amount`) and default the base to the net-of-VAT proportion of the amount applied; prefill OR CWT from the SI's expected CWT when present; validate SI expected CWT against the customer's default ATC. Depends on PXL-AUD-031 for the OR side to accept the correct value. |
+| Dependencies | PXL-AUD-031. |
+| Estimated Effort | Small-medium session (frontend only, after 031). |
+
+### New Finding Detail - PXL-AUD-046
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | Medium |
+| Module | Sales / Cash — receipt header semantics |
+| Scenario | A cash sale with CWT posts; later the receipt bounces, or the cash receipts book is exported. |
+| Expected Behavior | `receipts.total_amount` means one thing everywhere (the cash portion), and every consumer (bounce JE totals, books exports, receipt registers) derives gross as `total_amount + total_cwt`. |
+| Current Behavior | Standard ORs store the CASH portion in `total_amount` (JE debits cash by it). Cash-sale ORs (`fn_save_cash_sale`) store the GROSS in `total_amount` while the JE debits cash by `grand_total − cwt`. Consequences: `fn_bounce_receipt` on a cash-sale receipt writes reversal-JE header totals of `total_amount + total_cwt` = gross + CWT (overstated versus its own lines, which reverse correctly); registers and the cash receipts book show inconsistent "Amount" semantics between the two OR kinds; receipt-level cash analysis double-counts CWT for cash sales. |
+| Root Cause | The cash-sale CWT fix (PXL-AUD-028 follow-up) changed line semantics but left the header gross. |
+| Files Affected | `supabase/migrations/20260703000002_vat_ledger_completeness.sql` (`fn_save_cash_sale`); `supabase/migrations/20260702000009_tax_ledger_void_reversal.sql` (`fn_bounce_receipt` totals) |
+| Accounting Risk | Reversal JE header totals ≠ line sums for bounced cash-sale receipts; header-sourced cash reports misstate. |
+| Tax Risk | None direct (tax ledger uses lines). |
+| Compliance Risk | Cash receipts book amounts inconsistent between OR kinds. |
+| Business Risk | Reconciliation confusion. |
+| Suggested Fix | Store `total_amount = cash received` for cash-sale receipts (gross − CWT) and derive gross where needed; or compute bounce/export amounts from lines everywhere. Add a bounce-a-cash-sale pgTAP case. |
+| Dependencies | None. |
+| Estimated Effort | Small session. |
+
+### New Finding Detail - PXL-AUD-047
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | Medium |
+| Module | Compliance — Form 2307 Received / CWT claiming |
+| Scenario | The accountant records a customer's 2307 certificate against a receipt line and marks it claimed; later the receipt bounces. |
+| Expected Behavior | Certificate amounts are validated against the receipt line's CWT; claiming is controlled (can't claim more than withheld, can't claim twice, claim ties to an ITR period); a bounced/reversed receipt flags its tracking row as invalid. |
+| Current Behavior | `Form2307ReceivedPage` writes `form_2307_tracking` by direct PostgREST insert/update: certificate amount and `claimed` status are client-set with no validation against `receipt_lines.cwt_amount`, no over-claim guard, no ITR linkage, and no reaction when the underlying receipt bounces (the CWT tax-ledger row is netted, but the tracking row stays `received`/`claimed`). Claimed rows are not immutability-guarded (`form_2307_tracking` is not in the PXL-DA-011 header list). Similarly, on the issued side, EWT reversal after a certificate is SENT does not flag the certificate stale — supersede is available but nothing prompts it. |
+| Root Cause | Tracking implemented as plain CRUD before the ledger-integrity work. |
+| Files Affected | `supabase/migrations/20260629000007_cwt_2307.sql` (+ gap_fill policies); `src/pages/Form2307ReceivedPage.tsx` |
+| Accounting Risk | CWT receivable support can be recorded and "claimed" at amounts exceeding what was withheld. |
+| Tax Risk | Over-claimed tax credits on the ITR — a direct deficiency-assessment trigger. |
+| Compliance Risk | SAWT says one thing; the certificate registry says another. |
+| Business Risk | Unsupported ITR credits discovered at audit. |
+| Suggested Fix | Move claim transitions to an RPC validating certificate amount ≤ receipt-line CWT (and ≤ un-reversed ledger amount); guard claimed rows; on bounce, mark linked tracking rows `invalidated`; on EWT reversal after certificate sent, flag the issuance for supersede. |
+| Dependencies | PXL-AUD-031 (correct CWT amounts first). |
+| Estimated Effort | Medium session. |
+
+### New Finding Detail - PXL-AUD-048
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | Medium |
+| Module | Compliance — tolerance alignment |
+| Scenario | A PV is saved with header `total_ewt` differing from line EWT by the permitted 0.02 (or many lines each 0.02 off), then Q-end QAP export runs. |
+| Expected Behavior | Anything the save/post validators accept can still be exported: validation tolerance ≤ reconciliation tolerance. |
+| Current Behavior | Header-vs-line EWT and per-line rate-vs-amount checks tolerate 0.02; the GL takes the header `total_ewt` while the tax ledger takes line `ewt_amount`s; `fn_wht_gl_reconciliation` reconciles at 0.01. A legitimately saved document can therefore create a permanent 0.02 ledger-to-GL variance that blocks SAWT/QAP/DAT exports for the quarter (no adjustment workflow exists to clear it). Per-line 0.02 tolerances also accumulate unbounded across lines. |
+| Root Cause | Tolerances chosen independently per layer. |
+| Files Affected | `supabase/migrations/20260701000016_pv_ewt_explicit_basis.sql`; `supabase/migrations/20260701000017_customer_cwt_defaults.sql`; `supabase/migrations/20260703000007_report_snapshots_wht_exports.sql` |
+| Accounting Risk | Sub-centavo-class GL/ledger drift by design. |
+| Tax Risk | Negligible amounts, but export blocking is operational. |
+| Compliance Risk | Quarter exports blocked by permitted rounding. |
+| Business Risk | Support escalations at filing time. |
+| Suggested Fix | Post the LINE-SUM EWT to the GL (not the header figure) or tighten header/line tolerance to 0.00 after server-side recomputation (PXL-AUD-038's stronger fix resolves this too); keep the per-line rate tolerance for genuine rounding. |
+| Dependencies | PXL-AUD-038. |
+| Estimated Effort | Folded into PXL-AUD-038's session. |
+
+### New Finding Detail - PXL-AUD-049
+
+| Field | Detail |
+| ----- | ------ |
+| Status | Open |
+| Severity | Medium |
+| Module | UX / GL Impact — withholding posting transparency |
+| Scenario | A user posts a check voucher with EWT, or a cash purchase/cash sale, and wants to see the GL impact and drill from the EWT figure to the certificate/alphalist. |
+| Expected Behavior | Every EWT-bearing transaction shows a GL Impact preview before posting and the posted JE after (as SI/OR/VB/PV already do), and EWT amounts drill to their tax-ledger rows and onward to 2307/QAP. |
+| Current Behavior | `CheckVouchersPage`, `CashPurchasesPage`, and `CashSalesPage` have NO `GLImpactPanel` (preview or posted view). There is no drilldown anywhere from a document's EWT amount to its `tax_detail_entries` rows, from a 2307 certificate line back to the source PVs, or from a QAP row to the document (the snapshot reader shows frozen rows; live pages join manually). Posting explanations for withholding (why AP is debited gross while cash is credited net) exist nowhere in the UI. This is the EWT-specific slice of PXL-DA-001 (server-side GL preview) and PXL-DA-002 (drill contracts). |
+| Root Cause | GL panel rollout stopped at the four core documents. |
+| Files Affected | `src/pages/CheckVouchersPage.tsx`; `src/pages/CashPurchasesPage.tsx`; `src/pages/CashSalesPage.tsx`; `src/components/GLImpactPanel.tsx` |
+| Accounting Risk | Users post withholding entries they cannot preview or explain. |
+| Tax Risk | None direct. |
+| Compliance Risk | Auditor drill-down (P7 infinite traceability) breaks at every withholding hop. |
+| Business Risk | Trust/usability. |
+| Suggested Fix | Extend `GLImpactPanel` to CV/cash purchase/cash sale; when PXL-DA-001's server-side preview RPC lands, include the tax-detail rows it will write; add 2307-line → source-PV and EWT-amount → tax-ledger drilldowns. |
+| Dependencies | PXL-DA-001, PXL-DA-002. |
+| Estimated Effort | Rolled into the PXL-DA-001/DA-002 sessions. |
 
 ## Recommended Fix Sessions
 
@@ -570,3 +977,4 @@ Use these sessions after the existing critical small fix unless a newer blocker 
 | 2026-07-04 | 44 | PXL-AUD-017 | Retested Passed | Small bounded session per user request. Context persistence: `AppContextProvider` now lazily restores company/branch/period IDs from localStorage (`pxl.ctx.*`) and persists every change; `ContextSelectors` in `AppShell` validates restored IDs against the RLS-scoped selector queries it already performs on load, clearing anything the signed-in user cannot see (company staleness cascade-clears branch/period). Refreshing the browser no longer drops working context, and a stale/foreign restored ID can never silently scope pages to an inaccessible company. No migration, no DB change. | Executed 2026-07-04: `npm run build` passed; `npm run lint` pre-existing 39 warnings only (an interim ternary-statement warning was fixed); no schema change so the 324/324 suite from session 43 stands. | URL-based deep-link context is a possible future enhancement; localStorage wrapped for storage-unavailable environments. | Next Criticals: PXL-DA-001 server-side GL preview RPC, PXL-DA-002 drilldown contracts, or PXL-DA-004 posting-engine consolidation. |
 | 2026-07-04 | 45 | PXL-AUD-018 | In Progress | Small bounded session. Cleared the 10 mechanically safe lint warnings (39→29) — and the unstable-dependency subset turned out to be a real production defect: six compliance dashboards recreated `now = new Date()` every render (WT also `quarterMonths`), so their `load` useCallback changed identity each render and `useEffect([load])` refetched from Supabase in a continuous loop; pinned via `useMemo` so each dashboard loads once per company change. Ternary-as-statement Set toggles became if/else; unused `department_name` destructure `_`-prefixed. No migration, no DB change. | Executed 2026-07-04: `npm run build` passed; `npm run lint` exit 0 with 29 warnings (was 39). | Remaining 27 `useEffect` missing-dependency warnings need per-page loader stabilization verified against refetch/stale-closure behavior (not mechanical); 2 fast-refresh export notes remain. | Next Criticals: PXL-DA-001 server-side GL preview RPC, PXL-DA-002 drilldown contracts, or PXL-DA-004 posting-engine consolidation. |
 | 2026-07-04 | 46 | PXL-AUD-018 | Retested Passed | Small bounded session completing the lint cleanup: 29→0 warnings, exit 0. The 27 `useEffect` missing-dependency warnings all flag the same benign idiom (`useEffect(() => { load() }, [companyId, ...])` with a per-render loader; other inputs refetch via direct handler calls, so every effect run executes a fresh closure — no stale-state bug). Each site now carries a per-line `eslint-disable` WITH explanation, which the finding's expected behavior explicitly allows; a 27-page useCallback restructure was rejected as regression risk without user value. The 2 fast-refresh only-export-components notes (`button.tsx`, `context.tsx`) suppressed with reason. Frontend comments only — zero behavior change, no migration. | Executed 2026-07-04: `npm run lint` 0 warnings exit 0; `npm run build` passed. | Lint is now a zero-warning baseline — any new warning is a visible regression. | Next Criticals: PXL-DA-001 server-side GL preview RPC, PXL-DA-002 drilldown contracts, or PXL-DA-004 posting-engine consolidation. |
+| 2026-07-04 | 47 | PXL-AUD-031..PXL-AUD-049 (new) | All Open | AUDIT-ONLY session: definitive end-to-end EWT audit (no fixes). Inspected ATC/EWT master data + governance, supplier/customer withholding profiles, compliance profile gating, PV/OR/CV/cash-sale/cash-purchase withholding paths, GL impact, tax ledger + void/cancel/bounce reversal, 2307 issued/received, SAWT/QAP/1601EQ, WHT/GL reconciliation, DAT/books exports, UI defaults, and pgTAP coverage. 19 new findings (4 Critical / 9 High / 6 Medium): OR CWT base forced VAT-inclusive with the statutory net-based amount hard-rejected (AUD-031); check-voucher EWT unlinked/unvalidated and aborting quarterly 2307 generation (AUD-032) with a non-convention cancel reversal leaving phantom QAP rows (AUD-033); 1601EQ figures free-entry with no reconciliation gate (AUD-034); ATC validity checked as of CURRENT_DATE not document date (AUD-035); ATC rate changes unrepresentable under the official code (AUD-036); no accrual-basis withholding (AUD-037); PV/OR header cash totals unreconciled to lines (AUD-038); over-apply guards ignore CM/VC applications (AUD-039); 2307 lacks monthly breakdown (AUD-040); remittance JEs deadlock SAWT/QAP exports (AUD-041); withholding profile gates nothing (AUD-042); no EWT on cash purchases/advances (AUD-043); duplicate withholding flags/masters (AUD-044); gross-based UI defaults (AUD-045); receipts.total_amount semantics split (AUD-046); uncontrolled 2307-received claiming (AUD-047); tolerance mismatch 0.02 vs 0.01 (AUD-048); missing GL preview/drilldown on CV/cash pages (AUD-049). EWT maturity assessed ~55% (AP-side PV pipeline ~75%). Matrix addendum + Check Voucher row added; 9 Not-Yet-Implemented scenarios added to the test book. | Documentation only — no code/migration changes; `npm test` not run (no behavior changed); `scripts/check_docs_consistency.sh` green. | All 19 findings Open; the 4 Criticals block the withholding slice of production readiness. | Start with PXL-AUD-031 (OR CWT explicit base) — smallest Critical with the widest tax-correctness impact; then AUD-032+033 together (CV module), then AUD-034. |

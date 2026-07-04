@@ -509,3 +509,101 @@ Notes:
 
 - Unlike other test files, this file COMMITs its fixtures: the same-transaction construction exception would otherwise make every tamper attempt look legitimate. Always run on a fresh database (`supabase db reset --local`), per the standing discipline.
 - Guards cover every transactional line table (18 tables incl. JE lines; SI/OR/VB/PV keep their PXL-AUD-005 triggers) and every transactional header (34 tables: AR/AP documents, banking, inventory, fixed assets, schedules and their entries — posted entries fully frozen — plus non-VAT tax returns; `vat_returns` stays under the PXL-DA-015 snapshot guard).
+
+## EWT Audit Scenarios (Session 47) — Recommended, Not Yet Implemented
+
+The 2026-07-04 EWT end-to-end audit (findings PXL-AUD-031..049) identified the following missing scenarios. Each is **Not Yet Implemented** — no `supabase/tests` file exists yet; they become executable when their finding's fix session lands.
+
+## CWT-NET-BASE-001 - Statutory VAT-Exclusive CWT on Receipts
+
+Status: Not Yet Implemented. Related findings: PXL-AUD-031, PXL-AUD-045.
+
+Scenario (VAT company; posted SI 11,200.00 = 10,000.00 net + 1,200.00 output VAT; customer withholds 2% on the net base):
+
+| Step | Transaction | Amounts | Expected Behavior |
+| ---- | ----------- | ------- | ----------------- |
+| 1 | OR: cash 11,000.00 + CWT 200.00 on explicit base 10,000.00 | 2% ATC | Accepted (today this is REJECTED); JE DR cash 11,000 / DR CWT receivable 200 / CR AR 11,200. |
+| 2 | Tax ledger row | - | cwt_receivable base 10,000.00 (net of VAT), tax 200.00; SAWT income payment excludes VAT. |
+| 3 | OR with CWT 224.00 on base 11,200.00 (gross) without justification | - | Flagged/blocked or requires variance reason — gross-based withholding is the exception, not the default. |
+| 4 | Partial collection: half the invoice with proportional net-base CWT 100.00 | - | Accepted; cumulative CWT 200.00 after both halves. |
+
+## CV-EWT-2307-001 - Check Voucher EWT Feeds Certificates and Cancels Cleanly
+
+Status: Not Yet Implemented. Related findings: PXL-AUD-032, PXL-AUD-033, PXL-AUD-049.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | CV with EWT to a supplier-linked payee, valid ATC, explicit base | Posts; rate-on-base validated like PV lines; tax detail row carries counterparty_id. |
+| 2 | CV EWT with wrong rate / expired ATC / no base | Rejected with the PV-style messages. |
+| 3 | Quarterly 2307 generation for a quarter containing CV EWT | Generates (today it ABORTS the whole batch); CV amounts included per supplier/ATC. |
+| 4 | Cancel the posted CV | Counter tax row with `reverses_tax_detail_id`, dated on cancel date; `vw_ewt_summary_ap` drops both rows; QAP detail excludes the cancelled CV. |
+
+## EWT-RETURN-GATE-001 - 1601EQ Reconciliation Gate
+
+Status: Not Yet Implemented. Related findings: PXL-AUD-034, PXL-AUD-041.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | Compute 1601EQ for a quarter with posted PV EWT | Figures come from the tax ledger server-side. |
+| 2 | Edit total_ewt_withheld to a diverging figure and set status final | Blocked while figures diverge from the ledger (>0.01) or `fn_wht_gl_reconciliation` fails. |
+| 3 | Matching figures, reconciled quarter, status final then filed | Allowed; business figures frozen (existing PXL-DA-011 guard). |
+
+## ATC-ASOF-001 - ATC Validity as of Document Date
+
+Status: Not Yet Implemented. Related finding: PXL-AUD-035.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | Backdated PV in an open period using an ATC valid on the PV date but expired today | Accepted (today: rejected). |
+| 2 | Backdated PV using an ATC that only became effective after the PV date | Rejected (today: accepted). |
+| 3 | Same pair on receipt CWT and CV EWT | Same as-of-document-date behavior. |
+
+## ATC-RATE-VERSION-001 - BIR Rate Change Under the Same ATC Code
+
+Status: Not Yet Implemented. Related finding: PXL-AUD-036.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | Deprecate used ATC (rate 1%), create successor with the SAME code, rate 2%, effective from the change date | Succeeds (today: unique violation); `supersedes_atc_code_id` links versions. |
+| 2 | PV dated before the change | Validates against 1%; after the change: 2%. |
+| 3 | Historical documents and QAP for the old quarter | Reproduce the old rate; certificates report the official code unchanged. |
+
+## WHT-REMIT-001 - Controlled EWT Remittance Keeps Exports Reconciling
+
+Status: Not Yet Implemented. Related finding: PXL-AUD-041.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | PV EWT in month 1; remit month-1 EWT on the 10th of month 2 through the controlled remittance flow | Remittance JE debits EWT payable, classified as remittance. |
+| 2 | Quarter-end QAP export | Reconciliation recognizes the remittance and the export snapshot succeeds (today: hard-blocked). |
+| 3 | 1601EQ remitted_prior | Derived from remittance records, not free entry. |
+
+## PV-OR-HEADER-TOTALS-001 - Header/Line Cash Total Integrity
+
+Status: Not Yet Implemented. Related findings: PXL-AUD-038, PXL-AUD-048.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | `fn_save_payment_voucher` with header total_amount ≠ SUM(line payment_amount) | Rejected (or header recomputed server-side). |
+| 2 | Same for `fn_save_receipt` | Rejected/recomputed. |
+| 3 | GL EWT credit vs tax-ledger EWT sum for the document | Exactly equal (line-sum posted), so WHT/GL reconciliation stays at zero variance. |
+
+## CM-VC-OVERAPPLY-001 - Over-Application Guards Respect Credit Documents
+
+Status: Not Yet Implemented. Related finding: PXL-AUD-039.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | SI 11,200 with applied CM 2,000; receipt for 11,200 | Rejected: exceeds CM-adjusted balance 9,200. |
+| 2 | VB 5,600 with applied VC 1,000; PV paying 5,600 | Rejected: exceeds VC-adjusted balance 4,600. |
+| 3 | Receipt/PV for the adjusted balance | Accepted; aging reaches zero, never negative. |
+
+## CASH-PURCHASE-EWT-001 - Withholding on Cash Purchases
+
+Status: Not Yet Implemented. Related finding: PXL-AUD-043.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | Cash purchase of services from an EWT-subject supplier with ATC + explicit net base | Posts DR expense/input VAT, CR cash (net of EWT), CR EWT payable; ewt_payable tax detail row written. |
+| 2 | Cash purchase to an EWT-subject supplier with zero EWT | Warned or blocked per policy. |
+| 3 | Quarter 2307/QAP | Include the cash-purchase withholding. |
