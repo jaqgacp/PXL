@@ -57,6 +57,7 @@ Every financial transaction page should converge toward one consistent layout. N
 | Feature | Business Value | Accounting Value | Compliance Value | UX Value | Dependencies | Priority | Complexity | Current Readiness | Phase | UI Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Automatic reconciliation suite | System proves its own integrity | AR aging = AR control; AP aging = AP control; inventory = inventory GL; assets = asset GL; FS = TB; TB = JE | VAT ledger = GL and 2307 = EWT ledger already enforced; extend the pattern | One dashboard of green checks | `fn_vat_gl_reconciliation` / `fn_wht_gl_reconciliation` as the pattern; PXL-DA-013 as-of views | High | L | VAT and WHT reconciliation RPCs delivered and gate returns/exports; other pairs unimplemented | Phase 2 | Reconciliation dashboard: pair, ledger amount, GL amount, variance, drill |
+| Snapshot integrity re-verification & file re-download | Auditor can prove a downloaded file matches its snapshot years later | Hash re-check proves frozen evidence untampered | BIR audit defense: recompute SHA-256 over the frozen payload and regenerate the exact exported file | One-click "Verify hash" / "Re-download file" on the snapshot reader | `ReportSnapshotsPage` (delivered, PXL-DA-015); Web Crypto for client-side SHA-256 or a server RPC | Medium | S | Reader shows stored hash and frozen rows; no recompute or re-download action yet | Phase 2 | Buttons in the snapshot detail header; green/red verify badge with recomputed hash |
 
 ## Notes
 

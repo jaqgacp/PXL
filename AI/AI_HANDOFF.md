@@ -1,35 +1,38 @@
 # AI Handoff
 
-Last updated: 2026-07-03
+Last updated: 2026-07-04
 
 ## What Was Done
 
-Session 39 continued PXL-DA-015 with the books slice. Migration `20260703000009_report_snapshots_books_exports.sql` adds `fn_snapshot_books_export`, covering all seven BIR books of accounts (sales journal, purchase journal, cash receipts book with ORs gross of CWT plus cash-sale SIs, cash disbursements book with PVs net of EWT plus check vouchers and cash purchases, general journal gated on debit=credit balance, cash sales journal, cash purchases journal). Same contract as the CAS slice: server-built payload, versioned `BOOKS_*` exported snapshot with SHA-256 hash and integrity totals, server-attested `cas_export_log` row (`csv_export`), and the RPC returns the frozen rows that the page writes to the file. All seven Books pages were rewired.
+Session 40 closed PXL-DA-015. The final implementation piece — the snapshot reader/drilldown UI — shipped as `src/pages/ReportSnapshotsPage.tsx` (route `/report-snapshots`, Compliance → Audit & CAS nav): an RLS-scoped, read-only list over `report_snapshots` filterable by report type (all 19 labels across the six families), status, and period overlap; drilldown shows the full SHA-256 source hash, source table/id, per-source version history with click-through (e.g. final vs filed VAT return evidence), and generic rendering of frozen report/source payloads — scalar values grid, row tables (capped at 200 with a count note), integrity totals, and reconciliation blocks. No live-report recomputation anywhere on the page.
+
+The page was found in-flight (uncommitted) from a prior session; this session verified it against the actual schema, fixed payload year formatting (`2,026` → `2026`) and the filter-aware empty state, and verified it live in Chromium against the local Supabase stack with seeded snapshot evidence.
 
 ## What Changed
 
-- Findings standing: 19 Retested Passed / 15 In Progress / 14 Open (48 findings); 11 Criticals remain.
-- All six snapshot families now exist: VAT returns, Form 2307 issued, SLSP/RELIEF, SAWT/QAP, CAS DAT, BIR books.
-- New scenario BOOKS-EXPORT-SNAP-001 (`supabase/tests/018_books_export_snapshots_test.sql`, 13 assertions).
-- `supabase/tests/` now has 18 files / 285 assertions.
-- Transaction matrix gained a BIR Books of Accounts Export row.
+- PXL-DA-015 is Retested Passed. Findings standing: 20 Retested Passed / 14 In Progress / 15 Open (49 findings); 10 Criticals remain.
+- New Medium finding PXL-AUD-029 (Open): `AppShell` nav feature gating selects the non-existent `sys_feature_enablement.feature_key` column — 400 on every page load, gating silently fails open. Fix is a small query change (resolve via `feature_definition_id` → `ref_feature_definitions`).
+- `docs/PXL/STATUS.md`: 206/206 pages (Audit & CAS now 12).
+- Backlog: snapshot hash re-verification / file re-download enhancement recorded per DEC-012.
+- No new migrations, no schema changes, no new pgTAP files (UI-only session; `supabase/tests/` remains 18 files / 285 assertions).
 
 ## What Remains
 
-- PXL-DA-015 remains In Progress with one implementation piece left: the snapshot reader/drilldown UI over the six snapshot families. Do not redo any snapshot slice (`20260703000004` through `20260703000009`). The true BIR DAT record layout stays under PXL-DA-019.
-- PXL-DA-017 dimension propagation to JE lines per DEC-011.
-- CM/DM/VC per-classification ledger rows follow the same writer pattern when needed.
+- PXL-DA-017 dimension propagation to JE lines per DEC-011 (next unblocked accounting architecture task).
+- PXL-AUD-029 AppShell feature-gating query fix (small).
+- The true BIR DAT record layout stays under PXL-DA-019.
+- CM/DM/VC per-classification ledger rows follow the same writer pattern when needed (PXL-AUD-014).
 - Summary docs AIQ-006–007 when audit work pauses.
 
 ## Known Errors / Blockers
 
-None locally: fresh replay through `20260703000009` + `npm test` 285/285, build/lint/docs-consistency green. PENDING: hosted push of migrations `20260702000010` and `20260703000001` through `20260703000009` — no `SUPABASE_ACCESS_TOKEN` in this workspace; run `supabase db push --linked` from a tokened workspace and verify with `supabase migration list --linked`.
+None locally: `npm test` 285/285 across 18 files on a fresh `supabase db reset --local` (reset first — a dirty local DB collides on seeded user UUIDs), build/lint/docs-consistency green. Reader UI verified live in the browser. PENDING: hosted push of migrations `20260702000010` and `20260703000001` through `20260703000009` — no `SUPABASE_ACCESS_TOKEN` in this workspace; run `supabase db push --linked` from a tokened workspace and verify with `supabase migration list --linked`.
 
-Same remittance caveat as the VAT slice: legitimate 0619-E/1601EQ remittance JEs on the withholding control accounts surface as reconciliation variance until a controlled remittance flow exists.
+Dev caveat: `index.html` CSP `connect-src` allows only `*.supabase.co`, so browser-testing the frontend against local Supabase needs a CSP bypass (Playwright `bypassCSP: true` was used).
 
 ## Exact Next Recommended Task
 
-Continue `AIQ-008` by building the snapshot reader/drilldown UI: a page listing `report_snapshots` (filter by report type/period/status), showing version history, source hash, row counts, reconciliation payloads, and frozen rows — closing the PXL-DA-015 implementation scope. Alternatively PXL-DA-017 dimension propagation per DEC-011.
+Continue `AIQ-008` with PXL-DA-017: propagate branch/department/cost-center dimensions from documents to JE lines per DEC-011 (branch as reporting dimension), including posting writers and a pgTAP scenario. Alternatively, the small PXL-AUD-029 AppShell feature-gating fix.
 
 ## Exact Next Prompt
 

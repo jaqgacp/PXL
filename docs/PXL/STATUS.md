@@ -1,8 +1,8 @@
 # PXL ERP — Build Status
 
-**BUILD COMPLETE — 205/205 pages** ✅
+**BUILD COMPLETE — 206/206 pages** ✅
 
-Last updated: 2026-07-03
+Last updated: 2026-07-04
 Build: ✅ Clean (zero TS errors)
 Migrations: see `docs/PXL/PXL_SCHEMA_SUMMARY.md` (generated) for the full chain; hosted sync status is tracked in `AI/AI_STATE.md` (verify with `supabase migration list --linked`). As of 2026-07-03 hosted is synced through `20260702000009`; `20260702000010` and `20260703000001` through `20260703000009` are pending push (no access token in the workspace).
 Production hardening: audit findings standing and readiness gate live in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`; tests: 18 pgTAP files / 285 assertions (`npm test`).
@@ -251,7 +251,7 @@ No new migration required — all books are read-only registers/views over exist
 
 ---
 
-## Audit & CAS — COMPLETE (S19, 2026-07-01)
+## Audit & CAS — COMPLETE (S19, 2026-07-01; Report Snapshots added S40, 2026-07-04)
 | Page | File | Status |
 |---|---|---|
 | CAS Dashboard | CASDashboardPage.tsx | ✅ |
@@ -265,6 +265,7 @@ No new migration required — all books are read-only registers/views over exist
 | DAT File Generation | CASDATFileGenerationPage.tsx | ✅ |
 | CAS Audit Report | CASAuditReportPage.tsx | ✅ |
 | Export History | CASExportHistoryPage.tsx | ✅ |
+| Report Snapshots | ReportSnapshotsPage.tsx | ✅ |
 
 **New migration:** `20260701000005_audit_cas.sql` — expands `fn_audit_trigger` coverage to 27 more master-data/transaction/system-parameter tables; adds `cas_attachment_register` and `cas_export_log` tables. Validated locally against a fresh Postgres instance (full migration chain applied cleanly).
 
@@ -334,6 +335,6 @@ No new migration required — all books are read-only registers/views over exist
 | Accounting | 15 | 0 |
 | Compliance | 41 | 0 |
 | BIR Books | 13 | 0 |
-| Audit & CAS | 11 | 0 |
+| Audit & CAS | 12 | 0 |
 | Reports | 43 | 0 |
-| **TOTAL** | **205** | **0** |
+| **TOTAL** | **206** | **0** |

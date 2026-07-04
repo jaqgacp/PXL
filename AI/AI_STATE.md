@@ -1,12 +1,12 @@
 # AI State
 
-Last updated: 2026-07-03
+Last updated: 2026-07-04
 
 ## Project Status
 
 PXL is a React + TypeScript + Vite frontend backed by Supabase/PostgreSQL. The repository contains extensive PXL documentation, migrations, pgTAP tests, and module pages.
 
-Current documented build status in `docs/PXL/STATUS.md` says 205/205 pages are built, with production-hardening and audit work continuing through `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`, `docs/PXL/PXL_TRANSACTION_MATRIX.md`, and `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`.
+Current documented build status in `docs/PXL/STATUS.md` says 206/206 pages are built, with production-hardening and audit work continuing through `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`, `docs/PXL/PXL_TRANSACTION_MATRIX.md`, and `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`.
 
 ## Completed AI Operating Files
 
@@ -14,7 +14,7 @@ All files listed in `AI/AI_DOCUMENTATION_RULES.md` exist under `AI/`. The AI Ope
 
 ## Current Active Task
 
-AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 39 (2026-07-03) continued PXL-DA-015 with the books slice: `20260703000009_report_snapshots_books_exports.sql` adds `fn_snapshot_books_export`, covering all seven BIR books (sales/purchase journals, cash receipts book gross of CWT, cash disbursements book net of EWT, balance-gated general journal, cash sales/purchases journals) with the frozen-rows contract: server-built payload, versioned `BOOKS_*` snapshot with SHA-256 hash, server-attested `cas_export_log` row, and the returned rows are what the page writes to the file. Every compliance export surface now snapshots; only the snapshot reader/drilldown UI remains under PXL-DA-015. Findings standing is 19 Retested Passed / 15 In Progress / 14 Open (48 findings); 11 Criticals remain.
+AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 40 (2026-07-04) CLOSED PXL-DA-015: `src/pages/ReportSnapshotsPage.tsx` (route `/report-snapshots`, Compliance → Audit & CAS nav) is the snapshot reader/drilldown UI over all six snapshot families — filterable RLS-scoped list, full SHA-256 hash, per-source version history with click-through, generic frozen payload rendering (values, row tables, reconciliation). Verified live in Chromium against local Supabase with seeded snapshots. New Medium finding PXL-AUD-029 logged (AppShell nav feature gating queries non-existent `sys_feature_enablement.feature_key`, 400s and fails open). Findings standing is 20 Retested Passed / 14 In Progress / 15 Open (49 findings); 10 Criticals remain.
 
 ## Current Broken / Missing AI Operating Areas
 
@@ -25,30 +25,31 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
 - Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
 - Remote is in sync through migration 20260702000009 (verified 2026-07-02). PENDING: push `20260702000010` and `20260703000001` through `20260703000009` to hosted Supabase — no `SUPABASE_ACCESS_TOKEN` in this workspace. Run `supabase db push --linked` from a tokened workspace, then verify with `supabase migration list --linked`.
-- PXL-DA-015: every export surface snapshots (VAT returns, Form 2307, SLSP/RELIEF, SAWT/QAP, CAS DAT, seven BIR books). Remaining work is the snapshot reader/drilldown UI.
+- PXL-AUD-029 (Open, Medium): `AppShell` feature gating fails open — small query fix pending.
+- Dev note: the CSP in `index.html` restricts `connect-src` to `*.supabase.co`, so running the frontend against the local Supabase stack (`127.0.0.1:54321`) requires a CSP bypass (Playwright `bypassCSP` was used for verification). Consider a dev-mode CSP if local frontend testing becomes routine.
 
 ## Last Files Changed
 
-Books export snapshot session (session 39, 2026-07-03):
+Snapshot reader UI session (session 40, 2026-07-04):
 
-- `supabase/migrations/20260703000009_report_snapshots_books_exports.sql` (new: `fn_snapshot_books_export` for all seven BIR books)
-- `supabase/tests/018_books_export_snapshots_test.sql` (new: BOOKS-EXPORT-SNAP-001, 13 assertions)
-- The seven `src/pages/Books*Page.tsx` journal pages (files rendered from the RPC's frozen rows)
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (BOOKS-EXPORT-SNAP-001 scenario)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-015 index/detail refreshed; session 39 log row)
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md` (new BIR Books of Accounts Export row)
-- `docs/PXL/STATUS.md` (test count and pending migrations refreshed)
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md` (regenerated)
+- `src/pages/ReportSnapshotsPage.tsx` (new: snapshot reader/drilldown UI)
+- `src/App.tsx` (route `/report-snapshots`)
+- `src/components/AppShell.tsx` (nav item + page label under Compliance → Audit & CAS)
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-015 Retested Passed; new PXL-AUD-029; standing; session 40 log row)
+- `docs/PXL/STATUS.md` (206/206 pages; Audit & CAS 12)
+- `docs/PXL/PXL_PRODUCT_BACKLOG.md` (snapshot hash re-verification/re-download enhancement row)
 
 ## Last Known Errors
 
-None. Fresh `supabase db reset --local` replay passed through `20260703000009`; `npm test` passed 285/285 across 18 files; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
+None. `npm test` 285/285 across 18 files on a fresh `supabase db reset --local`; `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green. Reader UI verified live in the browser (login → company select → list/filter/drilldown/version switching).
 
-Session 31 landed as `8425d56` (CI 28634813215 green); session 32 as `f88a595` (CI 28636237029 green). Sessions 33-36 landed together as `d88f0df` (CI 28645009697 green). Session 37 landed as `9110765` (CI 28645835919 green). Session 38 landed as `0f9ab83` (CI 28648390569 green). Session 39 landed as `c575c8b` (2026-07-03); CI run 28649086159 passed both jobs, verified via `gh run watch --exit-status`.
+Note: `npm test` against a non-fresh local DB can fail with `users_pkey` duplicate-key collisions from earlier seeded runs — always `supabase db reset --local` first.
+
+Session 37 landed as `9110765` (CI 28645835919 green). Session 38 landed as `0f9ab83` (CI 28648390569 green). Session 39 landed as `c575c8b` (CI 28649086159 green). Session 40 landing evidence is recorded in `AI/AI_HANDOFF.md` once CI completes.
 
 ## Next Recommended Step
 
-Continue AIQ-008 by building the snapshot reader/drilldown UI (the last PXL-DA-015 implementation piece; all six snapshot families exist through `20260703000009`). Do not redo any existing snapshot slice. PXL-DA-017 dimension propagation remains the next unblocked accounting architecture alternative.
+Continue AIQ-008: PXL-DA-017 dimension propagation to JE lines per DEC-011 is the highest-value unblocked accounting architecture task. Alternatively, PXL-AUD-029 is a small self-contained `AppShell` query fix. Do not redo any PXL-DA-015 snapshot slice or the reader UI.
 
 ## Standing Autonomy Delegation
 
