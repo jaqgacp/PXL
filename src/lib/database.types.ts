@@ -12648,6 +12648,10 @@ export type Database = {
         Args: { p_bill_id: string }
         Returns: undefined
       }
+      fn_row_written_by_current_txn: {
+        Args: { p_xmin_raw: number }
+        Returns: boolean
+      }
       fn_save_cash_purchase: {
         Args: { p_cp_id: string; p_header: Json; p_lines: Json }
         Returns: string

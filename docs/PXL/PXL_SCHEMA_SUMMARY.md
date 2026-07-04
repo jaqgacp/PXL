@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-04. Migrations scanned: 73. Tests present: 19.
+Generated: 2026-07-04. Migrations scanned: 74. Tests present: 20.
 
-## Functions (146)
+## Functions (149)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -58,6 +58,8 @@ Generated: 2026-07-04. Migrations scanned: 73. Tests present: 19.
 | `fn_grant_creator_company_ownership` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_grant_new_user_all_companies` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_guard_atc_code_history` | `20260701000018_atc_effective_date_governance.sql` | 1 |
+| `fn_guard_doc_header` | `20260704000002_status_immutability.sql` | 1 |
+| `fn_guard_doc_lines` | `20260704000002_status_immutability.sql` | 1 |
 | `fn_guard_form2307_snapshot_immutable` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_guard_vat_return_snapshot_immutable` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
 | `fn_je_dimensions_guard` | `20260704000001_je_line_dimensions.sql` | 1 |
@@ -109,6 +111,7 @@ Generated: 2026-07-04. Migrations scanned: 73. Tests present: 19.
 | `fn_reverse_vendor_credit_application` | `20260701000011_vendor_credit_application_reversal.sql` | 1 |
 | `fn_revert_si_to_draft` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_revert_vendor_bill_to_draft` | `20260630000021_gap_fill.sql` | 2 |
+| `fn_row_written_by_current_txn` | `20260704000002_status_immutability.sql` | 1 |
 | `fn_save_cash_purchase` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_save_cash_sale` | `20260703000002_vat_ledger_completeness.sql` | 4 |
 | `fn_save_credit_memo` | `20260630000022_tax_ledger_completeness.sql` | 4 |
@@ -332,7 +335,7 @@ Generated: 2026-07-04. Migrations scanned: 73. Tests present: 19.
 | `warehouse_zones` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 
-## Triggers (143)
+## Triggers (202)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -420,6 +423,65 @@ Generated: 2026-07-04. Migrations scanned: 73. Tests present: 19.
 | `trg_fund_transfers_updated_at` | `20260630000023_banking_treasury_schema.sql` |
 | `trg_generate_calendar_on_profile_change` | `20260628000005_sprint2_tax.sql` |
 | `trg_gi_updated_at` | `20260630000028_inventory.sql` |
+| `trg_guard_header_amortization_entries` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_amortization_schedules` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_asset_depreciation_entries` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_bank_adjustments` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_bank_reconciliations` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_book_tax_reconciliation` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_cash_count_sheets` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_cash_purchases` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_check_vouchers` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_credit_memos` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_debit_memos` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_delivery_receipts` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_ewt_returns` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_fixed_assets` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_fund_transfers` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_fwt_returns` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_goods_issues` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_income_tax_computations` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_inter_branch_transfers` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_itr_filings` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_journal_entries` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_mcit_computations` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_payment_vouchers` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_petty_cash_replenishments` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_petty_cash_vouchers` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_physical_count_sheets` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_pt_returns` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_purchase_orders` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_purchase_returns` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_receipts` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_receiving_reports` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_revenue_recognition_entries` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_revenue_recognition_schedules` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_sales_invoices` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_sales_orders` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_sales_quotations` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_stock_adjustments` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_stock_transfers` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_supplier_debit_memos` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_vendor_bills` | `20260704000002_status_immutability.sql` |
+| `trg_guard_header_vendor_credits` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_bank_recon_items` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_cash_purchase_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_check_voucher_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_credit_memo_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_debit_memo_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_delivery_receipt_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_goods_issue_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_journal_entry_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_physical_count_sheet_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_purchase_order_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_purchase_return_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_receiving_report_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_sales_order_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_sales_quotation_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_stock_adjustment_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_stock_transfer_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_supplier_debit_memo_lines` | `20260704000002_status_immutability.sql` |
+| `trg_guard_lines_vendor_credit_lines` | `20260704000002_status_immutability.sql` |
 | `trg_inter_branch_transfers_updated_at` | `20260630000023_banking_treasury_schema.sql` |
 | `trg_je_dimensions_guard` | `20260704000001_je_line_dimensions.sql` |
 | `trg_je_line_dimensions_guard` | `20260704000001_je_line_dimensions.sql` |

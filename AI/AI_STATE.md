@@ -14,7 +14,7 @@ All files listed in `AI/AI_DOCUMENTATION_RULES.md` exist under `AI/`. The AI Ope
 
 ## Current Active Task
 
-AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 42 (2026-07-04, bounded frontend-safety session, user-directed) introduced generated database types (`src/lib/database.types.ts`, `npm run gen:types`) and typed the shared Supabase client — column/RPC/embed drift is now a compile error across all 206 pages. This surfaced and closed PXL-AUD-030 (new, High: 8 pages had runtime-dead queries against non-existent columns — quotation/SO/DR/customer-return/cash-sale reference fetches, asset/warehouse supplier lists, SLP register tab; fixed via PostgREST aliases/embeds) and closed PXL-AUD-029 (AppShell feature gating resolves keys via the `ref_feature_definitions` embed). `PXL_ARCHITECTURE_SUMMARY.md` stack line corrected (TanStack Query/Zustand/react-hook-form/Zod installed but NOT adopted); Frontend Architecture backlog section added. Sessions 40/41 closed PXL-DA-015 (snapshot reader UI) and PXL-DA-017 (JE line dimensions per DEC-011). Findings standing is 23 Retested Passed / 14 In Progress / 13 Open (50 findings); 10 Criticals remain.
+AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 43 (2026-07-04) closed PXL-DA-011 and PXL-AUD-005: `20260704000002_status_immutability.sql` adds generic status-aware guards — `fn_guard_doc_lines` (18 line tables) and `fn_guard_doc_header` (34 header tables, diff-based: business columns freeze once a document leaves its editable statuses; only status/updated stamps/per-table lifecycle metadata may change; DELETE blocked per DEC-002; posted schedule entries fully frozen). The same-transaction construction exception (`fn_row_written_by_current_txn`: visible row + xmin in progress ⇒ ours; works under subtransactions) keeps every posting writer and the CM/DM apply RPCs working while PostgREST single-transaction clients can never satisfy it. IMMUT-001 (`supabase/tests/020_status_immutability_test.sql`, 25 assertions, COMMITs fixtures to tamper cross-transaction) executed passing; `npm test` 324/324 across 20 files. Session 42 delivered generated DB types + typed client (PXL-AUD-029/030). Findings standing is 25 Retested Passed / 13 In Progress / 12 Open (50 findings); 8 Criticals remain.
 
 ## Current Broken / Missing AI Operating Areas
 
@@ -30,21 +30,20 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 
 ## Last Files Changed
 
-Frontend type-safety session (session 42, 2026-07-04):
+Status-aware immutability session (session 43, 2026-07-04):
 
-- `src/lib/database.types.ts` (new, GENERATED — regenerate with `npm run gen:types` after EVERY migration)
-- `src/lib/supabase.ts` (client typed `createClient<Database>`)
-- `src/components/AppShell.tsx` (PXL-AUD-029 feature-gating fix)
-- 8 pages with runtime-dead queries repaired via aliases/embeds (PXL-AUD-030): Quotations, SalesOrders, DeliveryReceipts, CustomerReturns, CashSales, AssetAcquisition, WarehouseStockSettings, PurchaseRegisters (SLP tab reworked)
-- ~30 pages: behavior-neutral type fixes (optional RPC args omitted instead of null, non-null assertions on intentional null-for-new args, read-list casts, literal-union dynamic names, `TablesInsert`/`TablesUpdate` payload casts)
-- `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` (stack line corrected — no overstated tech)
-- `docs/PXL/PXL_PRODUCT_BACKLOG.md` (Frontend Architecture section)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-AUD-029/030 Retested Passed; standing; session 42 log row)
-- `package.json` (`gen:types` script)
+- `supabase/migrations/20260704000002_status_immutability.sql` (new: `fn_row_written_by_current_txn`, `fn_guard_doc_lines`, `fn_guard_doc_header`, 18 line-guard + 34 header-guard triggers)
+- `supabase/tests/020_status_immutability_test.sql` (new: IMMUT-001, 25 assertions; intentionally COMMITs fixtures — always reset before `npm test`)
+- `src/lib/database.types.ts` (regenerated)
+- `docs/PXL/PXL_SCHEMA_SUMMARY.md` (regenerated: 149 functions, 202 triggers)
+- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (IMMUT-001 scenario)
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-011 + PXL-AUD-005 Retested Passed; standing; session 43 log row)
 
 ## Last Known Errors
 
-None. `npm test` 299/299 across 19 files on a fresh `supabase db reset --local` (replay through `20260704000001`); `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
+None. `npm test` 324/324 across 20 files on a fresh `supabase db reset --local` (replay through `20260704000002`); `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
+
+IMPORTANT for future migrations: the PXL-DA-011 guards fire for superuser too — data backfills that rewrite non-draft documents or their lines need `SET session_replication_role = replica` (or targeted `ALTER TABLE ... DISABLE TRIGGER`) around the backfill. New lifecycle columns on guarded tables must be added to that table's allowlist in the guard trigger definition.
 
 Note: `npm test` against a non-fresh local DB can fail with `users_pkey` duplicate-key collisions from earlier seeded runs — always `supabase db reset --local` first.
 
@@ -52,7 +51,7 @@ Session 38 landed as `0f9ab83` (CI 28648390569 green). Session 39 landed as `c57
 
 ## Next Recommended Step
 
-Continue AIQ-008 with the next Critical: PXL-DA-011 (status-aware immutability on every transactional header/line table, Open) or PXL-DA-001 (server-side GL preview RPC, In Progress). IMPORTANT new discipline: run `npm run gen:types` after every migration so `src/lib/database.types.ts` stays in sync — a stale types file fails the frontend build on new columns/RPCs. Do not redo PXL-DA-015, PXL-DA-017, PXL-AUD-029, or PXL-AUD-030.
+Continue AIQ-008 with the next Critical: PXL-DA-001 (server-side GL preview RPC, In Progress), PXL-DA-002 (drilldown contracts, Open), or PXL-DA-004 (posting-engine consolidation, Open). Run `npm run gen:types` after every migration. Do not redo PXL-DA-011, PXL-AUD-005, PXL-DA-015, PXL-DA-017, PXL-AUD-029, or PXL-AUD-030.
 
 ## Standing Autonomy Delegation
 
