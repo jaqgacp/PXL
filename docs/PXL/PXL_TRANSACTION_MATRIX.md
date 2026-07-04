@@ -12,7 +12,7 @@ Use this section first when choosing transaction work; then read the specific ro
 - **Strongest implemented core:** SI/OR/VB/PV have atomic save/post RPCs, setup readiness, GL Impact coverage, status-aware immutability, and pgTAP coverage. Do not assume the same maturity on secondary transaction pages.
 - **Secondary transaction caution:** Check vouchers, cash sales/purchases, credit/vendor-credit applications, inventory, fixed assets, and schedule entries exist but may lack full GL preview, drillback, tax validation, or report reconciliation.
 - **Reporting evidence:** VAT, WHT, CAS, and BIR books export snapshots are server-attested and hashed; true BIR DAT layout and remaining drill contracts are still tracked in audit findings.
-- **Audit evidence rollout:** Payment Vouchers, Vendor Bills, and Receipts now show lifecycle facts and `AuditTrailSection`; other transaction pages still need the same PXL-AUD-050 treatment.
+- **Audit evidence rollout:** Sales Invoices, Payment Vouchers, Vendor Bills, and Receipts now show lifecycle facts and `AuditTrailSection`; other transaction pages still need the same PXL-AUD-050 treatment.
 - **When touching a row:** keep this matrix, `PXL_END_TO_END_AUDIT_FINDINGS.md`, and `PXL_ACCOUNTING_TEST_BOOK.md` synchronized in the same session.
 
 Status key:

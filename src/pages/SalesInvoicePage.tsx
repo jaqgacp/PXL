@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { AuditTrailSection, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
@@ -20,7 +20,7 @@ type SI = {
   total_exempt_amount: number; total_vat_amount: number
   total_amount: number; status: SIStatus
   cwt_amount_expected: number | null
-  void_reason_id: string | null; posted_at: string | null
+  void_reason_id: string | null; approved_at?: string | null; posted_at: string | null
   created_at: string; updated_at: string
 }
 
@@ -68,6 +68,8 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 
 const today = () => new Date().toISOString().split('T')[0]
+const formatDateTime = (value?: string | null) =>
+  value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 
 const newLine = (): SILine => ({
   _key: crypto.randomUUID(),
@@ -555,6 +557,13 @@ export default function SalesInvoicePage() {
   const readOnly = mode === 'view'
   const canEdit = mode === 'edit' || mode === 'new'
   const siStatus = editSI?.status || 'draft'
+  const auditFacts = editSI ? [
+    { label: 'Created', value: formatDateTime(editSI.created_at) },
+    { label: 'Last edited', value: formatDateTime(editSI.updated_at) },
+    { label: 'Approved', value: formatDateTime(editSI.approved_at) },
+    { label: 'Posted', value: formatDateTime(editSI.posted_at) },
+    { label: 'Lock status', value: editSI.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ] : []
 
   // ── List View ──────────────────────────────────────────────
   if (mode === 'list') {
@@ -1006,6 +1015,23 @@ export default function SalesInvoicePage() {
             previewRows={glImpactRows}
           />
         </div>
+
+        {editSI?.id && (
+          <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 space-y-3">
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {auditFacts.map(fact => (
+                  <div key={fact.label}>
+                    <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{fact.label}</div>
+                    <div className="text-xs font-medium text-gray-700">{fact.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <AuditTrailSection tableName="sales_invoices" recordId={editSI.id} />
+          </div>
+        )}
 
         {/* Void footer for posted SIs */}
         {editSI?.posted_at && (
