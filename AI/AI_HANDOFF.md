@@ -27,7 +27,7 @@ Session 43 (2026-07-04): implemented PXL-DA-011 status-aware immutability, which
 
 ## Known Errors / Blockers
 
-None locally: fresh replay through `20260704000002` + `npm test` 324/324 across 20 files (reset the local DB first — test 020 commits fixtures by design), build/lint/docs-consistency green. Hosted push of `20260704000002` PENDING until landing (push with `supabase link` + `db push --linked --yes`, then verify with `supabase migration list --linked`).
+None locally: fresh replay through `20260704000002` + `npm test` 324/324 across 20 files (reset the local DB first — test 020 commits fixtures by design), build/lint/docs-consistency green. Session 43 landed as `ba74c14`, CI run 28707527259 green (verified via `gh run watch --exit-status`); hosted is fully in sync through `20260704000002` (pushed and verified 2026-07-04 via `supabase migration list --linked`).
 
 ## Exact Next Recommended Task
 
