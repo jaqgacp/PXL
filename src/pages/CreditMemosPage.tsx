@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { AuditTrailSection, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
 
 // ── Types ─────────────────────────────────────────────────────
 type CMStatus = 'draft' | 'approved' | 'applied' | 'cancelled'
@@ -11,7 +11,7 @@ type CM = {
   customer_name_snapshot: string; customer_tin_snapshot: string
   invoice_id: string | null; reason_code_id: string; remarks: string | null
   total_net_amount: number; total_vat_amount: number; total_amount: number
-  status: CMStatus; posted_at: string | null; created_at: string; branch_id: string
+  status: CMStatus; posted_at: string | null; created_at: string; updated_at: string; branch_id: string
 }
 
 type CMLLine = {
@@ -37,6 +37,8 @@ type Branch = { id: string; branch_code: string; branch_name: string }
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
+const formatDateTime = (value?: string | null) =>
+  value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 const newLine = (): CMLLine => ({
   _key: crypto.randomUUID(), description: '', quantity: 1, unit_price: 0,
   net_amount: 0, vat_code_id: '', vat_classification: 'regular', vat_rate: 12,
@@ -258,6 +260,13 @@ export default function CreditMemosPage() {
   const readOnly = mode === 'view'
   const canEdit = mode === 'new' || mode === 'edit'
   const cmStatus = editDoc?.status || 'draft'
+  const auditFacts = editDoc ? [
+    { label: 'Created', value: formatDateTime(editDoc.created_at) },
+    { label: 'Last edited', value: formatDateTime(editDoc.updated_at) },
+    { label: 'Posted', value: formatDateTime(editDoc.posted_at) },
+    { label: 'Status', value: editDoc.status },
+    { label: 'Lock status', value: editDoc.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ] : []
 
   // ── List ───────────────────────────────────────────────────
   if (mode === 'list') {
@@ -505,8 +514,24 @@ export default function CreditMemosPage() {
             </div>
           </div>
         </div>
+
+        {editDoc?.id && (
+          <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 space-y-3">
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                {auditFacts.map(fact => (
+                  <div key={fact.label}>
+                    <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{fact.label}</div>
+                    <div className="text-xs font-medium text-gray-700">{fact.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <AuditTrailSection tableName="credit_memos" recordId={editDoc.id} />
+          </div>
+        )}
       </div>
     </div>
   )
 }
-
