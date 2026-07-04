@@ -24,8 +24,7 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
 - `README.md` stack table is stale (says React 18 / Vite 8, migrations 001–015); `package.json` shows React 19, react-router-dom v7, TanStack Query, Zustand, Zod, and 61 migrations exist. The architecture summary reflects actuals; consider refreshing README separately.
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
 - Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
-- Remote is fully in sync through migration 20260704000001 (pushed and verified 2026-07-04 via `supabase migration list --linked`; user supplied the access token in-session, `link` + `db push --linked --yes`). Note: `db push` emits harmless pg-delta CA-cert errors from the drift-check feature; migrations apply anyway — verify with `migration list --linked`, not the push output.
-- PXL-AUD-029 (Open, Medium): `AppShell` feature gating fails open — small query fix pending.
+- Remote is fully in sync through migration 20260704000002 (pushed and verified 2026-07-04 via `supabase migration list --linked`). Note: `db push` emits harmless pg-delta CA-cert errors from the drift-check feature; migrations apply anyway — verify with `migration list --linked`, not the push output.
 - Dev note: the CSP in `index.html` restricts `connect-src` to `*.supabase.co`, so running the frontend against the local Supabase stack (`127.0.0.1:54321`) requires a CSP bypass (Playwright `bypassCSP` was used for verification). Consider a dev-mode CSP if local frontend testing becomes routine.
 
 ## Last Files Changed
@@ -41,7 +40,7 @@ Status-aware immutability session (session 43, 2026-07-04):
 
 ## Last Known Errors
 
-None. `npm test` 324/324 across 20 files on a fresh `supabase db reset --local` (replay through `20260704000002`); `npm run build` passed; `npm run lint` passed with pre-existing warnings only (39); `scripts/check_docs_consistency.sh` green.
+None. `npm test` 324/324 across 20 files on a fresh `supabase db reset --local` (replay through `20260704000002`); `npm run build` passed; `npm run lint` is a zero-warning baseline (exit 0) as of session 46; `scripts/check_docs_consistency.sh` green.
 
 IMPORTANT for future migrations: the PXL-DA-011 guards fire for superuser too — data backfills that rewrite non-draft documents or their lines need `SET session_replication_role = replica` (or targeted `ALTER TABLE ... DISABLE TRIGGER`) around the backfill. New lifecycle columns on guarded tables must be added to that table's allowlist in the guard trigger definition.
 
