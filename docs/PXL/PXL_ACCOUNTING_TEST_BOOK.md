@@ -461,3 +461,26 @@ Notes:
 
 - All seven books pages previously assembled CSVs in the browser; they now render the file from the RPC's frozen rows. The print views still render live page data.
 - Cash receipts book = ORs (gross of CWT) plus cash-sale SIs; cash disbursements book = PVs (net of EWT) plus check vouchers (net check amount) plus cash purchases.
+
+## JE-DIMS-001 - Dimension Propagation to Journal Entry Lines
+
+Status: Executed Passing (2026-07-04) in `supabase/tests/019_je_line_dimensions_test.sql`.
+
+Related findings: PXL-DA-017 (dimension propagation per DEC-011).
+
+Scenario (two companies; company 1 has branch HO, department FIN, cost center CC-01; company 2 owns a foreign branch/department used only for negative tests):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Post an SI captured under branch HO | The JE header carries the document branch; every JE line inherits it (no line left unattributed, single distinct branch). |
+| 2 | Post a manual JE with department/cost center on the expense line | `fn_post_manual_je` accepts per-line `branch_id`/`department_id`/`cost_center_id` in `p_lines`; lines without an explicit branch inherit the header branch. |
+| 3 | Reverse the manual JE | Reversal lines carry the original line dimensions (department and cost center preserved on the swapped lines). |
+| 4 | Header branch from another company | Rejected by `trg_je_dimensions_guard` ("does not belong to company"). |
+| 5 | Line department or line branch from another company | Rejected by `trg_je_line_dimensions_guard`. |
+| 6 | Attempt to diverge a line's company from its JE's company | Blocked (RLS filters the direct update; the guard raises in definer contexts) — post-state proves the company is unchanged. |
+| 7 | Read `vw_general_ledger` | Line `department_id`/`cost_center_id` are exposed; `branch_id` is line-accurate (`COALESCE(line, header)`), and branch P&L revenue for HO reconciles exactly to the posted SI (10,000.00 net of VAT). |
+
+Notes:
+
+- Lines inherit the header branch centrally in a BEFORE trigger, so all 34 JE writers (and future ones) propagate without per-writer changes; existing lines were backfilled from their headers.
+- Documents do not yet carry department/cost center; capture at document-line level is a backlog enhancement (Dimension summary on documents). Stock transfer JEs stay branch-unattributed by design (they span warehouses).

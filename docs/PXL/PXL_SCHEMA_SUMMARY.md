@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-03. Migrations scanned: 72. Tests present: 18.
+Generated: 2026-07-04. Migrations scanned: 73. Tests present: 19.
 
-## Functions (144)
+## Functions (146)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -60,6 +60,8 @@ Generated: 2026-07-03. Migrations scanned: 72. Tests present: 18.
 | `fn_guard_atc_code_history` | `20260701000018_atc_effective_date_governance.sql` | 1 |
 | `fn_guard_form2307_snapshot_immutable` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_guard_vat_return_snapshot_immutable` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
+| `fn_je_dimensions_guard` | `20260704000001_je_line_dimensions.sql` | 1 |
+| `fn_je_line_dimensions_guard` | `20260704000001_je_line_dimensions.sql` | 1 |
 | `fn_mark_tax_event_filed` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_next_document_number` | `20260630000021_gap_fill.sql` | 3 |
 | `fn_post_amortization_entry` | `20260630000026_amortization_revenuerecon.sql` | 1 |
@@ -72,7 +74,7 @@ Generated: 2026-07-03. Migrations scanned: 72. Tests present: 18.
 | `fn_post_fund_transfer` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_post_goods_issue` | `20260630000028_inventory.sql` | 1 |
 | `fn_post_inter_branch_transfer` | `20260630000024_banking_treasury_functions.sql` | 1 |
-| `fn_post_manual_je` | `20260630000025_accounting_module.sql` | 1 |
+| `fn_post_manual_je` | `20260704000001_je_line_dimensions.sql` | 2 |
 | `fn_post_payment_voucher` | `20260701000016_pv_ewt_explicit_basis.sql` | 6 |
 | `fn_post_petty_cash_replenishment` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_post_physical_count` | `20260630000028_inventory.sql` | 1 |
@@ -102,7 +104,7 @@ Generated: 2026-07-03. Migrations scanned: 72. Tests present: 18.
 | `fn_require_vb_line_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_require_vb_vat_registration_status` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_required_approval_workflow` | `20260703000001_approval_sod_enforcement.sql` | 1 |
-| `fn_reverse_je` | `20260630000025_accounting_module.sql` | 1 |
+| `fn_reverse_je` | `20260704000001_je_line_dimensions.sql` | 2 |
 | `fn_reverse_tax_detail_entries` | `20260702000009_tax_ledger_void_reversal.sql` | 1 |
 | `fn_reverse_vendor_credit_application` | `20260701000011_vendor_credit_application_reversal.sql` | 1 |
 | `fn_revert_si_to_draft` | `20260630000021_gap_fill.sql` | 2 |
@@ -166,7 +168,7 @@ Generated: 2026-07-03. Migrations scanned: 72. Tests present: 18.
 | `vw_debit_memo_register` | `20260629000005_sprint5_views.sql` | 1 |
 | `vw_deposits_in_transit` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `vw_ewt_summary_ap` | `20260702000009_tax_ledger_void_reversal.sql` | 5 |
-| `vw_general_ledger` | `20260702000005_gl_reversal_visibility.sql` | 2 |
+| `vw_general_ledger` | `20260704000001_je_line_dimensions.sql` | 3 |
 | `vw_input_vat_review` | `20260703000003_vat_review_views_ledger_backed.sql` | 4 |
 | `vw_output_vat_review` | `20260703000003_vat_review_views_ledger_backed.sql` | 2 |
 | `vw_outstanding_checks` | `20260630000024_banking_treasury_functions.sql` | 1 |
@@ -261,7 +263,7 @@ Generated: 2026-07-03. Migrations scanned: 72. Tests present: 18.
 | `items` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `itr_filings` | `20260701000004_income_tax.sql` | 0 | `—` |
 | `journal_entries` | `20260629000013_gl_core.sql` | 5 | `20260630000025_accounting_module.sql` |
-| `journal_entry_lines` | `20260629000013_gl_core.sql` | 2 | `20260630000021_gap_fill.sql` |
+| `journal_entry_lines` | `20260629000013_gl_core.sql` | 3 | `20260704000001_je_line_dimensions.sql` |
 | `mcit_computations` | `20260701000004_income_tax.sql` | 0 | `—` |
 | `nolco_schedule` | `20260701000004_income_tax.sql` | 0 | `—` |
 | `number_series` | `20260628000002_sprint1.sql` | 2 | `20260702000001_number_series_document_code_alignment.sql` |
@@ -330,7 +332,7 @@ Generated: 2026-07-03. Migrations scanned: 72. Tests present: 18.
 | `warehouse_zones` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 
-## Triggers (141)
+## Triggers (143)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -419,6 +421,8 @@ Generated: 2026-07-03. Migrations scanned: 72. Tests present: 18.
 | `trg_generate_calendar_on_profile_change` | `20260628000005_sprint2_tax.sql` |
 | `trg_gi_updated_at` | `20260630000028_inventory.sql` |
 | `trg_inter_branch_transfers_updated_at` | `20260630000023_banking_treasury_schema.sql` |
+| `trg_je_dimensions_guard` | `20260704000001_je_line_dimensions.sql` |
+| `trg_je_line_dimensions_guard` | `20260704000001_je_line_dimensions.sql` |
 | `trg_journal_entries_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_journal_entry_lines_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_new_company_grant_access` | `20260630000021_gap_fill.sql` |

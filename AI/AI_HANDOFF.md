@@ -4,35 +4,39 @@ Last updated: 2026-07-04
 
 ## What Was Done
 
-Session 40 closed PXL-DA-015. The final implementation piece — the snapshot reader/drilldown UI — shipped as `src/pages/ReportSnapshotsPage.tsx` (route `/report-snapshots`, Compliance → Audit & CAS nav): an RLS-scoped, read-only list over `report_snapshots` filterable by report type (all 19 labels across the six families), status, and period overlap; drilldown shows the full SHA-256 source hash, source table/id, per-source version history with click-through (e.g. final vs filed VAT return evidence), and generic rendering of frozen report/source payloads — scalar values grid, row tables (capped at 200 with a count note), integrity totals, and reconciliation blocks. No live-report recomputation anywhere on the page.
+Session 41 closed PXL-DA-017 (dimension propagation per DEC-011). Migration `20260704000001_je_line_dimensions.sql`:
 
-The page was found in-flight (uncommitted) from a prior session; this session verified it against the actual schema, fixed payload year formatting (`2,026` → `2026`) and the filter-aware empty state, and verified it live in Chromium against the local Supabase stack with seeded snapshot evidence.
+- `journal_entry_lines` gained `branch_id` / `department_id` / `cost_center_id` (FK'd, partially indexed).
+- `trg_je_dimensions_guard` (journal_entries): header branch must belong to the JE company.
+- `trg_je_line_dimensions_guard` (journal_entry_lines): line company must equal the JE company (new integrity check); lines inherit the header branch when none is set — this single trigger covers all 34 JE writers, current and future, without per-writer changes; every line dimension is company-validated.
+- Backfill: existing lines inherited their header branch (guarded against hypothetical cross-company legacy branches).
+- `vw_general_ledger.branch_id` is now line-accurate (`COALESCE(line, header)` — same name/type/position, so Branch P&L and every other consumer upgraded transparently); line `department_id`/`cost_center_id` appended at the end.
+- `fn_post_manual_je` accepts optional per-line `branch_id`/`department_id`/`cost_center_id` inside `p_lines`; `fn_reverse_je` copies line dimensions onto reversal lines.
+
+Session 40 (same day) closed PXL-DA-015 with the snapshot reader UI (`/report-snapshots`), and the user-supplied token synced hosted Supabase through `20260703000009`.
 
 ## What Changed
 
-- PXL-DA-015 is Retested Passed. Findings standing: 20 Retested Passed / 14 In Progress / 15 Open (49 findings); 10 Criticals remain.
-- New Medium finding PXL-AUD-029 (Open): `AppShell` nav feature gating selects the non-existent `sys_feature_enablement.feature_key` column — 400 on every page load, gating silently fails open. Fix is a small query change (resolve via `feature_definition_id` → `ref_feature_definitions`).
-- `docs/PXL/STATUS.md`: 206/206 pages (Audit & CAS now 12).
-- Backlog: snapshot hash re-verification / file re-download enhancement recorded per DEC-012.
-- No new migrations, no schema changes, no new pgTAP files (UI-only session; `supabase/tests/` remains 18 files / 285 assertions).
+- Findings standing: 21 Retested Passed / 14 In Progress / 14 Open (49 findings); 10 Criticals remain.
+- New scenario JE-DIMS-001 (`supabase/tests/019_je_line_dimensions_test.sql`, 14 assertions); `supabase/tests/` now 19 files / 299 assertions.
+- Transaction matrix Manual JE row and test book updated; schema summary regenerated.
 
 ## What Remains
 
-- PXL-DA-017 dimension propagation to JE lines per DEC-011 (next unblocked accounting architecture task).
-- PXL-AUD-029 AppShell feature-gating query fix (small).
-- The true BIR DAT record layout stays under PXL-DA-019.
-- CM/DM/VC per-classification ledger rows follow the same writer pattern when needed (PXL-AUD-014).
+- Next Criticals: PXL-DA-001 server-side GL preview RPC (In Progress) or PXL-DA-011 status-aware immutability on all transactional header/line tables (Open).
+- PXL-AUD-029 AppShell feature-gating query fix (small, Medium).
+- Document-line department/cost-center capture is a backlog enhancement (documents carry only branch today).
+- `fn_bt_reverse_je` and doc-void counter-JEs inherit header branch but do not copy line dept/cc — adopt the `fn_reverse_je` pattern when a capture path writes dept/cc on those JEs.
+- Stock transfer JEs stay branch-unattributed by design (they span warehouses).
 - Summary docs AIQ-006–007 when audit work pauses.
 
 ## Known Errors / Blockers
 
-None locally: `npm test` 285/285 across 18 files on a fresh `supabase db reset --local` (reset first — a dirty local DB collides on seeded user UUIDs), build/lint/docs-consistency green. Reader UI verified live in the browser. Hosted Supabase is fully in sync through `20260703000009` (pushed 2026-07-04 with a user-supplied token; verified via `supabase migration list --linked` plus REST spot-checks of `report_snapshots` and `fn_snapshot_books_export`). No PENDING credential items remain.
-
-Dev caveat: `index.html` CSP `connect-src` allows only `*.supabase.co`, so browser-testing the frontend against local Supabase needs a CSP bypass (Playwright `bypassCSP: true` was used).
+None locally: fresh replay through `20260704000001` + `npm test` 299/299 across 19 files (reset the local DB first — leftover seeds collide with test UUIDs), build/lint/docs-consistency green. Hosted: synced through `20260703000009`; push `20260704000001` after landing (`SUPABASE_ACCESS_TOKEN` + `supabase db push --linked --yes`; the CLI's pg-delta CA-cert errors are noise — verify with `supabase migration list --linked`).
 
 ## Exact Next Recommended Task
 
-Continue `AIQ-008` with PXL-DA-017: propagate branch/department/cost-center dimensions from documents to JE lines per DEC-011 (branch as reporting dimension), including posting writers and a pgTAP scenario. Alternatively, the small PXL-AUD-029 AppShell feature-gating fix.
+Continue `AIQ-008` with PXL-DA-011: status-aware immutability on every transactional header/line table (extend the PXL-AUD-005 SI/OR/VB/PV pattern to CM/DM/VC, banking, inventory, and fixed-asset documents), or PXL-DA-001 server-side GL preview RPC. Alternatively the small PXL-AUD-029 AppShell fix.
 
 ## Exact Next Prompt
 
