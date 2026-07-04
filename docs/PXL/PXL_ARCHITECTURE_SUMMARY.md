@@ -8,7 +8,8 @@ PXL is an accounting-first, Philippine-compliance-first ERP for multi-company us
 
 ## Stack
 
-- **Frontend:** React 19 + TypeScript + Vite, Tailwind CSS v4, shadcn/Base UI components, react-router-dom v7, TanStack Query, Zustand, react-hook-form + Zod, PapaParse for CSV.
+- **Frontend:** React 19 + TypeScript + Vite, Tailwind CSS v4, shadcn/Base UI components, react-router-dom v7, PapaParse for CSV. Data fetching and form state are plain `useState`/`useEffect` with direct `@supabase/supabase-js` calls — deliberately boring; the database enforces all business rules. The client is typed against generated schema types (`src/lib/database.types.ts`, regenerate with `npm run gen:types` after every migration), so column/RPC drift fails the build.
+- **Installed but NOT yet adopted:** TanStack Query, Zustand, react-hook-form, Zod. Selective adoption targets are documented in `docs/PXL/PXL_PRODUCT_BACKLOG.md` (Frontend Architecture section); do not describe them as current architecture.
 - **Backend:** Supabase — PostgreSQL, PostgREST, GoTrue Auth (Google OAuth PKCE + email/password), Row Level Security.
 - **No custom server:** all business logic lives in PostgreSQL (tables, views, triggers, SECURITY DEFINER RPCs) behind Supabase; the React app talks to it via `@supabase/supabase-js`.
 - **No Claude/Anthropic API integration exists** in the application code.

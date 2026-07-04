@@ -176,7 +176,7 @@ export default function ItemCatalogPage() {
     setSaving(false)
   }
 
-  const toggleActive = async (id: string, table: string, current: boolean) => {
+  const toggleActive = async (id: string, table: 'item_categories' | 'units_of_measure' | 'items', current: boolean) => {
     await supabase.from(table).update({ is_active: !current }).eq('id', id)
     fetchAll()
   }

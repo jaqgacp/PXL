@@ -57,7 +57,7 @@ export default function NumberSeriesPage() {
     fetchSeries()
     supabase.from('companies').select('id,registered_name').order('registered_name').then(({ data }) => setCompanies(data || []))
     supabase.from('branches').select('id,company_id,branch_code,branch_name').order('branch_name').then(({ data }) => setBranches(data || []))
-    supabase.from('ref_document_types').select('*').order('sort_order').then(({ data }) => setDocTypes(data || []))
+    supabase.from('ref_document_types').select('*').order('sort_order').then(({ data }) => setDocTypes((data || []) as unknown as DocType[]))
   }, [])
 
   const set = (k: string, v: string | boolean) => { setSaved(false); setForm(f => ({ ...f, [k]: v })) }

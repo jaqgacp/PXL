@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import type { TablesInsert } from '@/lib/database.types'
 import { useAppCtx } from '@/lib/context'
 
 type Warehouse = {
@@ -64,7 +65,7 @@ export default function WarehousesPage() {
     const payload = { ...form, company_id: companyId }
     const { error: e } = editing
       ? await supabase.from('warehouses').update(payload).eq('id', editing.id)
-      : await supabase.from('warehouses').insert(payload)
+      : await supabase.from('warehouses').insert(payload as TablesInsert<'warehouses'>)
     setSaving(false)
     if (e) { setError(e.message); return }
     setMode('list'); load()

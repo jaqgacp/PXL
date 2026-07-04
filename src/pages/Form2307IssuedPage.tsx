@@ -87,7 +87,7 @@ export default function Form2307IssuedPage() {
   const supersede = async (issuance: Issuance, reason: string) => {
     const { error } = await supabase.rpc('fn_supersede_form_2307_issued', {
       p_issuance_id: issuance.id,
-      p_reason: reason || null,
+      p_reason: reason || undefined,
     })
     if (error) {
       alert(error.message)

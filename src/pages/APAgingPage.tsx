@@ -41,7 +41,7 @@ const toAgingBills = async (
   const { data } = await supabase.rpc('fn_ap_aging_asof', {
     p_company_id: companyId,
     p_as_of: asOfDate,
-    p_supplier_id: supplierId || null,
+    p_supplier_id: supplierId || undefined,
   })
 
   return ((data as any[]) || []).map(r => ({

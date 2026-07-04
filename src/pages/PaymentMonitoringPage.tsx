@@ -59,8 +59,8 @@ export default function PaymentMonitoringPage() {
     const { error: e } = await supabase.rpc('fn_update_payment_tracking', {
       p_voucher_id: modal.pv.id,
       p_action: modal.action,
-      p_date: modal.action !== 'stale' ? modalDate : null,
-      p_remarks: modalRemarks || null,
+      p_date: modal.action !== 'stale' ? modalDate : undefined,
+      p_remarks: modalRemarks || undefined,
     })
     if (e) { alert(e.message); setSaving(false); return }
     setModal(null); loadVouchers(); setSaving(false)

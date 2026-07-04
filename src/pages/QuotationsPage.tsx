@@ -83,11 +83,11 @@ export default function QuotationsPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
-      supabase.from('customers').select('id,registered_name,tin,tin_branch_code,payment_terms_id')
+      supabase.from('customers').select('id,registered_name,tin,tin_branch_code,payment_terms_id:default_terms_id')
         .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('items').select('id,item_code,item_name,default_uom_id,default_sales_price')
-        .eq('company_id', companyId).eq('is_active', true).order('item_name'),
-      supabase.from('units_of_measure').select('id,uom_code,uom_name').eq('is_active', true).order('uom_name'),
+      supabase.from('items').select('id,item_code,item_name:description,default_uom_id:uom_id,default_sales_price:standard_selling_price')
+        .eq('company_id', companyId).eq('is_active', true).order('description'),
+      supabase.from('units_of_measure').select('id,uom_code,uom_name:description').eq('is_active', true).order('uom_code'),
       supabase.from('branches').select('id,branch_code,branch_name')
         .eq('company_id', companyId).eq('is_active', true),
     ]).then(([{ data: cs }, { data: is }, { data: us }, { data: bs }]) => {

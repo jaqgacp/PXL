@@ -88,7 +88,7 @@ export default function InterBranchTransfersPage() {
   }
 
   const post = async (id: string) => { setBusy(true); setError(''); try { const { error: e } = await supabase.rpc('fn_post_inter_branch_transfer', { p_ibt_id: id }); if (e) throw e; await load(); setMode('list') } catch (e) { setError((e as Error).message || 'Post failed') } finally { setBusy(false) } }
-  const cancel = async (id: string) => { const memo = prompt('Reason for cancellation (optional):') ?? undefined; setBusy(true); setError(''); try { const { error: e } = await supabase.rpc('fn_cancel_inter_branch_transfer', { p_ibt_id: id, p_memo: memo || null }); if (e) throw e; await load(); setMode('list') } catch (e) { setError((e as Error).message || 'Cancel failed') } finally { setBusy(false) } }
+  const cancel = async (id: string) => { const memo = prompt('Reason for cancellation (optional):') ?? undefined; setBusy(true); setError(''); try { const { error: e } = await supabase.rpc('fn_cancel_inter_branch_transfer', { p_ibt_id: id, p_memo: memo || undefined }); if (e) throw e; await load(); setMode('list') } catch (e) { setError((e as Error).message || 'Cancel failed') } finally { setBusy(false) } }
   const del = async (id: string) => { if (!confirm('Delete this draft transfer?')) return; setBusy(true); try { const { error: e } = await supabase.from('inter_branch_transfers').delete().eq('id', id); if (e) throw e; await load() } catch (e) { setError((e as Error).message || 'Delete failed') } finally { setBusy(false) } }
 
   if (mode === 'list') return (

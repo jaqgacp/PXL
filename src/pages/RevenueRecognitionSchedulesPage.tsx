@@ -101,9 +101,9 @@ export default function RevenueRecognitionSchedulesPage() {
     try {
       const { error: e } = await supabase.rpc('fn_create_revenue_recognition_schedule', {
         p_company_id: companyId,
-        p_branch_id: branchId || null,
+        p_branch_id: (branchId || null)!,
         p_schedule_name: form.schedule_name,
-        p_description: form.description || null,
+        p_description: (form.description || null)!,
         p_deferred_revenue_account_id: form.deferred_revenue_account_id,
         p_revenue_account_id: form.revenue_account_id,
         p_total_amount: amt,

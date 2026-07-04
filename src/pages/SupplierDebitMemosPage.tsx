@@ -74,7 +74,7 @@ export default function SupplierDebitMemosPage() {
     setSaving(true); setError('')
     try {
       const result = await supabase.rpc('fn_save_supplier_debit_memo', {
-        p_sdm_id: editSDM.id || null,
+        p_sdm_id: (editSDM.id || null)!,
         p_header: {
           company_id: companyId, branch_id: branchId || null,
           supplier_id: editSDM.supplier_id, supplier_name_snapshot: editSDM.supplier_name_snapshot,

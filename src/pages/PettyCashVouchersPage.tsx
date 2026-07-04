@@ -85,7 +85,7 @@ export default function PettyCashVouchersPage() {
     } catch (e) { setError((e as Error).message || 'Save failed') } finally { setSaving(false) }
   }
 
-  const runRpc = async (fn: string, id: string, confirmMsg?: string) => {
+  const runRpc = async (fn: 'fn_approve_petty_cash_voucher' | 'fn_cancel_petty_cash_voucher', id: string, confirmMsg?: string) => {
     if (confirmMsg && !confirm(confirmMsg)) return
     setBusy(true); setError('')
     try {

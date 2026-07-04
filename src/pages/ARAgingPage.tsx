@@ -69,7 +69,7 @@ export default function ARAgingPage() {
     const { data } = await supabase.rpc('fn_ar_aging_asof', {
       p_company_id: companyId,
       p_as_of: asOfDate,
-      p_customer_id: agingCustomer || null,
+      p_customer_id: agingCustomer || undefined,
     })
 
     if (!data || data.length === 0) { setAgingLoading(false); return }
@@ -129,7 +129,7 @@ export default function ARAgingPage() {
     let balance = 0
     const rows: LedgerRow[] = (data || []).map(r => {
       balance += Number(r.debit_amount) - Number(r.credit_amount)
-      return { transaction_date: r.transaction_date, doc_type: r.doc_type, doc_number: r.doc_number, description: r.description, debit_amount: Number(r.debit_amount), credit_amount: Number(r.credit_amount), running_balance: balance }
+      return { transaction_date: r.transaction_date, doc_type: r.doc_type, doc_number: r.doc_number, description: r.description, debit_amount: Number(r.debit_amount), credit_amount: Number(r.credit_amount), running_balance: balance } as LedgerRow
     })
     setLedgerRows(rows)
     setLedgerLoading(false)

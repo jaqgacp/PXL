@@ -84,7 +84,7 @@ export default function PurchaseReturnsPage() {
     setSaving(true); setError('')
     try {
       const result = await supabase.rpc('fn_save_purchase_return', {
-        p_return_id: editReturn.id || null,
+        p_return_id: (editReturn.id || null)!,
         p_header: {
           company_id: companyId, branch_id: branchId || null,
           rr_id: editReturn.rr_id, return_date: editReturn.return_date,

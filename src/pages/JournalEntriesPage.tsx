@@ -146,7 +146,7 @@ export default function JournalEntriesPage() {
       }))
       const { error: e } = await supabase.rpc('fn_post_manual_je', {
         p_company_id: companyId,
-        p_branch_id: editJE.branch_id || branchId || null,
+        p_branch_id: (editJE.branch_id || branchId || null)!,
         p_je_date: editJE.je_date || today(),
         p_description: editJE.description || 'Manual Journal Entry',
         p_reference_doc_type: 'MANUAL',

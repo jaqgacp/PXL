@@ -126,7 +126,7 @@ export default function CheckVouchersPage() {
     } catch (e) { setError((e as Error).message || 'Save failed') } finally { setSaving(false) }
   }
 
-  const doRpc = async (fn: string, id: string, confirmMsg?: string) => {
+  const doRpc = async (fn: 'fn_post_check_voucher' | 'fn_cancel_check_voucher', id: string, confirmMsg?: string) => {
     if (confirmMsg && !confirm(confirmMsg)) return
     setBusy(true); setError('')
     try { const { error: e } = await supabase.rpc(fn, { p_cv_id: id }); if (e) throw e; await load(); setMode('list') }

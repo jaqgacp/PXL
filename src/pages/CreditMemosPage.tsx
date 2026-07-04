@@ -244,7 +244,7 @@ export default function CreditMemosPage() {
           vat_code_id: l.vat_code_id || '', revenue_account_id: l.revenue_account_id || '',
         }))
       const { error: rpcErr } = await supabase.rpc('fn_save_credit_memo', {
-        p_cm_id: mode === 'new' ? null : (editDoc?.id ?? null),
+        p_cm_id: (mode === 'new' ? null : (editDoc?.id ?? null))!,
         p_header: header,
         p_lines: linesPayload,
         p_next_status: nextStatus,

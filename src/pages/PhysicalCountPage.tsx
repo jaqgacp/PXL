@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import type { TablesInsert } from '@/lib/database.types'
 import { useAppCtx } from '@/lib/context'
 
 type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
@@ -103,7 +104,7 @@ export default function PhysicalCountPage() {
       .upsert(lines.filter(l => l.id).map(l => ({
         id: l.id, counted_qty: l.counted_qty !== '' ? Number(l.counted_qty) : null,
         gl_variance_account_id: l.gl_variance_account_id || null,
-      })))
+      })) as unknown as TablesInsert<'physical_count_sheet_lines'>[])
     if (updErr) { setError(updErr.message); return }
 
     setPosting(true); setError(''); setSuccess('')

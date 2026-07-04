@@ -319,7 +319,7 @@ export default function VendorBillsPage() {
       }))
 
       const { data: billId, error: saveErr } = await supabase.rpc('fn_save_vendor_bill', {
-        p_bill_id: editVB.id || null, p_header: header, p_lines: linesPayload,
+        p_bill_id: (editVB.id || null)!, p_header: header, p_lines: linesPayload,
       })
       if (saveErr) throw saveErr
 
@@ -354,7 +354,7 @@ export default function VendorBillsPage() {
     if (!voidTarget || !voidReasonId) return
     setSaving(true); setError('')
     const { error: e } = await supabase.rpc('fn_void_vendor_bill', {
-      p_bill_id: voidTarget.id, p_void_reason_id: voidReasonId, p_memo: voidMemo || null,
+      p_bill_id: voidTarget.id, p_void_reason_id: voidReasonId, p_memo: voidMemo || undefined,
     })
     if (e) { setError(e.message); setSaving(false); return }
     setVoidTarget(null); setVoidReasonId(''); setVoidMemo('')

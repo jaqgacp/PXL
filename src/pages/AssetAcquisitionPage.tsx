@@ -65,7 +65,7 @@ export default function AssetAcquisitionPage() {
       supabase.from('branches').select('id,branch_name').eq('company_id', companyId).order('branch_name'),
       supabase.from('departments').select('id,department_name').eq('company_id', companyId).order('department_name'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('is_postable', true).order('account_code'),
-      supabase.from('suppliers').select('id,supplier_name').eq('company_id', companyId).order('supplier_name'),
+      supabase.from('suppliers').select('id,supplier_name:registered_name').eq('company_id', companyId).order('registered_name'),
     ])
     setCategories((cats as Category[]) || [])
     setBranches((brs as Branch[]) || [])

@@ -22,7 +22,7 @@ export default function CurrencySetupPage() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    supabase.from('currencies').select('*').order('is_base', { ascending: false }).then(({ data }) => setCurrencies(data || []))
+    supabase.from('currencies').select('*').order('is_base', { ascending: false }).then(({ data }) => setCurrencies((data || []) as unknown as Currency[]))
     supabase.from('exchange_rates').select('*, companies(registered_name), currencies(currency_code,name,symbol)').order('rate_date', { ascending: false }).limit(200)
       .then(({ data }) => setRates((data as ExchangeRate[]) || []))
     supabase.from('companies').select('id,registered_name').order('registered_name').then(({ data }) => setCompanies(data || []))
@@ -33,7 +33,7 @@ export default function CurrencySetupPage() {
   const toggleCurrency = async (c: Currency) => {
     if (c.is_base) return
     await supabase.from('currencies').update({ is_active: !c.is_active }).eq('id', c.id)
-    supabase.from('currencies').select('*').order('is_base', { ascending: false }).then(({ data }) => setCurrencies(data || []))
+    supabase.from('currencies').select('*').order('is_base', { ascending: false }).then(({ data }) => setCurrencies((data || []) as unknown as Currency[]))
   }
 
   const handleSaveRate = async () => {

@@ -481,7 +481,7 @@ export default function SalesInvoicePage() {
         }))
 
       const { data: siId, error: saveErr } = await supabase.rpc('fn_save_sales_invoice', {
-        p_invoice_id: isNew ? null : editSI!.id,
+        p_invoice_id: (isNew ? null : editSI!.id)!,
         p_header: header,
         p_lines: linesPayload,
       })
@@ -512,7 +512,7 @@ export default function SalesInvoicePage() {
     const { error: e } = await supabase.rpc('fn_void_sales_invoice', {
       p_invoice_id: editSI.id,
       p_void_reason_id: voidReason,
-      p_memo: voidMemo || null,
+      p_memo: voidMemo || undefined,
     })
     if (e) { setError(e.message); setSaving(false); return }
     setShowVoid(false)

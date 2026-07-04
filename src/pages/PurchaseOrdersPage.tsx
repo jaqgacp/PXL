@@ -123,7 +123,7 @@ export default function PurchaseOrdersPage() {
     setSaving(true); setError('')
     try {
       const id = await supabase.rpc('fn_save_purchase_order', {
-        p_po_id: editPO.id || null,
+        p_po_id: (editPO.id || null)!,
         p_header: {
           company_id: companyId, branch_id: branchId || editPO.branch_id || null,
           supplier_id: editPO.supplier_id, supplier_name_snapshot: editPO.supplier_name_snapshot,

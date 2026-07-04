@@ -93,7 +93,7 @@ export default function TaxCalendarPage() {
     const { error } = await supabase.rpc('fn_mark_tax_event_filed', {
       p_event_id: editId,
       p_date_filed: filedDate || new Date().toISOString().split('T')[0],
-      p_efps_ref: efpsRef || null,
+      p_efps_ref: efpsRef || undefined,
     })
     if (error) alert(error.message)
     else { setEditId(null); fetchEvents(cid) }

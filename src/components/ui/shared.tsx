@@ -222,7 +222,7 @@ export function AuditTrailSection({ tableName, recordId }: { tableName: string; 
       .eq('record_id', recordId)
       .order('changed_at', { ascending: false })
       .limit(50)
-    setLogs(data || [])
+    setLogs((data || []).map(l => ({ ...l, changed_at: l.changed_at ?? '' })))
     setLoaded(true)
     setExpanded(true)
   }

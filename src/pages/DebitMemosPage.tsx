@@ -197,7 +197,7 @@ export default function DebitMemosPage() {
           vat_code_id: l.vat_code_id || '',
         }))
       const { error: rpcErr } = await supabase.rpc('fn_save_debit_memo', {
-        p_dm_id: mode === 'new' ? null : (editDoc?.id ?? null),
+        p_dm_id: (mode === 'new' ? null : (editDoc?.id ?? null))!,
         p_header: header,
         p_lines: linesPayload,
         p_next_status: nextStatus,

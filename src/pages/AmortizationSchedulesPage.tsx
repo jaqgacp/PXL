@@ -101,9 +101,9 @@ export default function AmortizationSchedulesPage() {
     try {
       const { error: e } = await supabase.rpc('fn_create_amortization_schedule', {
         p_company_id: companyId,
-        p_branch_id: branchId || null,
+        p_branch_id: (branchId || null)!,
         p_schedule_name: form.schedule_name,
-        p_description: form.description || null,
+        p_description: (form.description || null)!,
         p_asset_account_id: form.asset_account_id,
         p_expense_account_id: form.expense_account_id,
         p_total_amount: amt,

@@ -29,7 +29,7 @@ export default function BIRFormConfigPage() {
   const [search, setSearch] = useState('')
 
   useEffect(() => {
-    supabase.from('ref_compliance_forms').select('*').order('compliance_type').then(({ data }) => setForms(data || []))
+    supabase.from('ref_compliance_forms').select('*').order('compliance_type').then(({ data }) => setForms((data || []) as unknown as RefForm[]))
   }, [])
 
   const q = search.toLowerCase()

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import type { TablesInsert } from '@/lib/database.types'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
 
@@ -137,7 +138,7 @@ export default function RecurringJournalTemplatesPage() {
         if (e) throw e
         await supabase.from('recurring_journal_template_lines').delete().eq('template_id', templateId)
       } else {
-        const { data, error: e } = await supabase.from('recurring_journal_templates').insert(header).select('id').single()
+        const { data, error: e } = await supabase.from('recurring_journal_templates').insert(header as TablesInsert<'recurring_journal_templates'>).select('id').single()
         if (e) throw e
         templateId = (data as any).id
       }
@@ -146,7 +147,7 @@ export default function RecurringJournalTemplatesPage() {
         account_id: l.account_id, description: l.description || null,
         debit_amount: l.debit_amount, credit_amount: l.credit_amount,
       }))
-      const { error: le } = await supabase.from('recurring_journal_template_lines').insert(linePayload)
+      const { error: le } = await supabase.from('recurring_journal_template_lines').insert(linePayload as TablesInsert<'recurring_journal_template_lines'>[])
       if (le) throw le
       await load()
       setMode('list')

@@ -28,7 +28,7 @@ export default function FeatureEnablementPage() {
   const [saved, setSaved] = useState<string | null>(null)
 
   useEffect(() => {
-    supabase.from('ref_feature_definitions').select('*').order('sort_order').then(({ data }) => setFeatures(data || []))
+    supabase.from('ref_feature_definitions').select('*').order('sort_order').then(({ data }) => setFeatures((data || []) as unknown as FeatureDef[]))
     supabase.from('companies').select('id,registered_name').order('registered_name').then(({ data }) => setCompanies(data || []))
   }, [])
 

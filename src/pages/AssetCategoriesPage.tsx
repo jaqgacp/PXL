@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import type { TablesInsert } from '@/lib/database.types'
 import { useAppCtx } from '@/lib/context'
 
 type Category = {
@@ -71,7 +72,7 @@ export default function AssetCategoriesPage() {
     const payload = { ...form, company_id: companyId }
     const { error: e } = editing
       ? await supabase.from('fixed_asset_categories').update(payload).eq('id', editing.id)
-      : await supabase.from('fixed_asset_categories').insert(payload)
+      : await supabase.from('fixed_asset_categories').insert(payload as TablesInsert<'fixed_asset_categories'>)
     setSaving(false)
     if (e) { setError(e.message); return }
     setMode('list'); load()

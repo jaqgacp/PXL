@@ -113,7 +113,7 @@ export default function ReceivingReportsPage() {
     setSaving(true); setError('')
     try {
       const result = await supabase.rpc('fn_save_receiving_report', {
-        p_rr_id: editRR.id || null,
+        p_rr_id: (editRR.id || null)!,
         p_header: {
           company_id: companyId, branch_id: branchId || null,
           po_id: editRR.po_id, rr_date: editRR.rr_date,

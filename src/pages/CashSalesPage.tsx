@@ -110,12 +110,12 @@ export default function CashSalesPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
-      supabase.from('customers').select('id,registered_name,tin,address').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
+      supabase.from('customers').select('id,registered_name,tin,address:registered_address').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
       supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('is_active', true).order('vat_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'revenue').eq('is_postable', true).eq('is_active', true).order('account_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'asset').eq('is_postable', true).eq('is_active', true).order('account_code'),
       supabase.from('ref_payment_modes').select('id,name').eq('is_active', true).order('sort_order'),
-      supabase.from('items').select('id,item_code,item_name,unit_price,vat_code_id').eq('company_id', companyId).eq('is_active', true).order('item_name'),
+      supabase.from('items').select('id,item_code,item_name:description,unit_price:standard_selling_price,vat_code_id:default_sales_vat_id').eq('company_id', companyId).eq('is_active', true).order('description'),
       supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code'),
     ]).then(([custR, vatR, accR, bankR, pmR, itemR, atcR]) => {
       setCustomers(custR.data as Customer[] || [])

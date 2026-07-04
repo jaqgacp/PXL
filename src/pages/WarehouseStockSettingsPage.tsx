@@ -42,7 +42,7 @@ export default function WarehouseStockSettingsPage() {
     if (!companyId) return
     const [{ data: whs }, { data: sups }] = await Promise.all([
       supabase.from('warehouses').select('id,warehouse_code,warehouse_name').eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
-      supabase.from('suppliers').select('id,supplier_code,supplier_name').eq('company_id', companyId).eq('is_active', true).order('supplier_name'),
+      supabase.from('suppliers').select('id,supplier_code,supplier_name:registered_name').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
     ])
     setWarehouses((whs as Warehouse[]) || [])
     setSuppliers((sups as Supplier[]) || [])

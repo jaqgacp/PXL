@@ -333,7 +333,7 @@ export default function PaymentVouchersPage() {
         }))
 
       const { data: pvId, error: saveErr } = await supabase.rpc('fn_save_payment_voucher', {
-        p_voucher_id: editPV.id || null, p_header: header, p_lines: linesPayload,
+        p_voucher_id: (editPV.id || null)!, p_header: header, p_lines: linesPayload,
       })
       if (saveErr) throw saveErr
 

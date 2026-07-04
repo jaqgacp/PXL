@@ -77,9 +77,9 @@ export default function TaxSetupPage() {
   const cid = companyId || selectedCompany
 
   const fetchAll = async () => {
-    supabase.from('tax_codes').select('*').order('tax_type').then(({ data }) => setTaxCodes(data || []))
+    supabase.from('tax_codes').select('*').order('tax_type').then(({ data }) => setTaxCodes((data || []) as unknown as TaxCode[]))
     supabase.from('vat_codes').select('*, tax_codes(code,rate)').order('vat_code').then(({ data }) => setVatCodes((data as VatCode[]) || []))
-    supabase.from('atc_codes').select('*').order('code').then(({ data }) => setATCCodes(data || []))
+    supabase.from('atc_codes').select('*').order('code').then(({ data }) => setATCCodes((data || []) as unknown as ATCCode[]))
     supabase.from('companies').select('id,registered_name').order('registered_name').then(({ data }) => setCompanies(data || []))
   }
   const fetchCompanyCodes = async (coid: string) => {

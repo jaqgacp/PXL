@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "supabase test db"
+    "test": "supabase test db",
+    "gen:types": "supabase gen types typescript --local > src/lib/database.types.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
+import type { TablesInsert } from '@/lib/database.types'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
 
@@ -144,7 +145,7 @@ export default function BankReconciliationPage() {
         const { error: e } = await supabase.from('bank_reconciliations').update(base).eq('id', reconId)
         if (e) throw e
       } else {
-        const { data: ins, error: e } = await supabase.from('bank_reconciliations').insert([{ ...base, created_by: uid }]).select('id').single()
+        const { data: ins, error: e } = await supabase.from('bank_reconciliations').insert([{ ...base, created_by: uid } as TablesInsert<'bank_reconciliations'>]).select('id').single()
         if (e) throw e
         reconId = (ins as { id: string }).id
       }

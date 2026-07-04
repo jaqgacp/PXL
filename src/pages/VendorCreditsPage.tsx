@@ -104,7 +104,7 @@ export default function VendorCreditsPage() {
     setSaving(true); setError('')
     try {
       const result = await supabase.rpc('fn_save_vendor_credit', {
-        p_vc_id: editVC.id || null,
+        p_vc_id: (editVC.id || null)!,
         p_header: {
           company_id: companyId, branch_id: branchId || null,
           supplier_id: editVC.supplier_id, supplier_name_snapshot: editVC.supplier_name_snapshot,

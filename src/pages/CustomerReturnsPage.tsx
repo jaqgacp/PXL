@@ -17,12 +17,6 @@ type DR = {
   sales_order_id: string | null
 }
 
-type DRLine = {
-  id: string; line_number: number; item_id: string | null; description: string
-  quantity: number; unit_price: number; uom_id: string | null
-  vat_code_id: string | null; revenue_account_id: string | null
-}
-
 type VATCode = { id: string; vat_code: string; description: string; vat_classification: string; rate: number }
 type ReasonCode = { id: string; code: string; description: string }
 
@@ -117,30 +111,37 @@ export default function CustomerReturnsPage() {
   const searchDRs = async (q: string) => {
     if (!companyId || q.length < 2) { setDRs([]); return }
     const { data } = await supabase.from('delivery_receipts')
-      .select('id,dr_number,date,customer_id,customer_name_snapshot,customer_tin_snapshot,sales_order_id')
+      .select('id,dr_number,date:dr_date,customer_id,customer_name_snapshot,sales_order_id,customers(tin)')
       .eq('company_id', companyId).eq('status', 'delivered')
       .ilike('dr_number', `%${q}%`)
-      .order('date', { ascending: false }).limit(20)
-    setDRs(data as DR[] || [])
+      .order('dr_date', { ascending: false }).limit(20)
+    setDRs((data || []).map(d => ({
+      id: d.id, dr_number: d.dr_number, date: d.date,
+      customer_id: d.customer_id, customer_name_snapshot: d.customer_name_snapshot,
+      customer_tin_snapshot: d.customers?.tin ?? null,
+      sales_order_id: d.sales_order_id,
+    })))
   }
 
   const selectDR = async (dr: DR) => {
     setFDR(dr); setDRs([])
     setReturnLines([])
-    // Load DR lines
+    // Load DR lines. DR lines carry no price or accounts: unit price comes from
+    // the fulfilled SO line, VAT/revenue defaults from the item master.
     const { data: drLines } = await supabase.from('delivery_receipt_lines')
-      .select('id,line_number,item_id,description,quantity,unit_price,uom_id,vat_code_id,revenue_account_id')
-      .eq('delivery_receipt_id', dr.id).order('line_number')
+      .select('id,line_number,item_id,description,quantity,uom_id,so_line:sales_order_lines(unit_price),item:items(default_sales_vat_id,sales_account_id)')
+      .eq('dr_id', dr.id).order('line_number')
     if (!drLines) return
-    const rl: ReturnLine[] = (drLines as DRLine[]).map(l => {
-      const vc = vatCodes.find(v => v.id === l.vat_code_id)
+    const rl: ReturnLine[] = drLines.map(l => {
+      const vatCodeId = l.item?.default_sales_vat_id || ''
+      const vc = vatCodes.find(v => v.id === vatCodeId)
       return computeReturnLine({
-        dr_line_id: l.id, description: l.description, item_id: l.item_id,
+        dr_line_id: l.id, description: l.description ?? '', item_id: l.item_id,
         quantity_delivered: Number(l.quantity), quantity_returned: 0,
-        unit_price: Number(l.unit_price),
-        vat_code_id: l.vat_code_id || '', vat_classification: vc?.vat_classification || 'exempt',
+        unit_price: Number(l.so_line?.unit_price ?? 0),
+        vat_code_id: vatCodeId, vat_classification: vc?.vat_classification || 'exempt',
         vat_rate: vc?.rate || 0, net_amount: 0, vat_amount: 0, total_amount: 0,
-        revenue_account_id: l.revenue_account_id || '',
+        revenue_account_id: l.item?.sales_account_id || '',
       })
     })
     setReturnLines(rl)
@@ -183,7 +184,7 @@ export default function CustomerReturnsPage() {
     }))
 
     const { error: rpcErr } = await supabase.rpc('fn_save_credit_memo', {
-      p_cm_id: null, p_header: header, p_lines: linesPayload, p_next_status: 'draft',
+      p_cm_id: null!, p_header: header, p_lines: linesPayload, p_next_status: 'draft',
     })
     if (rpcErr) { setError(rpcErr.message); setSaving(false); return }
 

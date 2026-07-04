@@ -461,14 +461,16 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
     if (!companyId) { setEnabledFeatures(null); return }
     Promise.all([
       supabase.from('ref_feature_definitions').select('feature_key').eq('always_enabled', true),
-      supabase.from('sys_feature_enablement').select('feature_key').eq('company_id', companyId).eq('is_enabled', true),
+      // sys_feature_enablement keys enablement by feature_definition_id; the
+      // feature_key lives on ref_feature_definitions (PXL-AUD-029)
+      supabase.from('sys_feature_enablement').select('ref_feature_definitions(feature_key)').eq('company_id', companyId).eq('is_enabled', true),
     ]).then(([alwaysRes, companyRes]) => {
-      const companyRows = companyRes.data || []
+      const companyRows = (companyRes.data || []) as { ref_feature_definitions: { feature_key: string } | null }[]
       // If the company has no feature records configured yet, show everything (default-open)
       if (companyRows.length === 0) { setEnabledFeatures(null); return }
       const keys = new Set<string>()
       for (const r of alwaysRes.data || []) keys.add(r.feature_key)
-      for (const r of companyRows) keys.add(r.feature_key)
+      for (const r of companyRows) if (r.ref_feature_definitions?.feature_key) keys.add(r.ref_feature_definitions.feature_key)
       setEnabledFeatures(keys)
     })
   }, [companyId])

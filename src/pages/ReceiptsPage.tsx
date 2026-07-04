@@ -335,7 +335,7 @@ export default function ReceiptsPage() {
       }))
 
       const { data: docId, error: saveErr } = await supabase.rpc('fn_save_receipt', {
-        p_receipt_id: isNew ? null : editDoc!.id,
+        p_receipt_id: (isNew ? null : editDoc!.id)!,
         p_header: header,
         p_lines: linesPayload,
       })

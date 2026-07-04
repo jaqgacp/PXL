@@ -29,11 +29,9 @@ type SDMRow = {
 }
 
 type SLPRow = {
-  supplier_id: string; supplier_name: string; supplier_tin: string | null
-  period_year: number; period_month: number
+  supplier_name: string; supplier_tin: string | null
   gross_purchases: number; exempt_purchases: number
   zero_rated: number; taxable_base: number; input_vat: number
-  transaction_count: number
 }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
@@ -67,7 +65,7 @@ export default function PurchaseRegistersPage() {
     let q = supabase.from('vw_vendor_bill_register').select('*').eq('company_id', companyId).gte('bill_date', dateFrom).lte('bill_date', dateTo).order('bill_date', { ascending: false })
     if (search) q = q.or(`bill_number.ilike.%${search}%,supplier_name.ilike.%${search}%,invoice_no.ilike.%${search}%`)
     const { data } = await q
-    setVbRows(data as VBRow[] || [])
+    setVbRows((data || []) as unknown as VBRow[])
   }, [companyId, dateFrom, dateTo, search])
 
   const loadPV = useCallback(async () => {
@@ -83,13 +81,34 @@ export default function PurchaseRegistersPage() {
     let q = supabase.from('vw_sdm_register').select('*').eq('company_id', companyId).gte('memo_date', dateFrom).lte('memo_date', dateTo).order('memo_date', { ascending: false })
     if (search) q = q.or(`memo_number.ilike.%${search}%,supplier_name.ilike.%${search}%`)
     const { data } = await q
-    setSdmRows(data as SDMRow[] || [])
+    setSdmRows((data || []) as unknown as SDMRow[])
   }, [companyId, dateFrom, dateTo, search])
 
   const loadSLP = useCallback(async () => {
     if (!companyId) return
-    const { data } = await supabase.from('vw_slp_export').select('*').eq('company_id', companyId).eq('period_year', slpYear).eq('period_month', slpMonth).order('supplier_name')
-    setSlpRows(data as SLPRow[] || [])
+    // vw_slp_export aggregates per supplier per bill date; filter the month by
+    // bill_date and roll up per supplier client-side.
+    const start = `${slpYear}-${String(slpMonth).padStart(2, '0')}-01`
+    const endDate = new Date(slpYear, slpMonth, 0)
+    const end = `${slpYear}-${String(slpMonth).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`
+    const { data } = await supabase.from('vw_slp_export')
+      .select('supplier_name:registered_name,supplier_tin,gross_purchases,exempt_purchases,zero_rated,taxable_base,input_vat')
+      .eq('company_id', companyId).gte('bill_date', start).lte('bill_date', end)
+    const bySupplier = new Map<string, SLPRow>()
+    for (const r of data || []) {
+      const key = `${r.supplier_name}|${r.supplier_tin || ''}`
+      const acc = bySupplier.get(key) || {
+        supplier_name: r.supplier_name || '', supplier_tin: r.supplier_tin,
+        gross_purchases: 0, exempt_purchases: 0, zero_rated: 0, taxable_base: 0, input_vat: 0,
+      }
+      acc.gross_purchases += Number(r.gross_purchases || 0)
+      acc.exempt_purchases += Number(r.exempt_purchases || 0)
+      acc.zero_rated += Number(r.zero_rated || 0)
+      acc.taxable_base += Number(r.taxable_base || 0)
+      acc.input_vat += Number(r.input_vat || 0)
+      bySupplier.set(key, acc)
+    }
+    setSlpRows([...bySupplier.values()].sort((a, b) => a.supplier_name.localeCompare(b.supplier_name)))
   }, [companyId, slpYear, slpMonth])
 
   useEffect(() => {
@@ -112,8 +131,8 @@ export default function PurchaseRegistersPage() {
       headers = ['Memo Date','Memo #','Supplier','TIN','Amount','Status','Sent','Acknowledged']
       rows = sdmRows.map(r => [r.memo_date, r.memo_number, r.supplier_name, r.supplier_tin || '', r.total_amount, r.status, r.date_sent || '', r.date_acknowledged || ''])
     } else {
-      headers = ['Supplier','TIN','Year','Month','Gross Purchases','Exempt','Zero-Rated','Taxable Base','Input VAT','Count']
-      rows = slpRows.map(r => [r.supplier_name, r.supplier_tin || '', r.period_year, r.period_month, r.gross_purchases, r.exempt_purchases, r.zero_rated, r.taxable_base, r.input_vat, r.transaction_count])
+      headers = ['Supplier','TIN','Year','Month','Gross Purchases','Exempt','Zero-Rated','Taxable Base','Input VAT']
+      rows = slpRows.map(r => [r.supplier_name, r.supplier_tin || '', slpYear, slpMonth, r.gross_purchases, r.exempt_purchases, r.zero_rated, r.taxable_base, r.input_vat])
     }
     const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
     const a = document.createElement('a')
@@ -263,8 +282,8 @@ export default function PurchaseRegistersPage() {
               slpRows.length === 0 ? <div className="p-8 text-center text-sm text-gray-400">No SLP data for {MONTHS[slpMonth - 1]} {slpYear}.</div> : (
                 <table className="w-full text-xs">
                   <thead className="bg-gray-50 border-b border-gray-200">
-                    <tr>{['Supplier','TIN','Gross Purchases','Exempt','Zero-Rated','Taxable Base','Input VAT','Count'].map(h => (
-                      <th key={h} className={`px-3 py-2 font-medium text-gray-500 ${['Gross Purchases','Exempt','Zero-Rated','Taxable Base','Input VAT','Count'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
+                    <tr>{['Supplier','TIN','Gross Purchases','Exempt','Zero-Rated','Taxable Base','Input VAT'].map(h => (
+                      <th key={h} className={`px-3 py-2 font-medium text-gray-500 ${['Gross Purchases','Exempt','Zero-Rated','Taxable Base','Input VAT'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                     ))}</tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -277,7 +296,6 @@ export default function PurchaseRegistersPage() {
                         <td className="px-3 py-1.5 text-right font-mono text-blue-600">{r.zero_rated > 0 ? fmt(r.zero_rated) : '—'}</td>
                         <td className="px-3 py-1.5 text-right font-mono">{fmt(r.taxable_base)}</td>
                         <td className="px-3 py-1.5 text-right font-mono font-medium text-green-700">{fmt(r.input_vat)}</td>
-                        <td className="px-3 py-1.5 text-right font-mono text-gray-500">{r.transaction_count}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -287,7 +305,6 @@ export default function PurchaseRegistersPage() {
                       {(['gross_purchases','exempt_purchases','zero_rated','taxable_base','input_vat'] as const).map(k => (
                         <td key={k} className="px-3 py-2 text-right font-mono">{fmt(slpRows.reduce((s, r) => s + r[k], 0))}</td>
                       ))}
-                      <td className="px-3 py-2 text-right font-mono text-gray-500">{slpRows.reduce((s, r) => s + r.transaction_count, 0)}</td>
                     </tr>
                   </tfoot>
                 </table>

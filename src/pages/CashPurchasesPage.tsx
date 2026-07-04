@@ -137,7 +137,7 @@ export default function CashPurchasesPage() {
     setSaving(true); setError('')
     try {
       const result = await supabase.rpc('fn_save_cash_purchase', {
-        p_cp_id: editCP?.id || null,
+        p_cp_id: (editCP?.id || null)!,
         p_header: {
           company_id: companyId, branch_id: branchId || null,
           transaction_date: editCP?.transaction_date, payment_method: editCP?.payment_method || 'cash',

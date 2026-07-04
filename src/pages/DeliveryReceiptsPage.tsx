@@ -81,11 +81,11 @@ export default function DeliveryReceiptsPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
-      supabase.from('customers').select('id,registered_name,address')
+      supabase.from('customers').select('id,registered_name,address:delivery_address')
         .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('items').select('id,item_code,item_name,default_uom_id')
-        .eq('company_id', companyId).eq('is_active', true).order('item_name'),
-      supabase.from('units_of_measure').select('id,uom_code,uom_name').eq('is_active', true).order('uom_name'),
+      supabase.from('items').select('id,item_code,item_name:description,default_uom_id:uom_id')
+        .eq('company_id', companyId).eq('is_active', true).order('description'),
+      supabase.from('units_of_measure').select('id,uom_code,uom_name:description').eq('is_active', true).order('uom_code'),
       supabase.from('sales_orders').select('id,so_number,customer_id,customer_name_snapshot')
         .eq('company_id', companyId).eq('approval_status', 'approved')
         .in('fulfillment_status', ['open', 'partial']).order('so_date', { ascending: false }),

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import type { TablesInsert, TablesUpdate } from '@/lib/database.types'
 
 type RDO = { id: string; rdo_code: string; rdo_name: string }
 type Company = { id: string; registered_name: string }
@@ -96,8 +97,8 @@ export default function BranchSetupPage() {
     const payload = { ...form, rdo_id: form.rdo_id || null, bir_reg_date: form.bir_reg_date || null,
       lgu_reg_date: form.lgu_reg_date || null, cas_date_issued: form.cas_date_issued || null }
     const { error } = editId
-      ? await supabase.from('branches').update(payload).eq('id', editId)
-      : await supabase.from('branches').insert([payload])
+      ? await supabase.from('branches').update(payload as TablesUpdate<'branches'>).eq('id', editId)
+      : await supabase.from('branches').insert([payload as TablesInsert<'branches'>])
     if (error) alert('Error: ' + error.message)
     else { setSaved(true); fetch() }
     setSaving(false)

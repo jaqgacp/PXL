@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import Papa from 'papaparse'
 import { supabase } from '@/lib/supabase'
+import type { TablesInsert } from '@/lib/database.types'
 
 type RDO = { id: string; rdo_code: string; rdo_name: string }
 type Company = {
@@ -294,7 +295,7 @@ export default function CompanySetupPage() {
         lgu_reg_date: row.data.lgu_reg_date || null,
         cas_date_issued: row.data.cas_date_issued || null,
         rdo_id: null,
-      }])
+      } as unknown as TablesInsert<'companies'>])
       setImportRows(prev => prev.map(r =>
         r.row === row.row
           ? { ...r, status: error ? 'error' : 'success', error: error?.message }

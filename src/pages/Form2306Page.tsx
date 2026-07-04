@@ -79,8 +79,11 @@ export default function Form2306Page() {
 
   const applyAction = async () => {
     if (!actionModal) return
-    const field = actionModal.action === 'sent' ? 'date_sent' : 'date_acknowledged'
-    await supabase.from('form_2306_issuances').update({ status: actionModal.action, [field]: actionDate }).eq('id', actionModal.issuance.id)
+    await supabase.from('form_2306_issuances').update(
+      actionModal.action === 'sent'
+        ? { status: 'sent', date_sent: actionDate }
+        : { status: 'acknowledged', date_acknowledged: actionDate }
+    ).eq('id', actionModal.issuance.id)
     setActionModal(null); load()
   }
 
