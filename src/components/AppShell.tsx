@@ -413,15 +413,35 @@ function ContextSelectors() {
 
   useEffect(() => {
     supabase.from('companies').select('id,registered_name').eq('is_active', true).order('registered_name')
-      .then(({ data }) => setCompanies(data || []))
+      .then(({ data }) => {
+        const list = data || []
+        setCompanies(list)
+        // A restored selection the signed-in user can no longer see must not
+        // silently scope every page to an inaccessible company.
+        if (companyId && !list.some(c => c.id === companyId)) {
+          setCompanyId(''); setBranchId(''); setPeriodId('')
+        }
+      })
+    // Validation is against the freshly restored selection only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
     if (!companyId) { setBranches([]); setPeriods([]); return }
     supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true).order('branch_name')
-      .then(({ data }) => setBranches(data || []))
+      .then(({ data }) => {
+        const list = data || []
+        setBranches(list)
+        if (branchId && !list.some(b => b.id === branchId)) setBranchId('')
+      })
     supabase.from('fiscal_periods').select('id,period_name,fiscal_year_id').eq('company_id', companyId).eq('is_locked', false).order('start_date', { ascending: false }).limit(24)
-      .then(({ data }) => setPeriods(data || []))
+      .then(({ data }) => {
+        const list = data || []
+        setPeriods(list)
+        if (periodId && !list.some(p => p.id === periodId)) setPeriodId('')
+      })
+    // Re-validate only when the company scope changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [companyId])
 
   // Blue focus ring is intentional here: the app-wide gray-900 ring is

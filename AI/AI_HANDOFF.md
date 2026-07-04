@@ -4,6 +4,8 @@ Last updated: 2026-07-04
 
 ## What Was Done
 
+Session 44 (2026-07-04, small bounded session): closed PXL-AUD-017 — `AppContextProvider` restores company/branch/period from localStorage (`pxl.ctx.*`) and persists changes; `ContextSelectors` validates restored IDs against its RLS-scoped selector queries and clears anything invisible to the signed-in user (company staleness cascade-clears branch/period). Frontend-only; build/lint green; no migration so hosted Supabase needs no push (still synced through `20260704000002`).
+
 Session 43 (2026-07-04): implemented PXL-DA-011 status-aware immutability, which also closed the PXL-AUD-005 residue.
 
 - `20260704000002_status_immutability.sql`: two generic SECURITY DEFINER trigger guards. `fn_guard_doc_lines(parent, fk, status_col, editable_csv, same_txn)` blocks line INSERT/UPDATE/DELETE unless the parent status is editable — applied to 18 line tables (all sales/purchasing/banking/inventory line tables, `bank_recon_items`, `journal_entry_lines`; SI/OR/VB/PV keep their PXL-AUD-005 triggers). `fn_guard_doc_header(status_col, editable_csv, extras_csv, frozen_csv, same_txn)` freezes business columns once a document leaves its editable statuses — only status, `updated_at/by`, and per-table lifecycle metadata (posting stamps, JE linkage, void reason, PV/CV release/clear dates, CM/DM totals for the apply path, VC `remaining_balance`, PCV `replenishment_id`, schedule `posted_periods`, returns filing metadata) may change; DELETE outside editable statuses always blocked (DEC-002); `frozen` statuses (posted amortization/depreciation/rev-rec entries) allow no change at all. Applied to 34 header tables. `vat_returns` excluded (PXL-DA-015 snapshot guard governs it).
@@ -14,7 +16,7 @@ Session 43 (2026-07-04): implemented PXL-DA-011 status-aware immutability, which
 
 ## What Changed
 
-- Findings standing: 25 Retested Passed / 13 In Progress / 12 Open (50 findings); 8 Criticals remain (AUD-002, AUD-006, DA-001, DA-002, DA-004, DA-008, DA-009, DA-019).
+- Findings standing: 26 Retested Passed / 13 In Progress / 11 Open (50 findings); 8 Criticals remain (AUD-002, AUD-006, DA-001, DA-002, DA-004, DA-008, DA-009, DA-019).
 - `npm test` is now 324/324 across 20 files.
 - NEW MIGRATION DISCIPLINE: the guards fire for superuser too. Future backfills that rewrite non-draft documents/lines need `SET session_replication_role = replica` (or targeted `ALTER TABLE ... DISABLE TRIGGER`) around the backfill. New lifecycle columns on guarded tables must be added to that table's allowlist in its guard trigger.
 - No accounting/tax/posting behavior changed for legitimate flows — all 299 pre-existing assertions still pass unchanged.
