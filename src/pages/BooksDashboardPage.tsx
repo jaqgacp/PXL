@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
@@ -27,7 +27,7 @@ const BOOKS = [
 export default function BooksDashboardPage() {
   const { companyId } = useAppCtx()
   const navigate = useNavigate()
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
   const [postedJeCount, setPostedJeCount] = useState(0)
   const [totalDebits, setTotalDebits] = useState(0)
   const [openPeriods, setOpenPeriods] = useState(0)

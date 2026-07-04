@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -10,7 +10,7 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 
 export default function VATDashboardPage() {
   const { companyId } = useAppCtx()
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [outputVat, setOutputVat] = useState(0)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -11,7 +11,7 @@ const fmtQuarter = (y: number, q: number) => `Q${q} ${y}`
 
 export default function PTDashboardPage() {
   const { companyId } = useAppCtx()
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
   const currentQuarter = Math.floor(now.getMonth() / 3) + 1
 
   const [profile, setProfile] = useState<Profile | null>(null)

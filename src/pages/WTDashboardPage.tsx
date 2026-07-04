@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -9,9 +9,9 @@ const fmtNum = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDi
 
 export default function WTDashboardPage() {
   const { companyId } = useAppCtx()
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
   const quarter = Math.ceil((now.getMonth() + 1) / 3)
-  const quarterMonths = [(quarter - 1) * 3 + 1, (quarter - 1) * 3 + 2, (quarter - 1) * 3 + 3]
+  const quarterMonths = useMemo(() => [(quarter - 1) * 3 + 1, (quarter - 1) * 3 + 2, (quarter - 1) * 3 + 3], [quarter])
 
   const [profile, setProfile] = useState<Profile | null>(null)
   const [ewtWithheld, setEwtWithheld] = useState(0)

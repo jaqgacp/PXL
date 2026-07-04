@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -10,7 +10,7 @@ const fmtNum = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDi
 
 export default function IncomeTaxDashboardPage() {
   const { companyId } = useAppCtx()
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
   const quarter = Math.ceil((now.getMonth() + 1) / 3)
 
   const [profile, setProfile] = useState<Profile | null>(null)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
@@ -19,7 +19,7 @@ const LINKS = [
 export default function CASDashboardPage() {
   const { companyId } = useAppCtx()
   const navigate = useNavigate()
-  const now = new Date()
+  const now = useMemo(() => new Date(), [])
   const [changesThisMonth, setChangesThisMonth] = useState(0)
   const [atpAlerts, setAtpAlerts] = useState(0)
   const [attachmentCount, setAttachmentCount] = useState(0)

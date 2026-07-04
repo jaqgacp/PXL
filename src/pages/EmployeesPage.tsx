@@ -73,7 +73,7 @@ export default function EmployeesPage() {
   }
 
   const openEdit = (emp: Employee) => {
-    const { department_name, ...rest } = emp
+    const { department_name: _department_name, ...rest } = emp
     setForm(rest); setEditId(emp.id); setError(''); setActiveTab('info'); setModal('edit')
   }
 

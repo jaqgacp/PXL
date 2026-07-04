@@ -116,7 +116,8 @@ export default function CollectionMonitoringPage() {
   const toggleExpand = (cid: string) => {
     setExpanded(prev => {
       const next = new Set(prev)
-      next.has(cid) ? next.delete(cid) : next.add(cid)
+      if (next.has(cid)) next.delete(cid)
+      else next.add(cid)
       return next
     })
   }

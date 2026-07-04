@@ -4,6 +4,8 @@ Last updated: 2026-07-04
 
 ## What Was Done
 
+Session 45 (2026-07-04, small bounded session): PXL-AUD-018 partial (39→29 lint warnings, exit 0). The 7 unstable-dependency warnings were a real production defect: six compliance dashboards (`BooksDashboardPage`, `CASDashboardPage`, `IncomeTaxDashboardPage`, `PTDashboardPage`, `VATDashboardPage`, `WTDashboardPage`) created `now = new Date()` (WT also `quarterMonths`) on every render → the `load` useCallback changed identity every render → `useEffect([load])` refired after every render → continuous Supabase refetch loop. Fixed by pinning `now` at mount with `useMemo(() => new Date(), [])` (and deriving `quarterMonths` via `useMemo`). Also: ternary-as-statement Set toggles in `DepreciationRunPage`/`CollectionMonitoringPage` → if/else; unused `department_name` destructure in `EmployeesPage` `_`-prefixed. Frontend-only, no migration; hosted Supabase unchanged (synced through `20260704000002`). Remaining for AUD-018: 27 `useEffect` missing-dependency warnings (`load`/`loadHeaders`/`fetchLogs`/`fetchEvents`) — stabilize each page's loader with `useCallback` and verify no refetch loop/stale closure per page; plus 2 fast-refresh only-export-components notes (`context.tsx`, `shared.tsx`).
+
 Session 44 (2026-07-04, small bounded session): closed PXL-AUD-017 — `AppContextProvider` restores company/branch/period from localStorage (`pxl.ctx.*`) and persists changes; `ContextSelectors` validates restored IDs against its RLS-scoped selector queries and clears anything invisible to the signed-in user (company staleness cascade-clears branch/period). Frontend-only; build/lint green; no migration so hosted Supabase needs no push (still synced through `20260704000002`).
 
 Session 43 (2026-07-04): implemented PXL-DA-011 status-aware immutability, which also closed the PXL-AUD-005 residue.
@@ -16,7 +18,7 @@ Session 43 (2026-07-04): implemented PXL-DA-011 status-aware immutability, which
 
 ## What Changed
 
-- Findings standing: 26 Retested Passed / 13 In Progress / 11 Open (50 findings); 8 Criticals remain (AUD-002, AUD-006, DA-001, DA-002, DA-004, DA-008, DA-009, DA-019).
+- Findings standing: 26 Retested Passed / 14 In Progress / 10 Open (50 findings); 8 Criticals remain (AUD-002, AUD-006, DA-001, DA-002, DA-004, DA-008, DA-009, DA-019).
 - `npm test` is now 324/324 across 20 files.
 - NEW MIGRATION DISCIPLINE: the guards fire for superuser too. Future backfills that rewrite non-draft documents/lines need `SET session_replication_role = replica` (or targeted `ALTER TABLE ... DISABLE TRIGGER`) around the backfill. New lifecycle columns on guarded tables must be added to that table's allowlist in its guard trigger.
 - No accounting/tax/posting behavior changed for legitimate flows — all 299 pre-existing assertions still pass unchanged.
