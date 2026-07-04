@@ -45,7 +45,7 @@ None. `npm test` 285/285 across 18 files on a fresh `supabase db reset --local`;
 
 Note: `npm test` against a non-fresh local DB can fail with `users_pkey` duplicate-key collisions from earlier seeded runs — always `supabase db reset --local` first.
 
-Session 37 landed as `9110765` (CI 28645835919 green). Session 38 landed as `0f9ab83` (CI 28648390569 green). Session 39 landed as `c575c8b` (CI 28649086159 green). Session 40 landing evidence is recorded in `AI/AI_HANDOFF.md` once CI completes.
+Session 37 landed as `9110765` (CI 28645835919 green). Session 38 landed as `0f9ab83` (CI 28648390569 green). Session 39 landed as `c575c8b` (CI 28649086159 green). Session 40 landed as `7cfa494` (2026-07-04); CI run 28699881597 completed successfully, verified via `gh run watch --exit-status`.
 
 ## Next Recommended Step
 
