@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge } from '@/components/ui/shared'
+import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 
 // ── Types ─────────────────────────────────────────────────────
 type JEStatus = 'draft' | 'posted' | 'reversed'
@@ -12,7 +12,7 @@ type JE = {
   description: string | null; reference_doc_type: string | null; reference_doc_id: string | null
   status: JEStatus; total_debit: number; total_credit: number
   auto_reverse: boolean; is_auto_reversal: boolean; reversed_by_je_id: string | null
-  created_at: string
+  created_at: string; updated_at: string
 }
 
 type JELine = {
@@ -28,6 +28,8 @@ type PeriodRef = { id: string; period_name: string; start_date: string; end_date
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
+const formatDateTime = (value?: string | null) =>
+  value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 const newLine = (): JELine => ({ _key: crypto.randomUUID(), account_id: '', description: '', debit_amount: 0, credit_amount: 0 })
 
 const refTypeStyle = (t: string | null): string => {
@@ -134,6 +136,12 @@ export default function JournalEntriesPage() {
   const isBalanced = Math.abs(balance) <= 0.01
   const validLines = lines.filter(l => l.account_id && (l.debit_amount > 0 || l.credit_amount > 0))
   const canPost = isBalanced && totalDebit > 0 && validLines.length >= 2
+  const auditFacts = editJE?.id ? [
+    { label: 'Created', value: formatDateTime(editJE.created_at) },
+    { label: 'Last edited', value: formatDateTime(editJE.updated_at) },
+    { label: 'Status', value: editJE.status || 'draft' },
+    { label: 'Lock status', value: editJE.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ] : []
 
   const post = async () => {
     if (!companyId || !editJE) return
@@ -414,8 +422,26 @@ export default function JournalEntriesPage() {
         </div>
 
         {readOnly && (
-          <div className="bg-white border border-gray-200 rounded-lg p-4 text-xs text-gray-500">
-            This entry is {editJE?.status}. Posted entries are immutable — reverse to make a correction.
+          <div className="space-y-4">
+            <div className="bg-white border border-gray-200 rounded-lg p-4 text-xs text-gray-500">
+              This entry is {editJE?.status}. Posted entries are immutable — reverse to make a correction.
+            </div>
+            {editJE?.id && (
+              <div className="space-y-3">
+                <div className="bg-white border border-gray-200 rounded-lg p-4">
+                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    {auditFacts.map(fact => (
+                      <div key={fact.label}>
+                        <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{fact.label}</div>
+                        <div className="text-xs font-medium text-gray-700">{fact.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <AuditTrailSection tableName="journal_entries" recordId={editJE.id} />
+              </div>
+            )}
           </div>
         )}
       </div>
