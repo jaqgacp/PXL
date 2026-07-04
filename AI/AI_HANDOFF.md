@@ -26,7 +26,7 @@ The page was found in-flight (uncommitted) from a prior session; this session ve
 
 ## Known Errors / Blockers
 
-None locally: `npm test` 285/285 across 18 files on a fresh `supabase db reset --local` (reset first — a dirty local DB collides on seeded user UUIDs), build/lint/docs-consistency green. Reader UI verified live in the browser. PENDING: hosted push of migrations `20260702000010` and `20260703000001` through `20260703000009` — no `SUPABASE_ACCESS_TOKEN` in this workspace; run `supabase db push --linked` from a tokened workspace and verify with `supabase migration list --linked`.
+None locally: `npm test` 285/285 across 18 files on a fresh `supabase db reset --local` (reset first — a dirty local DB collides on seeded user UUIDs), build/lint/docs-consistency green. Reader UI verified live in the browser. Hosted Supabase is fully in sync through `20260703000009` (pushed 2026-07-04 with a user-supplied token; verified via `supabase migration list --linked` plus REST spot-checks of `report_snapshots` and `fn_snapshot_books_export`). No PENDING credential items remain.
 
 Dev caveat: `index.html` CSP `connect-src` allows only `*.supabase.co`, so browser-testing the frontend against local Supabase needs a CSP bypass (Playwright `bypassCSP: true` was used).
 
