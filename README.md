@@ -1,6 +1,6 @@
 # PXL — Philippine Accounting ERP
 
-React 18 + TypeScript + Vite frontend backed by Supabase (PostgreSQL + PostgREST + Auth + RLS).
+React 19 + TypeScript + Vite frontend backed by Supabase (PostgreSQL + PostgREST + Auth + RLS).
 
 ---
 
@@ -8,9 +8,10 @@ React 18 + TypeScript + Vite frontend backed by Supabase (PostgreSQL + PostgREST
 
 | Layer | Technology |
 |---|---|
-| Frontend | React 18, TypeScript, Vite 8, Tailwind CSS v4 |
+| Frontend | React 19, TypeScript, Vite 8, Tailwind CSS v4 |
 | Backend | Supabase (PostgreSQL 15, PostgREST, GoTrue Auth) |
 | Routing | react-router-dom v7 (BrowserRouter) |
+| Data fetching | `@supabase/supabase-js`, with generated TypeScript DB types |
 | CSV parsing | PapaParse |
 | Auth | Supabase OAuth (Google PKCE flow) |
 
@@ -44,14 +45,13 @@ The app validates these at startup and throws a clear error if either is missing
 
 ### 4. Apply migrations
 
-Run all migrations in order against your Supabase project:
+Run all migrations in filename order against your Supabase project:
 
 ```bash
 # Using Supabase CLI
-supabase db push
+supabase db push --linked
 
-# Or apply manually via Supabase SQL editor in migration order:
-# 001_initial_schema.sql through to the latest migration
+# Or apply manually via Supabase SQL editor in filename order.
 ```
 
 ### 5. Start the dev server
@@ -73,21 +73,13 @@ npm run dev
 
 ## Database Migrations
 
-Migrations live in `supabase/migrations/` and are numbered sequentially:
+Migrations live in `supabase/migrations/` and are applied in filename order. This repository currently has 75 migration files, through `20260704000003_receipt_cwt_explicit_base.sql`.
 
-| Migration | Description |
-|---|---|
-| 001–003 | Core schema: companies, branches, COA, master data |
-| 004 | Schema fixes (atc_codes column renames: `atc_code→code`, `tax_type→tax_category`) |
-| 005–007 | Sales, AR, Compliance modules |
-| 008 | RLS hardening: user_company_memberships, write policies |
-| 009 | RLS reads scope: remove auto-grant-all, scope SELECT policies to membership |
-| 010 | Atomic save/post RPCs: fn_save_sales_invoice, fn_post_sales_invoice, fn_save_receipt, etc. |
-| 011 | Audit triggers: automatic DB-level logging to sys_audit_logs |
-| 012 | Number series hardening: search_path fix, membership check, restricted EXECUTE grant |
-| 013 | GL Core: journal_entries, journal_entry_lines, company_accounting_config; posting RPCs create balanced double-entry JEs |
-| 014 | Hardening: ATC table consolidation, AR view CWT fix, server-side VAT computation, approved-SI edit lock, over-application check, fn_mark_tax_event_filed, audit triggers for line tables, admin-only tax code writes |
-| 015 | CM/DM RPCs: fn_save_credit_memo, fn_save_debit_memo with server-side computation and status transitions |
+For the current object-by-object schema map, use the generated summary in `docs/PXL/PXL_SCHEMA_SUMMARY.md`. Regenerate it after migration changes with:
+
+```bash
+scripts/gen_schema_summary.sh
+```
 
 ---
 

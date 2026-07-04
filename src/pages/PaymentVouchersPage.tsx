@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge } from '@/components/ui/shared'
+import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
@@ -16,13 +16,14 @@ type PV = {
   payment_mode_id: string | null; reference_number: string | null
   bank_account_id: string | null; total_amount: number; total_ewt: number
   remarks: string | null; status: PVStatus
-  posted_at: string | null; created_at: string
+  posted_at: string | null; approved_at?: string | null; updated_at?: string | null; created_at: string
 }
 
 type PVLine = {
   _key: string; id?: string
   vendor_bill_id: string
   bill_number: string; bill_total: number; bill_outstanding: number
+  bill_net_base: number
   payment_amount: number; ewt_amount: number; atc_code_id: string
   ewt_tax_base: number; ewt_income_nature: string; ewt_variance_reason: string
 }
@@ -36,6 +37,7 @@ type SupplierRef = {
 }
 type VendorBillRef = {
   id: string; bill_number: string; total_amount: number; outstanding: number
+  net_base: number
   bill_date: string; supplier_invoice_number: string | null
 }
 type COARef = { id: string; account_code: string; account_name: string }
@@ -61,9 +63,25 @@ const round2 = (n: number) => Math.round(n * 100) / 100
 
 const newLine = (): PVLine => ({
   _key: crypto.randomUUID(), vendor_bill_id: '', bill_number: '', bill_total: 0,
-  bill_outstanding: 0, payment_amount: 0, ewt_amount: 0, atc_code_id: '',
+  bill_outstanding: 0, bill_net_base: 0, payment_amount: 0, ewt_amount: 0, atc_code_id: '',
   ewt_tax_base: 0, ewt_income_nature: '', ewt_variance_reason: '',
 })
+
+const proportionalNetBase = (grossPortion: number, grossTotal: number, netBase: number) => {
+  if (grossPortion <= 0 || grossTotal <= 0 || netBase <= 0) return 0
+  return round2(Math.min(netBase, (grossPortion / grossTotal) * netBase))
+}
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '—'
+  return new Date(value).toLocaleString('en-PH', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 // ── Component ─────────────────────────────────────────────────
 export default function PaymentVouchersPage() {
@@ -131,7 +149,7 @@ export default function PaymentVouchersPage() {
     if (!companyId || !supplierId) { setOpenBills([]); return }
     const { data: billsData } = await supabase
       .from('vendor_bills')
-      .select('id,bill_number,total_amount,bill_date,supplier_invoice_number')
+      .select('id,bill_number,total_amount,total_input_vat_amount,total_taxable_amount,total_zero_rated_amount,total_exempt_amount,bill_date,supplier_invoice_number')
       .eq('company_id', companyId).eq('supplier_id', supplierId)
       .in('status', ['posted'])
       .order('bill_date')
@@ -153,9 +171,21 @@ export default function PaymentVouchersPage() {
     }
 
     const result: VendorBillRef[] = (billsData as any[])
-      .map(b => ({ id: b.id, bill_number: b.bill_number, total_amount: Number(b.total_amount),
-        outstanding: Math.max(Number(b.total_amount) - (paidMap[b.id] || 0), 0),
-        bill_date: b.bill_date, supplier_invoice_number: b.supplier_invoice_number }))
+      .map(b => {
+        const total = Number(b.total_amount)
+        const outstanding = Math.max(total - (paidMap[b.id] || 0), 0)
+        const netBase = Number(b.total_taxable_amount || 0) + Number(b.total_zero_rated_amount || 0) + Number(b.total_exempt_amount || 0)
+        const fallbackNetBase = Math.max(total - Number(b.total_input_vat_amount || 0), 0)
+        return {
+          id: b.id,
+          bill_number: b.bill_number,
+          total_amount: total,
+          outstanding,
+          net_base: netBase > 0 ? netBase : fallbackNetBase,
+          bill_date: b.bill_date,
+          supplier_invoice_number: b.supplier_invoice_number,
+        }
+      })
       .filter(b => b.outstanding > 0.01)
 
     setOpenBills(result)
@@ -185,6 +215,7 @@ export default function PaymentVouchersPage() {
           bill_number: l.vendor_bills?.bill_number || '',
           bill_total: Number(l.vendor_bills?.total_amount || 0),
           bill_outstanding: 0,
+          bill_net_base: 0,
           payment_amount: Number(l.payment_amount),
           ewt_amount: Number(l.ewt_amount),
           atc_code_id: l.atc_code_id || '',
@@ -209,16 +240,17 @@ export default function PaymentVouchersPage() {
   const pickBill = (lineKey: string, billId: string) => {
     const bill = openBills.find(b => b.id === billId)
     if (!bill) {
-      setLines(ls => ls.map(l => l._key !== lineKey ? l : { ...l, vendor_bill_id: '', bill_number: '', bill_total: 0, bill_outstanding: 0, payment_amount: 0 }))
+      setLines(ls => ls.map(l => l._key !== lineKey ? l : { ...l, vendor_bill_id: '', bill_number: '', bill_total: 0, bill_outstanding: 0, bill_net_base: 0, payment_amount: 0 }))
       return
     }
     const supplier = suppliers.find(s => s.id === editPV?.supplier_id)
     const defaultAtc = supplier?.is_subject_to_ewt ? supplier.default_atc_code_id || '' : ''
+    const defaultTaxBase = proportionalNetBase(bill.outstanding, bill.total_amount, bill.net_base)
     setLines(ls => ls.map(l => l._key !== lineKey ? l : recalcLineEwt(l, {
       vendor_bill_id: bill.id, bill_number: bill.bill_number,
-      bill_total: bill.total_amount, bill_outstanding: bill.outstanding,
+      bill_total: bill.total_amount, bill_outstanding: bill.outstanding, bill_net_base: bill.net_base,
       payment_amount: bill.outstanding, ewt_amount: 0,
-      ewt_tax_base: l.ewt_tax_base || bill.outstanding,
+      ewt_tax_base: l.ewt_tax_base || defaultTaxBase,
       atc_code_id: l.atc_code_id || defaultAtc,
     })))
   }
@@ -444,6 +476,13 @@ export default function PaymentVouchersPage() {
     </div>
   )
   const inputCls = `border border-gray-300 rounded px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500 w-full`
+  const auditFacts = [
+    { label: 'Created', value: formatDateTime(editPV?.created_at) },
+    { label: 'Last edited', value: formatDateTime(editPV?.updated_at) },
+    { label: 'Approved', value: formatDateTime(editPV?.approved_at) },
+    { label: 'Posted', value: formatDateTime(editPV?.posted_at) },
+    { label: 'Lock status', value: editPV?.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ]
 
   return (
     <div className="flex flex-col h-full">
@@ -634,6 +673,23 @@ export default function PaymentVouchersPage() {
           sourceDocId={editPV?.id}
           previewRows={glImpactRows}
         />
+
+        {editPV?.id && (
+          <div className="mt-4 space-y-3">
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                {auditFacts.map(fact => (
+                  <div key={fact.label}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{fact.label}</div>
+                    <div className="mt-1 text-xs text-gray-700">{fact.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <AuditTrailSection tableName="payment_vouchers" recordId={editPV.id} />
+          </div>
+        )}
 
         {mode === 'view' && (
           <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-xs text-blue-700">

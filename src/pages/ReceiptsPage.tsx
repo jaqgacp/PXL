@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { AuditTrailSection, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
@@ -16,7 +16,7 @@ type Receipt = {
   payment_mode_id: string; reference_number: string | null
   bank_account_id: string | null; total_amount: number; total_cwt: number
   remarks: string | null; status: RStatus; posted_at: string | null
-  created_at: string
+  created_at: string; updated_at?: string | null
 }
 
 type ApplicationLine = {
@@ -57,6 +57,8 @@ const fmt = (n: number) =>
 
 const today = () => new Date().toISOString().split('T')[0]
 const round2 = (n: number) => Math.round(n * 100) / 100
+const formatDateTime = (value?: string | null) =>
+  value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 
 const inp = 'w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white'
 const ro  = 'w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm bg-gray-50 text-gray-600 cursor-default'
@@ -417,6 +419,12 @@ export default function ReceiptsPage() {
 
   const readOnly = mode === 'view'
   const canEdit = mode === 'new' || mode === 'edit'
+  const auditFacts = editDoc ? [
+    { label: 'Created', value: formatDateTime(editDoc.created_at) },
+    { label: 'Last edited', value: formatDateTime(editDoc.updated_at) },
+    { label: 'Posted', value: formatDateTime(editDoc.posted_at) },
+    { label: 'Lock status', value: editDoc.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ] : []
 
   // ── List View ─────────────────────────────────────────────
   if (mode === 'list') {
@@ -795,6 +803,23 @@ export default function ReceiptsPage() {
             previewRows={glImpactRows}
           />
         </div>
+
+        {editDoc?.id && (
+          <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 space-y-3">
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {auditFacts.map(fact => (
+                  <div key={fact.label}>
+                    <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{fact.label}</div>
+                    <div className="text-xs font-medium text-gray-700">{fact.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <AuditTrailSection tableName="receipts" recordId={editDoc.id} />
+          </div>
+        )}
 
         {editDoc?.posted_at && (
           <div className="bg-gray-50 px-5 py-3">

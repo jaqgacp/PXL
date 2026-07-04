@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge } from '@/components/ui/shared'
+import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
@@ -20,7 +20,7 @@ type VB = {
   total_exempt_amount: number; total_input_vat_amount: number
   total_amount: number; ewt_amount_expected: number | null
   status: VBStatus; void_reason_id: string | null; posted_at: string | null
-  created_at: string
+  approved_at: string | null; updated_at: string | null; created_at: string
 }
 
 type VBLine = {
@@ -60,6 +60,17 @@ const fmt = (n: number) =>
   new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 
 const today = () => new Date().toISOString().split('T')[0]
+
+const formatDateTime = (value?: string | null) => {
+  if (!value) return '—'
+  return new Date(value).toLocaleString('en-PH', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
 
 const newLine = (): VBLine => ({
   _key: crypto.randomUUID(), item_id: '', description: '',
@@ -471,6 +482,13 @@ export default function VendorBillsPage() {
     </div>
   )
   const inputCls = `border border-gray-300 rounded px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500 w-full`
+  const auditFacts = [
+    { label: 'Created', value: formatDateTime(editVB?.created_at) },
+    { label: 'Last edited', value: formatDateTime(editVB?.updated_at) },
+    { label: 'Approved', value: formatDateTime(editVB?.approved_at) },
+    { label: 'Posted', value: formatDateTime(editVB?.posted_at) },
+    { label: 'Lock status', value: editVB?.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ]
 
   return (
     <div className="flex flex-col h-full">
@@ -660,6 +678,23 @@ export default function VendorBillsPage() {
           sourceDocId={editVB?.id}
           previewRows={glImpactRows}
         />
+
+        {editVB?.id && (
+          <div className="mt-4 space-y-3">
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
+                {auditFacts.map(fact => (
+                  <div key={fact.label}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{fact.label}</div>
+                    <div className="mt-1 text-xs text-gray-700">{fact.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <AuditTrailSection tableName="vendor_bills" recordId={editVB.id} />
+          </div>
+        )}
       </div>
     </div>
   )
