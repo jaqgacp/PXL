@@ -7805,6 +7805,8 @@ export type Database = {
           created_at: string
           created_by: string | null
           cwt_amount: number
+          cwt_tax_base: number | null
+          cwt_variance_reason: string | null
           forex_adjustment: number
           id: string
           invoice_id: string
@@ -7819,6 +7821,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           cwt_amount?: number
+          cwt_tax_base?: number | null
+          cwt_variance_reason?: string | null
           forex_adjustment?: number
           id?: string
           invoice_id: string
@@ -7833,6 +7837,8 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           cwt_amount?: number
+          cwt_tax_base?: number | null
+          cwt_variance_reason?: string | null
           forex_adjustment?: number
           id?: string
           invoice_id?: string
@@ -12835,6 +12841,8 @@ export type Database = {
           p_atc_code_id: string
           p_company_id: string
           p_cwt_amount: number
+          p_cwt_tax_base?: number
+          p_cwt_variance_reason?: string
           p_payment_amount: number
         }
         Returns: undefined

@@ -24,7 +24,22 @@ type ApplicationLine = {
   original_amount: number; balance_due: number
   payment_amount: number; cwt_amount: number; forex_adjustment: number
   atc_code_id: string | null
+  // CWT taxable base = VAT-exclusive income payment (PXL-AUD-031).
+  // net_ratio = (invoice total − VAT) / invoice total; base_auto tracks
+  // whether the base still follows the applied amount automatically.
+  cwt_tax_base: number
+  cwt_variance_reason: string
+  net_ratio: number
+  base_auto: boolean
 }
+
+const CWT_VARIANCE_REASONS = [
+  { value: 'rounding', label: 'Rounding' },
+  { value: 'partial_non_taxable', label: 'Partially non-taxable' },
+  { value: 'bir_ruling', label: 'BIR ruling' },
+  { value: 'supplier_exempt', label: 'Payee exempt' },
+  { value: 'other_authorized', label: 'Other (authorized)' },
+]
 
 type CustomerRef = {
   id: string; registered_name: string; tin: string; tin_branch_code: string; registered_address: string
@@ -148,7 +163,7 @@ export default function ReceiptsPage() {
     setOpenInvoicesLoading(true)
     // Get posted SIs for customer
     const { data: sis } = await supabase.from('sales_invoices')
-      .select('id,si_number,date,total_amount')
+      .select('id,si_number,date,total_amount,total_vat_amount')
       .eq('company_id', companyId).eq('customer_id', customerId)
       .eq('status', 'posted').order('date')
     if (!sis || sis.length === 0) { setLines([]); setOpenInvoicesLoading(false); return }
@@ -179,7 +194,13 @@ export default function ReceiptsPage() {
         .filter(a => a.invoice_id === si.id)
         .reduce((s, a) => s + Number(a.total_amount), 0)
       const balance = Number(si.total_amount) - totalPaid - totalCM
-      const defaultCwt = defaultAtc ? round2(balance * defaultAtc.rate / 100) : 0
+      // CWT base defaults to the VAT-exclusive proportion of the amount
+      // applied (statutory base per RR 2-98) — PXL-AUD-031/045.
+      const netRatio = Number(si.total_amount) > 0
+        ? (Number(si.total_amount) - Number(si.total_vat_amount || 0)) / Number(si.total_amount)
+        : 1
+      const defaultBase = defaultAtc ? round2(balance * netRatio) : 0
+      const defaultCwt = defaultAtc ? round2(defaultBase * defaultAtc.rate / 100) : 0
       return {
         invoice_id: si.id, si_number: si.si_number, si_date: si.date,
         original_amount: Number(si.total_amount), balance_due: balance,
@@ -187,6 +208,10 @@ export default function ReceiptsPage() {
         cwt_amount: defaultCwt,
         forex_adjustment: 0,
         atc_code_id: defaultAtcId,
+        cwt_tax_base: defaultBase,
+        cwt_variance_reason: '',
+        net_ratio: netRatio,
+        base_auto: true,
       }
     }).filter(l => l.balance_due > 0.005)
 
@@ -230,25 +255,30 @@ export default function ReceiptsPage() {
     const { data: rl } = await supabase.from('receipt_lines')
       .select('*').eq('receipt_id', doc.id)
     const { data: siData } = rl?.length
-      ? await supabase.from('sales_invoices').select('id,si_number,date,total_amount')
+      ? await supabase.from('sales_invoices').select('id,si_number,date,total_amount,total_vat_amount')
           .in('id', rl.map(r => r.invoice_id))
       : { data: [] }
 
     const mapped: ApplicationLine[] = (rl || []).map(r => {
       const si = (siData || []).find(s => s.id === r.invoice_id)
+      const siTotal = Number(si?.total_amount || 0)
       return {
         invoice_id: r.invoice_id, si_number: si?.si_number || '—',
-        si_date: si?.date || '', original_amount: Number(si?.total_amount || 0),
+        si_date: si?.date || '', original_amount: siTotal,
         balance_due: 0, // will be stale, but fine for view
         payment_amount: Number(r.payment_amount), cwt_amount: Number(r.cwt_amount),
         forex_adjustment: Number(r.forex_adjustment), atc_code_id: r.atc_code_id || null,
+        cwt_tax_base: Number(r.cwt_tax_base || 0),
+        cwt_variance_reason: r.cwt_variance_reason || '',
+        net_ratio: siTotal > 0 ? (siTotal - Number(si?.total_vat_amount || 0)) / siTotal : 1,
+        base_auto: false,
       }
     })
     setLines(mapped)
     setMode(doc.status === 'draft' ? 'edit' : 'view')
   }
 
-  const setLineField = (invoiceId: string, field: 'payment_amount' | 'cwt_amount' | 'forex_adjustment', val: number) => {
+  const setLineField = (invoiceId: string, field: 'payment_amount' | 'cwt_amount' | 'forex_adjustment' | 'cwt_tax_base', val: number) => {
     setLines(prev => prev.map(l => {
       if (l.invoice_id !== invoiceId) return l
       const next = { ...l, [field]: val }
@@ -256,8 +286,26 @@ export default function ReceiptsPage() {
         const customer = customers.find(c => c.id === fCustomer)
         next.atc_code_id = customer?.default_cwt_atc_code_id || null
       }
+      if (field === 'cwt_tax_base') {
+        next.base_auto = false
+      } else if (next.base_auto && (field === 'payment_amount' || field === 'cwt_amount')) {
+        // Keep the base tracking the VAT-exclusive proportion of the amount
+        // applied until the user takes over the base manually.
+        next.cwt_tax_base = round2((next.payment_amount + next.cwt_amount) * next.net_ratio)
+      }
+      // A changed amount invalidates a previously chosen variance reason if
+      // the amounts now agree with the ATC rate again.
+      const atc = atcCodes.find(a => a.id === next.atc_code_id)
+      if (atc && next.cwt_amount > 0 && next.cwt_tax_base > 0) {
+        const expected = round2(next.cwt_tax_base * atc.rate / 100)
+        if (Math.abs(expected - next.cwt_amount) <= 0.02) next.cwt_variance_reason = ''
+      }
       return next
     }))
+  }
+
+  const setLineVarianceReason = (invoiceId: string, reason: string) => {
+    setLines(prev => prev.map(l => l.invoice_id === invoiceId ? { ...l, cwt_variance_reason: reason } : l))
   }
 
   const setLineAtc = (invoiceId: string, atcCodeId: string | null) => {
@@ -299,10 +347,14 @@ export default function ReceiptsPage() {
       }
       const atc = atcCodes.find(a => a.id === line.atc_code_id)
       if (line.cwt_amount > 0 && atc) {
-        const base = round2(line.payment_amount + line.cwt_amount)
+        const base = line.cwt_tax_base > 0 ? round2(line.cwt_tax_base) : round2(line.payment_amount + line.cwt_amount)
+        if (base <= 0) {
+          setError(`CWT taxable base is required for ${line.si_number}.`)
+          return
+        }
         const expected = round2(base * atc.rate / 100)
-        if (Math.abs(expected - line.cwt_amount) > 0.02) {
-          setError(`CWT for ${line.si_number} should be ${fmt(expected)} for ATC ${atc.code}.`)
+        if (Math.abs(expected - line.cwt_amount) > 0.02 && !line.cwt_variance_reason) {
+          setError(`CWT for ${line.si_number} should be ${fmt(expected)} (${atc.rate}% of base ${fmt(base)}, ATC ${atc.code}). Select a variance reason to keep ${fmt(line.cwt_amount)}.`)
           return
         }
       }
@@ -332,6 +384,8 @@ export default function ReceiptsPage() {
         cwt_amount: l.cwt_amount,
         forex_adjustment: l.forex_adjustment,
         atc_code_id: l.cwt_amount > 0 ? l.atc_code_id : null,
+        cwt_tax_base: l.cwt_amount > 0 && l.cwt_tax_base > 0 ? l.cwt_tax_base : null,
+        cwt_variance_reason: l.cwt_amount > 0 && l.cwt_variance_reason ? l.cwt_variance_reason : null,
       }))
 
       const { data: docId, error: saveErr } = await supabase.rpc('fn_save_receipt', {
@@ -605,7 +659,7 @@ export default function ReceiptsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['SI Number','SI Date','Original Amount','Balance Due','Payment Amount','CWT (2307)','ATC Code','Forex Adj.','Remaining After'].map(h => (
+                    {['SI Number','SI Date','Original Amount','Balance Due','Payment Amount','CWT Base (net of VAT)','CWT (2307)','ATC Code','Forex Adj.','Remaining After'].map(h => (
                       <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap last:text-right">{h}</th>
                     ))}
                   </tr>
@@ -633,14 +687,42 @@ export default function ReceiptsPage() {
                         </td>
                         <td className="px-4 py-2.5">
                           {readOnly ? (
-                            <span className="font-mono text-xs tabular-nums text-gray-500">{fmt(l.cwt_amount)}</span>
+                            <span className="font-mono text-xs tabular-nums text-gray-500">{l.cwt_amount > 0 ? fmt(l.cwt_tax_base) : '—'}</span>
                           ) : (
                             <input type="number" min={0} step="any"
-                              value={l.cwt_amount || ''}
-                              onChange={e => setLineField(l.invoice_id, 'cwt_amount', parseFloat(e.target.value) || 0)}
-                              className="w-24 border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
+                              value={l.cwt_tax_base || ''}
+                              onChange={e => setLineField(l.invoice_id, 'cwt_tax_base', parseFloat(e.target.value) || 0)}
+                              className="w-28 border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
                               placeholder="0.00" />
                           )}
+                        </td>
+                        <td className="px-4 py-2.5">
+                          {readOnly ? (
+                            <span className="font-mono text-xs tabular-nums text-gray-500">{fmt(l.cwt_amount)}</span>
+                          ) : (() => {
+                            const atc = atcCodes.find(a => a.id === l.atc_code_id)
+                            const expected = atc && l.cwt_tax_base > 0 ? round2(l.cwt_tax_base * atc.rate / 100) : null
+                            const mismatch = expected !== null && l.cwt_amount > 0 && Math.abs(expected - l.cwt_amount) > 0.02
+                            return (
+                              <div>
+                                <input type="number" min={0} step="any"
+                                  value={l.cwt_amount || ''}
+                                  onChange={e => setLineField(l.invoice_id, 'cwt_amount', parseFloat(e.target.value) || 0)}
+                                  className={`w-24 border rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900 ${mismatch && !l.cwt_variance_reason ? 'border-amber-400 bg-amber-50/40' : 'border-gray-300'}`}
+                                  placeholder="0.00" />
+                                {mismatch && (
+                                  <select
+                                    value={l.cwt_variance_reason}
+                                    onChange={e => setLineVarianceReason(l.invoice_id, e.target.value)}
+                                    className="mt-1 w-24 border border-amber-300 rounded px-1 py-0.5 text-[10px] focus:outline-none"
+                                    title={`Expected ${fmt(expected!)} at ${atc!.rate}% of ${fmt(l.cwt_tax_base)}`}>
+                                    <option value="">Variance reason…</option>
+                                    {CWT_VARIANCE_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+                                  </select>
+                                )}
+                              </div>
+                            )
+                          })()}
                         </td>
                         <td className="px-4 py-2.5">
                           {l.cwt_amount > 0 ? (

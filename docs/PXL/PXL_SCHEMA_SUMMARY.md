@@ -4,7 +4,7 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-04. Migrations scanned: 74. Tests present: 20.
+Generated: 2026-07-04. Migrations scanned: 75. Tests present: 21.
 
 ## Functions (149)
 
@@ -80,7 +80,7 @@ Generated: 2026-07-04. Migrations scanned: 74. Tests present: 20.
 | `fn_post_payment_voucher` | `20260701000016_pv_ewt_explicit_basis.sql` | 6 |
 | `fn_post_petty_cash_replenishment` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_post_physical_count` | `20260630000028_inventory.sql` | 1 |
-| `fn_post_receipt` | `20260701000017_customer_cwt_defaults.sql` | 5 |
+| `fn_post_receipt` | `20260704000003_receipt_cwt_explicit_base.sql` | 6 |
 | `fn_post_revenue_recognition_entry` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_post_sales_invoice` | `20260703000002_vat_ledger_completeness.sql` | 6 |
 | `fn_post_stock_adjustment` | `20260630000028_inventory.sql` | 1 |
@@ -95,7 +95,7 @@ Generated: 2026-07-04. Migrations scanned: 74. Tests present: 20.
 | `fn_require_customer_cwt_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |
 | `fn_require_pv_ewt_ready_status` | `20260701000013_pv_ewt_atc_validation.sql` | 1 |
 | `fn_require_pvl_ewt_validation` | `20260701000016_pv_ewt_explicit_basis.sql` | 2 |
-| `fn_require_receipt_line_cwt_validation` | `20260701000017_customer_cwt_defaults.sql` | 1 |
+| `fn_require_receipt_line_cwt_validation` | `20260704000003_receipt_cwt_explicit_base.sql` | 2 |
 | `fn_require_si_accounting_ready_status` | `20260701000008_accounting_readiness_approval.sql` | 1 |
 | `fn_require_si_line_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_require_si_vat_registration_status` | `20260701000012_vat_registration_enforcement.sql` | 1 |
@@ -113,13 +113,13 @@ Generated: 2026-07-04. Migrations scanned: 74. Tests present: 20.
 | `fn_revert_vendor_bill_to_draft` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_row_written_by_current_txn` | `20260704000002_status_immutability.sql` | 1 |
 | `fn_save_cash_purchase` | `20260630000021_gap_fill.sql` | 2 |
-| `fn_save_cash_sale` | `20260703000002_vat_ledger_completeness.sql` | 4 |
+| `fn_save_cash_sale` | `20260704000003_receipt_cwt_explicit_base.sql` | 5 |
 | `fn_save_credit_memo` | `20260630000022_tax_ledger_completeness.sql` | 4 |
 | `fn_save_debit_memo` | `20260630000022_tax_ledger_completeness.sql` | 4 |
 | `fn_save_payment_voucher` | `20260701000016_pv_ewt_explicit_basis.sql` | 3 |
 | `fn_save_purchase_order` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_save_purchase_return` | `20260630000021_gap_fill.sql` | 2 |
-| `fn_save_receipt` | `20260701000017_customer_cwt_defaults.sql` | 4 |
+| `fn_save_receipt` | `20260704000003_receipt_cwt_explicit_base.sql` | 5 |
 | `fn_save_receiving_report` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_save_sales_invoice` | `20260630000021_gap_fill.sql` | 3 |
 | `fn_save_supplier_debit_memo` | `20260630000021_gap_fill.sql` | 2 |
@@ -143,8 +143,8 @@ Generated: 2026-07-04. Migrations scanned: 74. Tests present: 20.
 | `fn_validate_company_vat_code` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_validate_payment_voucher_ewt_ready` | `20260701000016_pv_ewt_explicit_basis.sql` | 2 |
 | `fn_validate_payment_voucher_line_ewt` | `20260701000018_atc_effective_date_governance.sql` | 3 |
-| `fn_validate_receipt_cwt_ready` | `20260701000017_customer_cwt_defaults.sql` | 1 |
-| `fn_validate_receipt_line_cwt` | `20260701000018_atc_effective_date_governance.sql` | 2 |
+| `fn_validate_receipt_cwt_ready` | `20260704000003_receipt_cwt_explicit_base.sql` | 2 |
+| `fn_validate_receipt_line_cwt` | `20260704000003_receipt_cwt_explicit_base.sql` | 3 |
 | `fn_validate_sales_invoice_accounting_ready` | `20260701000008_accounting_readiness_approval.sql` | 1 |
 | `fn_validate_sales_invoice_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_validate_supplier_atc_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |
@@ -284,7 +284,7 @@ Generated: 2026-07-04. Migrations scanned: 74. Tests present: 20.
 | `purchase_orders` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
 | `purchase_return_lines` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
 | `purchase_returns` | `20260629000018_purchasing_full.sql` | 3 | `20260630000021_gap_fill.sql` |
-| `receipt_lines` | `20260629000003_sprint5_ar.sql` | 4 | `20260630000021_gap_fill.sql` |
+| `receipt_lines` | `20260629000003_sprint5_ar.sql` | 5 | `20260704000003_receipt_cwt_explicit_base.sql` |
 | `receipts` | `20260629000003_sprint5_ar.sql` | 1 | `20260629000003_sprint5_ar.sql` |
 | `receiving_report_lines` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
 | `receiving_reports` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
@@ -503,7 +503,7 @@ Generated: 2026-07-04. Migrations scanned: 74. Tests present: 20.
 | `trg_pt_wp_h_updated_at` | `20260701000001_percentage_tax.sql` |
 | `trg_pv_ewt_ready_status` | `20260701000013_pv_ewt_atc_validation.sql` |
 | `trg_pvl_ewt_validation` | `20260701000016_pv_ewt_explicit_basis.sql` |
-| `trg_receipt_line_cwt_validation` | `20260701000017_customer_cwt_defaults.sql` |
+| `trg_receipt_line_cwt_validation` | `20260704000003_receipt_cwt_explicit_base.sql` |
 | `trg_receipt_lines_updated_at` | `20260629000003_sprint5_ar.sql` |
 | `trg_receipts_updated_at` | `20260629000003_sprint5_ar.sql` |
 | `trg_rjt_updated_at` | `20260630000025_accounting_module.sql` |

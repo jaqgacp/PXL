@@ -510,22 +510,25 @@ Notes:
 - Unlike other test files, this file COMMITs its fixtures: the same-transaction construction exception would otherwise make every tamper attempt look legitimate. Always run on a fresh database (`supabase db reset --local`), per the standing discipline.
 - Guards cover every transactional line table (18 tables incl. JE lines; SI/OR/VB/PV keep their PXL-AUD-005 triggers) and every transactional header (34 tables: AR/AP documents, banking, inventory, fixed assets, schedules and their entries — posted entries fully frozen — plus non-VAT tax returns; `vat_returns` stays under the PXL-DA-015 snapshot guard).
 
-## EWT Audit Scenarios (Session 47) — Recommended, Not Yet Implemented
+## EWT Audit Scenarios (Session 47) — Recommended
 
-The 2026-07-04 EWT end-to-end audit (findings PXL-AUD-031..049) identified the following missing scenarios. Each is **Not Yet Implemented** — no `supabase/tests` file exists yet; they become executable when their finding's fix session lands.
+The 2026-07-04 EWT end-to-end audit (findings PXL-AUD-031..049) identified the following missing scenarios. Scenarios still marked **Not Yet Implemented** have no `supabase/tests` file yet; they become executable when their finding's fix session lands. CWT-NET-BASE-001 was implemented in session 49.
 
 ## CWT-NET-BASE-001 - Statutory VAT-Exclusive CWT on Receipts
 
-Status: Not Yet Implemented. Related findings: PXL-AUD-031, PXL-AUD-045.
+Status: Executed Passing (2026-07-04) in `supabase/tests/021_receipt_cwt_net_base_test.sql`.
+
+Related findings: PXL-AUD-031 (fixed, session 49), PXL-AUD-045 (OR default slice delivered with it; PV slice remains).
 
 Scenario (VAT company; posted SI 11,200.00 = 10,000.00 net + 1,200.00 output VAT; customer withholds 2% on the net base):
 
 | Step | Transaction | Amounts | Expected Behavior |
 | ---- | ----------- | ------- | ----------------- |
-| 1 | OR: cash 11,000.00 + CWT 200.00 on explicit base 10,000.00 | 2% ATC | Accepted (today this is REJECTED); JE DR cash 11,000 / DR CWT receivable 200 / CR AR 11,200. |
+| 1 | OR: cash 11,000.00 + CWT 200.00 on explicit base 10,000.00 | 2% ATC | Accepted (previously REJECTED); JE DR cash 11,000 / DR CWT receivable 200 / CR AR 11,200; SI cleared to zero. |
 | 2 | Tax ledger row | - | cwt_receivable base 10,000.00 (net of VAT), tax 200.00; SAWT income payment excludes VAT. |
-| 3 | OR with CWT 224.00 on base 11,200.00 (gross) without justification | - | Flagged/blocked or requires variance reason — gross-based withholding is the exception, not the default. |
-| 4 | Partial collection: half the invoice with proportional net-base CWT 100.00 | - | Accepted; cumulative CWT 200.00 after both halves. |
+| 3 | Validator mechanics | - | Legacy gross convention (no explicit base → fallback payment + CWT) still validates; CWT off-rate on the explicit base rejected without a variance reason; accepted with an authorized reason; unrecognized reason rejected (PV parity). |
+| 4 | Partial collection: half the invoice, CWT 100.00 on explicit base 5,000.00 | - | Posts; tax ledger row base 5,000.00 / tax 100.00; SI outstanding 5,600.00. |
+| 5 | Cash sale with CWT 200.00 (net convention) | 2% ATC | Posts; tax ledger base 10,000.00; receipt JE debits cash 11,000.00. Gross-convention 224.00 records base 11,200.00. CWT matching neither convention rejected with both expected values. |
 
 ## CV-EWT-2307-001 - Check Voucher EWT Feeds Certificates and Cancels Cleanly
 

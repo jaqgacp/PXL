@@ -335,6 +335,16 @@ export default function CashSalesPage() {
                   <option value="">Select ATC…</option>
                   {atcCodes.map(a => <option key={a.id} value={a.id}>{a.code} ({a.rate}%) — {a.description}</option>)}
                 </select>
+                {(() => {
+                  const atc = atcCodes.find(a => a.id === fCwtAtc)
+                  if (!atc || atc.rate <= 0) return null
+                  const expectedNet = Math.round(totals.net * atc.rate) / 100
+                  return (
+                    <p className="text-[10px] text-gray-400 mt-1">
+                      Statutory CWT is {atc.rate}% of the VAT-exclusive {fmt(totals.net)} = {fmt(expectedNet)}.
+                    </p>
+                  )
+                })()}
               </div>
             )}
             <div>
