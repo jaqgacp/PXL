@@ -39,6 +39,7 @@ export default function CASMasterDataChangeLogPage() {
     setLoading(false)
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loader is re-created each render; refetch is intentionally keyed to this dep list, and user actions call the loader directly
   useEffect(() => { if (companyId) fetchLogs() }, [companyId, filterTable, filterAction, page])
 
   return (

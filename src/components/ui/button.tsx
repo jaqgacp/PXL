@@ -55,4 +55,5 @@ function Button({
   )
 }
 
+// eslint-disable-next-line react/only-export-components -- fast-refresh note only: this non-component export is intentional and stable
 export { Button, buttonVariants }

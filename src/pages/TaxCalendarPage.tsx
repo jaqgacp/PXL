@@ -70,6 +70,7 @@ export default function TaxCalendarPage() {
   useEffect(() => {
     supabase.from('companies').select('id,registered_name').order('registered_name').then(({ data }) => setCompanies(data || []))
   }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loader is re-created each render; refetch is intentionally keyed to this dep list, and user actions call the loader directly
   useEffect(() => { if (cid) fetchEvents(cid) }, [cid, filterYear])
 
   const handleRegenerate = async () => {

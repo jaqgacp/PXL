@@ -14,6 +14,7 @@ const AppContext = createContext<AppCtx>({
   setCompanyId: () => {}, setBranchId: () => {}, setPeriodId: () => {},
 })
 
+// eslint-disable-next-line react/only-export-components -- fast-refresh note only: this non-component export is intentional and stable
 export const useAppCtx = () => useContext(AppContext)
 
 // Selections survive a refresh; restored IDs are validated against the

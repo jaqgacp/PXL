@@ -46,6 +46,7 @@ export default function TaxCreditsSchedulePage() {
     setLoading(false)
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- loader is re-created each render; refetch is intentionally keyed to this dep list, and user actions call the loader directly
   useEffect(() => { load() }, [companyId])
 
   const set = (k: keyof FormData, v: string | number) => setForm(f => ({ ...f, [k]: v }))
