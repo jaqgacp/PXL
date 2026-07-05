@@ -58,9 +58,12 @@ export default function Form2307IssuedPage() {
         p_tax_quarter: quarter,
       })
       if (error) throw error
-      const result = data as { generated_count?: number; skipped_locked_count?: number } | null
+      const result = data as { generated_count?: number; skipped_locked_count?: number; skipped_unlinked_count?: number; skipped_unlinked_ewt?: number } | null
       if ((result?.generated_count || 0) === 0 && (result?.skipped_locked_count || 0) > 0) {
         alert('No certificates were regenerated because all matching certificates are already sent or acknowledged.')
+      }
+      if ((result?.skipped_unlinked_count || 0) > 0) {
+        alert(`Warning: ${result?.skipped_unlinked_count} EWT row group(s) totaling ${Number(result?.skipped_unlinked_ewt || 0).toFixed(2)} withheld were SKIPPED because the source document has no supplier link. Those payees received no certificate — link the documents to suppliers and regenerate.`)
       }
       await load()
     } catch (err: any) {

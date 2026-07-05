@@ -1,20 +1,31 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge } from '@/components/ui/shared'
+import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 
 type BankRef = { id: string; bank_name: string; account_number: string }
 type COARef = { id: string; account_code: string; account_name: string }
 type ATCCode = { id: string; code: string; description: string; rate: number }
+type SupplierRef = { id: string; supplier_code: string; registered_name: string; tin: string }
 type CV = {
   id: string; company_id: string; branch_id: string | null
   cv_number: string; voucher_date: string; bank_account_id: string
   check_number: string; check_date: string; payee: string; payee_tin: string | null
+  supplier_id: string | null; ewt_tax_base: number | null; ewt_variance_reason: string | null
   total_gross_amount: number; total_ewt_amount: number; net_check_amount: number
   atc_code_id: string | null; ewt_rate: number | null; particulars: string
   status: string; cleared_date: string | null; stale_date: string | null
+  created_at?: string; updated_at?: string; posted_at?: string | null
   bank_accounts?: { bank_name: string; account_number: string } | null
 }
+
+const EWT_VARIANCE_REASONS = [
+  { value: 'rounding', label: 'Rounding' },
+  { value: 'partial_non_taxable', label: 'Partially non-taxable payment' },
+  { value: 'bir_ruling', label: 'BIR ruling' },
+  { value: 'supplier_exempt', label: 'Supplier exemption' },
+  { value: 'other_authorized', label: 'Other authorized basis' },
+]
 type CVLine = { _key: string; id?: string; expense_account_id: string; description: string; amount: number }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
@@ -28,6 +39,8 @@ export default function CheckVouchersPage() {
   const [banks, setBanks] = useState<BankRef[]>([])
   const [coa, setCoa] = useState<COARef[]>([])
   const [atcCodes, setAtcCodes] = useState<ATCCode[]>([])
+  const [suppliers, setSuppliers] = useState<SupplierRef[]>([])
+  const [baseTouched, setBaseTouched] = useState(false)
   const [loading, setLoading] = useState(false)
   const [mode, setMode] = useState<'list' | 'edit' | 'view'>('list')
   const [form, setForm] = useState<Partial<CV> | null>(null)
@@ -51,21 +64,23 @@ export default function CheckVouchersPage() {
 
   const loadRefs = useCallback(async () => {
     if (!companyId) return
-    const [baRes, coaRes, atcRes] = await Promise.all([
+    const [baRes, coaRes, atcRes, supRes] = await Promise.all([
       supabase.from('bank_accounts').select('id,bank_name,account_number').eq('company_id', companyId).eq('is_active', true).order('bank_name'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('is_active', true).eq('is_postable', true).order('account_code'),
       supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).order('code'),
+      supabase.from('suppliers').select('id,supplier_code,registered_name,tin').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
     ])
     setBanks((baRes.data as BankRef[]) || [])
     setCoa((coaRes.data as COARef[]) || [])
     setAtcCodes((atcRes.data as ATCCode[]) || [])
+    setSuppliers((supRes.data as SupplierRef[]) || [])
   }, [companyId])
 
   useEffect(() => { if (companyId) { load(); loadRefs() } }, [load, loadRefs, companyId])
 
-  const openNew = () => { setForm({ company_id: companyId, branch_id: branchId || null, voucher_date: today(), check_date: today(), status: 'draft', total_ewt_amount: 0 }); setLines([newLine()]); setError(''); setMode('edit') }
+  const openNew = () => { setForm({ company_id: companyId, branch_id: branchId || null, voucher_date: today(), check_date: today(), status: 'draft', total_ewt_amount: 0 }); setLines([newLine()]); setBaseTouched(false); setError(''); setMode('edit') }
   const openRow = async (r: CV) => {
-    setForm({ ...r }); setError('')
+    setForm({ ...r }); setBaseTouched(r.ewt_tax_base != null); setError('')
     const { data } = await supabase.from('check_voucher_lines').select('*').eq('cv_id', r.id).order('line_number')
     const mapped: CVLine[] = (data || []).map((l) => {
       const row = l as { id: string; expense_account_id: string; description: string; amount: number }
@@ -78,10 +93,19 @@ export default function CheckVouchersPage() {
   const totalGross = lines.reduce((s, l) => s + (Number(l.amount) || 0), 0)
   const ewt = Number(form?.total_ewt_amount) || 0
   const netCheck = totalGross - ewt
+  // Explicit EWT base auto-tracks the gross voucher total until manually overridden
+  const ewtBase = ewt > 0 ? (baseTouched && form?.ewt_tax_base != null ? Number(form.ewt_tax_base) : totalGross) : null
+  const atcRate = form?.ewt_rate != null ? Number(form.ewt_rate) : null
+  const expectedEwt = ewtBase != null && atcRate ? Math.round(ewtBase * atcRate) / 100 : null
+  const varianceNeeded = ewt > 0 && expectedEwt != null && Math.abs(expectedEwt - ewt) > 0.02
 
   const pickAtc = (id: string) => {
     const a = atcCodes.find(x => x.id === id)
     setForm(f => ({ ...f, atc_code_id: id || null, ewt_rate: a ? Number(a.rate) : null }))
+  }
+  const pickSupplier = (id: string) => {
+    const s = suppliers.find(x => x.id === id)
+    setForm(f => ({ ...f, supplier_id: id || null, ...(s ? { payee: s.registered_name, payee_tin: s.tin } : {}) }))
   }
 
   const save = async () => {
@@ -91,6 +115,8 @@ export default function CheckVouchersPage() {
     if (valid.length === 0) { setError('At least one expense line with an account and amount is required'); return }
     if (netCheck <= 0) { setError('Net check amount must be greater than zero'); return }
     if (ewt > 0 && !form.atc_code_id) { setError('An ATC code is required when EWT is withheld'); return }
+    if (ewt > 0 && !form.supplier_id) { setError('A supplier is required when EWT is withheld (Form 2307 traceability)'); return }
+    if (varianceNeeded && !form.ewt_variance_reason) { setError(`EWT ${fmt(ewt)} does not match the ATC rate on base ${fmt(ewtBase ?? 0)} (expected ${fmt(expectedEwt ?? 0)}). Select a variance reason.`); return }
     setSaving(true); setError('')
     try {
       const uid = (await supabase.auth.getUser()).data.user?.id
@@ -99,8 +125,10 @@ export default function CheckVouchersPage() {
         voucher_date: form.voucher_date || today(), bank_account_id: form.bank_account_id,
         check_number: form.check_number, check_date: form.check_date || today(),
         payee: form.payee, payee_tin: form.payee_tin || null,
+        supplier_id: form.supplier_id || null,
         total_gross_amount: totalGross, total_ewt_amount: ewt,
         atc_code_id: form.atc_code_id || null, ewt_rate: form.ewt_rate ?? null,
+        ewt_tax_base: ewtBase, ewt_variance_reason: varianceNeeded ? form.ewt_variance_reason || null : null,
         particulars: form.particulars, updated_by: uid,
       }
       let cvId = form.id
@@ -219,12 +247,22 @@ export default function CheckVouchersPage() {
             <option value="">— select —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select></Field>
           <Field label="Check Number *"><input disabled={ro} className={inputCls} value={form?.check_number || ''} onChange={e => setForm(f => ({ ...f, check_number: e.target.value }))} /></Field>
           <Field label="Check Date *"><input type="date" disabled={ro} className={inputCls} value={form?.check_date || today()} onChange={e => setForm(f => ({ ...f, check_date: e.target.value }))} /></Field>
+          <Field label="Supplier (required if EWT)"><select disabled={ro} className={inputCls} value={form?.supplier_id || ''} onChange={e => pickSupplier(e.target.value)}>
+            <option value="">—</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.supplier_code} — {s.registered_name}</option>)}</select></Field>
           <Field label="Payee *"><input disabled={ro} className={inputCls} value={form?.payee || ''} onChange={e => setForm(f => ({ ...f, payee: e.target.value }))} /></Field>
           <Field label="Payee TIN"><input disabled={ro} className={inputCls} value={form?.payee_tin || ''} onChange={e => setForm(f => ({ ...f, payee_tin: e.target.value }))} /></Field>
           <Field label="ATC Code (if EWT)"><select disabled={ro} className={inputCls} value={form?.atc_code_id || ''} onChange={e => pickAtc(e.target.value)}>
             <option value="">—</option>{atcCodes.map(a => <option key={a.id} value={a.id}>{a.code} — {a.description}</option>)}</select></Field>
           <Field label="EWT Rate (%)"><input type="number" disabled className={inputCls} value={form?.ewt_rate ?? ''} readOnly /></Field>
+          <Field label="EWT Base (defaults to gross)"><input type="number" disabled={ro} className={inputCls} value={ewtBase ?? ''} placeholder="—"
+            onChange={e => { setBaseTouched(true); setForm(f => ({ ...f, ewt_tax_base: e.target.value === '' ? null : parseFloat(e.target.value) || 0 })) }} /></Field>
           <Field label="EWT Amount"><input type="number" disabled={ro} className={inputCls} value={form?.total_ewt_amount ?? 0} onChange={e => setForm(f => ({ ...f, total_ewt_amount: parseFloat(e.target.value) || 0 }))} /></Field>
+          {varianceNeeded && (
+            <Field label={`Variance Reason * (expected EWT ${fmt(expectedEwt ?? 0)})`}>
+              <select disabled={ro} className={inputCls} value={form?.ewt_variance_reason || ''} onChange={e => setForm(f => ({ ...f, ewt_variance_reason: e.target.value || null }))}>
+                <option value="">— select —</option>{EWT_VARIANCE_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}</select>
+            </Field>
+          )}
           <Field label="Particulars *" full3><textarea disabled={ro} rows={2} className={inputCls} value={form?.particulars || ''} onChange={e => setForm(f => ({ ...f, particulars: e.target.value }))} /></Field>
         </div>
 
@@ -260,9 +298,35 @@ export default function CheckVouchersPage() {
             <span className={`text-right font-mono font-bold border-t border-gray-200 pt-1 mt-1 ${netCheck <= 0 ? 'text-red-600' : 'text-gray-900'}`}>{fmt(netCheck)}</span>
           </div>
         </div>
+
+        {form?.id && (
+          <div className="mt-4 space-y-3">
+            <div className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                {[
+                  { label: 'Created', value: fmtTs(form.created_at) },
+                  { label: 'Last edited', value: fmtTs(form.updated_at) },
+                  { label: 'Posted', value: fmtTs(form.posted_at) },
+                  { label: 'Lock status', value: form.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+                ].map(fact => (
+                  <div key={fact.label}>
+                    <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{fact.label}</div>
+                    <div className="mt-1 text-xs text-gray-700">{fact.value}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <AuditTrailSection tableName="check_vouchers" recordId={form.id} />
+          </div>
+        )}
       </div>
     </div>
   )
+}
+
+function fmtTs(ts: string | null | undefined) {
+  return ts ? new Date(ts).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—'
 }
 
 function Field({ label, children, full3 }: { label: string; children: React.ReactNode; full3?: boolean }) {

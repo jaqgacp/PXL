@@ -1,6 +1,6 @@
 # AI State
 
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 
 ## Project Status
 
@@ -14,7 +14,7 @@ All files listed in `AI/AI_DOCUMENTATION_RULES.md` exist under `AI/`. The AI Ope
 
 ## Current Active Task
 
-AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 43 (2026-07-04) closed PXL-DA-011 and PXL-AUD-005: `20260704000002_status_immutability.sql` adds generic status-aware guards — `fn_guard_doc_lines` (18 line tables) and `fn_guard_doc_header` (34 header tables, diff-based: business columns freeze once a document leaves its editable statuses; only status/updated stamps/per-table lifecycle metadata may change; DELETE blocked per DEC-002; posted schedule entries fully frozen). The same-transaction construction exception (`fn_row_written_by_current_txn`: visible row + xmin in progress ⇒ ours; works under subtransactions) keeps every posting writer and the CM/DM apply RPCs working while PostgREST single-transaction clients can never satisfy it. IMMUT-001 (`supabase/tests/020_status_immutability_test.sql`, 25 assertions, COMMITs fixtures to tamper cross-transaction) executed passing; `npm test` 324/324 across 20 files. Session 42 delivered generated DB types + typed client (PXL-AUD-029/030). Session 44 closed PXL-AUD-017; session 46 closed PXL-AUD-018 with a zero-warning lint baseline. Session 47 was the definitive EWT audit (PXL-AUD-031..049); session 48 added the transaction experience standard and PXL-AUD-050. Session 49 FIXED PXL-AUD-031 (receipt CWT explicit VAT-exclusive base, `20260704000003`, CWT-NET-BASE-001 executed). Session 50 partially fixed PXL-AUD-045: PV `ewt_tax_base` now defaults from proportional VAT-exclusive bill outstanding. Sessions 51-56 partially fixed PXL-AUD-050: Sales Invoice, Receipt, Credit Memo, Vendor Bill, Payment Voucher, and Journal Entry now show lifecycle facts and the shared `AuditTrailSection`. Findings standing is 28 Retested Passed / 15 In Progress / 27 Open (70 findings); 11 Criticals remain.
+AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`. Session 43 (2026-07-04) closed PXL-DA-011 and PXL-AUD-005: `20260704000002_status_immutability.sql` adds generic status-aware guards — `fn_guard_doc_lines` (18 line tables) and `fn_guard_doc_header` (34 header tables, diff-based: business columns freeze once a document leaves its editable statuses; only status/updated stamps/per-table lifecycle metadata may change; DELETE blocked per DEC-002; posted schedule entries fully frozen). The same-transaction construction exception (`fn_row_written_by_current_txn`: visible row + xmin in progress ⇒ ours; works under subtransactions) keeps every posting writer and the CM/DM apply RPCs working while PostgREST single-transaction clients can never satisfy it. IMMUT-001 (`supabase/tests/020_status_immutability_test.sql`, 25 assertions, COMMITs fixtures to tamper cross-transaction) executed passing; `npm test` 324/324 across 20 files. Session 42 delivered generated DB types + typed client (PXL-AUD-029/030). Session 44 closed PXL-AUD-017; session 46 closed PXL-AUD-018 with a zero-warning lint baseline. Session 47 was the definitive EWT audit (PXL-AUD-031..049); session 48 added the transaction experience standard and PXL-AUD-050. Session 49 FIXED PXL-AUD-031 (receipt CWT explicit VAT-exclusive base, `20260704000003`, CWT-NET-BASE-001 executed). Session 50 partially fixed PXL-AUD-045: PV `ewt_tax_base` now defaults from proportional VAT-exclusive bill outstanding. Sessions 51-56 partially fixed PXL-AUD-050: Sales Invoice, Receipt, Credit Memo, Vendor Bill, Payment Voucher, and Journal Entry now show lifecycle facts and the shared `AuditTrailSection`. Session 57 (2026-07-05) CLOSED PXL-AUD-032 and PXL-AUD-033: `20260705000001_cv_ewt_supplier_validation.sql` adds `check_vouchers.supplier_id`/`ewt_tax_base`/`ewt_variance_reason` (supplier REQUIRED when EWT > 0; PV-parity validation via `trg_cv_ewt_validation` + post-time recheck reusing `fn_validate_payment_voucher_line_ewt`); `fn_post_check_voucher` writes supplier-linked tax detail with the explicit base and ATC master rate; `fn_cancel_check_voucher` switched to `fn_reverse_tax_detail_entries` counter-rows (legacy bare CV counter-rows backfilled + re-dated onto their reversal JE); `fn_generate_form_2307_issued` skips supplier-unlinked rows with `skipped_unlinked_count`/`skipped_unlinked_ewt` instead of aborting the quarter. `CheckVouchersPage` gained supplier select, auto-tracking EWT base, variance-reason select, and the PXL-AUD-050 Audit Evidence block; `Form2307IssuedPage` surfaces the skip warning. CV-EWT-2307-001 executed (`supabase/tests/022_cv_ewt_2307_test.sql`, 17 assertions); `npm test` 361/361 across 22 files. Findings standing is 30 Retested Passed / 15 In Progress / 25 Open (70 findings); 9 Criticals remain.
 
 ## Current Broken / Missing AI Operating Areas
 
@@ -22,36 +22,26 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
   - `docs/PXL/PXL_TAX_RULES_PH.md` (AIQ-007)
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
 - Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
-- Remote is fully in sync through migration 20260704000003 (pushed and verified 2026-07-04 via `supabase migration list --linked`). Note: `db push` emits harmless pg-delta CA-cert errors from the drift-check feature; migrations apply anyway — verify with `migration list --linked`, not the push output.
+- Remote is in sync through migration 20260704000003 (pushed and verified 2026-07-04 via `supabase migration list --linked`). PENDING: migration `20260705000001_cv_ewt_supplier_validation.sql` still needs `supabase db push --linked` — session 57 had no `SUPABASE_ACCESS_TOKEN` (token file empty); run `SUPABASE_ACCESS_TOKEN=<token> supabase link --project-ref bskjkogijpbhukjkagfj` then `supabase db push --linked --yes` and verify with `supabase migration list --linked`. Note: `db push` emits harmless pg-delta CA-cert errors from the drift-check feature; migrations apply anyway — verify with `migration list --linked`, not the push output.
 - Dev note: the CSP in `index.html` restricts `connect-src` to `*.supabase.co`, so running the frontend against the local Supabase stack (`127.0.0.1:54321`) requires a CSP bypass (Playwright `bypassCSP` was used for verification). Consider a dev-mode CSP if local frontend testing becomes routine.
 
 ## Last Files Changed
 
-Receipt CWT explicit-base session (session 49, 2026-07-04):
+Check-voucher EWT session (session 57, 2026-07-05, PXL-AUD-032 + PXL-AUD-033):
 
-- `supabase/migrations/20260704000003_receipt_cwt_explicit_base.sql` (new: `receipt_lines.cwt_tax_base`/`cwt_variance_reason`; rewritten `fn_validate_receipt_line_cwt` + trigger + ready check + `fn_save_receipt` + `fn_post_receipt` + `fn_save_cash_sale`)
-- `supabase/tests/021_receipt_cwt_net_base_test.sql` (new: CWT-NET-BASE-001, 20 assertions)
-- `src/pages/ReceiptsPage.tsx` (CWT Base column, net-base auto-default, variance-reason select, payload fields)
-- `src/pages/CashSalesPage.tsx` (statutory net CWT hint)
+- `supabase/migrations/20260705000001_cv_ewt_supplier_validation.sql` (new: `check_vouchers.supplier_id`/`ewt_tax_base`/`ewt_variance_reason` + `trg_cv_ewt_validation`; rewritten `fn_post_check_voucher` + `fn_cancel_check_voucher`; legacy CV counter-row backfill; `fn_generate_form_2307_issued` skip-with-warning)
+- `supabase/tests/022_cv_ewt_2307_test.sql` (new: CV-EWT-2307-001, 17 assertions)
+- `src/pages/CheckVouchersPage.tsx` (supplier select defaulting payee identity, auto-tracking EWT base, variance-reason select, client-side supplier/variance checks; PXL-AUD-050 Audit Evidence block + `AuditTrailSection`)
+- `src/pages/Form2307IssuedPage.tsx` (surfaces the skipped-unlinked warning from the generation RPC)
 - `src/lib/database.types.ts` + `docs/PXL/PXL_SCHEMA_SUMMARY.md` (regenerated)
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (CWT-NET-BASE-001 Executed Passing)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` + `docs/PXL/PXL_TRANSACTION_MATRIX.md` (PXL-AUD-031 Retested Passed; standing; session 49 log row; OR row updated)
-- `README.md` (small cleanup: stack and migration summary now match React 19 and migration `20260704000003`; detailed object map delegated to generated schema summary)
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md` + `AI/AI_WORK_QUEUE.md` (small AIQ-010 context cleanup: Quick Orientation added to the top of the large matrix; AIQ-010 marked Done)
-- `docs/PXL/PXL_ACCOUNTING_RULES.md` + `AI/AI_CONTEXT_INDEX.md` + `AI/AI_WORK_QUEUE.md` (small AIQ-006 context cleanup: concise accounting rules summary added and indexed; AIQ-006 marked Done)
-- `src/pages/PaymentVouchersPage.tsx` (PXL-AUD-045 partial: PV EWT base defaults from proportional VAT-exclusive bill base)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` + `docs/PXL/PXL_TRANSACTION_MATRIX.md` (PXL-AUD-045 In Progress; standing now 28 Retested Passed / 14 In Progress / 28 Open)
-- `src/pages/PaymentVouchersPage.tsx` (PXL-AUD-050 partial: saved PVs now show lifecycle audit facts and `AuditTrailSection`)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` + `docs/PXL/PXL_TRANSACTION_MATRIX.md` (PXL-AUD-050 In Progress; standing now 28 Retested Passed / 15 In Progress / 27 Open)
-- `src/pages/VendorBillsPage.tsx` (PXL-AUD-050 partial: saved VBs now show lifecycle audit facts and `AuditTrailSection`)
-- `src/pages/ReceiptsPage.tsx` (PXL-AUD-050 partial: saved ORs now show lifecycle audit facts and `AuditTrailSection`)
-- `src/pages/SalesInvoicePage.tsx` (PXL-AUD-050 partial: saved SIs now show lifecycle audit facts and `AuditTrailSection`)
-- `src/pages/JournalEntriesPage.tsx` (PXL-AUD-050 partial: saved JEs now show lifecycle audit facts and `AuditTrailSection`)
-- `src/pages/CreditMemosPage.tsx` (PXL-AUD-050 partial: saved CMs now show lifecycle audit facts and `AuditTrailSection`)
+- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (CV-EWT-2307-001 Executed Passing)
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (AUD-032/033 Retested Passed; standing 30/15/25; session 57 log row)
+- `docs/PXL/PXL_TRANSACTION_MATRIX.md` (Check Voucher row rewritten to fixed state; Quick Orientation lane + audit-evidence rollout updated; addendum row closed)
+- `AI/AI_STATE.md`, `AI/AI_HANDOFF.md`, `AI/AI_WORK_QUEUE.md` (session close-out)
 
 ## Last Known Errors
 
-None. `npm test` 344/344 across 21 files on a fresh `supabase db reset --local` (replay through `20260704000003`); `npm run build` passed; `npm run lint` is a zero-warning baseline (exit 0); `scripts/check_docs_consistency.sh` green.
+None. `npm test` 361/361 across 22 files on a fresh `supabase db reset --local` (replay through `20260705000001`); `npm run build` passed; `npm run lint` is a zero-warning baseline (exit 0); `scripts/check_docs_consistency.sh` green.
 
 IMPORTANT for future migrations: the PXL-DA-011 guards fire for superuser too — data backfills that rewrite non-draft documents or their lines need `SET session_replication_role = replica` (or targeted `ALTER TABLE ... DISABLE TRIGGER`) around the backfill. New lifecycle columns on guarded tables must be added to that table's allowlist in the guard trigger definition.
 
@@ -61,7 +51,7 @@ Session 38 landed as `0f9ab83` (CI 28648390569 green). Session 39 landed as `c57
 
 ## Next Recommended Step
 
-Continue AIQ-008 with the remaining EWT Criticals: PXL-AUD-032+033 together (check-voucher EWT validation/supplier linkage + counter-row cancel; scenario CV-EWT-2307-001), then PXL-AUD-034 (1601EQ reconciliation gate; pairs with PXL-AUD-041's remittance flow). Do not redo PXL-AUD-031. The pre-existing Criticals (PXL-DA-001/002/004/008/009/019, AUD-002/006) remain. Run `npm run gen:types` after every migration. Do not redo PXL-DA-011, PXL-AUD-005, PXL-DA-015, PXL-DA-017, PXL-AUD-029, PXL-AUD-030, AIQ-006, or AIQ-010. Summary doc AIQ-007 follows when audit work pauses.
+Continue AIQ-008 with the last EWT Critical: PXL-AUD-034 (1601EQ server-computed figures + reconciliation gate mirroring `trg_vat_returns_status_reconciled`; scenario EWT-RETURN-GATE-001; pairs with PXL-AUD-041's remittance flow). Do not redo PXL-AUD-031 or PXL-AUD-032/033. The pre-existing Criticals (PXL-DA-001/002/004/008/009/019, AUD-002/006) remain. Run `npm run gen:types` after every migration. Do not redo PXL-DA-011, PXL-AUD-005, PXL-DA-015, PXL-DA-017, PXL-AUD-029, PXL-AUD-030, AIQ-006, or AIQ-010. Summary doc AIQ-007 follows when audit work pauses.
 
 ## Standing Autonomy Delegation
 

@@ -532,13 +532,13 @@ Scenario (VAT company; posted SI 11,200.00 = 10,000.00 net + 1,200.00 output VAT
 
 ## CV-EWT-2307-001 - Check Voucher EWT Feeds Certificates and Cancels Cleanly
 
-Status: Not Yet Implemented. Related findings: PXL-AUD-032, PXL-AUD-033, PXL-AUD-049.
+Status: Executed Passing (session 57, 2026-07-05) — `supabase/tests/022_cv_ewt_2307_test.sql`, 17 assertions. Related findings: PXL-AUD-032, PXL-AUD-033, PXL-AUD-049.
 
 | Step | Transaction | Expected Behavior |
 | ---- | ----------- | ----------------- |
-| 1 | CV with EWT to a supplier-linked payee, valid ATC, explicit base | Posts; rate-on-base validated like PV lines; tax detail row carries counterparty_id. |
-| 2 | CV EWT with wrong rate / expired ATC / no base | Rejected with the PV-style messages. |
-| 3 | Quarterly 2307 generation for a quarter containing CV EWT | Generates (today it ABORTS the whole batch); CV amounts included per supplier/ATC. |
+| 1 | CV with EWT to a supplier-linked payee, valid ATC, explicit base 10,000 at 2% | Posts; rate-on-base validated like PV lines (off-rate accepted only with an authorized variance reason); JE balanced at gross 10,000 with EWT payable credited 200; tax detail row carries counterparty_id + supplier master TIN/name. |
+| 2 | CV EWT without a supplier / wrong rate without reason / expired ATC | Rejected with the PV-style messages at save time (header trigger) and again at post. |
+| 3 | Quarterly 2307 generation for a quarter containing CV EWT | Generates (previously ABORTED the whole batch); CV amounts included per supplier/ATC; supplier-unlinked legacy rows are skipped with `skipped_unlinked_count` in the result; an all-unlinked quarter raises an actionable message. |
 | 4 | Cancel the posted CV | Counter tax row with `reverses_tax_detail_id`, dated on cancel date; `vw_ewt_summary_ap` drops both rows; QAP detail excludes the cancelled CV. |
 
 ## EWT-RETURN-GATE-001 - 1601EQ Reconciliation Gate

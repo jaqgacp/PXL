@@ -1993,6 +1993,8 @@ export type Database = {
           created_by: string | null
           cv_number: string
           ewt_rate: number | null
+          ewt_tax_base: number | null
+          ewt_variance_reason: string | null
           fiscal_period_id: string | null
           id: string
           journal_entry_id: string | null
@@ -2004,6 +2006,7 @@ export type Database = {
           posted_by: string | null
           stale_date: string | null
           status: string
+          supplier_id: string | null
           total_ewt_amount: number
           total_gross_amount: number
           updated_at: string
@@ -2022,6 +2025,8 @@ export type Database = {
           created_by?: string | null
           cv_number: string
           ewt_rate?: number | null
+          ewt_tax_base?: number | null
+          ewt_variance_reason?: string | null
           fiscal_period_id?: string | null
           id?: string
           journal_entry_id?: string | null
@@ -2033,6 +2038,7 @@ export type Database = {
           posted_by?: string | null
           stale_date?: string | null
           status?: string
+          supplier_id?: string | null
           total_ewt_amount?: number
           total_gross_amount?: number
           updated_at?: string
@@ -2051,6 +2057,8 @@ export type Database = {
           created_by?: string | null
           cv_number?: string
           ewt_rate?: number | null
+          ewt_tax_base?: number | null
+          ewt_variance_reason?: string | null
           fiscal_period_id?: string | null
           id?: string
           journal_entry_id?: string | null
@@ -2062,6 +2070,7 @@ export type Database = {
           posted_by?: string | null
           stale_date?: string | null
           status?: string
+          supplier_id?: string | null
           total_ewt_amount?: number
           total_gross_amount?: number
           updated_at?: string
@@ -2109,6 +2118,13 @@ export type Database = {
             columns: ["journal_entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_vouchers_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]

@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-04. Migrations scanned: 75. Tests present: 21.
+Generated: 2026-07-05. Migrations scanned: 76. Tests present: 22.
 
-## Functions (149)
+## Functions (150)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -32,7 +32,7 @@ Generated: 2026-07-04. Migrations scanned: 75. Tests present: 21.
 | `fn_can_perform` | `20260702000010_can_perform_role_actions.sql` | 1 |
 | `fn_cancel_amortization_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_cancel_bank_adjustment` | `20260630000024_banking_treasury_functions.sql` | 1 |
-| `fn_cancel_check_voucher` | `20260630000024_banking_treasury_functions.sql` | 1 |
+| `fn_cancel_check_voucher` | `20260705000001_cv_ewt_supplier_validation.sql` | 2 |
 | `fn_cancel_fund_transfer` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_cancel_inter_branch_transfer` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_cancel_payment_voucher` | `20260702000009_tax_ledger_void_reversal.sql` | 3 |
@@ -51,7 +51,7 @@ Generated: 2026-07-04. Migrations scanned: 75. Tests present: 21.
 | `fn_execute_recurring_template` | `20260630000025_accounting_module.sql` | 1 |
 | `fn_form2307_period_bounds` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_form2307_report_payload` | `20260703000005_report_snapshots_form2307.sql` | 1 |
-| `fn_generate_form_2307_issued` | `20260702000007_form2307_version_supersede.sql` | 2 |
+| `fn_generate_form_2307_issued` | `20260705000001_cv_ewt_supplier_validation.sql` | 3 |
 | `fn_generate_tax_calendar` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_generate_tax_calendar_trigger` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_grant_all_users_on_new_company` | `20260630000021_gap_fill.sql` | 2 |
@@ -69,7 +69,7 @@ Generated: 2026-07-04. Migrations scanned: 75. Tests present: 21.
 | `fn_post_amortization_entry` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_post_bank_adjustment` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_post_cash_purchase` | `20260703000002_vat_ledger_completeness.sql` | 4 |
-| `fn_post_check_voucher` | `20260630000024_banking_treasury_functions.sql` | 1 |
+| `fn_post_check_voucher` | `20260705000001_cv_ewt_supplier_validation.sql` | 2 |
 | `fn_post_credit_memo` | `20260630000022_tax_ledger_completeness.sql` | 3 |
 | `fn_post_debit_memo` | `20260630000022_tax_ledger_completeness.sql` | 3 |
 | `fn_post_depreciation_entry` | `20260630000027_fixed_assets.sql` | 1 |
@@ -93,6 +93,7 @@ Generated: 2026-07-04. Migrations scanned: 75. Tests present: 21.
 | `fn_report_snapshot_key_uuid` | `20260703000006_report_snapshots_vat_exports.sql` | 1 |
 | `fn_require_admin_for_accounting_lifecycle` | `20260702000010_can_perform_role_actions.sql` | 3 |
 | `fn_require_customer_cwt_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |
+| `fn_require_cv_ewt_validation` | `20260705000001_cv_ewt_supplier_validation.sql` | 1 |
 | `fn_require_pv_ewt_ready_status` | `20260701000013_pv_ewt_atc_validation.sql` | 1 |
 | `fn_require_pvl_ewt_validation` | `20260701000016_pv_ewt_explicit_basis.sql` | 2 |
 | `fn_require_receipt_line_cwt_validation` | `20260704000003_receipt_cwt_explicit_base.sql` | 2 |
@@ -213,7 +214,7 @@ Generated: 2026-07-04. Migrations scanned: 75. Tests present: 21.
 | `cash_purchases` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
 | `chart_of_accounts` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `check_voucher_lines` | `20260630000023_banking_treasury_schema.sql` | 1 | `20260630000023_banking_treasury_schema.sql` |
-| `check_vouchers` | `20260630000023_banking_treasury_schema.sql` | 1 | `20260630000023_banking_treasury_schema.sql` |
+| `check_vouchers` | `20260630000023_banking_treasury_schema.sql` | 2 | `20260705000001_cv_ewt_supplier_validation.sql` |
 | `companies` | `20260628000001_companies.sql` | 1 | `20260628000001_companies.sql` |
 | `company_accounting_config` | `20260629000013_gl_core.sql` | 3 | `20260630000021_gap_fill.sql` |
 | `compliance_1601eq_working_papers_headers` | `20260701000003_withholding_tax.sql` | 0 | `—` |
@@ -335,7 +336,7 @@ Generated: 2026-07-04. Migrations scanned: 75. Tests present: 21.
 | `warehouse_zones` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 
-## Triggers (202)
+## Triggers (203)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -404,6 +405,7 @@ Generated: 2026-07-04. Migrations scanned: 75. Tests present: 21.
 | `trg_credit_memo_lines_updated_at` | `20260629000003_sprint5_ar.sql` |
 | `trg_credit_memos_updated_at` | `20260629000003_sprint5_ar.sql` |
 | `trg_customer_cwt_default` | `20260701000017_customer_cwt_defaults.sql` |
+| `trg_cv_ewt_validation` | `20260705000001_cv_ewt_supplier_validation.sql` |
 | `trg_dashboard_layouts_updated_at` | `20260629000001_dashboard.sql` |
 | `trg_dashboard_widgets_updated_at` | `20260629000001_dashboard.sql` |
 | `trg_debit_memo_lines_updated_at` | `20260629000003_sprint5_ar.sql` |
