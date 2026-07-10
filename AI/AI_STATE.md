@@ -1,6 +1,6 @@
 # AI State
 
-Last updated: 2026-07-05
+Last updated: 2026-07-10
 
 ## Project Status
 
@@ -22,7 +22,7 @@ AIQ-008 (P0): work through open audit findings in `docs/PXL/PXL_END_TO_END_AUDIT
   - `docs/PXL/PXL_TAX_RULES_PH.md` (AIQ-007)
 - No Claude/Anthropic API integration exists yet; do not implement `cache_control` code until an integration exists or is explicitly requested.
 - Remote grant posture vs Supabase's legacy auto-expose defaults has not been diffed (PXL-AUD-026 residue).
-- Remote is in sync through migration 20260704000003 (pushed and verified 2026-07-04 via `supabase migration list --linked`). PENDING: migration `20260705000001_cv_ewt_supplier_validation.sql` still needs `supabase db push --linked` — session 57 had no `SUPABASE_ACCESS_TOKEN` (token file empty); run `SUPABASE_ACCESS_TOKEN=<token> supabase link --project-ref bskjkogijpbhukjkagfj` then `supabase db push --linked --yes` and verify with `supabase migration list --linked`. Note: `db push` emits harmless pg-delta CA-cert errors from the drift-check feature; migrations apply anyway — verify with `migration list --linked`, not the push output.
+- Remote is in sync through migration 20260705000001 (pushed and verified 2026-07-10 via `supabase migration list --linked` — local and remote columns match through `20260705000001`; the session-57 PENDING is cleared). Note: `db push` emits harmless pg-delta CA-cert errors from the drift-check feature; migrations apply anyway — verify with `migration list --linked`, not the push output.
 - Dev note: the CSP in `index.html` restricts `connect-src` to `*.supabase.co`, so running the frontend against the local Supabase stack (`127.0.0.1:54321`) requires a CSP bypass (Playwright `bypassCSP` was used for verification). Consider a dev-mode CSP if local frontend testing becomes routine.
 
 ## Last Files Changed

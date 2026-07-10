@@ -1,6 +1,6 @@
 # AI Handoff
 
-Last updated: 2026-07-05
+Last updated: 2026-07-10
 
 ## What Was Done
 
@@ -11,7 +11,7 @@ Session 57 (2026-07-05): CLOSED PXL-AUD-032 and PXL-AUD-033 (both Critical — t
 - `fn_generate_form_2307_issued` no longer aborts the whole quarter on a supplier-unlinked row: unlinked rows are skipped and reported via `skipped_unlinked_count`/`skipped_unlinked_ewt` in the JSONB result; an all-unlinked quarter raises an actionable message; linked rows missing TIN/ATC still abort. `Form2307IssuedPage` surfaces the warning.
 - `CheckVouchersPage`: supplier select (defaults payee/TIN from the master), EWT base auto-tracks the gross total until manually overridden, variance-reason select appears on rate mismatch, client-side supplier/variance checks; plus the PXL-AUD-050 adopt-on-touch Audit Evidence block + `AuditTrailSection` for `check_vouchers`.
 - Evidence: CV-EWT-2307-001 executed (`supabase/tests/022_cv_ewt_2307_test.sql`, 17 assertions — supplier requirement, variance mechanics, expired-ATC rejection, balanced JE with EWT payable credit, supplier-linked tax detail row, 2307 inclusion + unlinked skip + all-unlinked message, counter-row cancel dated today, view drop). Fresh `supabase db reset --local` replays through `20260705000001`; `npm test` 361/361 across 22 files; build green; lint zero warnings; `npm run gen:types` + schema summary regenerated; `scripts/check_docs_consistency.sh` green.
-- PENDING: hosted `supabase db push --linked` for `20260705000001` — no `SUPABASE_ACCESS_TOKEN` was available this session. Recipe: `SUPABASE_ACCESS_TOKEN=<token> supabase link --project-ref bskjkogijpbhukjkagfj` then `supabase db push --linked --yes`; verify with `supabase migration list --linked`.
+- RESOLVED 2026-07-10: hosted `supabase db push --linked` for `20260705000001` executed with a user-provided `SUPABASE_ACCESS_TOKEN` and verified via `supabase migration list --linked` (local and remote in sync through `20260705000001`).
 - Standing: 30 Retested Passed / 15 In Progress / 25 Open (70 findings); 9 Criticals remain (AUD-002, AUD-006, AUD-034, DA-001, DA-002, DA-004, DA-008, DA-009, DA-019).
 
 Small cleanup after Session 49 (2026-07-04): refreshed `README.md` so the stack summary says React 19, the migration instructions use the linked Supabase CLI path, and the database migration section points to the generated schema summary instead of a short hand-written migration list. `AI/AI_STATE.md` no longer lists README drift as a broken area.
@@ -68,17 +68,17 @@ Session 43 (2026-07-04): implemented PXL-DA-011 status-aware immutability, which
 
 - Next EWT Critical: PXL-AUD-034 (1601EQ server-computed figures + reconciliation gate mirroring `trg_vat_returns_status_reconciled`; scenario EWT-RETURN-GATE-001; pairs with PXL-AUD-041).
 - Then: PXL-DA-001 server-side GL preview RPC (In Progress), PXL-DA-002 drilldown/drillback contracts, PXL-DA-004 posting-engine consolidation.
-- PENDING external action: hosted push of `20260705000001` (needs `SUPABASE_ACCESS_TOKEN`).
+- (Resolved 2026-07-10) Hosted push of `20260705000001` completed and verified via `supabase migration list --linked`.
 - PXL-DA-011 residues (documented in the finding): `tax_detail_entries` direct-write posture continues under tax-ledger findings; CM/DM total columns stay lifecycle-mutable because the apply RPCs zero/recompute them (lines remain guarded, totals always recomputable).
 - Summary docs AIQ-006–007 when audit work pauses.
 
 ## Known Errors / Blockers
 
-None locally: fresh replay through `20260705000001` + `npm test` 361/361 across 22 files (reset the local DB first — test 020 commits fixtures by design), build/lint/docs-consistency green. Session 49 landed as `e30de22`; hosted is in sync through `20260704000003` only — `20260705000001` push is PENDING on `SUPABASE_ACCESS_TOKEN`.
+None locally: fresh replay through `20260705000001` + `npm test` 361/361 across 22 files (reset the local DB first — test 020 commits fixtures by design), build/lint/docs-consistency green. Hosted is in sync through `20260705000001` (pushed and verified 2026-07-10).
 
 ## Exact Next Recommended Task
 
-Continue `AIQ-008` with PXL-AUD-034 (1601EQ server-computed figures + reconciliation gate; mirror the `vat_returns` gate `trg_vat_returns_status_reconciled` + `fn_wht_gl_reconciliation`; scenario EWT-RETURN-GATE-001). Do not redo PXL-AUD-031 or PXL-AUD-032/033. Remember: `npm run gen:types` after every migration; backfills on non-draft rows of DA-011-guarded tables need the replica-role escape hatch (`tax_detail_entries` and `ewt_returns`… check the guard list first — `ewt_returns` IS guarded per `trg_guard_header_ewt_returns`). If a `SUPABASE_ACCESS_TOKEN` is available, push `20260705000001` to hosted first.
+Continue `AIQ-008` with PXL-AUD-034 (1601EQ server-computed figures + reconciliation gate; mirror the `vat_returns` gate `trg_vat_returns_status_reconciled` + `fn_wht_gl_reconciliation`; scenario EWT-RETURN-GATE-001). Do not redo PXL-AUD-031 or PXL-AUD-032/033. Remember: `npm run gen:types` after every migration; backfills on non-draft rows of DA-011-guarded tables need the replica-role escape hatch (`tax_detail_entries` and `ewt_returns`… check the guard list first — `ewt_returns` IS guarded per `trg_guard_header_ewt_returns`). Hosted is in sync through `20260705000001` — no push pending.
 
 If the user asks for another small documentation item instead of audit work, AIQ-007 is the next summary doc: create `docs/PXL/PXL_TAX_RULES_PH.md`.
 
