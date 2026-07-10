@@ -1,8 +1,17 @@
 # AI Handoff
 
-Last updated: 2026-07-10
+Last updated: 2026-07-10 (session 58)
 
 ## What Was Done
+
+Session 58 (2026-07-10): CLOSED PXL-AUD-034 (Critical — 1601EQ reconciliation gate; the last session-47 EWT Critical). Also pushed the previously PENDING `20260705000001` to hosted at session start.
+
+- `20260710000001_ewt_return_reconciliation_gate.sql`: `fn_compute_ewt_return(company, year, quarter)` server-computes quarterly tax base/EWT withheld from the `ewt_payable` tax ledger by `document_date` (reversal counter-rows included so cancelled withholding nets out — the identical population `fn_wht_gl_reconciliation` compares to the GL). `trg_ewt_returns_status_reconciled` (BEFORE INSERT OR UPDATE; alphabetically before the DA-011 guard) blocks final/filed unless: `remitted_prior >= 0`; `still_due = total_ewt_withheld - remitted_prior` within 0.01; return figures match the tax ledger within 0.01; and the `ewt_payable` row of `fn_wht_gl_reconciliation` reconciles for the quarter (unconfigured control account with a nonzero ledger also blocks). Metadata-only updates of a validated return pass — full mirror of `trg_vat_returns_status_reconciled`.
+- `EWT1601EQReturnPage`: ⚡ Generate now calls the RPC instead of client-summing `vw_ewt_summary_ap`; Total Tax Base / Total EWT Withheld are read-only server-computed fields (remitted prior stays operator-entered); a hint under the computation explains the finalization gate. Unused `quarterMonths` helper removed (lint baseline).
+- Deliberate scope lines: `remitted_prior` derivation belongs to PXL-AUD-041's controlled remittance flow (arithmetic-gated meanwhile); an uncontrolled in-quarter remittance JE now blocks 1601EQ finalization exactly as it blocks SAWT/QAP exports — both unblock under AUD-041; `fwt_returns` (1601FQ) is NOT gated because nothing posts FWT tax detail yet (a ledger gate would force all-zero returns).
+- Evidence: EWT-RETURN-GATE-001 executed (`supabase/tests/023_ewt_return_gate_test.sql`, 12 assertions — server computation, draft free-entry, ledger-mismatch/arithmetic/negative-prior blocks, reconciled finalize + metadata edit + filing, remittance-JE variance block, unreconciled quarter still draftable). Fresh `supabase db reset --local` replays through `20260710000001`; `npm test` 373/373 across 23 files; build green; lint zero warnings; `npm run gen:types` + schema summary regenerated; `scripts/check_docs_consistency.sh` green.
+- Hosted: `20260705000001` AND `20260710000001` pushed and verified via `supabase migration list --linked` (user provided `SUPABASE_ACCESS_TOKEN` in-session).
+- Standing: 31 Retested Passed / 15 In Progress / 24 Open (70 findings); 8 Criticals remain (AUD-002, AUD-006, DA-001, DA-002, DA-004, DA-008, DA-009, DA-019).
 
 Session 57 (2026-07-05): CLOSED PXL-AUD-032 and PXL-AUD-033 (both Critical — the check-voucher EWT lane).
 
@@ -56,8 +65,9 @@ Session 43 (2026-07-04): implemented PXL-DA-011 status-aware immutability, which
 
 ## What Changed
 
-- Findings standing: 30 Retested Passed / 15 In Progress / 25 Open (70 findings); 9 Criticals remain (AUD-002, AUD-006, AUD-034, DA-001, DA-002, DA-004, DA-008, DA-009, DA-019). Sessions 49 and 57 closed AUD-031 and AUD-032/033; do not redo them. Session 50 partially fixed AUD-045's PV default slice; sessions 51-57 rolled AUD-050 audit evidence onto PV/VB/OR/SI/JE/CM/CV.
-- `npm test` is now 361/361 across 22 files.
+- Findings standing: 31 Retested Passed / 15 In Progress / 24 Open (70 findings); 8 Criticals remain (AUD-002, AUD-006, DA-001, DA-002, DA-004, DA-008, DA-009, DA-019). Sessions 49, 57, and 58 closed AUD-031, AUD-032/033, and AUD-034 — all four session-47 EWT Criticals; do not redo them. Session 50 partially fixed AUD-045's PV default slice; sessions 51-57 rolled AUD-050 audit evidence onto PV/VB/OR/SI/JE/CM/CV.
+- `npm test` is now 373/373 across 23 files.
+- 1601EQ returns are now reconciliation-gated like VAT returns; any future remittance flow (AUD-041) must keep `fn_wht_gl_reconciliation` passing or 1601EQ finalization and SAWT/QAP exports both block.
 - New architecture standard: `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md` governs how transaction pages should look/expose information; adopt-on-touch only, Phase 2 for structural work. The backlog's Target section defers to it.
 - Lint is a zero-warning baseline as of session 46 — keep it that way; new warnings are regressions.
 - `npm test` is now 344/344 across 21 files.
@@ -66,19 +76,19 @@ Session 43 (2026-07-04): implemented PXL-DA-011 status-aware immutability, which
 
 ## What Remains
 
-- Next EWT Critical: PXL-AUD-034 (1601EQ server-computed figures + reconciliation gate mirroring `trg_vat_returns_status_reconciled`; scenario EWT-RETURN-GATE-001; pairs with PXL-AUD-041).
-- Then: PXL-DA-001 server-side GL preview RPC (In Progress), PXL-DA-002 drilldown/drillback contracts, PXL-DA-004 posting-engine consolidation.
-- (Resolved 2026-07-10) Hosted push of `20260705000001` completed and verified via `supabase migration list --linked`.
+- EWT High tier: PXL-AUD-035+036 (ATC as-of-document-date validation + rate versioning; scenarios ATC-ASOF-001 / ATC-RATE-VERSION-001), then PXL-AUD-041 (controlled remittance flow — feeds `remitted_prior` and unblocks quarters containing remittance JEs).
+- Pre-existing Critical lane: PXL-DA-001 server-side GL preview RPC (In Progress), PXL-DA-002 drilldown/drillback contracts, PXL-DA-004 posting-engine consolidation.
+- Hosted is fully in sync through `20260710000001` (verified via `supabase migration list --linked`); no push pending.
 - PXL-DA-011 residues (documented in the finding): `tax_detail_entries` direct-write posture continues under tax-ledger findings; CM/DM total columns stay lifecycle-mutable because the apply RPCs zero/recompute them (lines remain guarded, totals always recomputable).
 - Summary docs AIQ-006–007 when audit work pauses.
 
 ## Known Errors / Blockers
 
-None locally: fresh replay through `20260705000001` + `npm test` 361/361 across 22 files (reset the local DB first — test 020 commits fixtures by design), build/lint/docs-consistency green. Hosted is in sync through `20260705000001` (pushed and verified 2026-07-10).
+None locally: fresh replay through `20260710000001` + `npm test` 373/373 across 23 files (reset the local DB first — test 020 commits fixtures by design), build/lint/docs-consistency green. Hosted is in sync through `20260710000001` (pushed and verified 2026-07-10).
 
 ## Exact Next Recommended Task
 
-Continue `AIQ-008` with PXL-AUD-034 (1601EQ server-computed figures + reconciliation gate; mirror the `vat_returns` gate `trg_vat_returns_status_reconciled` + `fn_wht_gl_reconciliation`; scenario EWT-RETURN-GATE-001). Do not redo PXL-AUD-031 or PXL-AUD-032/033. Remember: `npm run gen:types` after every migration; backfills on non-draft rows of DA-011-guarded tables need the replica-role escape hatch (`tax_detail_entries` and `ewt_returns`… check the guard list first — `ewt_returns` IS guarded per `trg_guard_header_ewt_returns`). Hosted is in sync through `20260705000001` — no push pending.
+Continue `AIQ-008` with the EWT High pair PXL-AUD-035+036 (thread the document date through `fn_validate_payment_voucher_line_ewt` / `fn_validate_receipt_line_cwt` / the CV path so ATC validity is checked as of the document date, and make ATC rate changes representable under the same official code via versioned uniqueness; scenarios ATC-ASOF-001 and ATC-RATE-VERSION-001 — 035 is a prerequisite of 036, so do them together or 035 first). Alternatively resume the pre-existing Critical lane with PXL-DA-001 (server-side GL preview RPC). Do not redo AUD-031/032/033/034. Remember: `npm run gen:types` after every migration; backfills on non-draft rows of DA-011-guarded tables need the replica-role escape hatch (check the guard list first — `ewt_returns` IS guarded per `trg_guard_header_ewt_returns`; note it now ALSO has `trg_ewt_returns_status_reconciled`, so backfills touching final/filed returns must satisfy or bypass both). Hosted is in sync through `20260710000001` — no push pending.
 
 If the user asks for another small documentation item instead of audit work, AIQ-007 is the next summary doc: create `docs/PXL/PXL_TAX_RULES_PH.md`.
 

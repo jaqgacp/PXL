@@ -543,13 +543,14 @@ Status: Executed Passing (session 57, 2026-07-05) — `supabase/tests/022_cv_ewt
 
 ## EWT-RETURN-GATE-001 - 1601EQ Reconciliation Gate
 
-Status: Not Yet Implemented. Related findings: PXL-AUD-034, PXL-AUD-041.
+Status: Executed Passing (session 58, 2026-07-10) — `supabase/tests/023_ewt_return_gate_test.sql`, 12 assertions. Related findings: PXL-AUD-034, PXL-AUD-041.
 
 | Step | Transaction | Expected Behavior |
 | ---- | ----------- | ----------------- |
-| 1 | Compute 1601EQ for a quarter with posted PV EWT | Figures come from the tax ledger server-side. |
-| 2 | Edit total_ewt_withheld to a diverging figure and set status final | Blocked while figures diverge from the ledger (>0.01) or `fn_wht_gl_reconciliation` fails. |
-| 3 | Matching figures, reconciled quarter, status final then filed | Allowed; business figures frozen (existing PXL-DA-011 guard). |
+| 1 | Compute 1601EQ for a quarter with posted CV EWT | `fn_compute_ewt_return` returns the quarterly `ewt_payable` ledger totals server-side. |
+| 2 | Edit total_ewt_withheld to a diverging figure and set status final | Blocked while figures diverge from the ledger (>0.01), `still_due` breaks the withheld-less-remitted arithmetic, `remitted_prior` is negative, or `fn_wht_gl_reconciliation` fails; draft rows stay free-entry. |
+| 3 | Matching figures, reconciled quarter, status final then filed | Allowed; metadata-only updates of the validated return pass; business figures frozen (existing PXL-DA-011 guard). |
+| 4 | Uncontrolled manual remittance JE on the EWT Payable control account in the next quarter | That quarter's return cannot be marked final (GL variance) until the PXL-AUD-041 controlled remittance flow exists — but still saves as draft. |
 
 ## ATC-ASOF-001 - ATC Validity as of Document Date
 

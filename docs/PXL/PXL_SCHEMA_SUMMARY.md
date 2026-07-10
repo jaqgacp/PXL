@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-05. Migrations scanned: 76. Tests present: 22.
+Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 
-## Functions (150)
+## Functions (152)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -41,6 +41,7 @@ Generated: 2026-07-05. Migrations scanned: 76. Tests present: 22.
 | `fn_cancel_revenue_recognition_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_complete_purchase_return` | `20260630000021_gap_fill.sql` | 3 |
 | `fn_compute_depr_schedule` | `20260630000027_fixed_assets.sql` | 1 |
+| `fn_compute_ewt_return` | `20260710000001_ewt_return_reconciliation_gate.sql` | 1 |
 | `fn_confirm_receiving_report` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_consume_cost_layers` | `20260630000028_inventory.sql` | 1 |
 | `fn_create_amortization_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
@@ -94,6 +95,7 @@ Generated: 2026-07-05. Migrations scanned: 76. Tests present: 22.
 | `fn_require_admin_for_accounting_lifecycle` | `20260702000010_can_perform_role_actions.sql` | 3 |
 | `fn_require_customer_cwt_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |
 | `fn_require_cv_ewt_validation` | `20260705000001_cv_ewt_supplier_validation.sql` | 1 |
+| `fn_require_ewt_return_reconciled` | `20260710000001_ewt_return_reconciliation_gate.sql` | 1 |
 | `fn_require_pv_ewt_ready_status` | `20260701000013_pv_ewt_atc_validation.sql` | 1 |
 | `fn_require_pvl_ewt_validation` | `20260701000016_pv_ewt_explicit_basis.sql` | 2 |
 | `fn_require_receipt_line_cwt_validation` | `20260704000003_receipt_cwt_explicit_base.sql` | 2 |
@@ -336,7 +338,7 @@ Generated: 2026-07-05. Migrations scanned: 76. Tests present: 22.
 | `warehouse_zones` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 
-## Triggers (203)
+## Triggers (204)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -413,6 +415,7 @@ Generated: 2026-07-05. Migrations scanned: 76. Tests present: 22.
 | `trg_dr_updated_at` | `20260629000004_sprint5_so_dr.sql` |
 | `trg_drl_updated_at` | `20260629000004_sprint5_so_dr.sql` |
 | `trg_emp_updated_at` | `20260630000029_master_data_completion.sql` |
+| `trg_ewt_returns_status_reconciled` | `20260710000001_ewt_return_reconciliation_gate.sql` |
 | `trg_ewt_wp_headers_updated_at` | `20260629000006_ewt_working_papers.sql` |
 | `trg_ewt_wp_lines_updated_at` | `20260629000006_ewt_working_papers.sql` |
 | `trg_f2306_updated_at` | `20260701000003_withholding_tax.sql` |

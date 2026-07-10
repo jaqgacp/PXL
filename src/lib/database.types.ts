@@ -12453,6 +12453,13 @@ export type Database = {
           period_number: number
         }[]
       }
+      fn_compute_ewt_return: {
+        Args: { p_company_id: string; p_quarter: number; p_year: number }
+        Returns: {
+          total_ewt_withheld: number
+          total_tax_base: number
+        }[]
+      }
       fn_confirm_receiving_report: {
         Args: { p_rr_id: string }
         Returns: undefined

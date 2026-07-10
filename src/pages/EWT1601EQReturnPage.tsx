@@ -29,7 +29,6 @@ const sec = 'bg-white border border-gray-200 rounded-lg p-6 space-y-4'
 const hd  = 'text-xs font-semibold text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-100'
 const fmtNum = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const fmtQuarter = (y: number, q: number) => `Q${q} ${y}`
-const quarterMonths = (q: number) => [(q - 1) * 3 + 1, (q - 1) * 3 + 2, (q - 1) * 3 + 3]
 
 function StatusBadge({ status }: { status: Status }) {
   const cls: Record<Status, string> = { draft: 'bg-gray-100 text-gray-600', final: 'bg-blue-50 text-blue-700', filed: 'bg-green-50 text-green-700' }
@@ -65,14 +64,13 @@ export default function EWT1601EQReturnPage() {
   const handleGenerate = async () => {
     if (!companyId) return
     setGenerating(true)
-    const months = quarterMonths(form.period_quarter)
-    const startDate = `${form.period_year}-${String(months[0]).padStart(2, '0')}-01`
-    const endDate = new Date(form.period_year, months[2], 0).toISOString().split('T')[0]
-
-    const { data } = await supabase.from('vw_ewt_summary_ap').select('tax_base,tax_withheld').eq('company_id', companyId).gte('invoice_date', startDate).lte('invoice_date', endDate)
-    const rows = (data || []) as { tax_base: number; tax_withheld: number }[]
-    const taxBase = rows.reduce((s, r) => s + Number(r.tax_base), 0)
-    const withheld = rows.reduce((s, r) => s + Number(r.tax_withheld), 0)
+    const { data, error } = await supabase.rpc('fn_compute_ewt_return', {
+      p_company_id: companyId, p_year: form.period_year, p_quarter: form.period_quarter,
+    })
+    if (error) { alert('Cannot generate.\nReason: ' + error.message); setGenerating(false); return }
+    const row = (Array.isArray(data) ? data[0] : data) as { total_tax_base: number; total_ewt_withheld: number } | undefined
+    const taxBase = Number(row?.total_tax_base ?? 0)
+    const withheld = Number(row?.total_ewt_withheld ?? 0)
 
     setForm(f => ({ ...f, total_tax_base: taxBase, total_ewt_withheld: withheld, still_due: withheld - f.remitted_prior }))
     setGenerating(false)
@@ -138,11 +136,12 @@ export default function EWT1601EQReturnPage() {
         <div className={sec}>
           <h2 className={hd}>Return Computation</h2>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className={lbl}>Total Tax Base</label>{isView ? <div className={ro}>{fmtNum(form.total_tax_base)}</div> : <input type="number" step="0.01" value={form.total_tax_base} onChange={e => set('total_tax_base', Number(e.target.value))} className={inp} />}</div>
-            <div><label className={lbl}>Total EWT Withheld</label>{isView ? <div className={ro}>{fmtNum(form.total_ewt_withheld)}</div> : <input type="number" step="0.01" value={form.total_ewt_withheld} onChange={e => set('total_ewt_withheld', Number(e.target.value))} className={inp} />}</div>
+            <div><label className={lbl}>Total Tax Base</label><div className={ro}>{fmtNum(form.total_tax_base)}</div></div>
+            <div><label className={lbl}>Total EWT Withheld</label><div className={ro}>{fmtNum(form.total_ewt_withheld)}</div></div>
             <div><label className={lbl}>Less: Remitted Prior (0619-E)</label>{isView ? <div className={ro}>{fmtNum(form.remitted_prior)}</div> : <input type="number" step="0.01" value={form.remitted_prior} onChange={e => set('remitted_prior', Number(e.target.value))} className={inp} />}</div>
             <div className="col-span-2 pt-2 border-t border-gray-100"><label className={lbl}>Still Due</label><div className="text-2xl font-bold font-mono tabular-nums text-gray-900">{fmtNum(form.total_ewt_withheld - form.remitted_prior)}</div></div>
           </div>
+          {!isView && <p className="text-xs text-gray-400">Tax base and EWT withheld are computed from the tax ledger — click ⚡ Generate to refresh them. A return can only be marked Final or Filed when these figures match the ledger and the ledger reconciles to the EWT Payable GL account for the quarter.</p>}
         </div>
 
         <div className={sec}>
