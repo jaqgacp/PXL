@@ -14,7 +14,7 @@ Priority: High / Medium / Low (product value, independent of audit P0–P2). Com
 
 ## Target: Standard Transaction Experience
 
-AUTHORITATIVE DEFINITION: `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md` (session 48) — full layout, tab set, line grid, auto-population, account determination, summary/GL/tax panel contracts, drill contracts, adoption sequence, and gap analysis. The seven-section outline below remains as the short form; when they disagree, the standard wins. This file keeps the per-feature priority/complexity rows.
+AUTHORITATIVE DEFINITION: `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` (official product vision, 2026-07-10, DEC-013), detailed by `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md` (session 48 blueprint) — full layout, tab set, line grid, auto-population, account determination, summary/GL/tax panel contracts, drill contracts, adoption sequence, and gap analysis. The seven-section outline below remains as the short form; when they disagree, the standard wins. This file keeps the per-feature priority/complexity rows.
 
 Every financial transaction page should converge toward one consistent layout. New or reworked pages should adopt this shape rather than inventing their own:
 

@@ -470,3 +470,36 @@ Related Source Files:
 
 - None.
 
+
+## DEC-013 - PXL Standard Transaction Workspace Is the Official Phase 2 Product Architecture
+
+Decision:
+
+The "PXL Standard Transaction Workspace" (`docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`, user directive 2026-07-10) is the canonical long-term UI/UX architecture for every posting transaction page, present and future. PXL targets a NetSuite/Business Central/SAP B1-class workspace: consistent document header + toolbar, party snapshot, server-computed financial summary, posting-validation panel, workflow strip, ERP-style tabs, professional role-aware line grid, line detail panel, right sidebar, GL Impact from the authoritative posting engine, Tax Impact, bidirectional related-document drill-through, audit trail, activity timeline, Smart Master Data promotion (recurring manual fields are master-data design gaps), and automatic account determination (normal users never pick GL accounts unless permitted).
+
+Priority contract: production-critical audit findings (accounting, tax, posting, security, immutability, audit trail, compliance) always come first; immediately after they are complete, this vision becomes the single highest product priority. Until then, adoption is strictly adopt-on-touch/incremental (per DEC-012's continuous architectural review), never a mass rewrite. `PXL_TRANSACTION_EXPERIENCE_STANDARD.md` (session 48) remains the subordinate implementation blueprint; when documents disagree the order is: transaction matrix/migrations (behavior) > workspace vision > blueprint > UI_UX_PRINCIPLES > backlog. Discovery routing: functional bugs to the audit findings doc, architectural enhancements to the vision/backlog, permanent decisions here.
+
+Business Reason:
+
+User directive 2026-07-10 (session 60): PXL must not feel like a CRUD accounting app; a user who understands one transaction page must immediately understand every other one, and every lifecycle question (impact, validity, workflow, provenance, related documents) must be answerable without leaving the page.
+
+Technical Reason:
+
+A single named target architecture with an explicit component inventory (TransactionHeader, PartySnapshotCard, FinancialSummaryPanel, PostingValidationPanel, WorkflowStrip, TransactionTabs, ProfessionalLineGrid, LineDetailPanel, GLImpactPanel, TaxImpactPanel, AuditTrailPanel, RelatedDocumentsPanel, AttachmentPanel, ActivityTimeline, QuickActionSidebar, SystemInformationPanel) prevents per-page divergence and duplicate implementations, and lets audit-era sessions prepare extension points without scope creep.
+
+Alternatives Considered:
+
+- Keep the session-48 standard as the top document. Rejected: the user issued a superseding official vision with a canonical name and file; the blueprint stays as the detail layer.
+- Immediate implementation sprint. Rejected by the directive itself: audit findings retain absolute priority; adoption is incremental.
+- Per-module UX decisions. Rejected: consistency across all transaction pages is the explicit business goal.
+
+Related Documents:
+
+- `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`
+- `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md`
+- `docs/PXL/PXL_PRODUCT_BACKLOG.md`
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
+
+Related Source Files:
+
+- `src/components/GLImpactPanel.tsx`; `src/components/SetupReadiness.tsx`; `src/components/ui/shared.tsx` (existing panel inventory to extend, not fork).

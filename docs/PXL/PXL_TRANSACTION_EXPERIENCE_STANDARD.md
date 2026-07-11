@@ -1,6 +1,6 @@
 # PXL Transaction Experience Standard
 
-Status: ARCHITECTURE STANDARD (audit session 48, 2026-07-04). Design blueprint for Phase 2 UI/UX modernization — nothing here is implemented by this document, and no page is required to change until its Phase 2 session is scheduled. Audit-finding work always outranks this standard (DEC-012).
+Status: DESIGN BLUEPRINT subordinate to `PXL_STANDARD_TRANSACTION_WORKSPACE.md` (the official product vision, user directive 2026-07-10, DEC-013). This file carries the implementation-level detail (tab specs, line-grid column groups, auto-population matrix, account-determination ladder, panel contracts, maturity table); when the two disagree, the vision document wins and this file must be updated. Nothing here is implemented by this document, and no page is required to change until its Phase 2 session is scheduled. Audit-finding work always outranks this standard (DEC-012).
 
 ## 1. Purpose and Normative Status
 

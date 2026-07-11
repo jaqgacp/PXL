@@ -80,7 +80,7 @@ export default function CashPurchasesPage() {
   useEffect(() => {
     if (!companyId) return
     supabase.from('suppliers').select('id,registered_name,tin').eq('company_id', companyId).eq('is_active', true).order('registered_name').then(({ data }) => setSuppliers(data as SupplierRef[] || []))
-    supabase.from('items').select('id,item_code,description,uom_id,uom:units_of_measure(uom_name),standard_cost,default_purchase_vat_id,purchase_account_id').eq('company_id', companyId).eq('is_active', true).order('description').then(({ data }) => setItems((data || []).map((i: any) => ({ ...i, uom_label: i.uom?.uom_name || '' }))))
+    supabase.from('items').select('id,item_code,description,uom_id,uom:units_of_measure(uom_code),standard_cost,default_purchase_vat_id,purchase_account_id:purchase_expense_account_id').eq('company_id', companyId).eq('is_active', true).order('description').then(({ data }) => setItems((data || []).map((i: any) => ({ ...i, uom_label: i.uom?.uom_code || '' }))))
     Promise.all([
       supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true),
