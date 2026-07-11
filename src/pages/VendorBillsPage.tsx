@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
@@ -52,8 +52,6 @@ type TaxRegistration = 'vat' | 'non_vat' | 'exempt'
 type COARef = { id: string; account_code: string; account_name: string; account_type: string }
 type Branch = { id: string; branch_code: string; branch_name: string }
 type VoidReason = { id: string; code: string; description: string }
-
-const VB_REQUIRED_CONFIG: ConfigField[] = ['ap_account_id', 'input_vat_account_id']
 
 // ── Helpers ───────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -116,12 +114,18 @@ export default function VendorBillsPage() {
   const listRef = useRef<HTMLDivElement>(null)
 
   const readOnly = mode === 'view'
+  const requiredConfig = useMemo<ConfigField[]>(
+    () => taxRegistration === 'vat'
+      ? ['ap_account_id', 'input_vat_account_id']
+      : ['ap_account_id'],
+    [taxRegistration]
+  )
   const readiness = useTransactionReadiness({
     companyId,
     branchId: mode === 'list' ? branchId : (editVB?.branch_id || branchId || ''),
     documentCode: 'VB',
     postingDate: editVB?.bill_date || today(),
-    requiredConfig: VB_REQUIRED_CONFIG,
+    requiredConfig,
   })
   const allowsVatCode = useCallback((code: VATRef) => taxRegistration === 'vat' || code.rate === 0, [taxRegistration])
   const defaultVatCode = useCallback(() => vatCodes.find(allowsVatCode) || null, [allowsVatCode, vatCodes])

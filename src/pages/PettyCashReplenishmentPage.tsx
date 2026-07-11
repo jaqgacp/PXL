@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type FundRef = { id: string; fund_name: string }
 type BankRef = { id: string; bank_name: string; account_number: string }
@@ -103,6 +104,8 @@ export default function PettyCashReplenishmentPage() {
   const post = async (id: string) => {
     setBusy(true); setError('')
     try {
+      const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', { p_source_doc_type: 'PCR', p_source_doc_id: id })
+      if (previewError) throw new Error(`Petty Cash Replenishment is not ready to post: ${previewError.message}`)
       const { error: e } = await supabase.rpc('fn_post_petty_cash_replenishment', { p_pcr_id: id })
       if (e) throw e
       await load(); setMode('list')
@@ -196,6 +199,11 @@ export default function PettyCashReplenishmentPage() {
             </table>
           )}
         </div>
+        {form?.id && (
+          <div className="mt-4 max-w-5xl">
+            <GLImpactPanel companyId={companyId} sourceDocType="PCR" sourceDocId={form.id} previewRows={[]} />
+          </div>
+        )}
       </div>
     </div>
   )

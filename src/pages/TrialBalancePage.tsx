@@ -1,4 +1,6 @@
 import { Fragment, useState, useEffect, useCallback } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { BookOpen, Scale } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -23,6 +25,8 @@ const TYPE_LABEL: Record<string, string> = {
 
 export default function TrialBalancePage() {
   const { companyId } = useAppCtx()
+  const [searchParams] = useSearchParams()
+  const requestedAccountId = searchParams.get('accountId') || searchParams.get('account') || ''
   const [accounts, setAccounts] = useState<COA[]>([])
   const [periods, setPeriods] = useState<PeriodRef[]>([])
 
@@ -97,6 +101,7 @@ export default function TrialBalancePage() {
   }
 
   const visible = rows.filter(r => {
+    if (requestedAccountId && r.id !== requestedAccountId) return false
     const nonZero = Math.abs(r.openingNet) > 0.005 || r.periodDebit > 0.005 || r.periodCredit > 0.005 || Math.abs(r.closingNet) > 0.005
     if (adjusted) return Math.abs(r.closingNet) > 0.005
     if (!includeZero) return nonZero
@@ -130,6 +135,9 @@ export default function TrialBalancePage() {
     <div>
       <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3 flex-wrap">
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Trial Balance</span>
+        {requestedAccountId && (
+          <Link to="/trial-balance" className="text-xs font-medium text-blue-700 hover:text-blue-900">Clear account filter</Link>
+        )}
         <div className="flex rounded border border-gray-300 overflow-hidden">
           <button onClick={() => setUseRange(false)} className={`px-3 py-1.5 text-xs font-medium ${!useRange ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>By Period</button>
           <button onClick={() => setUseRange(true)} className={`px-3 py-1.5 text-xs font-medium border-l border-gray-300 ${useRange ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>By Date Range</button>
@@ -183,8 +191,18 @@ export default function TrialBalancePage() {
                     </tr>
                     {g.items.map(r => (
                       <tr key={r.id} className="hover:bg-gray-50/60">
-                        <td className="px-3 py-2 font-mono font-semibold text-gray-900">{r.account_code}</td>
-                        <td className="px-3 py-2 text-gray-700 max-w-[240px] truncate">{r.account_name}</td>
+                        <td className="px-3 py-2 font-mono font-semibold">
+                          <Link to={`/account-detail-ledger?accountId=${r.id}`} className="inline-flex items-center gap-1 text-blue-700 hover:text-blue-900">
+                            {r.account_code}
+                            <BookOpen className="h-3 w-3" aria-hidden="true" />
+                          </Link>
+                        </td>
+                        <td className="px-3 py-2 text-gray-700 max-w-[240px] truncate">
+                          <Link to={`/general-ledger?accountId=${r.id}`} className="inline-flex items-center gap-1 text-blue-700 hover:text-blue-900">
+                            {r.account_name}
+                            <Scale className="h-3 w-3" aria-hidden="true" />
+                          </Link>
+                        </td>
                         <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-600">{r.openingNet > 0 ? fmt(r.openingNet) : '—'}</td>
                         <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-600">{r.openingNet < 0 ? fmt(-r.openingNet) : '—'}</td>
                         <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-700">{r.periodDebit ? fmt(r.periodDebit) : '—'}</td>

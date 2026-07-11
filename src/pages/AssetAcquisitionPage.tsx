@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 
 type Category = { id: string; category_code: string; category_name: string; depreciation_method: string; useful_life_months: number; salvage_rate: number }
 type Branch = { id: string; branch_name: string }
@@ -148,6 +149,21 @@ export default function AssetAcquisitionPage() {
   }
 
   const preview = previewSalvage()
+  const acquisitionCost = Number(form.acquisition_cost) || 0
+  const glPreviewRows: GLImpactRow[] = form.credit_account_id && acquisitionCost > 0 ? [
+    {
+      accountLabel: 'Asset account from selected category',
+      description: `Acquisition — ${form.asset_name || 'fixed asset'}`,
+      debit: acquisitionCost,
+      credit: 0,
+    },
+    {
+      accountId: form.credit_account_id,
+      description: `Acquisition — ${form.asset_name || 'fixed asset'}`,
+      debit: 0,
+      credit: acquisitionCost,
+    },
+  ] : []
 
   return (
     <div>
@@ -290,6 +306,14 @@ export default function AssetAcquisitionPage() {
             <p className="text-[10px] text-gray-400 mt-0.5">If selected, posts DR Asset Account / CR this account automatically.</p>
           </div>
         </div>
+
+        <GLImpactPanel
+          companyId={companyId}
+          sourceDocType="FA"
+          sourceDocId={null}
+          previewRows={glPreviewRows}
+          title="GL Impact — Acquisition"
+        />
 
         <div className="flex gap-2">
           <button onClick={submit} disabled={saving}

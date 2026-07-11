@@ -1,13 +1,17 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 
 type CPStatus = 'draft' | 'posted' | 'cancelled'
 
 type CP = {
-  id: string; company_id: string; cp_number: string; transaction_date: string
+  id: string; company_id: string; branch_id: string; cp_number: string; transaction_date: string
   supplier_id: string | null; supplier_name_snapshot: string | null
+  payment_account_id: string | null
   payment_method: string; reference_number: string | null; remarks: string | null
   total_taxable_amount: number; total_input_vat_amount: number; total_amount: number
   status: CPStatus; created_at: string
@@ -77,7 +81,15 @@ export default function CashPurchasesPage() {
     if (!companyId) return
     supabase.from('suppliers').select('id,registered_name,tin').eq('company_id', companyId).eq('is_active', true).order('registered_name').then(({ data }) => setSuppliers(data as SupplierRef[] || []))
     supabase.from('items').select('id,item_code,description,uom_id,uom:units_of_measure(uom_name),standard_cost,default_purchase_vat_id,purchase_account_id').eq('company_id', companyId).eq('is_active', true).order('description').then(({ data }) => setItems((data || []).map((i: any) => ({ ...i, uom_label: i.uom?.uom_name || '' }))))
-    supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true).then(({ data }) => setVatCodes((data || []).map((v: any) => ({ id: v.id, vat_code: v.vat_code, description: v.description, vat_classification: v.vat_classification, rate: v.tax_codes?.rate || 0 }))))
+    Promise.all([
+      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
+      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true),
+    ]).then(([companyRes, vatRes]) => {
+      const taxRegistration = companyRes.data?.tax_registration || 'vat'
+      setVatCodes((vatRes.data || [])
+        .map((v: any) => ({ id: v.id, vat_code: v.vat_code, description: v.description, vat_classification: v.vat_classification, rate: v.tax_codes?.rate || 0 }))
+        .filter(v => taxRegistration === 'vat' || v.rate === 0))
+    })
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['asset']).eq('is_active', true).ilike('account_name', '%cash%').order('account_code').then(({ data }) => setCashAccounts(data as COARef[] || []))
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['expense','cost_of_goods']).eq('is_active', true).order('account_code').then(({ data }) => setExpenseAccounts(data as COARef[] || []))
   }, [companyId])
@@ -109,9 +121,9 @@ export default function CashPurchasesPage() {
     updateLine(idx, {
       item_id: item.id, description: item.description, uom_id: item.uom_id,
       unit_price: item.standard_cost,
-      vat_code_id: item.default_purchase_vat_id || '',
+      vat_code_id: vatRef?.id || '',
       vat_classification: vatRef?.vat_classification || 'regular',
-      vat_rate: vatRef?.rate || 12,
+      vat_rate: vatRef?.rate ?? 0,
       expense_account_id: item.purchase_account_id || '',
     })
   }
@@ -131,15 +143,56 @@ export default function CashPurchasesPage() {
     vat: acc.vat + l.input_vat_amount,
     total: acc.total + l.total_amount,
   }), { taxable: 0, vat: 0, total: 0 })
+  const requiredConfig = useMemo<ConfigField[]>(() => {
+    const fields: ConfigField[] = []
+    if (!editCP?.payment_account_id) fields.push('default_cash_account_id')
+    if (totals.vat > 0.005) fields.push('input_vat_account_id')
+    return fields
+  }, [editCP?.payment_account_id, totals.vat])
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: editCP?.branch_id || branchId,
+    documentCode: 'CP',
+    postingDate: editCP?.transaction_date || today(),
+    requiredConfig,
+  })
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+  const glPreviewRows = useMemo<GLImpactRow[]>(() => [
+    ...lines
+      .filter(line => line.net_amount > 0.005)
+      .map(line => ({
+        accountId: line.expense_account_id || null,
+        description: line.description || 'Cash purchase',
+        debit: line.net_amount,
+        credit: 0,
+      })),
+    ...(totals.vat > 0.005 ? [{
+      configKey: 'input_vat_account_id' as const,
+      description: 'Input VAT',
+      debit: totals.vat,
+      credit: 0,
+    }] : []),
+    {
+      accountId: editCP?.payment_account_id || null,
+      configKey: editCP?.payment_account_id ? undefined : 'default_cash_account_id',
+      description: 'Cash or bank payment',
+      debit: 0,
+      credit: totals.total,
+    },
+  ], [editCP?.payment_account_id, lines, totals.total, totals.vat])
 
   const save = async () => {
+    if (setupBlocked) {
+      setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0])
+      return
+    }
     if (!companyId) return
     setSaving(true); setError('')
     try {
       const result = await supabase.rpc('fn_save_cash_purchase', {
         p_cp_id: (editCP?.id || null)!,
         p_header: {
-          company_id: companyId, branch_id: branchId || null,
+          company_id: companyId, branch_id: editCP?.branch_id || branchId || null,
           transaction_date: editCP?.transaction_date, payment_method: editCP?.payment_method || 'cash',
           supplier_id: editCP?.supplier_id || null,
           supplier_name_snapshot: editCP?.supplier_name_snapshot || '',
@@ -163,6 +216,11 @@ export default function CashPurchasesPage() {
   }
 
   const post = async (cp: CP) => {
+    const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', {
+      p_source_doc_type: 'CP',
+      p_source_doc_id: cp.id,
+    })
+    if (previewError) { alert(`Cash Purchase is not ready to post: ${previewError.message}`); return }
     const { error: e } = await supabase.rpc('fn_post_cash_purchase', { p_cp_id: cp.id })
     if (e) { alert(e.message); return }
     loadRecords()
@@ -182,6 +240,7 @@ export default function CashPurchasesPage() {
       </div>
 
       {error && <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">{error}</div>}
+      <SetupReadinessBanner readiness={readiness} />
 
       <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Header</h3>
@@ -270,10 +329,22 @@ export default function CashPurchasesPage() {
         </table>
       </div>
 
+      <GLImpactPanel
+        companyId={companyId}
+        sourceDocType="CP"
+        sourceDocId={editCP?.id || null}
+        previewRows={glPreviewRows}
+      />
+
       {!readOnly && (
         <div className="flex justify-end gap-2">
           <button onClick={() => setMode('list')} className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
-          <button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
+          <button onClick={save} disabled={saving || setupBlocked} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      )}
+      {readOnly && editCP?.status === 'draft' && (
+        <div className="flex justify-end">
+          <button onClick={() => post(editCP as CP)} disabled={setupBlocked} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">Post Cash Purchase</button>
         </div>
       )}
     </div>

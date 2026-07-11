@@ -1,4 +1,5 @@
 import type { SetupReadiness } from '@/lib/setupReadiness'
+import { Link } from 'react-router-dom'
 
 export function SetupReadinessBanner({ readiness }: { readiness: SetupReadiness }) {
   if (readiness.loading) {
@@ -25,6 +26,11 @@ export function SetupReadinessBanner({ readiness }: { readiness: SetupReadiness 
         <ul className="mt-2 list-disc pl-5 text-amber-700 space-y-1">
           {readiness.warnings.map(item => <li key={item}>{item}</li>)}
         </ul>
+      )}
+      {readiness.blockers.length > 0 && (
+        <Link to="/company-setup" className="inline-flex mt-3 text-xs font-semibold text-amber-900 underline underline-offset-2 hover:text-amber-950">
+          Open Company Setup Checklist
+        </Link>
       )}
     </div>
   )

@@ -4,15 +4,16 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
+Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
 
-## Functions (152)
+## Functions (172)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
 | `can_admin_company` | `20260701000006_permissions_hardening.sql` | 3 |
 | `fn_acknowledge_supplier_debit_memo` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_add_cost_layer` | `20260630000028_inventory.sql` | 1 |
+| `fn_add_posting_line` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_ap_aging_asof` | `20260702000003_ar_ap_aging_asof_rpcs.sql` | 1 |
 | `fn_apply_vendor_credit` | `20260701000011_vendor_credit_application_reversal.sql` | 4 |
 | `fn_approve_petty_cash_voucher` | `20260630000024_banking_treasury_functions.sql` | 1 |
@@ -45,16 +46,21 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `fn_confirm_receiving_report` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_consume_cost_layers` | `20260630000028_inventory.sql` | 1 |
 | `fn_create_amortization_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
+| `fn_create_posted_journal_entry` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_create_revenue_recognition_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_dispose_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
 | `fn_enforce_approval_sod` | `20260703000001_approval_sod_enforcement.sql` | 1 |
+| `fn_enforce_journal_entry_balanced` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_ensure_stock_balance` | `20260630000028_inventory.sql` | 1 |
 | `fn_execute_recurring_template` | `20260630000025_accounting_module.sql` | 1 |
+| `fn_finalize_journal_entry` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_form2307_period_bounds` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_form2307_report_payload` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_generate_form_2307_issued` | `20260705000001_cv_ewt_supplier_validation.sql` | 3 |
 | `fn_generate_tax_calendar` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_generate_tax_calendar_trigger` | `20260628000005_sprint2_tax.sql` | 1 |
+| `fn_get_accounting_trace` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_gl_impact_payload` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_grant_all_users_on_new_company` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_grant_creator_company_ownership` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_grant_new_user_all_companies` | `20260630000021_gap_fill.sql` | 2 |
@@ -62,17 +68,22 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `fn_guard_doc_header` | `20260704000002_status_immutability.sql` | 1 |
 | `fn_guard_doc_lines` | `20260704000002_status_immutability.sql` | 1 |
 | `fn_guard_form2307_snapshot_immutable` | `20260703000005_report_snapshots_form2307.sql` | 1 |
+| `fn_guard_journal_entry_line` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_guard_journal_entry_posting` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_guard_vat_return_snapshot_immutable` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
 | `fn_je_dimensions_guard` | `20260704000001_je_line_dimensions.sql` | 1 |
 | `fn_je_line_dimensions_guard` | `20260704000001_je_line_dimensions.sql` | 1 |
+| `fn_link_fixed_asset_journal_source` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_link_purchase_return_journal_source` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_link_schedule_journal_source` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_mark_tax_event_filed` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_next_document_number` | `20260630000021_gap_fill.sql` | 3 |
 | `fn_post_amortization_entry` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_post_bank_adjustment` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_post_cash_purchase` | `20260703000002_vat_ledger_completeness.sql` | 4 |
 | `fn_post_check_voucher` | `20260705000001_cv_ewt_supplier_validation.sql` | 2 |
-| `fn_post_credit_memo` | `20260630000022_tax_ledger_completeness.sql` | 3 |
-| `fn_post_debit_memo` | `20260630000022_tax_ledger_completeness.sql` | 3 |
+| `fn_post_credit_memo` | `20260710000002_vat_registration_all_documents.sql` | 4 |
+| `fn_post_debit_memo` | `20260710000002_vat_registration_all_documents.sql` | 4 |
 | `fn_post_depreciation_entry` | `20260630000027_fixed_assets.sql` | 1 |
 | `fn_post_fund_transfer` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_post_goods_issue` | `20260630000028_inventory.sql` | 1 |
@@ -87,7 +98,9 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `fn_post_stock_adjustment` | `20260630000028_inventory.sql` | 1 |
 | `fn_post_stock_transfer` | `20260630000028_inventory.sql` | 1 |
 | `fn_post_vendor_bill` | `20260703000002_vat_ledger_completeness.sql` | 4 |
-| `fn_post_vendor_credit` | `20260630000022_tax_ledger_completeness.sql` | 4 |
+| `fn_post_vendor_credit` | `20260710000002_vat_registration_all_documents.sql` | 5 |
+| `fn_preview_gl_impact` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_rebuild_document_vat_details` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_receive_inventory` | `20260630000028_inventory.sql` | 1 |
 | `fn_record_impairment` | `20260630000027_fixed_assets.sql` | 1 |
 | `fn_register_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
@@ -95,13 +108,18 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `fn_require_admin_for_accounting_lifecycle` | `20260702000010_can_perform_role_actions.sql` | 3 |
 | `fn_require_customer_cwt_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |
 | `fn_require_cv_ewt_validation` | `20260705000001_cv_ewt_supplier_validation.sql` | 1 |
+| `fn_require_document_header_vat_registration` | `20260710000002_vat_registration_all_documents.sql` | 1 |
+| `fn_require_document_line_vat_registration` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_require_ewt_return_reconciled` | `20260710000001_ewt_return_reconciliation_gate.sql` | 1 |
+| `fn_require_open_fiscal_period` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_require_postable_account` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_require_pv_ewt_ready_status` | `20260701000013_pv_ewt_atc_validation.sql` | 1 |
 | `fn_require_pvl_ewt_validation` | `20260701000016_pv_ewt_explicit_basis.sql` | 2 |
 | `fn_require_receipt_line_cwt_validation` | `20260704000003_receipt_cwt_explicit_base.sql` | 2 |
 | `fn_require_si_accounting_ready_status` | `20260701000008_accounting_readiness_approval.sql` | 1 |
 | `fn_require_si_line_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_require_si_vat_registration_status` | `20260701000012_vat_registration_enforcement.sql` | 1 |
+| `fn_require_vat_export_snapshot_registration` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_require_vat_registered_company` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_require_vat_return_reconciled` | `20260702000004_vat_ledger_gl_reconciliation.sql` | 1 |
 | `fn_require_vat_return_registered_company` | `20260701000012_vat_registration_enforcement.sql` | 1 |
@@ -132,9 +150,9 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `fn_set_updated_at` | `20260629000001_dashboard.sql` | 1 |
 | `fn_ship_purchase_return` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_snapshot_books_export` | `20260703000009_report_snapshots_books_exports.sql` | 1 |
-| `fn_snapshot_cas_export` | `20260703000008_report_snapshots_cas_exports.sql` | 1 |
+| `fn_snapshot_cas_export` | `20260710000002_vat_registration_all_documents.sql` | 2 |
 | `fn_snapshot_form2307_issued` | `20260703000005_report_snapshots_form2307.sql` | 1 |
-| `fn_snapshot_vat_export` | `20260703000006_report_snapshots_vat_exports.sql` | 1 |
+| `fn_snapshot_vat_export` | `20260710000002_vat_registration_all_documents.sql` | 2 |
 | `fn_snapshot_vat_return` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
 | `fn_snapshot_wht_export` | `20260703000007_report_snapshots_wht_exports.sql` | 1 |
 | `fn_supersede_form_2307_issued` | `20260702000007_form2307_version_supersede.sql` | 1 |
@@ -143,7 +161,9 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `fn_update_form_2307_issued_status` | `20260701000015_form2307_issued_generation_rpc.sql` | 1 |
 | `fn_update_payment_tracking` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_update_wac` | `20260630000028_inventory.sql` | 1 |
+| `fn_validate_company_vat_amount` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_validate_company_vat_code` | `20260701000012_vat_registration_enforcement.sql` | 1 |
+| `fn_validate_document_vat_registration` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_validate_payment_voucher_ewt_ready` | `20260701000016_pv_ewt_explicit_basis.sql` | 2 |
 | `fn_validate_payment_voucher_line_ewt` | `20260701000018_atc_effective_date_governance.sql` | 3 |
 | `fn_validate_receipt_cwt_ready` | `20260704000003_receipt_cwt_explicit_base.sql` | 2 |
@@ -187,7 +207,7 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `vw_trial_balance` | `20260702000005_gl_reversal_visibility.sql` | 2 |
 | `vw_vendor_bill_register` | `20260630000021_gap_fill.sql` | 2 |
 
-## Tables (146)
+## Tables (147)
 
 | Table | Created in | Alters | Last altered in |
 | ----- | ---------- | ------ | --------------- |
@@ -268,7 +288,7 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `item_categories` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `items` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `itr_filings` | `20260701000004_income_tax.sql` | 0 | `—` |
-| `journal_entries` | `20260629000013_gl_core.sql` | 5 | `20260630000025_accounting_module.sql` |
+| `journal_entries` | `20260629000013_gl_core.sql` | 6 | `20260710000003_posting_engine_preview_trace.sql` |
 | `journal_entry_lines` | `20260629000013_gl_core.sql` | 3 | `20260704000001_je_line_dimensions.sql` |
 | `mcit_computations` | `20260701000004_income_tax.sql` | 0 | `—` |
 | `nolco_schedule` | `20260701000004_income_tax.sql` | 0 | `—` |
@@ -298,6 +318,7 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `ref_document_types` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `ref_feature_definitions` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `ref_payment_modes` | `20260629000003_sprint5_ar.sql` | 1 | `20260629000003_sprint5_ar.sql` |
+| `ref_posting_source_types` | `20260710000003_posting_engine_preview_trace.sql` | 1 | `20260710000003_posting_engine_preview_trace.sql` |
 | `ref_rdo_codes` | `20260628000001_companies.sql` | 1 | `20260628000001_companies.sql` |
 | `ref_reason_codes` | `20260629000003_sprint5_ar.sql` | 1 | `20260629000003_sprint5_ar.sql` |
 | `report_snapshots` | `20260703000004_report_snapshots_vat_returns.sql` | 2 | `20260703000005_report_snapshots_form2307.sql` |
@@ -338,7 +359,7 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `warehouse_zones` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 
-## Triggers (204)
+## Triggers (224)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -400,9 +421,13 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `trg_cas_ar_updated_at` | `20260701000005_audit_cas.sql` |
 | `trg_cash_count_sheets_updated_at` | `20260630000023_banking_treasury_schema.sql` |
 | `trg_check_vouchers_updated_at` | `20260630000023_banking_treasury_schema.sql` |
+| `trg_cm_line_vat_registration` | `20260710000002_vat_registration_all_documents.sql` |
+| `trg_cm_vat_registration_status` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_company_accounting_config_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_company_creator_owner` | `20260630000021_gap_fill.sql` |
+| `trg_cp_line_vat_registration` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_cp_updated_at` | `20260630000021_gap_fill.sql` |
+| `trg_cp_vat_registration_status` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_cpl_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_credit_memo_lines_updated_at` | `20260629000003_sprint5_ar.sql` |
 | `trg_credit_memos_updated_at` | `20260629000003_sprint5_ar.sql` |
@@ -412,6 +437,8 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `trg_dashboard_widgets_updated_at` | `20260629000001_dashboard.sql` |
 | `trg_debit_memo_lines_updated_at` | `20260629000003_sprint5_ar.sql` |
 | `trg_debit_memos_updated_at` | `20260629000003_sprint5_ar.sql` |
+| `trg_dm_line_vat_registration` | `20260710000002_vat_registration_all_documents.sql` |
+| `trg_dm_vat_registration_status` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_dr_updated_at` | `20260629000004_sprint5_so_dr.sql` |
 | `trg_drl_updated_at` | `20260629000004_sprint5_so_dr.sql` |
 | `trg_emp_updated_at` | `20260630000029_master_data_completion.sql` |
@@ -491,7 +518,18 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `trg_je_dimensions_guard` | `20260704000001_je_line_dimensions.sql` |
 | `trg_je_line_dimensions_guard` | `20260704000001_je_line_dimensions.sql` |
 | `trg_journal_entries_updated_at` | `20260630000021_gap_fill.sql` |
+| `trg_journal_entry_balanced_deferred` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_journal_entry_line_posting_guard` | `20260710000003_posting_engine_preview_trace.sql` |
 | `trg_journal_entry_lines_updated_at` | `20260630000021_gap_fill.sql` |
+| `trg_journal_entry_posting_guard` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_journal_line_balanced_deferred` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_link_amortization_entry_je` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_link_fixed_asset_acquisition_je` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_link_fixed_asset_depreciation_je` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_link_fixed_asset_disposal_je` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_link_fixed_asset_impairment_je` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_link_purchase_return_je` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_link_revenue_recognition_entry_je` | `20260710000003_posting_engine_preview_trace.sql` |
 | `trg_new_company_grant_access` | `20260630000021_gap_fill.sql` |
 | `trg_new_user_grant_companies` | `20260630000021_gap_fill.sql` |
 | `trg_payment_voucher_lines_updated_at` | `20260630000021_gap_fill.sql` |
@@ -511,6 +549,7 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `trg_receipt_line_cwt_validation` | `20260704000003_receipt_cwt_explicit_base.sql` |
 | `trg_receipt_lines_updated_at` | `20260629000003_sprint5_ar.sql` |
 | `trg_receipts_updated_at` | `20260629000003_sprint5_ar.sql` |
+| `trg_report_snapshot_vat_registration` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_rjt_updated_at` | `20260630000025_accounting_module.sql` |
 | `trg_rr_sched_updated_at` | `20260630000026_amortization_revenuerecon.sql` |
 | `trg_rr_updated_at` | `20260630000021_gap_fill.sql` |
@@ -519,9 +558,9 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `trg_sales_invoice_accounting_ready_status` | `20260701000008_accounting_readiness_approval.sql` |
 | `trg_sdm_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_sdml_updated_at` | `20260630000021_gap_fill.sql` |
-| `trg_si_line_vat_registration` | `20260701000012_vat_registration_enforcement.sql` |
+| `trg_si_line_vat_registration` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_si_updated_at` | `20260629000002_sprint5_sales.sql` |
-| `trg_si_vat_registration_status` | `20260701000012_vat_registration_enforcement.sql` |
+| `trg_si_vat_registration_status` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_sil_updated_at` | `20260629000002_sprint5_sales.sql` |
 | `trg_so_updated_at` | `20260629000004_sprint5_so_dr.sql` |
 | `trg_sol_updated_at` | `20260629000004_sprint5_so_dr.sql` |
@@ -536,9 +575,11 @@ Generated: 2026-07-10. Migrations scanned: 77. Tests present: 23.
 | `trg_vat_returns_status_reconciled` | `20260702000004_vat_ledger_gl_reconciliation.sql` |
 | `trg_vat_returns_updated_at` | `20260701000002_vat.sql` |
 | `trg_vat_wp_h_updated_at` | `20260701000002_vat.sql` |
-| `trg_vb_line_vat_registration` | `20260701000012_vat_registration_enforcement.sql` |
-| `trg_vb_vat_registration_status` | `20260701000012_vat_registration_enforcement.sql` |
+| `trg_vb_line_vat_registration` | `20260710000002_vat_registration_all_documents.sql` |
+| `trg_vb_vat_registration_status` | `20260710000002_vat_registration_all_documents.sql` |
+| `trg_vc_line_vat_registration` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_vc_updated_at` | `20260630000021_gap_fill.sql` |
+| `trg_vc_vat_registration_status` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_vcl_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_vendor_bill_accounting_ready_status` | `20260701000008_accounting_readiness_approval.sql` |
 | `trg_vendor_bill_lines_updated_at` | `20260630000021_gap_fill.sql` |

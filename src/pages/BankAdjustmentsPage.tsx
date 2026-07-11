@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type BankRef = { id: string; bank_name: string; account_number: string }
 type COARef = { id: string; account_code: string; account_name: string }
@@ -87,7 +88,16 @@ export default function BankAdjustmentsPage() {
     } catch (e) { setError((e as Error).message || 'Save failed') } finally { setSaving(false) }
   }
 
-  const post = async (id: string) => { setBusy(true); setError(''); try { const { error: e } = await supabase.rpc('fn_post_bank_adjustment', { p_ba_id: id }); if (e) throw e; await load(); setMode('list') } catch (e) { setError((e as Error).message || 'Post failed') } finally { setBusy(false) } }
+  const post = async (id: string) => {
+    setBusy(true); setError('')
+    try {
+      const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', { p_source_doc_type: 'BADJ', p_source_doc_id: id })
+      if (previewError) throw new Error(`Bank Adjustment is not ready to post: ${previewError.message}`)
+      const { error: e } = await supabase.rpc('fn_post_bank_adjustment', { p_ba_id: id })
+      if (e) throw e
+      await load(); setMode('list')
+    } catch (e) { setError((e as Error).message || 'Post failed') } finally { setBusy(false) }
+  }
   const cancel = async (id: string) => { const memo = prompt('Reason for cancellation (optional):') ?? undefined; setBusy(true); setError(''); try { const { error: e } = await supabase.rpc('fn_cancel_bank_adjustment', { p_ba_id: id, p_memo: memo || undefined }); if (e) throw e; await load(); setMode('list') } catch (e) { setError((e as Error).message || 'Cancel failed') } finally { setBusy(false) } }
   const del = async (id: string) => { if (!confirm('Delete this draft adjustment?')) return; setBusy(true); try { const { error: e } = await supabase.from('bank_adjustments').delete().eq('id', id); if (e) throw e; await load() } catch (e) { setError((e as Error).message || 'Delete failed') } finally { setBusy(false) } }
 
@@ -163,6 +173,11 @@ export default function BankAdjustmentsPage() {
           <Field label="Reference Number"><input disabled={ro} className={inputCls} value={form?.reference_number || ''} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} /></Field>
           <Field label="Description *" full><textarea disabled={ro} rows={2} className={inputCls} value={form?.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></Field>
         </div>
+        {form?.id && (
+          <div className="mt-4 max-w-5xl">
+            <GLImpactPanel companyId={companyId} sourceDocType="BADJ" sourceDocId={form.id} previewRows={[]} />
+          </div>
+        )}
       </div>
     </div>
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
@@ -68,8 +68,6 @@ const statusMap: Record<RStatus, string> = {
   draft: 'draft', posted: 'posted', bounced: 'error', cancelled: 'error',
 }
 
-const OR_REQUIRED_CONFIG: ConfigField[] = ['ar_account_id', 'default_cash_account_id', 'ewt_withheld_account_id']
-
 // ── Main ──────────────────────────────────────────────────────
 export default function ReceiptsPage() {
   const { companyId, branchId } = useAppCtx()
@@ -108,12 +106,18 @@ export default function ReceiptsPage() {
   const [fRemarks, setFRemarks] = useState('')
   const [lines, setLines] = useState<ApplicationLine[]>([])
   const [openInvoicesLoading, setOpenInvoicesLoading] = useState(false)
+  const requiredConfig = useMemo<ConfigField[]>(
+    () => lines.some(line => line.cwt_amount > 0.005)
+      ? ['ar_account_id', 'default_cash_account_id', 'ewt_withheld_account_id']
+      : ['ar_account_id', 'default_cash_account_id'],
+    [lines]
+  )
   const readiness = useTransactionReadiness({
     companyId,
     branchId: mode === 'list' ? branchId : fBranch,
     documentCode: 'OR',
     postingDate: mode === 'list' ? today() : fDate,
-    requiredConfig: OR_REQUIRED_CONFIG,
+    requiredConfig,
   })
 
   // Load reference data

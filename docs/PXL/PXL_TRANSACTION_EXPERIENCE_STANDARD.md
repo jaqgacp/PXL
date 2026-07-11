@@ -176,10 +176,10 @@ All summary figures are drill sources: clicking Output VAT opens the Tax Impact 
 
 `GLImpactPanel` is the right foundation; the standard completes it:
 
-1. **Draft preview** — server-computed via the PXL-DA-001 preview RPC (same code path as posting) instead of today's client-assembled rows; shows account, description, debit, credit, Balanced badge, unmapped-account warnings (exists).
-2. **Posted journal** — JE number, date, status (posted/reversed), lines (exists); ADD: link to the JE in `JournalEntriesPage` (drilldown) and reversal JE linkage when voided.
-3. **Drillback** — from a JE/GL row, a "Source document" link opens the document route (needs per-document routes, section 3; contract owned by PXL-DA-002).
-4. Coverage: every posting page (CM/DM/VC/cash docs/CV missing today — PXL-AUD-049).
+1. **Draft preview** — delivered for saved sources via the PXL-DA-001 rollback preview RPC (same code path as posting); atomic unsaved forms show a clearly labeled client estimate. Account, description, debit, credit, balance, account source, date, period, branch, and rule explanation are shown.
+2. **Posted journal** — delivered: JE number/date/lines plus links to JE, GL, account detail, source, and full accounting trace. Reversal-pair presentation remains a layout enhancement.
+3. **Drillback** — the PXL-DA-002 trace RPC/page and core routes are live; financial/compliance report adoption remains.
+4. Coverage: broad posting-surface rollout completed in session 59; PXL-AUD-049 remains In Progress only for withholding tax-ledger/2307/QAP drilldown.
 
 ## 10. Tax Impact Standard
 
@@ -216,11 +216,11 @@ Phase-2+ configuration surface, in priority order: (1) column picker per grid wi
 
 | Component | Status | Standard role |
 | --- | --- | --- |
-| `GLImpactPanel` | Exists, 4 pages | Keep; add JE drill link + server preview (PXL-DA-001); roll out to all posting pages |
-| `SetupReadinessBanner` + `useTransactionReadiness` | Exists, 4 pages | Extend checks; roll out everywhere (PXL-AUD-016) |
+| `GLImpactPanel` | Broadly adopted; exact saved-source preview | Keep; converge placement under `DocumentLayout`; extend report/compliance trace via PXL-DA-002 |
+| `SetupReadinessBanner` + `useTransactionReadiness` | Core + VAT-bearing pages; aggregate Company Checklist exists | Extend numbered-document checks under PXL-AUD-016; converge presentation |
 | `VATReconciliationPanel` | Exists (VAT pages) | Pattern donor for Tax Impact reconciliation chip |
 | `StatusBadge`, `AmountCell`, `DateCell` | Exist, adopted | Keep as the atoms |
-| `DataTable`, `LookupDialog`, `FormSection`, `ConfirmDialog`, `EmptyState`, `AuditTrailSection` | **Built, zero adopters** | Revive deliberately: adopt-on-touch; extend DataTable for editable grids |
+| `DataTable`, `LookupDialog`, `FormSection`, `ConfirmDialog`, `EmptyState`, `AuditTrailSection` | Built; `AuditTrailSection` adopted on core transaction pages, others uneven | Revive deliberately: adopt-on-touch; extend DataTable for editable grids |
 | `DocumentLayout` (header bar + toolbar + tabs shell) | Missing | Build first — everything else slots into it |
 | `FinancialSummaryPanel` | Missing | Section 8 contracts |
 | `TaxImpactPanel` | Missing | Section 10 |

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { TablesInsert } from '@/lib/database.types'
 import { useAppCtx } from '@/lib/context'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
 type COA = { id: string; account_code: string; account_name: string }
@@ -108,6 +109,12 @@ export default function PhysicalCountPage() {
     if (updErr) { setError(updErr.message); return }
 
     setPosting(true); setError(''); setSuccess('')
+    const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', { p_source_doc_type: 'INV_COUNT', p_source_doc_id: pendingId })
+    if (previewError) {
+      setPosting(false)
+      setError(`Physical Count is not ready to post: ${previewError.message}`)
+      return
+    }
     const { error: e } = await supabase.rpc('fn_post_physical_count', { p_sheet_id: pendingId })
     setPosting(false)
     if (e) { setError(e.message); return }
@@ -222,6 +229,10 @@ export default function PhysicalCountPage() {
               </div>
             )}
           </div>
+
+          {pendingId && (
+            <GLImpactPanel companyId={companyId} sourceDocType="INV_COUNT" sourceDocId={pendingId} previewRows={[]} />
+          )}
 
           {lines.length > 0 && (
             <div className="flex gap-2">

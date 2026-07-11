@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { TablesInsert } from '@/lib/database.types'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type Recurrence = 'monthly' | 'quarterly' | 'semi_annual' | 'annual'
 
@@ -165,6 +166,12 @@ export default function RecurringJournalTemplatesPage() {
     if (!execTarget) return
     setExecuting(true); setError('')
     try {
+      const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', {
+        p_source_doc_type: 'RECURRING',
+        p_source_doc_id: execTarget.id,
+        p_posting_date: execDate,
+      })
+      if (previewError) throw previewError
       const { error: e } = await supabase.rpc('fn_execute_recurring_template', {
         p_template_id: execTarget.id, p_je_date: execDate,
       })
@@ -189,6 +196,16 @@ export default function RecurringJournalTemplatesPage() {
         <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Posting Date</label>
         <input type="date" value={execDate} onChange={e => setExecDate(e.target.value)}
           className="border border-gray-300 rounded px-2.5 py-2 text-sm w-full mt-1 mb-4 focus:outline-none focus:ring-1 focus:ring-gray-900" />
+        <div className="mb-4 max-h-72 overflow-auto">
+          <GLImpactPanel
+            companyId={companyId}
+            sourceDocType="RECURRING"
+            sourceDocId={execTarget.id}
+            postingDate={execDate}
+            previewRows={[]}
+            title="GL Impact — Recurring Run"
+          />
+        </div>
         <div className="flex justify-end gap-2">
           <button onClick={() => setExecTarget(null)} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Cancel</button>
           <button onClick={doExecute} disabled={executing}

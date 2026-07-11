@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 
 // ── Types ─────────────────────────────────────────────────────
 type CMStatus = 'draft' | 'approved' | 'applied' | 'cancelled'
@@ -96,6 +99,7 @@ export default function CreditMemosPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
+      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('customers').select('id,registered_name,tin,tin_branch_code')
         .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
       supabase.from('vat_codes').select('id,vat_code,vat_classification,tax_codes(rate)')
@@ -104,12 +108,13 @@ export default function CreditMemosPage() {
         .in('applies_to', ['credit_memo', 'both']).eq('is_active', true).order('sort_order'),
       supabase.from('branches').select('id,branch_code,branch_name')
         .eq('company_id', companyId).eq('is_active', true),
-    ]).then(([{ data: cos }, { data: vcs }, { data: rcs }, { data: brs }]) => {
+    ]).then(([{ data: company }, { data: cos }, { data: vcs }, { data: rcs }, { data: brs }]) => {
+      const taxRegistration = company?.tax_registration || 'vat'
       setCustomers(cos as CustomerRef[] || [])
       setVatCodes((vcs || []).map(v => ({
         id: v.id, vat_code: v.vat_code, vat_classification: v.vat_classification as VATRef['vat_classification'],
         rate: (Array.isArray(v.tax_codes) ? v.tax_codes[0]?.rate : (v.tax_codes as { rate?: number } | null)?.rate) ?? 0,
-      })))
+      })).filter(v => taxRegistration === 'vat' || v.rate === 0))
       setReasonCodes(rcs as ReasonCode[] || [])
       setBranches(brs as Branch[] || [])
     })
@@ -165,7 +170,7 @@ export default function CreditMemosPage() {
           description: l.description, quantity: Number(l.quantity), unit_price: Number(l.unit_price),
           net_amount: Number(l.net_amount), vat_code_id: l.vat_code_id || '',
           vat_classification: (vc?.vat_classification || 'regular') as CMLLine['vat_classification'],
-          vat_rate: vc?.rate || 12, vat_amount: Number(l.vat_amount), total_amount: Number(l.total_amount),
+          vat_rate: vc?.rate ?? 12, vat_amount: Number(l.vat_amount), total_amount: Number(l.total_amount),
           revenue_account_id: l.revenue_account_id || '',
         }
       })
@@ -179,7 +184,7 @@ export default function CreditMemosPage() {
       if (l._key !== key) return l
       if (field === 'vat_code_id') {
         const vc = vatCodes.find(v => v.id === value)
-        return computeLine({ ...l, vat_code_id: value as string, vat_classification: vc?.vat_classification || 'regular', vat_rate: vc?.rate || 12 })
+        return computeLine({ ...l, vat_code_id: value as string, vat_classification: vc?.vat_classification || 'regular', vat_rate: vc?.rate ?? 12 })
       }
       return computeLine({ ...l, [field]: value })
     }))
@@ -214,7 +219,7 @@ export default function CreditMemosPage() {
           description: l.description, quantity: Number(l.quantity), unit_price: Number(l.unit_price),
           net_amount: Number(l.net_amount), vat_code_id: l.vat_code_id || '',
           vat_classification: (vc?.vat_classification || 'regular') as CMLLine['vat_classification'],
-          vat_rate: vc?.rate || 12, vat_amount: Number(l.vat_amount), total_amount: Number(l.total_amount),
+          vat_rate: vc?.rate ?? 12, vat_amount: Number(l.vat_amount), total_amount: Number(l.total_amount),
           revenue_account_id: l.revenue_account_id || '',
         }
       }))
@@ -226,8 +231,46 @@ export default function CreditMemosPage() {
   const totalNet = lines.reduce((s, l) => s + l.net_amount, 0)
   const totalVAT = lines.reduce((s, l) => s + l.vat_amount, 0)
   const totalAmt = lines.reduce((s, l) => s + l.total_amount, 0)
+  const requiredConfig = useMemo<ConfigField[]>(
+    () => totalVAT > 0.005 ? ['ar_account_id', 'vat_payable_account_id'] : ['ar_account_id'],
+    [totalVAT]
+  )
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: fBranch || branchId,
+    documentCode: 'CM',
+    postingDate: fDate,
+    requiredConfig,
+  })
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+  const glPreviewRows = useMemo<GLImpactRow[]>(() => [
+    ...lines
+      .filter(line => line.net_amount > 0.005)
+      .map(line => ({
+        accountId: line.revenue_account_id || null,
+        description: line.description || 'Revenue reversal',
+        debit: line.net_amount,
+        credit: 0,
+      })),
+    ...(totalVAT > 0.005 ? [{
+      configKey: 'vat_payable_account_id' as const,
+      description: 'Output VAT reversal',
+      debit: totalVAT,
+      credit: 0,
+    }] : []),
+    {
+      configKey: 'ar_account_id',
+      description: 'Reduce accounts receivable',
+      debit: 0,
+      credit: totalAmt,
+    },
+  ], [lines, totalAmt, totalVAT])
 
   const save = async (nextStatus: CMStatus = 'draft') => {
+    if (setupBlocked) {
+      setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0])
+      return
+    }
     if (!companyId || !fCustomer || !fReason) { setError('Customer and Reason Code are required.'); return }
     if (lines.every(l => !l.description.trim())) { setError('At least one line is required.'); return }
     setSaving(true); setError('')
@@ -351,17 +394,20 @@ export default function CreditMemosPage() {
         <div className="flex-1" />
         {error && <span className="text-xs text-red-600 font-medium">{error}</span>}
         {(mode === 'new' || cmStatus === 'draft') && !readOnly && <>
-          <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>
-          <button onClick={() => save('approved')} disabled={saving} className="px-3 py-1.5 border border-blue-500 text-blue-700 rounded text-sm hover:bg-blue-50 font-medium disabled:opacity-50">Submit for Approval</button>
-          <button onClick={() => save('applied')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Apply</button>
+          <button onClick={() => save('draft')} disabled={saving || setupBlocked} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>
+          <button onClick={() => save('approved')} disabled={saving || setupBlocked} className="px-3 py-1.5 border border-blue-500 text-blue-700 rounded text-sm hover:bg-blue-50 font-medium disabled:opacity-50">Submit for Approval</button>
+          <button onClick={() => save('applied')} disabled={saving || setupBlocked} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Apply</button>
         </>}
         {cmStatus === 'approved' && <>
           <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Reverting…' : 'Revert to Draft'}</button>
-          <button onClick={() => save('applied')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Apply</button>
+          <button onClick={() => save('applied')} disabled={saving || setupBlocked} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Apply</button>
         </>}
       </div>
 
       <div className="divide-y divide-gray-200">
+        <div className="bg-white px-5 py-4">
+          <SetupReadinessBanner readiness={readiness} />
+        </div>
         <div className="bg-white px-5 py-4">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Credit Memo Header</div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-3">
@@ -513,6 +559,15 @@ export default function CreditMemosPage() {
               <span className="text-sm font-mono tabular-nums font-semibold text-gray-900">{fmt(totalAmt)}</span>
             </div>
           </div>
+        </div>
+
+        <div className="bg-gray-50 px-5 py-4">
+          <GLImpactPanel
+            companyId={companyId}
+            sourceDocType="CM"
+            sourceDocId={editDoc && editDoc.status !== 'draft' ? editDoc.id : null}
+            previewRows={glPreviewRows}
+          />
         </div>
 
         {editDoc?.id && (

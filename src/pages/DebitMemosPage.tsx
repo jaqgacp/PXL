@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 
 // ── Types ─────────────────────────────────────────────────────
 type DMStatus = 'draft' | 'approved' | 'paid' | 'cancelled'
@@ -86,6 +89,7 @@ export default function DebitMemosPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
+      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('customers').select('id,registered_name,tin,tin_branch_code')
         .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
       supabase.from('vat_codes').select('id,vat_code,vat_classification,tax_codes(rate)')
@@ -96,12 +100,13 @@ export default function DebitMemosPage() {
         .eq('company_id', companyId).eq('is_active', true),
       supabase.from('chart_of_accounts').select('id,account_code,account_name')
         .eq('company_id', companyId).eq('is_postable', true).eq('is_active', true).order('account_code'),
-    ]).then(([{ data: cos }, { data: vcs }, { data: rcs }, { data: brs }, { data: coa }]) => {
+    ]).then(([{ data: company }, { data: cos }, { data: vcs }, { data: rcs }, { data: brs }, { data: coa }]) => {
+      const taxRegistration = company?.tax_registration || 'vat'
       setCustomers(cos as CustomerRef[] || [])
       setVatCodes((vcs || []).map(v => ({
         id: v.id, vat_code: v.vat_code, vat_classification: v.vat_classification as VATRef['vat_classification'],
         rate: (Array.isArray(v.tax_codes) ? v.tax_codes[0]?.rate : (v.tax_codes as { rate?: number } | null)?.rate) ?? 0,
-      })))
+      })).filter(v => taxRegistration === 'vat' || v.rate === 0))
       setReasonCodes(rcs as ReasonCode[] || [])
       setBranches(brs as Branch[] || [])
       setAccounts(coa as COAAccount[] || [])
@@ -177,8 +182,46 @@ export default function DebitMemosPage() {
   const totalNet = lines.reduce((s, l) => s + l.amount, 0)
   const totalVAT = lines.reduce((s, l) => s + l.vat_amount, 0)
   const totalAmt = lines.reduce((s, l) => s + l.total_amount, 0)
+  const requiredConfig = useMemo<ConfigField[]>(
+    () => totalVAT > 0.005 ? ['ar_account_id', 'vat_payable_account_id'] : ['ar_account_id'],
+    [totalVAT]
+  )
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: fBranch || branchId,
+    documentCode: 'DM',
+    postingDate: fDate,
+    requiredConfig,
+  })
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+  const glPreviewRows = useMemo<GLImpactRow[]>(() => [
+    {
+      configKey: 'ar_account_id',
+      description: 'Increase accounts receivable',
+      debit: totalAmt,
+      credit: 0,
+    },
+    ...lines
+      .filter(line => line.amount > 0.005)
+      .map(line => ({
+        accountId: line.account_id || null,
+        description: line.description || 'Debit memo charge',
+        debit: 0,
+        credit: line.amount,
+      })),
+    ...(totalVAT > 0.005 ? [{
+      configKey: 'vat_payable_account_id' as const,
+      description: 'Output VAT',
+      debit: 0,
+      credit: totalVAT,
+    }] : []),
+  ], [lines, totalAmt, totalVAT])
 
   const save = async (nextStatus: DMStatus = 'draft') => {
+    if (setupBlocked) {
+      setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0])
+      return
+    }
     if (!companyId || !fCustomer || !fReason) { setError('Customer and Reason Code are required.'); return }
     if (lines.every(l => !l.description.trim())) { setError('At least one line is required.'); return }
     setSaving(true); setError('')
@@ -295,17 +338,20 @@ export default function DebitMemosPage() {
         <div className="flex-1" />
         {error && <span className="text-xs text-red-600 font-medium">{error}</span>}
         {(mode === 'new' || dmStatus === 'draft') && !readOnly && <>
-          <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>
-          <button onClick={() => save('approved')} disabled={saving} className="px-3 py-1.5 border border-blue-500 text-blue-700 rounded text-sm hover:bg-blue-50 font-medium disabled:opacity-50">Submit for Approval</button>
-          <button onClick={() => save('paid')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Post</button>
+          <button onClick={() => save('draft')} disabled={saving || setupBlocked} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>
+          <button onClick={() => save('approved')} disabled={saving || setupBlocked} className="px-3 py-1.5 border border-blue-500 text-blue-700 rounded text-sm hover:bg-blue-50 font-medium disabled:opacity-50">Submit for Approval</button>
+          <button onClick={() => save('paid')} disabled={saving || setupBlocked} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Post</button>
         </>}
         {dmStatus === 'approved' && <>
           <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Reverting…' : 'Revert to Draft'}</button>
-          <button onClick={() => save('paid')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Post</button>
+          <button onClick={() => save('paid')} disabled={saving || setupBlocked} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Post</button>
         </>}
       </div>
 
       <div className="divide-y divide-gray-200">
+        <div className="bg-white px-5 py-4">
+          <SetupReadinessBanner readiness={readiness} />
+        </div>
         <div className="bg-white px-5 py-4">
           <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Debit Memo Header</div>
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-3">
@@ -456,6 +502,15 @@ export default function DebitMemosPage() {
               <span className="text-sm font-mono tabular-nums font-semibold text-gray-900">{fmt(totalAmt)}</span>
             </div>
           </div>
+        </div>
+
+        <div className="bg-gray-50 px-5 py-4">
+          <GLImpactPanel
+            companyId={companyId}
+            sourceDocType="DM"
+            sourceDocId={editDoc && editDoc.status !== 'draft' ? editDoc.id : null}
+            previewRows={glPreviewRows}
+          />
         </div>
       </div>
     </div>

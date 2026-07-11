@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import Papa from 'papaparse'
 import { supabase } from '@/lib/supabase'
 import type { TablesInsert } from '@/lib/database.types'
+import { CompanySetupChecklist } from '@/components/CompanySetupChecklist'
 
 type RDO = { id: string; rdo_code: string; rdo_name: string }
 type Company = {
@@ -14,6 +15,16 @@ type Company = {
   is_active: boolean
   parent_company_id: string | null
   entity_type: string
+  accounting_period: string
+  line_of_business: string
+  address_line_1: string
+  address_line_2: string
+  city: string
+  province: string
+  zip_code: string
+  email: string
+  signatory_name: string
+  signatory_position: string
   ref_rdo_codes?: { rdo_code: string; rdo_name: string }
 }
 type ImportRow = {
@@ -123,6 +134,7 @@ export default function CompanySetupPage() {
   const [importDone, setImportDone] = useState(false)
   const [showView, setShowView] = useState(false)
   const [viewForm, setViewForm] = useState({ ...EMPTY_FORM })
+  const [checklistCompany, setChecklistCompany] = useState<Company | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const fetchCompanies = async () => {
@@ -316,6 +328,18 @@ export default function CompanySetupPage() {
   const labelClass = 'block text-xs font-medium text-gray-500 mb-1'
   const sectionClass = 'bg-white border border-gray-200 rounded-lg p-6 space-y-4'
   const headingClass = 'text-xs font-semibold text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-100'
+
+  if (checklistCompany) return (
+    <CompanySetupChecklist
+      company={checklistCompany}
+      onBack={() => setChecklistCompany(null)}
+      onEditCompany={() => {
+        const company = checklistCompany
+        setChecklistCompany(null)
+        void openEdit(company)
+      }}
+    />
+  )
 
   // IMPORT VIEW
   if (showImport) return (
@@ -907,6 +931,7 @@ export default function CompanySetupPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-2">
+                    <button onClick={() => setChecklistCompany(c)} className="text-xs text-emerald-700 hover:text-emerald-900 font-medium">Checklist</button>
                     <button onClick={() => openView(c)} className="text-xs text-gray-500 hover:text-gray-700 font-medium">View</button>
                     <button onClick={() => openEdit(c)} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>
                     <button onClick={() => handleToggleStatus(c)} className="text-xs text-gray-500 hover:text-gray-700 font-medium">

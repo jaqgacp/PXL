@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, DateCell } from '@/components/ui/shared'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type ReturnStatus = 'draft' | 'shipped' | 'completed' | 'cancelled'
 
@@ -33,6 +34,7 @@ export default function PurchaseReturnsPage() {
   const [error, setError] = useState('')
   const [receivedRRs, setReceivedRRs] = useState<RRRef[]>([])
   const [fStatus, setFStatus] = useState('')
+  const [previewReturnId, setPreviewReturnId] = useState<string | null>(null)
   const readOnly = mode === 'view'
 
   const loadReturns = useCallback(async () => {
@@ -110,6 +112,10 @@ export default function PurchaseReturnsPage() {
   }
 
   const complete = async (r: PReturn) => {
+    const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', {
+      p_source_doc_type: 'PR', p_source_doc_id: r.id,
+    })
+    if (previewError) { alert(previewError.message); return }
     const { error: e } = await supabase.rpc('fn_complete_purchase_return', { p_return_id: r.id })
     if (e) { alert(e.message); return }
     loadReturns()
@@ -189,6 +195,7 @@ export default function PurchaseReturnsPage() {
                     <div className="flex gap-2 justify-end">
                       <button onClick={() => { setEditReturn({ ...r }); supabase.from('purchase_return_lines').select('*').eq('return_id', r.id).order('line_number').then(({ data }) => setLines(data?.map(l => ({ ...l, _key: l.id })) as ReturnLine[] || [])); setMode('view') }} className="text-blue-600 hover:text-blue-800">View</button>
                       {r.status === 'draft' && <button onClick={() => ship(r)} className="text-orange-600 hover:text-orange-800">Ship</button>}
+                      {r.status === 'shipped' && <button onClick={() => setPreviewReturnId(r.id)} className="text-gray-600 hover:text-gray-900">Preview</button>}
                       {r.status === 'shipped' && <button onClick={() => complete(r)} className="text-green-600 hover:text-green-800">Complete</button>}
                     </div>
                   </td>
@@ -198,6 +205,9 @@ export default function PurchaseReturnsPage() {
           </table>
         )}
       </div>
+      {previewReturnId && (
+        <GLImpactPanel companyId={companyId} sourceDocType="PR" sourceDocId={previewReturnId} previewRows={[]} title="GL Impact — Purchase Return" />
+      )}
     </div>
   )
 }

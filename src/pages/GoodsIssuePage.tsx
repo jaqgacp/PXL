@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
 type Department = { id: string; department_name: string }
@@ -83,6 +84,12 @@ export default function GoodsIssuePage() {
   const post = async () => {
     if (!pendingId) return
     setPosting(true); setError(''); setSuccess('')
+    const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', { p_source_doc_type: 'INV_GI', p_source_doc_id: pendingId })
+    if (previewError) {
+      setPosting(false)
+      setError(`Goods Issue is not ready to post: ${previewError.message}`)
+      return
+    }
     const { error: e } = await supabase.rpc('fn_post_goods_issue', { p_issue_id: pendingId })
     setPosting(false)
     if (e) { setError(e.message); return }
@@ -211,6 +218,10 @@ export default function GoodsIssuePage() {
               </table>
             )}
           </div>
+
+          {pendingId && (
+            <GLImpactPanel companyId={companyId} sourceDocType="INV_GI" sourceDocId={pendingId} previewRows={[]} />
+          )}
 
           <div className="flex gap-2">
             {!pendingId ? (

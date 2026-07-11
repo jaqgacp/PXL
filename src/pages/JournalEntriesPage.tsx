@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { BookOpen, Route, Scale } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 
 // ── Types ─────────────────────────────────────────────────────
 type JEStatus = 'draft' | 'posted' | 'reversed'
@@ -44,6 +47,8 @@ const refTypeStyle = (t: string | null): string => {
 // ── Component ─────────────────────────────────────────────────
 export default function JournalEntriesPage() {
   const { companyId, branchId } = useAppCtx()
+  const [searchParams] = useSearchParams()
+  const requestedJeId = searchParams.get('jeId') || ''
 
   const [entries, setEntries] = useState<JE[]>([])
   const [loading, setLoading] = useState(false)
@@ -69,6 +74,7 @@ export default function JournalEntriesPage() {
   const [reverseTarget, setReverseTarget] = useState<JE | null>(null)
   const [reverseDate, setReverseDate] = useState(today())
   const [reversing, setReversing] = useState(false)
+  const [openedQueryKey, setOpenedQueryKey] = useState('')
 
   const readOnly = mode === 'view'
 
@@ -108,7 +114,7 @@ export default function JournalEntriesPage() {
     setMode('edit')
   }
 
-  const openView = async (je: JE) => {
+  const openView = useCallback(async (je: JE) => {
     setEditJE(je)
     const { data } = await supabase.from('journal_entry_lines')
       .select('id,account_id,description,debit_amount,credit_amount,line_number')
@@ -119,7 +125,34 @@ export default function JournalEntriesPage() {
     })))
     setError('')
     setMode('view')
-  }
+  }, [])
+
+  useEffect(() => {
+    if (!companyId || !requestedJeId) return
+    const queryKey = `${companyId}:${requestedJeId}`
+    if (openedQueryKey === queryKey) return
+    let alive = true
+    const openRequestedEntry = async () => {
+      const { data, error: queryError } = await supabase.from('journal_entries')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('id', requestedJeId)
+        .maybeSingle()
+      if (!alive) return
+      setOpenedQueryKey(queryKey)
+      if (queryError || !data) {
+        setError(queryError?.message || 'Journal entry not found in the selected company')
+        return
+      }
+      await openView(data as JE)
+    }
+    void openRequestedEntry()
+    return () => { alive = false }
+  }, [companyId, openView, openedQueryKey, requestedJeId])
+
+  useEffect(() => {
+    if (!requestedJeId) setOpenedQueryKey('')
+  }, [requestedJeId])
 
   const updateLine = (key: string, field: keyof JELine, raw: string) => {
     setLines(ls => ls.map(l => {
@@ -136,6 +169,12 @@ export default function JournalEntriesPage() {
   const isBalanced = Math.abs(balance) <= 0.01
   const validLines = lines.filter(l => l.account_id && (l.debit_amount > 0 || l.credit_amount > 0))
   const canPost = isBalanced && totalDebit > 0 && validLines.length >= 2
+  const glPreviewRows: GLImpactRow[] = validLines.map(line => ({
+    accountId: line.account_id,
+    description: line.description || editJE?.description || 'Manual journal line',
+    debit: line.debit_amount,
+    credit: line.credit_amount,
+  }))
   const auditFacts = editJE?.id ? [
     { label: 'Created', value: formatDateTime(editJE.created_at) },
     { label: 'Last edited', value: formatDateTime(editJE.updated_at) },
@@ -249,6 +288,10 @@ export default function JournalEntriesPage() {
         </button>
       </div>
 
+      {error && (
+        <div className="mx-5 mt-4 border border-red-200 bg-red-50 rounded-md px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
+
       {loading ? (
         <div className="py-16 text-center text-sm text-gray-400">Loading…</div>
       ) : filtered.length === 0 ? (
@@ -271,7 +314,12 @@ export default function JournalEntriesPage() {
               return (
                 <tr key={je.id} onClick={() => openView(je)}
                   className={`cursor-pointer hover:bg-gray-50/60 ${je.status === 'reversed' ? 'opacity-60' : ''}`}>
-                  <td className="px-3 py-2.5 font-mono text-xs font-semibold text-gray-900">{je.je_number}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs font-semibold" onClick={event => event.stopPropagation()}>
+                    <Link to={`/accounting-trace?jeId=${je.id}`} className="inline-flex items-center gap-1 text-blue-700 hover:text-blue-900">
+                      {je.je_number}
+                      <Route className="h-3 w-3" aria-hidden="true" />
+                    </Link>
+                  </td>
                   <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{je.je_date}</td>
                   <td className="px-3 py-2.5 text-xs text-gray-500">{per?.period_name || '—'}</td>
                   <td className="px-3 py-2.5 text-xs text-gray-900 max-w-[220px] truncate">{je.description || '—'}</td>
@@ -316,6 +364,25 @@ export default function JournalEntriesPage() {
         {editJE?.status && <StatusBadge status={editJE.status} />}
         <div className="ml-auto flex items-center gap-2">
           {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
+          {editJE?.id && (
+            <>
+              <Link to={`/accounting-trace?jeId=${editJE.id}`}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50">
+                <Route className="h-3.5 w-3.5" aria-hidden="true" />
+                Trace
+              </Link>
+              <Link to={`/general-ledger?jeId=${editJE.id}`}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50">
+                <Scale className="h-3.5 w-3.5" aria-hidden="true" />
+                GL
+              </Link>
+              <Link to={`/posting-review?jeId=${editJE.id}`}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50">
+                <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
+                Posting review
+              </Link>
+            </>
+          )}
           {!readOnly && (
             <button onClick={post} disabled={saving || !canPost}
               className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
@@ -420,6 +487,14 @@ export default function JournalEntriesPage() {
             </div>
           )}
         </div>
+
+        <GLImpactPanel
+          companyId={companyId}
+          sourceDocType="MANUAL"
+          sourceDocId={null}
+          previewRows={glPreviewRows}
+          title="GL Impact — Manual Journal"
+        />
 
         {readOnly && (
           <div className="space-y-4">

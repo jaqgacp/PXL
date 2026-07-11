@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Route, Scale } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -17,8 +19,11 @@ const firstOfYear = () => new Date().getFullYear() + '-01-01'
 
 export default function AccountDetailLedgerPage() {
   const { companyId } = useAppCtx()
+  const [searchParams] = useSearchParams()
+  const requestedAccountId = searchParams.get('accountId') || searchParams.get('account') || ''
+  const requestedJeId = searchParams.get('jeId') || ''
   const [accounts, setAccounts] = useState<COARef[]>([])
-  const [accountId, setAccountId] = useState('')
+  const [accountId, setAccountId] = useState(requestedAccountId)
   const [dateFrom, setDateFrom] = useState(firstOfYear())
   const [dateTo, setDateTo] = useState(today())
 
@@ -26,6 +31,7 @@ export default function AccountDetailLedgerPage() {
   const [opening, setOpening] = useState(0)
   const [loading, setLoading] = useState(false)
   const [applied, setApplied] = useState(false)
+  const [autoAppliedKey, setAutoAppliedKey] = useState('')
 
   const loadAccounts = useCallback(async () => {
     if (!companyId) return
@@ -40,23 +46,37 @@ export default function AccountDetailLedgerPage() {
   const account = accounts.find(a => a.id === accountId)
   const isCredit = account?.normal_balance === 'credit'
 
-  const apply = async () => {
-    if (!companyId || !accountId || !dateFrom || !dateTo) return
+  const loadLedger = useCallback(async (targetAccountId: string) => {
+    if (!companyId || !targetAccountId || !dateFrom || !dateTo) return
     setLoading(true)
+    let movements = supabase.from('vw_general_ledger').select('*')
+      .eq('company_id', companyId).eq('account_id', targetAccountId)
+      .gte('je_date', dateFrom).lte('je_date', dateTo)
+      .order('je_date', { ascending: true }).order('je_number', { ascending: true })
+    if (requestedJeId) movements = movements.eq('je_id', requestedJeId)
     const [movRes, openRes] = await Promise.all([
-      supabase.from('vw_general_ledger').select('*')
-        .eq('company_id', companyId).eq('account_id', accountId)
-        .gte('je_date', dateFrom).lte('je_date', dateTo)
-        .order('je_date', { ascending: true }).order('je_number', { ascending: true }),
+      movements,
       supabase.from('vw_general_ledger').select('debit_amount,credit_amount')
-        .eq('company_id', companyId).eq('account_id', accountId).lt('je_date', dateFrom),
+        .eq('company_id', companyId).eq('account_id', targetAccountId).lt('je_date', dateFrom),
     ])
     setRows((movRes.data as GLRow[]) || [])
     const op = ((openRes.data as any[]) || []).reduce((s, r) => s + Number(r.debit_amount) - Number(r.credit_amount), 0)
-    setOpening(isCredit ? -op : op)
+    const selectedAccount = accounts.find(item => item.id === targetAccountId)
+    setOpening(selectedAccount?.normal_balance === 'credit' ? -op : op)
     setApplied(true)
     setLoading(false)
-  }
+  }, [accounts, companyId, dateFrom, dateTo, requestedJeId])
+
+  const apply = () => { void loadLedger(accountId) }
+
+  useEffect(() => {
+    if (!requestedAccountId || !companyId || !accounts.some(item => item.id === requestedAccountId)) return
+    const key = `${companyId}:${requestedAccountId}:${requestedJeId}`
+    if (autoAppliedKey === key) return
+    setAccountId(requestedAccountId)
+    setAutoAppliedKey(key)
+    void loadLedger(requestedAccountId)
+  }, [accounts, autoAppliedKey, companyId, loadLedger, requestedAccountId, requestedJeId])
 
   let running = opening
   const computed = rows.map(r => {
@@ -89,6 +109,12 @@ export default function AccountDetailLedgerPage() {
     <div>
       <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3 flex-wrap">
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Account Detail Ledger</span>
+        {requestedJeId && (
+          <>
+            <span className="text-xs text-gray-500 font-mono">JE {requestedJeId.slice(0, 8)}</span>
+            <Link to={`/account-detail-ledger?accountId=${accountId}`} className="text-xs font-medium text-blue-700 hover:text-blue-900">Clear JE filter</Link>
+          </>
+        )}
         <select value={accountId} onChange={e => setAccountId(e.target.value)}
           className="border border-gray-300 rounded px-2.5 py-1.5 text-sm w-72 focus:outline-none focus:ring-1 focus:ring-gray-900">
           <option value="">— select account —</option>
@@ -113,7 +139,11 @@ export default function AccountDetailLedgerPage() {
         <div className="px-5 py-4">
           {account && (
             <div className="mb-3 flex items-baseline gap-3">
-              <h2 className="text-base font-semibold text-gray-900 font-mono">{account.account_code} — {account.account_name}</h2>
+              <Link to={`/general-ledger?accountId=${account.id}`}
+                className="inline-flex items-center gap-1.5 text-base font-semibold text-blue-700 hover:text-blue-900 font-mono">
+                {account.account_code} — {account.account_name}
+                <Scale className="h-4 w-4" aria-hidden="true" />
+              </Link>
               <span className="text-xs text-gray-500 uppercase">Normal balance: {account.normal_balance}</span>
             </div>
           )}
@@ -136,9 +166,21 @@ export default function AccountDetailLedgerPage() {
                 {computed.map(r => (
                   <tr key={r.line_id} className="hover:bg-gray-50/60">
                     <td className="px-3 py-2 font-mono text-gray-500">{r.je_date}</td>
-                    <td className="px-3 py-2 font-mono font-semibold text-gray-900">{r.je_number}</td>
+                    <td className="px-3 py-2 font-mono font-semibold">
+                      <Link to={`/accounting-trace?jeId=${r.je_id}`} className="inline-flex items-center gap-1 text-blue-700 hover:text-blue-900">
+                        {r.je_number}
+                        <Route className="h-3 w-3" aria-hidden="true" />
+                      </Link>
+                    </td>
                     <td className="px-3 py-2 text-gray-500">{r.reference_doc_type || '—'}</td>
-                    <td className="px-3 py-2 font-mono text-gray-400">{r.reference_doc_id ? r.reference_doc_id.slice(0, 8) : '—'}</td>
+                    <td className="px-3 py-2 font-mono text-gray-400">
+                      {r.reference_doc_type && r.reference_doc_id ? (
+                        <Link to={`/accounting-trace?sourceType=${encodeURIComponent(r.reference_doc_type)}&sourceId=${r.reference_doc_id}`}
+                          className="text-blue-700 hover:text-blue-900">
+                          {r.reference_doc_id.slice(0, 8)}
+                        </Link>
+                      ) : '—'}
+                    </td>
                     <td className="px-3 py-2 text-gray-500">{r.period_name || '—'}</td>
                     <td className="px-3 py-2 text-gray-500 max-w-[180px] truncate">{r.line_description || r.je_description || '—'}</td>
                     <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-700">{r.debit_amount ? fmt(r.debit_amount) : '—'}</td>

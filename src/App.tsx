@@ -71,6 +71,7 @@ const BankReconciliationPage  = lazy(() => import('@/pages/BankReconciliationPag
 const OutstandingChecksPage   = lazy(() => import('@/pages/OutstandingChecksPage'))
 const DepositsInTransitPage   = lazy(() => import('@/pages/DepositsInTransitPage'))
 const JournalEntriesPage                = lazy(() => import('@/pages/JournalEntriesPage'))
+const AccountingTracePage               = lazy(() => import('@/pages/AccountingTracePage'))
 const RecurringJournalTemplatesPage     = lazy(() => import('@/pages/RecurringJournalTemplatesPage'))
 const GeneralLedgerPage                 = lazy(() => import('@/pages/GeneralLedgerPage'))
 const AccountDetailLedgerPage           = lazy(() => import('@/pages/AccountDetailLedgerPage'))
@@ -292,6 +293,7 @@ export default function App() {
             <Route path="/outstanding-checks" element={<OutstandingChecksPage />} />
             <Route path="/deposits-in-transit" element={<DepositsInTransitPage />} />
             <Route path="/journal-entries" element={<JournalEntriesPage />} />
+            <Route path="/accounting-trace" element={<AccountingTracePage />} />
             <Route path="/recurring-journal-templates" element={<RecurringJournalTemplatesPage />} />
             <Route path="/general-ledger" element={<GeneralLedgerPage />} />
             <Route path="/account-detail-ledger" element={<AccountDetailLedgerPage />} />

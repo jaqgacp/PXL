@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type DueEntry = {
   id: string
@@ -27,6 +28,7 @@ export default function AmortizationRunPage() {
   const [results, setResults] = useState<RunResult[]>([])
   const [showResults, setShowResults] = useState(false)
   const [error, setError] = useState('')
+  const [previewEntryId, setPreviewEntryId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!companyId) return
@@ -56,6 +58,11 @@ export default function AmortizationRunPage() {
     setRunning(true); setError(''); setResults([])
     const results: RunResult[] = []
     for (const entry of entries) {
+      const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', { p_source_doc_type: 'AMORT', p_source_doc_id: entry.id })
+      if (previewError) {
+        results.push({ entry_id: entry.id, schedule_name: entry.schedule_name, period: entry.period_number, success: false, error: `Preview failed: ${previewError.message}` })
+        continue
+      }
       const { data: jeId, error: e } = await supabase.rpc('fn_post_amortization_entry', { p_entry_id: entry.id })
       if (e) {
         results.push({ entry_id: entry.id, schedule_name: entry.schedule_name, period: entry.period_number, success: false, error: e.message })
@@ -76,6 +83,12 @@ export default function AmortizationRunPage() {
 
   const runSingle = async (entry: DueEntry) => {
     setRunning(true); setError('')
+    const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', { p_source_doc_type: 'AMORT', p_source_doc_id: entry.id })
+    if (previewError) {
+      setError(`Amortization Entry is not ready to post: ${previewError.message}`)
+      setRunning(false)
+      return
+    }
     const { error: e } = await supabase.rpc('fn_post_amortization_entry', { p_entry_id: entry.id })
     if (e) setError(e.message)
     setRunning(false)
@@ -185,7 +198,9 @@ export default function AmortizationRunPage() {
                     <td className="px-3 py-2 font-mono text-gray-600">{e.period_number}</td>
                     <td className="px-3 py-2 font-mono text-gray-700">{e.entry_date}</td>
                     <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-900">{fmt(e.amount)}</td>
-                    <td className="px-3 py-2 text-right">
+                    <td className="px-3 py-2 text-right whitespace-nowrap">
+                      <button onClick={() => setPreviewEntryId(e.id)} disabled={running}
+                        className="text-xs font-medium text-gray-600 hover:text-gray-900 disabled:opacity-40 mr-3">Preview</button>
                       <button onClick={() => runSingle(e)} disabled={running}
                         className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-40">Post</button>
                     </td>
@@ -202,6 +217,9 @@ export default function AmortizationRunPage() {
             </table>
           )}
         </div>
+        {previewEntryId && (
+          <GLImpactPanel companyId={companyId} sourceDocType="AMORT" sourceDocId={previewEntryId} previewRows={[]} />
+        )}
       </div>
     </div>
   )

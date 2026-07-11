@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Mode = 'list' | 'new'
@@ -17,6 +20,9 @@ type VATCode     = { id: string; vat_code: string; description: string; vat_clas
 type COAAccount  = { id: string; account_code: string; account_name: string }
 type PaymentMode = { id: string; name: string }
 type Item        = { id: string; item_code: string; item_name: string; unit_price: number; vat_code_id: string | null }
+
+const SI_REQUIRED_CONFIG_BASE: ConfigField[] = ['ar_account_id']
+const OR_REQUIRED_CONFIG_BASE: ConfigField[] = ['ar_account_id']
 
 type Line = {
   _key: string; item_id: string; description: string; quantity: number
@@ -110,20 +116,22 @@ export default function CashSalesPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
+      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('customers').select('id,registered_name,tin,address:registered_address').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('is_active', true).order('vat_code'),
+      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'output_vat').eq('is_active', true).order('vat_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'revenue').eq('is_postable', true).eq('is_active', true).order('account_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'asset').eq('is_postable', true).eq('is_active', true).order('account_code'),
       supabase.from('ref_payment_modes').select('id,name').eq('is_active', true).order('sort_order'),
       supabase.from('items').select('id,item_code,item_name:description,unit_price:standard_selling_price,vat_code_id:default_sales_vat_id').eq('company_id', companyId).eq('is_active', true).order('description'),
       supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code'),
-    ]).then(([custR, vatR, accR, bankR, pmR, itemR, atcR]) => {
+    ]).then(([companyR, custR, vatR, accR, bankR, pmR, itemR, atcR]) => {
+      const taxRegistration = companyR.data?.tax_registration || 'vat'
       setCustomers(custR.data as Customer[] || [])
       setVatCodes((vatR.data || []).map((v: Record<string, unknown>) => ({
         id: v.id as string, vat_code: v.vat_code as string, description: v.description as string,
         vat_classification: v.vat_classification as string,
         rate: ((v.tax_codes as Record<string, unknown>)?.rate as number) || 0,
-      })))
+      })).filter(v => taxRegistration === 'vat' || v.rate === 0))
       setAccounts(accR.data as COAAccount[] || [])
       setBankAccounts(bankR.data as COAAccount[] || [])
       setPaymentModes(pmR.data as PaymentMode[] || [])
@@ -154,7 +162,7 @@ export default function CashSalesPage() {
           merged.unit_price  = Number(it.unit_price)
           if (it.vat_code_id) {
             const vc = vatCodes.find(v => v.id === it.vat_code_id)
-            merged.vat_code_id = it.vat_code_id
+            merged.vat_code_id = vc?.id || ''
             merged.vat_classification = vc?.vat_classification || 'exempt'
             merged.vat_rate = vc?.rate || 0
           }
@@ -169,8 +177,71 @@ export default function CashSalesPage() {
     vat: lines.reduce((s, l) => s + l.vat_amount, 0),
     total: lines.reduce((s, l) => s + l.total_amount, 0),
   }
+  const siRequiredConfig = useMemo<ConfigField[]>(
+    () => totals.vat > 0.005 ? [...SI_REQUIRED_CONFIG_BASE, 'vat_payable_account_id'] : SI_REQUIRED_CONFIG_BASE,
+    [totals.vat]
+  )
+  const orRequiredConfig = useMemo<ConfigField[]>(() => {
+    const fields = [...OR_REQUIRED_CONFIG_BASE]
+    if (!fBankAccount) fields.push('default_cash_account_id')
+    if (fCWT > 0.005) fields.push('ewt_withheld_account_id')
+    return fields
+  }, [fBankAccount, fCWT])
+  const siReadiness = useTransactionReadiness({
+    companyId,
+    branchId: fBranch || branchId,
+    documentCode: 'SI',
+    postingDate: fDate,
+    requiredConfig: siRequiredConfig,
+  })
+  const orReadiness = useTransactionReadiness({
+    companyId,
+    branchId: fBranch || branchId,
+    documentCode: 'OR',
+    postingDate: fDate,
+    requiredConfig: orRequiredConfig,
+  })
+  const readiness = useMemo(() => ({
+    loading: siReadiness.loading || orReadiness.loading,
+    blockers: [...new Set([...siReadiness.blockers, ...orReadiness.blockers])],
+    warnings: [...new Set([...siReadiness.warnings, ...orReadiness.warnings])],
+  }), [orReadiness, siReadiness])
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+  const glPreviewRows = useMemo<GLImpactRow[]>(() => [
+    {
+      accountId: fBankAccount || null,
+      configKey: fBankAccount ? undefined : 'default_cash_account_id',
+      description: 'Cash or bank received',
+      debit: Math.max(totals.total - fCWT, 0),
+      credit: 0,
+    },
+    ...(fCWT > 0.005 ? [{
+      configKey: 'ewt_withheld_account_id' as const,
+      description: 'CWT receivable',
+      debit: fCWT,
+      credit: 0,
+    }] : []),
+    ...lines
+      .filter(line => line.net_amount > 0.005)
+      .map(line => ({
+        accountId: line.revenue_account_id || null,
+        description: line.description || 'Cash sale revenue',
+        debit: 0,
+        credit: line.net_amount,
+      })),
+    ...(totals.vat > 0.005 ? [{
+      configKey: 'vat_payable_account_id' as const,
+      description: 'Output VAT',
+      debit: 0,
+      credit: totals.vat,
+    }] : []),
+  ], [fBankAccount, fCWT, lines, totals.total, totals.vat])
 
   const save = async () => {
+    if (setupBlocked) {
+      setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0])
+      return
+    }
     if (!companyId || !fCustomer) { setError('Customer is required.'); return }
     if (lines.every(l => !l.description.trim())) { setError('At least one line is required.'); return }
     setSaving(true); setError('')
@@ -284,10 +355,14 @@ export default function CashSalesPage() {
         <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold uppercase bg-green-50 text-green-700 border border-green-200">Post Immediately</span>
         <div className="flex-1" />
         {error && <span className="text-xs text-red-600 font-medium max-w-sm truncate">{error}</span>}
-        <button onClick={save} disabled={saving}
+        <button onClick={save} disabled={saving || setupBlocked}
           className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
           {saving ? 'Posting…' : 'Post Cash Sale'}
         </button>
+      </div>
+
+      <div className="bg-white px-5 py-4 border-b border-gray-200">
+        <SetupReadinessBanner readiness={readiness} />
       </div>
 
       <div className="divide-y divide-gray-200">
@@ -440,6 +515,16 @@ export default function CashSalesPage() {
             <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12h14" /></svg>
             Add Row
           </button>
+        </div>
+
+        <div className="bg-gray-50 px-5 py-4">
+          <GLImpactPanel
+            companyId={companyId}
+            sourceDocType="SI"
+            sourceDocId={null}
+            previewRows={glPreviewRows}
+            title="Combined GL Impact (Cash Sale + Receipt)"
+          />
         </div>
 
         {/* Totals */}

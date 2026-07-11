@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
 type Item = { id: string; item_code: string; description: string; costing_method: string; uom_code: string }
@@ -104,6 +105,12 @@ export default function StockAdjustmentPage() {
   const post = async () => {
     if (!pendingId) return
     setPosting(true); setError(''); setSuccess('')
+    const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', { p_source_doc_type: 'INV_ADJ', p_source_doc_id: pendingId })
+    if (previewError) {
+      setPosting(false)
+      setError(`Stock Adjustment is not ready to post: ${previewError.message}`)
+      return
+    }
     const { error: e } = await supabase.rpc('fn_post_stock_adjustment', { p_adjustment_id: pendingId })
     setPosting(false)
     if (e) { setError(e.message); return }
@@ -223,6 +230,10 @@ export default function StockAdjustmentPage() {
               </table>
             )}
           </div>
+
+          {pendingId && (
+            <GLImpactPanel companyId={companyId} sourceDocType="INV_ADJ" sourceDocId={pendingId} previewRows={[]} />
+          )}
 
           <div className="flex gap-2">
             {!pendingId ? (

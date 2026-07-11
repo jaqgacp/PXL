@@ -6234,6 +6234,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "journal_entries_reference_doc_type_fkey"
+            columns: ["reference_doc_type"]
+            isOneToOne: false
+            referencedRelation: "ref_posting_source_types"
+            referencedColumns: ["document_type"]
+          },
+          {
             foreignKeyName: "journal_entries_reversed_by_je_id_fkey"
             columns: ["reversed_by_je_id"]
             isOneToOne: false
@@ -8454,6 +8461,42 @@ export type Database = {
           is_active?: boolean
           name?: string
           sort_order?: number
+        }
+        Relationships: []
+      }
+      ref_posting_source_types: {
+        Row: {
+          allows_multiple_journal_entries: boolean
+          display_name: string
+          document_date_column: unknown
+          document_number_column: unknown
+          document_type: string
+          is_active: boolean
+          route_path: string
+          source_table: unknown
+          status_column: unknown
+        }
+        Insert: {
+          allows_multiple_journal_entries?: boolean
+          display_name: string
+          document_date_column?: unknown
+          document_number_column?: unknown
+          document_type: string
+          is_active?: boolean
+          route_path: string
+          source_table?: unknown
+          status_column?: unknown
+        }
+        Update: {
+          allows_multiple_journal_entries?: boolean
+          display_name?: string
+          document_date_column?: unknown
+          document_number_column?: unknown
+          document_type?: string
+          is_active?: boolean
+          route_path?: string
+          source_table?: unknown
+          status_column?: unknown
         }
         Relationships: []
       }
@@ -11755,6 +11798,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "journal_entries_reference_doc_type_fkey"
+            columns: ["reference_doc_type"]
+            isOneToOne: false
+            referencedRelation: "ref_posting_source_types"
+            referencedColumns: ["document_type"]
+          },
+          {
             foreignKeyName: "journal_entries_reversed_by_je_id_fkey"
             columns: ["reversed_by_je_id"]
             isOneToOne: false
@@ -12313,6 +12363,20 @@ export type Database = {
         }
         Returns: string
       }
+      fn_add_posting_line: {
+        Args: {
+          p_account_id: string
+          p_branch_id?: string
+          p_cost_center_id?: string
+          p_credit?: number
+          p_debit?: number
+          p_department_id?: string
+          p_description: string
+          p_je_id: string
+          p_line_number: number
+        }
+        Returns: string
+      }
       fn_ap_aging_asof: {
         Args: { p_as_of: string; p_company_id: string; p_supplier_id?: string }
         Returns: {
@@ -12493,6 +12557,18 @@ export type Database = {
         }
         Returns: string
       }
+      fn_create_posted_journal_entry: {
+        Args: {
+          p_branch_id: string
+          p_company_id: string
+          p_description: string
+          p_je_date: string
+          p_je_number: string
+          p_reference_doc_id: string
+          p_reference_doc_type: string
+        }
+        Returns: string
+      }
       fn_create_revenue_recognition_schedule: {
         Args: {
           p_branch_id: string
@@ -12538,6 +12614,10 @@ export type Database = {
         Args: { p_je_date: string; p_template_id: string }
         Returns: string
       }
+      fn_finalize_journal_entry: {
+        Args: { p_je_id: string }
+        Returns: undefined
+      }
       fn_form2307_period_bounds: {
         Args: { p_quarter: number; p_year: number }
         Returns: Record<string, unknown>
@@ -12560,6 +12640,18 @@ export type Database = {
         Args: { p_company_id: string; p_fiscal_year: number }
         Returns: undefined
       }
+      fn_get_accounting_trace: {
+        Args: {
+          p_journal_entry_id?: string
+          p_source_doc_id?: string
+          p_source_doc_type?: string
+        }
+        Returns: Json
+      }
+      fn_gl_impact_payload: {
+        Args: { p_je_id: string; p_mode?: string; p_rule_explanation?: string }
+        Returns: Json
+      }
       fn_mark_tax_event_filed: {
         Args: { p_date_filed: string; p_efps_ref?: string; p_event_id: string }
         Returns: undefined
@@ -12580,7 +12672,15 @@ export type Database = {
       fn_post_cash_purchase: { Args: { p_cp_id: string }; Returns: undefined }
       fn_post_check_voucher: { Args: { p_cv_id: string }; Returns: undefined }
       fn_post_credit_memo: { Args: { p_cm_id: string }; Returns: undefined }
+      fn_post_credit_memo_vat_lump_impl: {
+        Args: { p_cm_id: string }
+        Returns: undefined
+      }
       fn_post_debit_memo: { Args: { p_dm_id: string }; Returns: undefined }
+      fn_post_debit_memo_vat_lump_impl: {
+        Args: { p_dm_id: string }
+        Returns: undefined
+      }
       fn_post_depreciation_entry: {
         Args: { p_entry_id: string }
         Returns: string
@@ -12631,10 +12731,34 @@ export type Database = {
       }
       fn_post_vendor_bill: { Args: { p_bill_id: string }; Returns: undefined }
       fn_post_vendor_credit: { Args: { p_vc_id: string }; Returns: undefined }
+      fn_post_vendor_credit_vat_lump_impl: {
+        Args: { p_vc_id: string }
+        Returns: undefined
+      }
+      fn_preview_gl_impact: {
+        Args: {
+          p_posting_date?: string
+          p_source_doc_id: string
+          p_source_doc_type: string
+        }
+        Returns: Json
+      }
+      fn_rebuild_document_vat_details: {
+        Args: { p_source_doc_id: string; p_source_doc_type: string }
+        Returns: undefined
+      }
       fn_receive_inventory: { Args: { p_data: Json }; Returns: string }
       fn_record_impairment: { Args: { p_data: Json }; Returns: string }
       fn_register_fixed_asset: { Args: { p_data: Json }; Returns: string }
       fn_report_snapshot_key_uuid: { Args: { p_key: string }; Returns: string }
+      fn_require_open_fiscal_period: {
+        Args: { p_company_id: string; p_lock?: boolean; p_posting_date: string }
+        Returns: string
+      }
+      fn_require_postable_account: {
+        Args: { p_account_id: string; p_company_id: string; p_context?: string }
+        Returns: undefined
+      }
       fn_require_vat_registered_company: {
         Args: { p_company_id: string; p_context?: string }
         Returns: undefined
@@ -12771,7 +12895,27 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_snapshot_cas_export_unchecked: {
+        Args: {
+          p_company_id: string
+          p_file_name: string
+          p_month: number
+          p_report_type: string
+          p_year: number
+        }
+        Returns: Json
+      }
       fn_snapshot_vat_export: {
+        Args: {
+          p_company_id: string
+          p_export_part?: string
+          p_month: number
+          p_report_type: string
+          p_year: number
+        }
+        Returns: string
+      }
+      fn_snapshot_vat_export_unchecked: {
         Args: {
           p_company_id: string
           p_export_part?: string
@@ -12821,12 +12965,29 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_validate_company_vat_amount: {
+        Args: { p_company_id: string; p_context?: string; p_vat_amount: number }
+        Returns: undefined
+      }
       fn_validate_company_vat_code: {
         Args: {
           p_company_id: string
           p_context?: string
           p_transaction_type: string
           p_vat_code_id: string
+        }
+        Returns: undefined
+      }
+      fn_validate_document_vat_registration: {
+        Args: {
+          p_company_id: string
+          p_context: string
+          p_document_id: string
+          p_header_vat_amount: number
+          p_line_table: unknown
+          p_line_vat_amount_column: unknown
+          p_parent_column: unknown
+          p_transaction_type: string
         }
         Returns: undefined
       }

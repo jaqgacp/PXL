@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type COARef = { id: string; account_code: string; account_name: string }
 type FundRef = { id: string; fund_name: string }
@@ -89,6 +90,10 @@ export default function PettyCashVouchersPage() {
     if (confirmMsg && !confirm(confirmMsg)) return
     setBusy(true); setError('')
     try {
+      if (fn === 'fn_approve_petty_cash_voucher') {
+        const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', { p_source_doc_type: 'PCV', p_source_doc_id: id })
+        if (previewError) throw new Error(`Petty Cash Voucher is not ready to approve: ${previewError.message}`)
+      }
       const { error: e } = await supabase.rpc(fn, { p_pcv_id: id })
       if (e) throw e
       await load(); setMode('list')
@@ -170,6 +175,11 @@ export default function PettyCashVouchersPage() {
           <Field label="Amount *"><input type="number" disabled={ro} className={inputCls} value={form?.amount ?? 0} onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} /></Field>
           <Field label="Purpose *" full><textarea disabled={ro} rows={2} className={inputCls} value={form?.purpose || ''} onChange={e => setForm(f => ({ ...f, purpose: e.target.value }))} /></Field>
         </div>
+        {form?.id && (
+          <div className="mt-4 max-w-5xl">
+            <GLImpactPanel companyId={companyId} sourceDocType="PCV" sourceDocId={form.id} previewRows={[]} />
+          </div>
+        )}
       </div>
     </div>
   )

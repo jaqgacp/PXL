@@ -1,12 +1,15 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 
 type VCStatus = 'draft' | 'open' | 'applied' | 'cancelled'
 
 type VC = {
-  id: string; company_id: string; vc_number: string; credit_date: string
+  id: string; company_id: string; branch_id: string; vc_number: string; credit_date: string
   supplier_id: string; supplier_name_snapshot: string; supplier_tin_snapshot: string | null
   supplier_cm_no: string | null; reference_bill_id: string | null
   remarks: string | null; total_taxable_amount: number; total_input_vat_amount: number
@@ -82,7 +85,15 @@ export default function VendorCreditsPage() {
   useEffect(() => {
     if (!companyId) return
     supabase.from('suppliers').select('id,registered_name,tin').eq('company_id', companyId).eq('is_active', true).order('registered_name').then(({ data }) => setSuppliers(data as SupplierRef[] || []))
-    supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true).then(({ data }) => setVatCodes((data || []).map((v: any) => ({ ...v, rate: v.tax_codes?.rate || 0 }))))
+    Promise.all([
+      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
+      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true),
+    ]).then(([companyRes, vatRes]) => {
+      const taxRegistration = companyRes.data?.tax_registration || 'vat'
+      setVatCodes((vatRes.data || [])
+        .map((v: any) => ({ ...v, rate: v.tax_codes?.rate || 0 }))
+        .filter(v => taxRegistration === 'vat' || v.rate === 0))
+    })
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['expense','cost_of_goods']).eq('is_active', true).order('account_code').then(({ data }) => setExpenseAccounts(data as COARef[] || []))
     supabase.from('vendor_bills').select('id,bill_number,bill_date,total_amount').eq('company_id', companyId).eq('status', 'posted').order('bill_date', { ascending: false }).then(({ data }) => setVendorBills(data as VBRef[] || []))
   }, [companyId])
@@ -98,15 +109,53 @@ export default function VendorCreditsPage() {
   }
 
   const totals = lines.reduce((acc, l) => ({ vat: acc.vat + l.input_vat_amount, total: acc.total + l.total_amount }), { vat: 0, total: 0 })
+  const requiredConfig = useMemo<ConfigField[]>(
+    () => totals.vat > 0.005 ? ['ap_account_id', 'input_vat_account_id'] : ['ap_account_id'],
+    [totals.vat]
+  )
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: editVC?.branch_id || branchId,
+    documentCode: 'VC',
+    postingDate: editVC?.credit_date || today(),
+    requiredConfig,
+  })
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+  const glPreviewRows = useMemo<GLImpactRow[]>(() => [
+    {
+      configKey: 'ap_account_id',
+      description: 'Reduce accounts payable',
+      debit: totals.total,
+      credit: 0,
+    },
+    ...lines
+      .filter(line => line.net_amount > 0.005)
+      .map(line => ({
+        accountId: line.expense_account_id || null,
+        description: line.description || 'Expense reversal',
+        debit: 0,
+        credit: line.net_amount,
+      })),
+    ...(totals.vat > 0.005 ? [{
+      configKey: 'input_vat_account_id' as const,
+      description: 'Input VAT reversal',
+      debit: 0,
+      credit: totals.vat,
+    }] : []),
+  ], [lines, totals.total, totals.vat])
 
   const save = async () => {
+    if (setupBlocked) {
+      setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0])
+      return
+    }
     if (!companyId || !editVC?.supplier_id) { setError('Supplier is required'); return }
     setSaving(true); setError('')
     try {
       const result = await supabase.rpc('fn_save_vendor_credit', {
         p_vc_id: (editVC.id || null)!,
         p_header: {
-          company_id: companyId, branch_id: branchId || null,
+          company_id: companyId, branch_id: editVC.branch_id || branchId || null,
           supplier_id: editVC.supplier_id, supplier_name_snapshot: editVC.supplier_name_snapshot,
           supplier_tin_snapshot: editVC.supplier_tin_snapshot || '',
           credit_date: editVC.credit_date, supplier_cm_no: editVC.supplier_cm_no || '',
@@ -127,6 +176,11 @@ export default function VendorCreditsPage() {
   }
 
   const post = async (vc: VC) => {
+    const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', {
+      p_source_doc_type: 'VC',
+      p_source_doc_id: vc.id,
+    })
+    if (previewError) { alert(`Vendor Credit is not ready to post: ${previewError.message}`); return }
     const { error: e } = await supabase.rpc('fn_post_vendor_credit', { p_vc_id: vc.id })
     if (e) { alert(e.message); return }
     loadCredits()
@@ -192,6 +246,7 @@ export default function VendorCreditsPage() {
         <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
       </div>
       {error && <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">{error}</div>}
+      <SetupReadinessBanner readiness={readiness} />
       <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
         <div className="grid grid-cols-3 gap-3">
           <div><label className="block text-xs font-medium text-gray-700 mb-1">Credit Date *</label><input type="date" value={editVC?.credit_date || ''} disabled={readOnly} onChange={e => setEditVC(p => ({ ...p, credit_date: e.target.value }))} className={inp} /></div>
@@ -226,10 +281,21 @@ export default function VendorCreditsPage() {
           <tfoot><tr className="border-t-2 border-gray-300 font-semibold text-xs"><td colSpan={5} className="pt-2 text-right pr-2 text-gray-600">Totals</td><td className="pt-2 text-right font-mono">{fmt(totals.total - totals.vat)}</td><td className="pt-2 text-right font-mono text-blue-600">{fmt(totals.vat)}</td><td className="pt-2 text-right font-mono text-sm">{fmt(totals.total)}</td></tr></tfoot>
         </table>
       </div>
+      <GLImpactPanel
+        companyId={companyId}
+        sourceDocType="VC"
+        sourceDocId={editVC?.id || null}
+        previewRows={glPreviewRows}
+      />
       {!readOnly && (
         <div className="flex justify-end gap-2">
           <button onClick={() => setMode('list')} className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
-          <button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
+          <button onClick={save} disabled={saving || setupBlocked} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
+        </div>
+      )}
+      {readOnly && editVC?.status === 'draft' && (
+        <div className="flex justify-end">
+          <button onClick={() => post(editVC as VC)} disabled={setupBlocked} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">Post Vendor Credit</button>
         </div>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
@@ -45,7 +45,6 @@ type PaymentMode = { id: string; code: string; name: string }
 type ATCCode = { id: string; code: string; description: string; rate: number }
 type Branch = { id: string; branch_code: string; branch_name: string }
 
-const PV_REQUIRED_CONFIG: ConfigField[] = ['ap_account_id', 'default_cash_account_id', 'ewt_payable_account_id']
 const EWT_VARIANCE_REASONS = [
   { value: 'rounding', label: 'Rounding' },
   { value: 'partial_non_taxable', label: 'Partial non-taxable' },
@@ -106,12 +105,18 @@ export default function PaymentVouchersPage() {
   const [voiding, setVoiding] = useState(false)
 
   const readOnly = mode === 'view'
+  const requiredConfig = useMemo<ConfigField[]>(
+    () => lines.some(line => line.ewt_amount > 0.005)
+      ? ['ap_account_id', 'default_cash_account_id', 'ewt_payable_account_id']
+      : ['ap_account_id', 'default_cash_account_id'],
+    [lines]
+  )
   const readiness = useTransactionReadiness({
     companyId,
     branchId: mode === 'list' ? branchId : (editPV?.branch_id || branchId || ''),
     documentCode: 'PV',
     postingDate: editPV?.voucher_date || today(),
-    requiredConfig: PV_REQUIRED_CONFIG,
+    requiredConfig,
   })
 
   const load = useCallback(async () => {

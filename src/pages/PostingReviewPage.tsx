@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { BookOpen, Route, Scale } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -26,6 +28,8 @@ const FILTER_GROUPS: Record<string, string[]> = {
 
 export default function PostingReviewPage() {
   const { companyId } = useAppCtx()
+  const [searchParams] = useSearchParams()
+  const requestedJeId = searchParams.get('jeId') || ''
   const [periods, setPeriods] = useState<PeriodRef[]>([])
   const [periodId, setPeriodId] = useState('')
   const [refFilter, setRefFilter] = useState('All')
@@ -47,6 +51,21 @@ export default function PostingReviewPage() {
 
   useEffect(() => { if (companyId) loadPeriods() }, [loadPeriods, companyId])
 
+  useEffect(() => {
+    if (!companyId || !requestedJeId) return
+    let alive = true
+    const resolvePeriod = async () => {
+      const { data } = await supabase.from('journal_entries')
+        .select('fiscal_period_id')
+        .eq('company_id', companyId)
+        .eq('id', requestedJeId)
+        .maybeSingle()
+      if (alive && data?.fiscal_period_id) setPeriodId(data.fiscal_period_id)
+    }
+    void resolvePeriod()
+    return () => { alive = false }
+  }, [companyId, requestedJeId])
+
   const load = useCallback(async () => {
     if (!companyId || !periodId) { setEntries([]); setLines([]); return }
     setLoading(true)
@@ -64,9 +83,9 @@ export default function PostingReviewPage() {
     } else {
       setLines([])
     }
-    setSelected(null)
+    setSelected(requestedJeId && jes.some(entry => entry.id === requestedJeId) ? requestedJeId : null)
     setLoading(false)
-  }, [companyId, periodId])
+  }, [companyId, periodId, requestedJeId])
 
   useEffect(() => { if (companyId && periodId) load() }, [load, companyId, periodId])
 
@@ -162,7 +181,12 @@ export default function PostingReviewPage() {
                 {filtered.map(e => (
                   <tr key={e.id} onClick={() => setSelected(e.id === selected ? null : e.id)}
                     className={`cursor-pointer ${selected === e.id ? 'bg-blue-50' : 'hover:bg-gray-50/60'}`}>
-                    <td className="px-3 py-2 font-mono font-semibold text-gray-900">{e.je_number}</td>
+                    <td className="px-3 py-2 font-mono font-semibold" onClick={event => event.stopPropagation()}>
+                      <Link to={`/accounting-trace?jeId=${e.id}`} className="inline-flex items-center gap-1 text-blue-700 hover:text-blue-900">
+                        {e.je_number}
+                        <Route className="h-3 w-3" aria-hidden="true" />
+                      </Link>
+                    </td>
                     <td className="px-3 py-2 font-mono text-gray-500">{e.je_date}</td>
                     <td className="px-3 py-2 text-gray-700 max-w-[240px] truncate">{e.description || '—'}</td>
                     <td className="px-3 py-2 text-gray-500">{e.reference_doc_type || '—'}</td>
@@ -179,11 +203,22 @@ export default function PostingReviewPage() {
         {/* Detail panel */}
         {selJE && (
           <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
-            <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+            <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between gap-3 flex-wrap">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Lines — {selJE.je_number}</span>
-              <span className={`text-xs font-medium ${Math.abs(selJE.total_debit - selJE.total_credit) <= 0.01 ? 'text-green-600' : 'text-red-600'}`}>
-                {Math.abs(selJE.total_debit - selJE.total_credit) <= 0.01 ? 'Balanced ✓' : 'Unbalanced'}
-              </span>
+              <div className="flex items-center gap-3">
+                <Link to={`/accounting-trace?jeId=${selJE.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:text-blue-900">
+                  <Route className="h-3.5 w-3.5" aria-hidden="true" /> Trace
+                </Link>
+                <Link to={`/journal-entries?jeId=${selJE.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:text-blue-900">
+                  <BookOpen className="h-3.5 w-3.5" aria-hidden="true" /> JE
+                </Link>
+                <Link to={`/general-ledger?jeId=${selJE.id}`} className="inline-flex items-center gap-1 text-xs font-medium text-blue-700 hover:text-blue-900">
+                  <Scale className="h-3.5 w-3.5" aria-hidden="true" /> GL
+                </Link>
+                <span className={`text-xs font-medium ${Math.abs(selJE.total_debit - selJE.total_credit) <= 0.01 ? 'text-green-600' : 'text-red-600'}`}>
+                  {Math.abs(selJE.total_debit - selJE.total_credit) <= 0.01 ? 'Balanced' : 'Unbalanced'}
+                </span>
+              </div>
             </div>
             <table className="w-full text-xs">
               <thead className="bg-gray-50 border-b border-gray-200">
@@ -196,7 +231,11 @@ export default function PostingReviewPage() {
               <tbody className="divide-y divide-gray-100">
                 {selLines.map(l => (
                   <tr key={l.id}>
-                    <td className="px-3 py-2 font-mono text-gray-900">{l.chart_of_accounts?.account_code || '—'}</td>
+                    <td className="px-3 py-2 font-mono">
+                      <Link to={`/account-detail-ledger?accountId=${l.account_id}&jeId=${selJE.id}`} className="text-blue-700 hover:text-blue-900">
+                        {l.chart_of_accounts?.account_code || '—'}
+                      </Link>
+                    </td>
                     <td className="px-3 py-2 text-gray-700">{l.chart_of_accounts?.account_name || '—'}</td>
                     <td className="px-3 py-2 text-gray-500">{l.description || '—'}</td>
                     <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-700">{l.debit_amount ? fmt(l.debit_amount) : '—'}</td>

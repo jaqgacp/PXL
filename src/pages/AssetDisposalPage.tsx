@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 
 type Asset = { id: string; asset_number: string; asset_name: string; acquisition_cost: number; status: string; accum_depr: number; nbv: number }
 type COA = { id: string; account_code: string; account_name: string }
@@ -84,6 +85,39 @@ export default function AssetDisposalPage() {
   const selectedAsset = assets.find(a => a.id === form.asset_id)
   const proceeds = Number(form.proceeds_amount) || 0
   const previewGainLoss = selectedAsset ? proceeds - selectedAsset.nbv : null
+  const glPreviewRows: GLImpactRow[] = selectedAsset ? [
+    ...(selectedAsset.accum_depr > 0.005 ? [{
+      accountLabel: 'Accumulated depreciation from asset category',
+      description: `Accumulated depreciation — ${selectedAsset.asset_name}`,
+      debit: selectedAsset.accum_depr,
+      credit: 0,
+    }] : []),
+    ...(proceeds > 0.005 ? [{
+      accountId: form.proceeds_account_id || null,
+      accountLabel: form.proceeds_account_id ? undefined : 'Missing proceeds account',
+      description: `Disposal proceeds — ${selectedAsset.asset_name}`,
+      debit: proceeds,
+      credit: 0,
+    }] : []),
+    ...(previewGainLoss != null && previewGainLoss < -0.005 ? [{
+      accountLabel: 'Loss on disposal account from asset category',
+      description: `Loss on disposal — ${selectedAsset.asset_name}`,
+      debit: Math.abs(previewGainLoss),
+      credit: 0,
+    }] : []),
+    {
+      accountLabel: 'Asset cost account from asset category',
+      description: `Asset cost — ${selectedAsset.asset_name}`,
+      debit: 0,
+      credit: selectedAsset.acquisition_cost,
+    },
+    ...(previewGainLoss != null && previewGainLoss > 0.005 ? [{
+      accountLabel: 'Gain on disposal account from asset category',
+      description: `Gain on disposal — ${selectedAsset.asset_name}`,
+      debit: 0,
+      credit: previewGainLoss,
+    }] : []),
+  ] : []
 
   const submit = async () => {
     if (!companyId || !form.asset_id) { setError('Select an asset'); return }
@@ -189,6 +223,14 @@ export default function AssetDisposalPage() {
               </div>
             )}
           </div>
+
+          <GLImpactPanel
+            companyId={companyId}
+            sourceDocType="FA_DISP"
+            sourceDocId={null}
+            previewRows={glPreviewRows}
+            title="GL Impact — Asset Disposal"
+          />
 
           <button onClick={submit} disabled={saving || !form.asset_id}
             className="px-5 py-2 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">

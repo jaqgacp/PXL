@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type PendingEntry = {
   id: string
@@ -25,6 +26,7 @@ export default function DepreciationRunPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [posting, setPosting] = useState(false)
   const [progress, setProgress] = useState<{ done: number; total: number; errors: string[] } | null>(null)
+  const [previewEntryId, setPreviewEntryId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!companyId) return
@@ -90,6 +92,12 @@ export default function DepreciationRunPage() {
 
     const errors: string[] = []
     for (let i = 0; i < ids.length; i++) {
+      const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', { p_source_doc_type: 'FA_DEPR', p_source_doc_id: ids[i] })
+      if (previewError) {
+        errors.push(`Entry ${ids[i].slice(0, 8)} preview: ${previewError.message}`)
+        setProgress({ done: i + 1, total: ids.length, errors })
+        continue
+      }
       const { error: e } = await supabase.rpc('fn_post_depreciation_entry', { p_entry_id: ids[i] })
       if (e) errors.push(`Entry ${ids[i].slice(0, 8)}: ${e.message}`)
       setProgress({ done: i + 1, total: ids.length, errors })
@@ -157,6 +165,7 @@ export default function DepreciationRunPage() {
                   {['Asset #','Name','Category','Period','Date','Depr. Amount (₱)','Accum. Depr (₱)','NBV After (₱)'].map(h => (
                     <th key={h} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 text-left whitespace-nowrap">{h}</th>
                   ))}
+                  <th className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 text-left">GL</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -174,6 +183,9 @@ export default function DepreciationRunPage() {
                     <td className="px-3 py-2 font-mono text-right font-semibold text-gray-900">{fmt(e.depreciation_amount)}</td>
                     <td className="px-3 py-2 font-mono text-right text-gray-500">{fmt(e.accumulated_depr_after)}</td>
                     <td className="px-3 py-2 font-mono text-right text-gray-800">{fmt(e.net_book_value_after)}</td>
+                    <td className="px-3 py-2">
+                      <button onClick={() => setPreviewEntryId(e.id)} className="text-xs font-medium text-blue-700 hover:text-blue-900">Preview</button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -181,12 +193,16 @@ export default function DepreciationRunPage() {
                 <tr>
                   <td colSpan={6} className="px-3 py-2 text-xs font-semibold text-right text-gray-500">Selected Total:</td>
                   <td className="px-3 py-2 font-mono font-bold text-right text-gray-900">₱ {fmt(totalDepr)}</td>
-                  <td colSpan={2}></td>
+                  <td colSpan={3}></td>
                 </tr>
               </tfoot>
             </table>
           )}
         </div>
+
+        {previewEntryId && (
+          <GLImpactPanel companyId={companyId} sourceDocType="FA_DEPR" sourceDocId={previewEntryId} previewRows={[]} />
+        )}
       </div>
     </div>
   )

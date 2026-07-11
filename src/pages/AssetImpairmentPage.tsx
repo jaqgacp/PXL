@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 
 type Asset = { id: string; asset_number: string; asset_name: string; acquisition_cost: number; accum_depr: number; carrying_amount: number; status: string }
 type COA = { id: string; account_code: string; account_name: string }
@@ -75,6 +76,22 @@ export default function AssetImpairmentPage() {
   const selectedAsset = assets.find(a => a.id === assetId)
   const recoverableNum = Number(recoverable) || 0
   const previewLoss = selectedAsset ? Math.max(0, selectedAsset.carrying_amount - recoverableNum) : null
+  const glPreviewRows: GLImpactRow[] = selectedAsset && previewLoss && previewLoss > 0.005 ? [
+    {
+      accountId: impLossAcct || null,
+      accountLabel: impLossAcct ? undefined : 'Impairment loss account from asset category',
+      description: `Impairment loss — ${selectedAsset.asset_name}`,
+      debit: previewLoss,
+      credit: 0,
+    },
+    {
+      accountId: accumImpAcct || null,
+      accountLabel: accumImpAcct ? undefined : 'Accumulated impairment account from asset category',
+      description: `Accumulated impairment — ${selectedAsset.asset_name}`,
+      debit: 0,
+      credit: previewLoss,
+    },
+  ] : []
 
   const submit = async () => {
     if (!companyId || !assetId) { setError('Select an asset'); return }
@@ -188,6 +205,14 @@ export default function AssetImpairmentPage() {
                 placeholder="Describe the indicators of impairment (physical damage, obsolescence, market decline, etc.)" />
             </div>
           </div>
+
+          <GLImpactPanel
+            companyId={companyId}
+            sourceDocType="FA_IMP"
+            sourceDocId={null}
+            previewRows={glPreviewRows}
+            title="GL Impact — Asset Impairment"
+          />
 
           <button onClick={submit} disabled={saving || !assetId}
             className="px-5 py-2 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">

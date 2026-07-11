@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type Schedule = {
   id: string; company_id: string; branch_id: string | null
@@ -57,6 +58,7 @@ export default function AmortizationSchedulesPage() {
   const [entriesLoading, setEntriesLoading] = useState(false)
   const [posting, setPosting] = useState<string | null>(null)
   const [postingAll, setPostingAll] = useState(false)
+  const [previewEntryId, setPreviewEntryId] = useState<string | null>(null)
 
   const load = useCallback(async () => {
     if (!companyId) return
@@ -79,6 +81,7 @@ export default function AmortizationSchedulesPage() {
 
   const loadEntries = async (schedule: Schedule) => {
     setViewSchedule(schedule)
+    setPreviewEntryId(null)
     setEntriesLoading(true)
     setMode('view')
     const { data } = await supabase.from('amortization_entries')
@@ -122,6 +125,10 @@ export default function AmortizationSchedulesPage() {
   const postEntry = async (entryId: string) => {
     setPosting(entryId); setError('')
     try {
+      const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', {
+        p_source_doc_type: 'AMORT', p_source_doc_id: entryId,
+      })
+      if (previewError) throw previewError
       const { error: e } = await supabase.rpc('fn_post_amortization_entry', { p_entry_id: entryId })
       if (e) throw e
       if (viewSchedule) { await loadEntries(viewSchedule); await load() }
@@ -137,6 +144,10 @@ export default function AmortizationSchedulesPage() {
     setPostingAll(true); setError('')
     let failed = 0
     for (const entry of pending) {
+      const { error: previewError } = await supabase.rpc('fn_preview_gl_impact', {
+        p_source_doc_type: 'AMORT', p_source_doc_id: entry.id,
+      })
+      if (previewError) { failed++; continue }
       const { error: e } = await supabase.rpc('fn_post_amortization_entry', { p_entry_id: entry.id })
       if (e) failed++
     }
@@ -223,6 +234,12 @@ export default function AmortizationSchedulesPage() {
             </div>
           </div>
 
+          {previewEntryId && (
+            <div className="mb-4">
+              <GLImpactPanel companyId={companyId} sourceDocType="AMORT" sourceDocId={previewEntryId} previewRows={[]} />
+            </div>
+          )}
+
           {/* Entries table */}
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-4 py-2.5 border-b border-gray-100">
@@ -253,10 +270,13 @@ export default function AmortizationSchedulesPage() {
                       <td className="px-3 py-2 font-mono text-xs text-gray-500">{e.journal_entries?.je_number || '—'}</td>
                       <td className="px-3 py-2">
                         {e.status === 'pending' && viewSchedule.status === 'active' && (
-                          <button onClick={() => postEntry(e.id)} disabled={posting === e.id}
-                            className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-40">
-                            {posting === e.id ? 'Posting…' : 'Post'}
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button onClick={() => setPreviewEntryId(e.id)} className="text-xs font-medium text-gray-600 hover:text-gray-900">Preview</button>
+                            <button onClick={() => postEntry(e.id)} disabled={posting === e.id}
+                              className="text-xs font-medium text-blue-600 hover:text-blue-800 disabled:opacity-40">
+                              {posting === e.id ? 'Posting…' : 'Post'}
+                            </button>
+                          </div>
                         )}
                       </td>
                     </tr>

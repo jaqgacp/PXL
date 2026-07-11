@@ -9,8 +9,8 @@ Purpose: this is the living source of truth for PXL transactions. Any code chang
 Use this section first when choosing transaction work; then read the specific row and relevant addendum before editing code.
 
 - **Current high-risk lane:** EWT. All four session-47 EWT Criticals are fixed (receipt CWT net base; check-voucher EWT supplier linkage/validation/counter-row cancel; 1601EQ server-computed reconciliation gate). Next EWT work is the High tier: PXL-AUD-035+036 (ATC as-of-document-date validation + rate versioning), then PXL-AUD-041 (controlled remittance flow — now also the unblock for finalizing a 1601EQ quarter that contains remittance JEs).
-- **Strongest implemented core:** SI/OR/VB/PV have atomic save/post RPCs, setup readiness, GL Impact coverage, status-aware immutability, and pgTAP coverage. Do not assume the same maturity on secondary transaction pages.
-- **Secondary transaction caution:** Check vouchers, cash sales/purchases, credit/vendor-credit applications, inventory, fixed assets, and schedule entries exist but may lack full GL preview, drillback, tax validation, or report reconciliation.
+- **Strongest implemented core:** SI/OR/VB/PV have atomic save/post RPCs, guided setup readiness, exact saved-source GL preview, status-aware immutability, and pgTAP coverage. Company Setup now provides the aggregate readiness checklist.
+- **Secondary transaction caution:** GL Impact coverage now spans CM/DM/cash/CV/treasury/inventory/fixed-asset/schedule/recurring/purchase-return posting surfaces. Atomic create-and-post cash/fixed-asset forms show a labeled client estimate; report/compliance drillback, some tax validation, and reconciliation remain incomplete.
 - **Reporting evidence:** VAT, WHT, CAS, and BIR books export snapshots are server-attested and hashed; true BIR DAT layout and remaining drill contracts are still tracked in audit findings.
 - **Audit evidence rollout:** Sales Invoices, Receipts, Credit Memos, Vendor Bills, Payment Vouchers, Journal Entries, and Check Vouchers now show lifecycle facts and `AuditTrailSection`; other transaction pages still need the same PXL-AUD-050 treatment.
 - **When touching a row:** keep this matrix, `PXL_END_TO_END_AUDIT_FINDINGS.md`, and `PXL_ACCOUNTING_TEST_BOOK.md` synchronized in the same session.
@@ -95,7 +95,7 @@ Audit-only session; no behavior changed. Findings live in `PXL_END_TO_END_AUDIT_
 | PXL-AUD-044 / PXL-AUD-045 | Customer/Supplier Master, SI/OR/PV pages | Duplicate customer flags (`is_withholding_agent` vs `is_subject_to_cwt`); vestigial `default_ewt_code_id`/`ewt_codes`/`fwt_codes` configured but unread. PV EWT base defaults now use the proportional VAT-exclusive bill base; remaining gaps: SI expected CWT never flows to the OR and needs ATC validation. | PXL-AUD-044 Open; PXL-AUD-045 In Progress. |
 | PXL-AUD-046 | Cash Sale, Receipt bounce, Cash Receipts Book | `receipts.total_amount` = cash on standard ORs but gross on cash-sale ORs; cash-sale bounce writes JE header totals ≠ line sums. | Open. |
 | PXL-AUD-047 | Form 2307 Received | Claim lifecycle is direct CRUD: no validation against receipt CWT, no over-claim guard, no invalidation on bounce, no staleness flag on issued certificates after EWT reversal. | Open. |
-| PXL-AUD-049 | Check Voucher, Cash Purchase, Cash Sale | No GL Impact preview/posted panel; no drilldown from EWT amounts to tax ledger/2307/QAP. | Open (EWT slice of PXL-DA-001/DA-002). |
+| PXL-AUD-049 | Check Voucher, Cash Purchase, Cash Sale | GL Impact preview/posted coverage landed; EWT/CWT amount drilldown to tax ledger/2307/QAP remains. | In Progress (remaining slice belongs to PXL-DA-002). |
 
 New transaction row (previously missing from this matrix):
 
@@ -112,6 +112,16 @@ New transaction row (previously missing from this matrix):
 | PXL-AUD-019 | Vendor Credit, AP Aging | Posted/applied vendor credits were not subtracted from AP aging, so supplier balances could be overstated after a vendor credit. | Retested Passed 2026-07-02: `fn_ap_aging_asof` subtracts non-reversed applications by `applied_date` with credit status open/applied; seeded scenario AP-AGING-ASOF-002 executed in `supabase/tests/003_ap_aging_asof_test.sql`. |
 | PXL-AUD-020 | Vendor Credit Application | Vendor credit application UI previously did not expose/pass application date, and direct inserts could bypass RPC date checks. | Retested Passed 2026-07-02: seeded scenario VC-APPLICATION-DATE-001 executed in `supabase/tests/004_vendor_credit_application_controls_test.sql` (stored user date, backdated-aging behavior, pre-credit-date and locked-period rejection, direct-insert denial). |
 | PXL-AUD-021 | Vendor Credit Application Reversal | Direct deletes of vendor credit application rows could alter AP aging without restoring vendor credit remaining balance/status. | Retested Passed 2026-07-02: seeded scenario VC-APPLICATION-REVERSAL-001 executed in `supabase/tests/004_vendor_credit_application_controls_test.sql` (reversal restores balance/status, evidence preserved, direct-delete denial, post-reversal aging restore). |
+
+## Matrix Implementation Addendum - 2026-07-10 Session 59
+
+| Scope | Transactions / Reports | Current Contract |
+| ----- | ---------------------- | ---------------- |
+| Guided setup | Company Setup; SI/OR/VB/PV; CM/DM; cash sale/purchase; vendor credit | Company Checklist aggregates legal profile, branch, fiscal calendar, COA, core series, compliance/tax-code coverage, and applicable GL mappings. Transaction pages block on relevant branch/period/series/config gaps and link back to the checklist; VAT/CWT/EWT mappings are conditional. |
+| VAT registration | SI/VB/CM/DM/cash sale/cash purchase/vendor credit; SLSP/RELIEF/CAS snapshots | `20260710000002` applies generic line/header registration and direction gates, canonical per-code CM/DM/VC tax detail, direct tax-ledger write denial, and VAT-export registration gates. VAT-REG-ALL-DOCS-001 passes 35 assertions. |
+| Exact GL preview | SI/OR/CM/DM/VB/PV/CP/VC/PR; FT/IBT/BADJ/PCV/PCR/CV; inventory adjustment/transfer/issue/count; depreciation/amortization/revenue recognition; recurring journals | Saved sources call `fn_preview_gl_impact`, which runs the same posting RPC inside rollback and returns exact JE lines/context. Post actions preflight it. GL-PREVIEW-PARITY-001 passes 40 assertions. Unsaved/atomic cash and fixed-asset forms show a labeled client estimate. |
+| Accounting trace foundation | GL Impact, General Ledger, Account Detail Ledger, Trial Balance, Journal Entries, Posting Review | `fn_get_accounting_trace` + `/accounting-trace` define source/JE/GL routes and reject mismatched source contracts. PXL-DA-002 remains In Progress until all financial/compliance report rows adopt it. |
+| Posting invariants foundation | All `journal_entries` / `journal_entry_lines` writers | Governed source types, period/date and branch guards, active-postable-account checks, line/balance/final-total guards, internal JE primitives, and one-live-JE source uniqueness are central. PXL-DA-004/005/007 remain In Progress for writer migration, physical source existence, tax/reversal primitives, source locks, and concurrency. PXL-DA-006 is closed. |
 
 ## Maintenance Rules
 

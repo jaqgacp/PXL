@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
@@ -106,8 +106,6 @@ const statusToShared: Record<SIStatus, string> = {
   draft: 'draft', approved: 'approved', posted: 'posted', cancelled: 'error',
 }
 
-const SI_REQUIRED_CONFIG: ConfigField[] = ['ar_account_id', 'vat_payable_account_id']
-
 // ── Item search dropdown ──────────────────────────────────────
 function ItemSearch({ items, value, onChange }: {
   items: ItemRef[]
@@ -205,12 +203,18 @@ export default function SalesInvoicePage() {
   const [showVoid, setShowVoid] = useState(false)
   const [voidReason, setVoidReason] = useState('')
   const [voidMemo, setVoidMemo] = useState('')
+  const requiredConfig = useMemo<ConfigField[]>(
+    () => taxRegistration === 'vat'
+      ? ['ar_account_id', 'vat_payable_account_id']
+      : ['ar_account_id'],
+    [taxRegistration]
+  )
   const readiness = useTransactionReadiness({
     companyId,
     branchId: mode === 'list' ? branchId : fBranch,
     documentCode: 'SI',
     postingDate: mode === 'list' ? today() : fDate,
-    requiredConfig: SI_REQUIRED_CONFIG,
+    requiredConfig,
   })
   const allowsVatCode = useCallback((code: VATRef) => taxRegistration === 'vat' || code.rate === 0, [taxRegistration])
   const defaultVatCode = useCallback(() => vatCodes.find(allowsVatCode) || null, [allowsVatCode, vatCodes])
