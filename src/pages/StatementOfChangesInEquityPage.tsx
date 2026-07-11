@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -67,6 +68,10 @@ export default function StatementOfChangesInEquityPage() {
 
   const endingEquity = beginningEquity + equityMovement + netIncome
   const selectedFy = fiscalYears.find(f => f.id === fyId)
+  const dayBeforeStart = selectedFy
+    ? new Date(new Date(`${selectedFy.start_date}T00:00:00Z`).getTime() - 86_400_000).toISOString().slice(0, 10)
+    : ''
+  const periodRange = selectedFy ? `dateFrom=${selectedFy.start_date}&dateTo=${selectedFy.end_date}` : ''
 
   return (
     <div className="space-y-4">
@@ -94,20 +99,23 @@ export default function StatementOfChangesInEquityPage() {
           <table className="w-full text-sm">
             <tbody>
               <tr className="border-b border-gray-100">
-                <td className="px-4 py-2.5 text-gray-700">Beginning Equity Balance</td>
-                <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700">{fmt(beginningEquity)}</td>
+                <td className="px-4 py-2.5"><Link to={`/general-ledger?accountType=equity&dateTo=${dayBeforeStart}`} className="text-blue-700 hover:text-blue-900">Beginning Equity Balance</Link></td>
+                <td className="px-4 py-2.5 text-right font-mono tabular-nums"><Link to={`/general-ledger?accountType=equity&dateTo=${dayBeforeStart}`} className="text-blue-700 hover:text-blue-900">{fmt(beginningEquity)}</Link></td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="px-4 py-2.5 text-gray-700">Add: Net Income for the Year</td>
-                <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700">{fmt(netIncome)}</td>
+                <td className="px-4 py-2.5"><Link to={`/general-ledger?accountType=revenue,expense&${periodRange}`} className="text-blue-700 hover:text-blue-900">Add: Net Income for the Year</Link></td>
+                <td className="px-4 py-2.5 text-right font-mono tabular-nums"><Link to={`/general-ledger?accountType=revenue,expense&${periodRange}`} className="text-blue-700 hover:text-blue-900">{fmt(netIncome)}</Link></td>
               </tr>
               <tr className="border-b border-gray-100">
-                <td className="px-4 py-2.5 text-gray-700">Other Equity Movements (contributions, withdrawals, adjustments)</td>
-                <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700">{fmt(equityMovement)}</td>
+                <td className="px-4 py-2.5"><Link to={`/general-ledger?accountType=equity&${periodRange}`} className="text-blue-700 hover:text-blue-900">Other Equity Movements (contributions, withdrawals, adjustments)</Link></td>
+                <td className="px-4 py-2.5 text-right font-mono tabular-nums"><Link to={`/general-ledger?accountType=equity&${periodRange}`} className="text-blue-700 hover:text-blue-900">{fmt(equityMovement)}</Link></td>
               </tr>
             </tbody>
             <tfoot className="border-t-2 border-gray-900 bg-gray-50">
-              <tr><td className="px-4 py-3 text-base font-bold text-gray-900">Ending Equity Balance</td><td className="px-4 py-3 text-right font-mono text-lg font-bold tabular-nums text-gray-900">{fmt(endingEquity)}</td></tr>
+              <tr>
+                <td className="px-4 py-3 text-base font-bold"><Link to={`/general-ledger?accountType=equity&dateTo=${selectedFy?.end_date || ''}`} className="text-blue-800 hover:text-blue-950">Ending Equity Balance</Link></td>
+                <td className="px-4 py-3 text-right font-mono text-lg font-bold tabular-nums"><Link to={`/general-ledger?accountType=equity&dateTo=${selectedFy?.end_date || ''}`} className="text-blue-800 hover:text-blue-950">{fmt(endingEquity)}</Link></td>
+              </tr>
             </tfoot>
           </table>
         </div>

@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
 type COA = { id: string; account_code: string; account_name: string; account_type: string }
 type GLAgg = { account_id: string; debit_amount: number; credit_amount: number }
-type Line = { account_code: string; account_name: string; amount: number }
+type Line = { account_id: string; account_code: string; account_name: string; amount: number }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
@@ -41,8 +42,8 @@ export default function IncomeStatementPage() {
     for (const a of coaList) {
       const net = balances[a.id] || 0
       if (Math.abs(net) < 0.005) continue
-      if (a.account_type === 'revenue') revLines.push({ account_code: a.account_code, account_name: a.account_name, amount: -net })
-      else expLines.push({ account_code: a.account_code, account_name: a.account_name, amount: net })
+      if (a.account_type === 'revenue') revLines.push({ account_id: a.id, account_code: a.account_code, account_name: a.account_name, amount: -net })
+      else expLines.push({ account_id: a.id, account_code: a.account_code, account_name: a.account_name, amount: net })
     }
 
     setRevenue(revLines.sort((a, b) => a.account_code.localeCompare(b.account_code)))
@@ -85,7 +86,11 @@ export default function IncomeStatementPage() {
               {revenue.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400">No revenue in this period.</td></tr> : revenue.map(l => (
                 <tr key={l.account_code} className="border-b border-gray-100">
                   <td className="px-4 py-1.5 text-gray-500 text-xs w-20">{l.account_code}</td>
-                  <td className="px-4 py-1.5 text-gray-700">{l.account_name}</td>
+                  <td className="px-4 py-1.5">
+                    <Link to={`/account-detail-ledger?accountId=${l.account_id}&dateFrom=${dateFrom}&dateTo=${dateTo}`} className="text-blue-700 hover:text-blue-900">
+                      {l.account_name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-1.5 text-right font-mono tabular-nums text-gray-700">{fmt(l.amount)}</td>
                 </tr>
               ))}
@@ -101,7 +106,11 @@ export default function IncomeStatementPage() {
               {expenses.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400">No expenses in this period.</td></tr> : expenses.map(l => (
                 <tr key={l.account_code} className="border-b border-gray-100">
                   <td className="px-4 py-1.5 text-gray-500 text-xs w-20">{l.account_code}</td>
-                  <td className="px-4 py-1.5 text-gray-700">{l.account_name}</td>
+                  <td className="px-4 py-1.5">
+                    <Link to={`/account-detail-ledger?accountId=${l.account_id}&dateFrom=${dateFrom}&dateTo=${dateTo}`} className="text-blue-700 hover:text-blue-900">
+                      {l.account_name}
+                    </Link>
+                  </td>
                   <td className="px-4 py-1.5 text-right font-mono tabular-nums text-gray-700">{fmt(l.amount)}</td>
                 </tr>
               ))}

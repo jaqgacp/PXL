@@ -22,10 +22,12 @@ export default function AccountDetailLedgerPage() {
   const [searchParams] = useSearchParams()
   const requestedAccountId = searchParams.get('accountId') || searchParams.get('account') || ''
   const requestedJeId = searchParams.get('jeId') || ''
+  const requestedDateFrom = searchParams.get('dateFrom') || firstOfYear()
+  const requestedDateTo = searchParams.get('dateTo') || today()
   const [accounts, setAccounts] = useState<COARef[]>([])
   const [accountId, setAccountId] = useState(requestedAccountId)
-  const [dateFrom, setDateFrom] = useState(firstOfYear())
-  const [dateTo, setDateTo] = useState(today())
+  const [dateFrom, setDateFrom] = useState(requestedDateFrom)
+  const [dateTo, setDateTo] = useState(requestedDateTo)
 
   const [rows, setRows] = useState<GLRow[]>([])
   const [opening, setOpening] = useState(0)
@@ -71,12 +73,12 @@ export default function AccountDetailLedgerPage() {
 
   useEffect(() => {
     if (!requestedAccountId || !companyId || !accounts.some(item => item.id === requestedAccountId)) return
-    const key = `${companyId}:${requestedAccountId}:${requestedJeId}`
+    const key = `${companyId}:${requestedAccountId}:${requestedJeId}:${dateFrom}:${dateTo}`
     if (autoAppliedKey === key) return
     setAccountId(requestedAccountId)
     setAutoAppliedKey(key)
     void loadLedger(requestedAccountId)
-  }, [accounts, autoAppliedKey, companyId, loadLedger, requestedAccountId, requestedJeId])
+  }, [accounts, autoAppliedKey, companyId, dateFrom, dateTo, loadLedger, requestedAccountId, requestedJeId])
 
   let running = opening
   const computed = rows.map(r => {
@@ -112,7 +114,7 @@ export default function AccountDetailLedgerPage() {
         {requestedJeId && (
           <>
             <span className="text-xs text-gray-500 font-mono">JE {requestedJeId.slice(0, 8)}</span>
-            <Link to={`/account-detail-ledger?accountId=${accountId}`} className="text-xs font-medium text-blue-700 hover:text-blue-900">Clear JE filter</Link>
+            <Link to={`/account-detail-ledger?accountId=${accountId}&dateFrom=${dateFrom}&dateTo=${dateTo}`} className="text-xs font-medium text-blue-700 hover:text-blue-900">Clear JE filter</Link>
           </>
         )}
         <select value={accountId} onChange={e => setAccountId(e.target.value)}
@@ -139,7 +141,7 @@ export default function AccountDetailLedgerPage() {
         <div className="px-5 py-4">
           {account && (
             <div className="mb-3 flex items-baseline gap-3">
-              <Link to={`/general-ledger?accountId=${account.id}`}
+              <Link to={`/general-ledger?accountId=${account.id}&dateFrom=${dateFrom}&dateTo=${dateTo}`}
                 className="inline-flex items-center gap-1.5 text-base font-semibold text-blue-700 hover:text-blue-900 font-mono">
                 {account.account_code} — {account.account_name}
                 <Scale className="h-4 w-4" aria-hidden="true" />

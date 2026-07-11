@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { AccountingTraceLink, ReportTraceLink } from '@/components/AccountingTraceLink'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -314,7 +315,9 @@ export default function Form2307ReceivedPage() {
                       {l.receipt_date || '—'}
                     </td>
                     <td className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-900 whitespace-nowrap">
-                      {l.receipt_number}
+                      <AccountingTraceLink sourceType="OR" sourceId={l.receipt_id} title="Open this receipt's accounting trace">
+                        {l.receipt_number}
+                      </AccountingTraceLink>
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-900 max-w-[180px] truncate">
                       {l.customer_name}
@@ -340,6 +343,17 @@ export default function Form2307ReceivedPage() {
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
+                        {l.tracking_id && (
+                          <ReportTraceLink
+                            companyId={companyId}
+                            reportFamily="form_2307_received"
+                            filters={{ record_id: l.tracking_id }}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
+                            title="Open the accounting source for this received certificate"
+                          >
+                            Trace
+                          </ReportTraceLink>
+                        )}
                         {(!l.tracking_status || l.tracking_status === 'pending') && (
                           <button onClick={() => openMarkReceived(l)}
                             className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap">

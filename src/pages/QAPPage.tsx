@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { ReportTraceLink } from '@/components/AccountingTraceLink'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -7,6 +8,13 @@ type Agg = { supplier_id: string; supplier_name: string; supplier_tin: string; a
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const QUARTERS: Record<number, number[]> = { 1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12] }
+const quarterDates = (year: number, quarter: number) => {
+  const months = QUARTERS[quarter]
+  return {
+    dateFrom: `${year}-${String(months[0]).padStart(2, '0')}-01`,
+    dateTo: new Date(year, months[2], 0).toISOString().split('T')[0],
+  }
+}
 
 export default function QAPPage() {
   const { companyId } = useAppCtx()
@@ -16,16 +24,14 @@ export default function QAPPage() {
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [rows, setRows] = useState<Agg[]>([])
+  const { dateFrom, dateTo } = quarterDates(year, quarter)
 
   const load = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
-    const months = QUARTERS[quarter]
-    const startDate = `${year}-${String(months[0]).padStart(2, '0')}-01`
-    const endDate = new Date(year, months[2], 0).toISOString().split('T')[0]
 
     const { data } = await supabase.from('vw_ewt_summary_ap').select('supplier_id,supplier_name,supplier_tin,atc_code,tax_base,tax_withheld')
-      .eq('company_id', companyId).gte('invoice_date', startDate).lte('invoice_date', endDate)
+      .eq('company_id', companyId).gte('invoice_date', dateFrom).lte('invoice_date', dateTo)
 
     const bySupplier: Record<string, Agg> = {}
     for (const r of (data || []) as Row[]) {
@@ -37,7 +43,7 @@ export default function QAPPage() {
     }
     setRows(Object.values(bySupplier).sort((a, b) => a.supplier_name.localeCompare(b.supplier_name)))
     setLoading(false)
-  }, [companyId, year, quarter])
+  }, [companyId, dateFrom, dateTo])
 
   useEffect(() => { if (companyId) load() }, [load, companyId])
 
@@ -104,7 +110,16 @@ export default function QAPPage() {
               ) : rows.map(r => (
                 <tr key={r.supplier_id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-2.5 text-gray-700">{r.supplier_tin || '—'}</td>
-                  <td className="px-4 py-2.5 text-gray-700">{r.supplier_name}</td>
+                  <td className="px-4 py-2.5 text-gray-700">
+                    <ReportTraceLink
+                      companyId={companyId}
+                      reportFamily="tax"
+                      filters={{ tax_kind: 'ewt_payable', counterparty_id: r.supplier_id, date_from: dateFrom, date_to: dateTo }}
+                      title="Open the accounting sources included for this payee"
+                    >
+                      {r.supplier_name}
+                    </ReportTraceLink>
+                  </td>
                   <td className="px-4 py-2.5 text-gray-500">{Array.from(r.atc_codes).join(', ') || '—'}</td>
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700">{fmt(r.tax_base)}</td>
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-900 font-semibold">{fmt(r.tax_withheld)}</td>

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { ReportTraceLink } from '@/components/AccountingTraceLink'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
@@ -217,11 +218,12 @@ export default function ReportSnapshotsPage() {
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Period</th>
                   <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rows</th>
                   <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Source Hash</th>
+                  <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {rows.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-16 text-gray-400">{!companyId ? 'Select a company from the context bar above.' : hasFilter ? 'No snapshots match the current filters.' : 'No snapshots recorded yet. Snapshots are created when returns are finalized/filed, certificates are sent, or compliance exports run.'}</td></tr>
+                  <tr><td colSpan={8} className="text-center py-16 text-gray-400">{!companyId ? 'Select a company from the context bar above.' : hasFilter ? 'No snapshots match the current filters.' : 'No snapshots recorded yet. Snapshots are created when returns are finalized/filed, certificates are sent, or compliance exports run.'}</td></tr>
                 ) : rows.map(r => (
                   <tr key={r.id} onClick={() => openSnapshot(r.id)} className={`border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${detail?.id === r.id ? 'bg-blue-50/50' : ''}`}>
                     <td className="px-4 py-2 text-xs text-gray-500 whitespace-nowrap">{new Date(r.generated_at).toLocaleString('en-PH')}</td>
@@ -231,6 +233,17 @@ export default function ReportSnapshotsPage() {
                     <td className="px-4 py-2 text-gray-600 whitespace-nowrap">{fmtPeriod(r)}</td>
                     <td className="px-4 py-2 text-right text-gray-700">{r.source_row_count.toLocaleString('en-PH')}</td>
                     <td className="px-4 py-2 font-mono text-xs text-gray-500">{r.source_hash.slice(0, 16)}…</td>
+                    <td className="px-4 py-2" onClick={event => event.stopPropagation()}>
+                      <ReportTraceLink
+                        companyId={companyId}
+                        reportFamily="report_snapshot"
+                        filters={{ record_id: r.id }}
+                        className="text-xs font-medium text-blue-600 hover:text-blue-800 whitespace-nowrap"
+                        title="Open the accounting sources frozen in this snapshot"
+                      >
+                        Trace
+                      </ReportTraceLink>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -250,7 +263,18 @@ export default function ReportSnapshotsPage() {
                 <StatusBadge status={STATUS_COLORS[detail.snapshot_status] || 'draft'} label={detail.snapshot_status} />
                 <span className="text-xs text-gray-500">v{detail.snapshot_version}</span>
               </div>
-              <button onClick={() => setDetail(null)} className="text-sm text-gray-400 hover:text-gray-600">× Close</button>
+              <div className="flex items-center gap-3">
+                <ReportTraceLink
+                  companyId={companyId}
+                  reportFamily="report_snapshot"
+                  filters={{ record_id: detail.id }}
+                  className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                  title="Open the accounting sources frozen in this snapshot"
+                >
+                  Trace accounting
+                </ReportTraceLink>
+                <button onClick={() => setDetail(null)} className="text-sm text-gray-400 hover:text-gray-600">× Close</button>
+              </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-2 px-4 py-3 text-sm">
               <div><div className="text-xs text-gray-400 uppercase tracking-wide">Period</div><div className="text-gray-800">{fmtPeriod(detail)}</div></div>
@@ -273,6 +297,17 @@ export default function ReportSnapshotsPage() {
                       <td className="px-4 py-1.5 text-gray-600">v{v.snapshot_version}</td>
                       <td className="px-4 py-1.5 text-right text-gray-600">{v.source_row_count.toLocaleString('en-PH')} rows</td>
                       <td className="px-4 py-1.5 font-mono text-xs text-gray-500">{v.source_hash.slice(0, 16)}…</td>
+                      <td className="px-4 py-1.5" onClick={event => event.stopPropagation()}>
+                        <ReportTraceLink
+                          companyId={companyId}
+                          reportFamily="report_snapshot"
+                          filters={{ record_id: v.id }}
+                          className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                          title="Open the accounting sources frozen in this snapshot"
+                        >
+                          Trace
+                        </ReportTraceLink>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

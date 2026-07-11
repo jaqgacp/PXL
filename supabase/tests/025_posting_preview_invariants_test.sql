@@ -375,8 +375,8 @@ SELECT is(
 
 SELECT is(
   fn_get_accounting_trace('SI', (SELECT id FROM t_ctx WHERE key = 'si'), NULL)->>'source_route',
-  '/sales-invoices?id=' || (SELECT id::text FROM t_ctx WHERE key = 'si'),
-  'trace contract resolves the source document route'
+  '/accounting-source?sourceType=SI&sourceId=' || (SELECT id::text FROM t_ctx WHERE key = 'si'),
+  'trace contract resolves the generic read-only source route'
 );
 
 SELECT is(
@@ -438,8 +438,8 @@ SELECT is(
   fn_get_accounting_trace(
     'AMORT', (SELECT id FROM t_ctx WHERE key = 'amort_entry'), NULL
   )->>'source_route',
-  '/amortization-run?id=' || (SELECT id::text FROM t_ctx WHERE key = 'amort_entry'),
-  'schedule trace resolves back to the individual amortization entry'
+  '/accounting-source?sourceType=AMORT&sourceId=' || (SELECT id::text FROM t_ctx WHERE key = 'amort_entry'),
+  'schedule trace resolves to the individual amortization source evidence'
 );
 
 SELECT throws_like(

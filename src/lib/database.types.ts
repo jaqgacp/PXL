@@ -10371,6 +10371,7 @@ export type Database = {
           reverses_tax_detail_id: string | null
           source_doc_id: string
           source_doc_type: string
+          source_line_id: string | null
           tax_amount: number
           tax_base: number
           tax_code_id: string | null
@@ -10396,6 +10397,7 @@ export type Database = {
           reverses_tax_detail_id?: string | null
           source_doc_id: string
           source_doc_type: string
+          source_line_id?: string | null
           tax_amount?: number
           tax_base?: number
           tax_code_id?: string | null
@@ -10421,6 +10423,7 @@ export type Database = {
           reverses_tax_detail_id?: string | null
           source_doc_id?: string
           source_doc_type?: string
+          source_line_id?: string | null
           tax_amount?: number
           tax_base?: number
           tax_code_id?: string | null
@@ -11618,6 +11621,8 @@ export type Database = {
           description: string | null
           doc_number: string | null
           doc_type: string | null
+          source_doc_id: string | null
+          source_doc_type: string | null
           transaction_date: string | null
         }
         Relationships: []
@@ -11634,6 +11639,7 @@ export type Database = {
           income_payment: number | null
           nature_of_income: string | null
           receipt_date: string | null
+          source_doc_id: string | null
           source_doc_type: string | null
           tax_rate: number | null
           transaction_id: string | null
@@ -11734,6 +11740,8 @@ export type Database = {
           company_id: string | null
           invoice_date: string | null
           nature_of_payment: string | null
+          source_doc_id: string | null
+          source_doc_type: string | null
           supplier_id: string | null
           supplier_name: string | null
           supplier_tin: string | null
@@ -11856,6 +11864,8 @@ export type Database = {
           input_vat: number | null
           invoice_date: string | null
           invoice_no: string | null
+          source_doc_id: string | null
+          source_doc_type: string | null
           source_module: string | null
           supplier_address: string | null
           supplier_name: string | null
@@ -11884,6 +11894,8 @@ export type Database = {
           gross_sales: number | null
           invoice_date: string | null
           output_vat: number | null
+          source_doc_id: string | null
+          source_doc_type: string | null
           source_module: string | null
           system_no: string | null
           taxable_base: number | null
@@ -12222,6 +12234,8 @@ export type Database = {
           document_number: string | null
           document_type: string | null
           external_ref: string | null
+          source_doc_id: string | null
+          source_doc_type: string | null
           supplier_id: string | null
           transaction_date: string | null
         }
@@ -12377,6 +12391,33 @@ export type Database = {
         }
         Returns: string
       }
+      fn_add_tax_detail: {
+        Args: {
+          p_atc_code_id: string
+          p_branch_id: string
+          p_company_id: string
+          p_counterparty_id: string
+          p_counterparty_name: string
+          p_counterparty_tin: string
+          p_document_date: string
+          p_filing_status?: string
+          p_income_nature?: string
+          p_is_reversal?: boolean
+          p_posting_date: string
+          p_reverses_tax_detail_id?: string
+          p_source_doc_id: string
+          p_source_doc_type: string
+          p_source_line_id: string
+          p_tax_amount: number
+          p_tax_base: number
+          p_tax_code_id: string
+          p_tax_kind: string
+          p_tax_period_id: string
+          p_tax_rate: number
+          p_vat_code_id: string
+        }
+        Returns: string
+      }
       fn_ap_aging_asof: {
         Args: { p_as_of: string; p_company_id: string; p_supplier_id?: string }
         Returns: {
@@ -12402,6 +12443,10 @@ export type Database = {
         Returns: string
       }
       fn_approve_petty_cash_voucher: {
+        Args: { p_pcv_id: string }
+        Returns: undefined
+      }
+      fn_approve_petty_cash_voucher_source_locked_impl: {
         Args: { p_pcv_id: string }
         Returns: undefined
       }
@@ -12431,6 +12476,23 @@ export type Database = {
           si_number: string
         }[]
       }
+      fn_assert_posting_source: {
+        Args: {
+          p_company_id: string
+          p_document_type: string
+          p_source_id: string
+        }
+        Returns: Json
+      }
+      fn_assert_source_journal_link: {
+        Args: {
+          p_company_id: string
+          p_document_type: string
+          p_journal_entry_id: string
+          p_source_id: string
+        }
+        Returns: undefined
+      }
       fn_atc_code_is_current: {
         Args: {
           p_as_of_date?: string
@@ -12440,6 +12502,15 @@ export type Database = {
         Returns: boolean
       }
       fn_atc_code_used: { Args: { p_atc_id: string }; Returns: boolean }
+      fn_begin_source_posting: {
+        Args: {
+          p_document_type: string
+          p_done_statuses?: string[]
+          p_ready_statuses?: string[]
+          p_source_id: string
+        }
+        Returns: Json
+      }
       fn_bounce_receipt: { Args: { p_receipt_id: string }; Returns: undefined }
       fn_bt_reverse_je: {
         Args: {
@@ -12500,6 +12571,18 @@ export type Database = {
       fn_complete_purchase_return: {
         Args: { p_return_id: string }
         Returns: undefined
+      }
+      fn_complete_purchase_return_source_locked_impl: {
+        Args: { p_return_id: string }
+        Returns: undefined
+      }
+      fn_complete_secondary_posting: {
+        Args: {
+          p_document_type: string
+          p_journal_entry_id?: string
+          p_source_id: string
+        }
+        Returns: string
       }
       fn_compute_depr_schedule: {
         Args: {
@@ -12614,6 +12697,10 @@ export type Database = {
         Args: { p_je_date: string; p_template_id: string }
         Returns: string
       }
+      fn_execute_recurring_template_source_locked_impl: {
+        Args: { p_je_date: string; p_template_id: string }
+        Returns: string
+      }
       fn_finalize_journal_entry: {
         Args: { p_je_id: string }
         Returns: undefined
@@ -12648,6 +12735,45 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_get_report_snapshot_trace_links: {
+        Args: { p_report_snapshot_id: string }
+        Returns: {
+          accounting_trace_route: string
+          general_ledger_route: string
+          journal_entry_id: string
+          journal_route: string
+          module_route: string
+          report_snapshot_id: string
+          source_date: string
+          source_doc_id: string
+          source_doc_type: string
+          source_number: string
+          source_route: string
+          trace_context: Json
+        }[]
+      }
+      fn_get_report_trace_set: {
+        Args: {
+          p_company_id: string
+          p_filters?: Json
+          p_report_family: string
+        }
+        Returns: {
+          accounting_trace_route: string
+          general_ledger_route: string
+          journal_entry_id: string
+          journal_route: string
+          module_route: string
+          report_family: string
+          report_record_id: string
+          source_date: string
+          source_doc_id: string
+          source_doc_type: string
+          source_number: string
+          source_route: string
+          trace_context: Json
+        }[]
+      }
       fn_gl_impact_payload: {
         Args: { p_je_id: string; p_mode?: string; p_rule_explanation?: string }
         Returns: Json
@@ -12664,19 +12790,43 @@ export type Database = {
         }
         Returns: string
       }
+      fn_normalize_report_source_type: {
+        Args: { p_hint: string }
+        Returns: string
+      }
       fn_post_amortization_entry: {
         Args: { p_entry_id: string }
         Returns: string
       }
+      fn_post_amortization_entry_source_locked_impl: {
+        Args: { p_entry_id: string }
+        Returns: string
+      }
       fn_post_bank_adjustment: { Args: { p_ba_id: string }; Returns: undefined }
+      fn_post_bank_adjustment_source_locked_impl: {
+        Args: { p_ba_id: string }
+        Returns: undefined
+      }
       fn_post_cash_purchase: { Args: { p_cp_id: string }; Returns: undefined }
+      fn_post_cash_purchase_source_locked_impl: {
+        Args: { p_cp_id: string }
+        Returns: undefined
+      }
       fn_post_check_voucher: { Args: { p_cv_id: string }; Returns: undefined }
       fn_post_credit_memo: { Args: { p_cm_id: string }; Returns: undefined }
+      fn_post_credit_memo_source_locked_impl: {
+        Args: { p_cm_id: string }
+        Returns: undefined
+      }
       fn_post_credit_memo_vat_lump_impl: {
         Args: { p_cm_id: string }
         Returns: undefined
       }
       fn_post_debit_memo: { Args: { p_dm_id: string }; Returns: undefined }
+      fn_post_debit_memo_source_locked_impl: {
+        Args: { p_dm_id: string }
+        Returns: undefined
+      }
       fn_post_debit_memo_vat_lump_impl: {
         Args: { p_dm_id: string }
         Returns: undefined
@@ -12685,9 +12835,25 @@ export type Database = {
         Args: { p_entry_id: string }
         Returns: string
       }
+      fn_post_depreciation_entry_source_locked_impl: {
+        Args: { p_entry_id: string }
+        Returns: string
+      }
       fn_post_fund_transfer: { Args: { p_ft_id: string }; Returns: undefined }
+      fn_post_fund_transfer_source_locked_impl: {
+        Args: { p_ft_id: string }
+        Returns: undefined
+      }
       fn_post_goods_issue: { Args: { p_issue_id: string }; Returns: string }
+      fn_post_goods_issue_source_locked_impl: {
+        Args: { p_issue_id: string }
+        Returns: string
+      }
       fn_post_inter_branch_transfer: {
+        Args: { p_ibt_id: string }
+        Returns: undefined
+      }
+      fn_post_inter_branch_transfer_source_locked_impl: {
         Args: { p_ibt_id: string }
         Returns: undefined
       }
@@ -12711,9 +12877,21 @@ export type Database = {
         Args: { p_pcr_id: string }
         Returns: undefined
       }
+      fn_post_petty_cash_replenishment_source_locked_impl: {
+        Args: { p_pcr_id: string }
+        Returns: undefined
+      }
       fn_post_physical_count: { Args: { p_sheet_id: string }; Returns: string }
+      fn_post_physical_count_source_locked_impl: {
+        Args: { p_sheet_id: string }
+        Returns: string
+      }
       fn_post_receipt: { Args: { p_receipt_id: string }; Returns: undefined }
       fn_post_revenue_recognition_entry: {
+        Args: { p_entry_id: string }
+        Returns: string
+      }
+      fn_post_revenue_recognition_entry_source_locked_impl: {
         Args: { p_entry_id: string }
         Returns: string
       }
@@ -12725,12 +12903,24 @@ export type Database = {
         Args: { p_adjustment_id: string }
         Returns: string
       }
+      fn_post_stock_adjustment_source_locked_impl: {
+        Args: { p_adjustment_id: string }
+        Returns: string
+      }
       fn_post_stock_transfer: {
+        Args: { p_transfer_id: string }
+        Returns: string
+      }
+      fn_post_stock_transfer_source_locked_impl: {
         Args: { p_transfer_id: string }
         Returns: string
       }
       fn_post_vendor_bill: { Args: { p_bill_id: string }; Returns: undefined }
       fn_post_vendor_credit: { Args: { p_vc_id: string }; Returns: undefined }
+      fn_post_vendor_credit_source_locked_impl: {
+        Args: { p_vc_id: string }
+        Returns: undefined
+      }
       fn_post_vendor_credit_vat_lump_impl: {
         Args: { p_vc_id: string }
         Returns: undefined
@@ -12749,6 +12939,17 @@ export type Database = {
       }
       fn_receive_inventory: { Args: { p_data: Json }; Returns: string }
       fn_record_impairment: { Args: { p_data: Json }; Returns: string }
+      fn_record_posting_event: {
+        Args: {
+          p_company_id: string
+          p_details?: Json
+          p_event_type: string
+          p_journal_entry_id?: string
+          p_source_doc_id: string
+          p_source_doc_type: string
+        }
+        Returns: string
+      }
       fn_register_fixed_asset: { Args: { p_data: Json }; Returns: string }
       fn_report_snapshot_key_uuid: { Args: { p_key: string }; Returns: string }
       fn_require_open_fiscal_period: {
@@ -12772,8 +12973,23 @@ export type Database = {
         }
         Returns: string
       }
+      fn_resolve_posting_source: {
+        Args: { p_document_type: string; p_lock?: boolean; p_source_id: string }
+        Returns: Json
+      }
       fn_reverse_je: {
         Args: { p_je_id: string; p_reversal_date?: string }
+        Returns: string
+      }
+      fn_reverse_posted_journal_entry: {
+        Args: {
+          p_description: string
+          p_je_number: string
+          p_original_je_id: string
+          p_reference_doc_id: string
+          p_reference_doc_type: string
+          p_reversal_date: string
+        }
         Returns: string
       }
       fn_reverse_tax_detail_entries: {
@@ -12991,6 +13207,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_validate_invoice_posting_totals: {
+        Args: { p_document_type: string; p_source_id: string }
+        Returns: undefined
+      }
       fn_validate_payment_voucher_ewt_ready: {
         Args: { p_voucher_id: string }
         Returns: undefined
@@ -13037,6 +13257,10 @@ export type Database = {
       }
       fn_validate_sales_invoice_vat_registration: {
         Args: { p_invoice_id: string }
+        Returns: undefined
+      }
+      fn_validate_settlement_posting: {
+        Args: { p_document_type: string; p_source_id: string }
         Returns: undefined
       }
       fn_validate_vendor_bill_accounting_ready: {

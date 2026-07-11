@@ -647,3 +647,15 @@ Status: Executed Passing (session 59, 2026-07-10) in `supabase/tests/025_posting
 | 4 | Request accounting trace by source or JE | Stable source/JE/GL routes resolve; a mismatched source type/ID and JE is rejected. |
 | 5 | Attempt duplicate live source JE, inactive account line, wrong fiscal period, unknown source type, or direct internal mutation primitive | Each attempt is rejected centrally. |
 | 6 | Preview a document in a locked period | The same locked-period error as posting is returned and the source remains unchanged. |
+
+## ACCOUNTING-TRACE-REPORTS-001 - Report-Wide Drillback Trace Contracts
+
+Status: Executed Passing (session 61, 2026-07-11) in `supabase/tests/026_accounting_trace_report_routes_test.sql`, 26 assertions. Related findings: PXL-DA-002.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Read customer/supplier ledger and VAT/EWT/CWT review views | Every row carries the canonical `source_doc_type`/`source_doc_id` pair pointing at its posted source document. |
+| 2 | Request a single-source accounting trace | The trace resolves the generic read-only `/accounting-source` route plus the linked JE; a JE paired with an arbitrary or mismatched source fails closed. |
+| 3 | Create deliberate orphan and cross-company source links via replica-mode fixtures | The trace reader rejects them; no foreign-company source record is ever returned to a member of another company. |
+| 4 | Request report snapshot trace links | Links are derived read-only from the immutable snapshot payload; payloads and hashes are never rewritten. |
+| 5 | Request aggregate report trace sets by family (financial, subledger, tax, 2307, snapshot) | Row sets are membership-scoped to the caller's company and filtered by the family's filter keys. |

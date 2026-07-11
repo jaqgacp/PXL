@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { AccountingTraceLink, ReportTraceLink } from '@/components/AccountingTraceLink'
 
 
 type InputVATRow = {
   transaction_id: string; source_module: string; invoice_date: string
+  source_doc_type: string; source_doc_id: string
   supplier_tin: string | null; supplier_name: string; invoice_no: string | null
   system_no: string; gross_purchases: number; exempt_purchases: number
   zero_rated: number; taxable_base: number; input_vat: number
@@ -27,10 +29,10 @@ export default function InputVATReviewPage() {
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`
     const endDate = new Date(year, month, 0).toISOString().split('T')[0]
     const { data } = await supabase.from('vw_input_vat_review')
-      .select('*').eq('company_id', companyId)
+      .select('transaction_id,source_module,invoice_date,source_doc_type,source_doc_id,supplier_tin,supplier_name,invoice_no,system_no,gross_purchases,exempt_purchases,zero_rated,taxable_base,input_vat').eq('company_id', companyId)
       .gte('invoice_date', startDate).lte('invoice_date', endDate)
       .order('invoice_date').order('supplier_name')
-    setRows(data as InputVATRow[] || [])
+    setRows(data as unknown as InputVATRow[] || [])
     setLoading(false)
   }, [companyId, year, month])
 
@@ -47,6 +49,8 @@ export default function InputVATReviewPage() {
     taxable: acc.taxable + r.taxable_base,
     vat: acc.vat + r.input_vat,
   }), { gross: 0, exempt: 0, zero: 0, taxable: 0, vat: 0 })
+  const periodStart = `${year}-${String(month).padStart(2, '0')}-01`
+  const periodEnd = new Date(year, month, 0).toISOString().split('T')[0]
 
   const exportCSV = () => {
     const headers = ['Invoice Date','Supplier TIN','Registered Name','Supplier Address','Invoice No.','System No.','Gross Purchases','Exempt','Zero-Rated','Taxable Base','Input VAT']
@@ -121,7 +125,11 @@ export default function InputVATReviewPage() {
                   <td className="px-3 py-1.5 font-mono text-gray-600">{row.supplier_tin || '—'}</td>
                   <td className="px-3 py-1.5 text-gray-700 max-w-[160px] truncate">{row.supplier_name}</td>
                   <td className="px-3 py-1.5 font-mono text-gray-500">{row.invoice_no || '—'}</td>
-                  <td className="px-3 py-1.5 font-mono text-gray-600">{row.system_no}</td>
+                  <td className="px-3 py-1.5 font-mono text-gray-600">
+                    <AccountingTraceLink sourceType={row.source_doc_type} sourceId={row.source_doc_id} title="Open source accounting trace">
+                      {row.system_no}
+                    </AccountingTraceLink>
+                  </td>
                   <td className="px-3 py-1.5 text-right font-mono">{fmt(row.gross_purchases)}</td>
                   <td className="px-3 py-1.5 text-right font-mono text-gray-500">{row.exempt_purchases > 0 ? fmt(row.exempt_purchases) : '—'}</td>
                   <td className="px-3 py-1.5 text-right font-mono text-blue-600">{row.zero_rated > 0 ? fmt(row.zero_rated) : '—'}</td>
@@ -137,7 +145,17 @@ export default function InputVATReviewPage() {
                 <td className="px-3 py-2 text-right font-mono text-gray-500">{fmt(totals.exempt)}</td>
                 <td className="px-3 py-2 text-right font-mono text-blue-600">{fmt(totals.zero)}</td>
                 <td className="px-3 py-2 text-right font-mono">{fmt(totals.taxable)}</td>
-                <td className="px-3 py-2 text-right font-mono text-green-700">{fmt(totals.vat)}</td>
+                <td className="px-3 py-2 text-right font-mono text-green-700">
+                  <ReportTraceLink
+                    companyId={companyId || ''}
+                    reportFamily="tax"
+                    filters={{ tax_kind: 'input_vat', date_from: periodStart, date_to: periodEnd }}
+                    title="Open contributing input VAT sources"
+                    className="text-green-700 hover:text-green-900"
+                  >
+                    {fmt(totals.vat)}
+                  </ReportTraceLink>
+                </td>
               </tr>
             </tfoot>
           </table>

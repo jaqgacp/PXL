@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { ReportTraceLink } from '@/components/AccountingTraceLink'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, DateCell } from '@/components/ui/shared'
@@ -144,6 +145,15 @@ export default function Form2307IssuedPage() {
                   <td className="px-3 py-2 text-gray-500">{iss.date_acknowledged ? <DateCell date={iss.date_acknowledged.split('T')[0]} /> : '—'}</td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2">
+                      <ReportTraceLink
+                        companyId={companyId}
+                        reportFamily="form_2307_issued"
+                        filters={{ record_id: iss.id }}
+                        className="text-blue-600 hover:text-blue-800"
+                        title="Open the accounting sources for this certificate"
+                      >
+                        Trace
+                      </ReportTraceLink>
                       {iss.status === 'generated' && <button onClick={() => { setActionModal({ issuance: iss, action: 'sent' }); setActionDate(new Date().toISOString().split('T')[0]) }} className="text-orange-600 hover:text-orange-800">Mark Sent</button>}
                       {iss.status === 'sent' && <button onClick={() => { setActionModal({ issuance: iss, action: 'acknowledged' }); setActionDate(new Date().toISOString().split('T')[0]) }} className="text-green-600 hover:text-green-800">Mark Acknowledged</button>}
                       {(iss.status === 'sent' || iss.status === 'acknowledged') && <button onClick={() => { setActionModal({ issuance: iss, action: 'supersede' }); setActionReason('') }} className="text-red-600 hover:text-red-800">Supersede</button>}

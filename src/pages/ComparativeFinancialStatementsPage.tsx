@@ -1,10 +1,11 @@
 import { Fragment, useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
 type COA = { id: string; account_code: string; account_name: string; account_type: string }
 type GLAgg = { account_id: string; debit_amount: number; credit_amount: number }
-type Line = { account_code: string; account_name: string; account_type: string; current: number; prior: number }
+type Line = { account_id: string; account_code: string; account_name: string; account_type: string; current: number; prior: number }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
@@ -52,7 +53,7 @@ export default function ComparativeFinancialStatementsPage() {
       let cur = curBal[a.id] || 0, prior = priorBal[a.id] || 0
       if (a.account_type === 'revenue') { cur = -cur; prior = -prior }
       else if (a.account_type === 'liability' || a.account_type === 'equity') { cur = -cur; prior = -prior }
-      return { account_code: a.account_code, account_name: a.account_name, account_type: a.account_type, current: cur, prior }
+      return { account_id: a.id, account_code: a.account_code, account_name: a.account_name, account_type: a.account_type, current: cur, prior }
     }).filter(l => Math.abs(l.current) >= 0.005 || Math.abs(l.prior) >= 0.005)
 
     setLines(result)
@@ -123,8 +124,16 @@ export default function ComparativeFinancialStatementsPage() {
                       return (
                         <tr key={l.account_code} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="px-4 py-1.5 text-gray-700">{l.account_code} — {l.account_name}</td>
-                          <td className="px-4 py-1.5 text-right font-mono tabular-nums text-gray-700">{fmt(l.current)}</td>
-                          <td className="px-4 py-1.5 text-right font-mono tabular-nums text-gray-500">{fmt(l.prior)}</td>
+                          <td className="px-4 py-1.5 text-right font-mono tabular-nums">
+                            <Link to={`/account-detail-ledger?accountId=${l.account_id}&dateFrom=${curFrom}&dateTo=${curTo}`} className="text-blue-700 hover:text-blue-900">
+                              {fmt(l.current)}
+                            </Link>
+                          </td>
+                          <td className="px-4 py-1.5 text-right font-mono tabular-nums">
+                            <Link to={`/account-detail-ledger?accountId=${l.account_id}&dateFrom=${priorFrom}&dateTo=${priorTo}`} className="text-blue-600 hover:text-blue-900">
+                              {fmt(l.prior)}
+                            </Link>
+                          </td>
                           <td className={`px-4 py-1.5 text-right font-mono tabular-nums ${variance >= 0 ? 'text-green-600' : 'text-red-600'}`}>{fmt(variance)}</td>
                           <td className={`px-4 py-1.5 text-right font-mono tabular-nums text-xs ${pctChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>{l.prior !== 0 ? `${pctChange.toFixed(1)}%` : '—'}</td>
                         </tr>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, BookOpen, Route } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -7,9 +7,10 @@ import { useAppCtx } from '@/lib/context'
 type COARef = { id: string; account_code: string; account_name: string; normal_balance: string }
 type GLRow = {
   line_id: string; je_id: string; account_id: string; je_date: string; je_number: string
-  je_description: string | null; reference_doc_type: string | null
+  je_description: string | null; reference_doc_type: string | null; reference_doc_id: string | null
   line_description: string | null; debit_amount: number; credit_amount: number
-  account_code: string; account_name: string; normal_balance: string
+  account_code: string; account_name: string; account_type: string; normal_balance: string
+  branch_id: string | null; department_id: string | null; cost_center_id: string | null
 }
 
 const fmt = (n: number) =>
@@ -22,18 +23,34 @@ export default function GeneralLedgerPage() {
   const [searchParams] = useSearchParams()
   const requestedJeId = searchParams.get('jeId') || ''
   const requestedAccountId = searchParams.get('accountId') || searchParams.get('account') || ''
+  const requestedDateFrom = searchParams.get('dateFrom') || ''
+  const requestedDateTo = searchParams.get('dateTo') || ''
+  const requestedSourceType = (searchParams.get('sourceType') || '').trim().toUpperCase()
+  const requestedSourceId = searchParams.get('sourceId') || ''
+  const requestedAccountTypeParam = searchParams.get('accountType') || ''
+  const requestedAccountTypes = useMemo(
+    () => requestedAccountTypeParam.split(',').map(value => value.trim()).filter(Boolean),
+    [requestedAccountTypeParam],
+  )
+  const requestedBranchId = searchParams.get('branchId') || ''
+  const requestedDepartmentId = searchParams.get('departmentId') || ''
+  const requestedCostCenterId = searchParams.get('costCenterId') || ''
+  const hasFocusedFilter = Boolean(
+    requestedJeId || requestedSourceType || requestedSourceId || requestedAccountTypes.length
+    || requestedBranchId || requestedDepartmentId || requestedCostCenterId,
+  )
   const [accounts, setAccounts] = useState<COARef[]>([])
   const [accountId, setAccountId] = useState(requestedAccountId)
-  const [dateFrom, setDateFrom] = useState(firstOfYear())
-  const [dateTo, setDateTo] = useState(today())
+  const [dateFrom, setDateFrom] = useState(requestedDateFrom || firstOfYear())
+  const [dateTo, setDateTo] = useState(requestedDateTo || today())
 
   const [rows, setRows] = useState<GLRow[]>([])
   const [opening, setOpening] = useState(0)
   const [loading, setLoading] = useState(false)
   const [applied, setApplied] = useState(false)
-  const [jeRows, setJeRows] = useState<GLRow[]>([])
-  const [jeLoading, setJeLoading] = useState(false)
-  const [jeError, setJeError] = useState('')
+  const [focusedRows, setFocusedRows] = useState<GLRow[]>([])
+  const [focusedLoading, setFocusedLoading] = useState(false)
+  const [focusedError, setFocusedError] = useState('')
   const [autoAppliedKey, setAutoAppliedKey] = useState('')
 
   const loadAccounts = useCallback(async () => {
@@ -71,36 +88,48 @@ export default function GeneralLedgerPage() {
   const apply = () => { void loadAccountLedger(accountId) }
 
   useEffect(() => {
+    if (hasFocusedFilter) return
     if (!requestedAccountId || !companyId || !accounts.some(item => item.id === requestedAccountId)) return
-    const key = `${companyId}:${requestedAccountId}`
+    const key = `${companyId}:${requestedAccountId}:${dateFrom}:${dateTo}`
     if (autoAppliedKey === key) return
     setAccountId(requestedAccountId)
     setAutoAppliedKey(key)
     void loadAccountLedger(requestedAccountId)
-  }, [accounts, autoAppliedKey, companyId, dateFrom, dateTo, loadAccountLedger, requestedAccountId])
+  }, [accounts, autoAppliedKey, companyId, dateFrom, dateTo, hasFocusedFilter, loadAccountLedger, requestedAccountId])
 
   useEffect(() => {
-    if (!companyId || !requestedJeId) {
-      setJeRows([])
-      setJeError('')
+    if (!companyId || !hasFocusedFilter) {
+      setFocusedRows([])
+      setFocusedError('')
       return
     }
     let alive = true
-    const loadJournalSlice = async () => {
-      setJeLoading(true)
-      setJeError('')
-      const { data, error } = await supabase.from('vw_general_ledger').select('*')
-        .eq('company_id', companyId)
-        .eq('je_id', requestedJeId)
+    const loadFocusedSlice = async () => {
+      setFocusedLoading(true)
+      setFocusedError('')
+      let query = supabase.from('vw_general_ledger').select('*').eq('company_id', companyId)
+      if (requestedJeId) query = query.eq('je_id', requestedJeId)
+      if (requestedAccountId) query = query.eq('account_id', requestedAccountId)
+      if (requestedSourceType) query = query.eq('reference_doc_type', requestedSourceType)
+      if (requestedSourceId) query = query.eq('reference_doc_id', requestedSourceId)
+      if (requestedAccountTypes.length) query = query.in('account_type', requestedAccountTypes)
+      if (requestedBranchId) query = query.eq('branch_id', requestedBranchId)
+      if (requestedDepartmentId) query = query.eq('department_id', requestedDepartmentId)
+      if (requestedCostCenterId) query = query.eq('cost_center_id', requestedCostCenterId)
+      if (requestedDateFrom) query = query.gte('je_date', requestedDateFrom)
+      if (requestedDateTo) query = query.lte('je_date', requestedDateTo)
+      const { data, error } = await query
+        .order('je_date', { ascending: true })
+        .order('je_number', { ascending: true })
         .order('line_id')
       if (!alive) return
-      setJeRows((data as GLRow[]) || [])
-      setJeError(error?.message || (!data?.length ? 'No posted GL lines were found for this journal entry.' : ''))
-      setJeLoading(false)
+      setFocusedRows((data as GLRow[]) || [])
+      setFocusedError(error?.message || (!data?.length ? 'No posted GL lines were found for these filters.' : ''))
+      setFocusedLoading(false)
     }
-    void loadJournalSlice()
+    void loadFocusedSlice()
     return () => { alive = false }
-  }, [companyId, requestedJeId])
+  }, [companyId, hasFocusedFilter, requestedAccountId, requestedAccountTypes, requestedBranchId, requestedCostCenterId, requestedDateFrom, requestedDateTo, requestedDepartmentId, requestedJeId, requestedSourceId, requestedSourceType])
 
   // running balance in normal direction
   const isCredit = account?.normal_balance === 'credit'
@@ -130,14 +159,22 @@ export default function GeneralLedgerPage() {
     URL.revokeObjectURL(url)
   }
 
-  if (requestedJeId) {
-    const targetDebit = jeRows.reduce((sum, row) => sum + Number(row.debit_amount), 0)
-    const targetCredit = jeRows.reduce((sum, row) => sum + Number(row.credit_amount), 0)
+  if (hasFocusedFilter) {
+    const targetDebit = focusedRows.reduce((sum, row) => sum + Number(row.debit_amount), 0)
+    const targetCredit = focusedRows.reduce((sum, row) => sum + Number(row.credit_amount), 0)
+    const focusedLabel = requestedJeId
+      ? `JE ${requestedJeId.slice(0, 8)}`
+      : requestedSourceType || requestedSourceId
+        ? `${requestedSourceType || 'Source'}${requestedSourceId ? ` ${requestedSourceId.slice(0, 8)}` : ''}`
+        : 'Report drilldown'
     return (
       <div>
         <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3 flex-wrap">
           <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">General Ledger</span>
-          <span className="text-xs text-gray-500 font-mono">JE {requestedJeId.slice(0, 8)}</span>
+          <span className="text-xs text-gray-500 font-mono">{focusedLabel}</span>
+          {(requestedDateFrom || requestedDateTo) && (
+            <span className="text-xs text-gray-400">{requestedDateFrom || 'Beginning'} to {requestedDateTo || 'Today'}</span>
+          )}
           <Link to="/general-ledger" className="ml-auto inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 hover:text-blue-900">
             <ArrowLeft className="h-3.5 w-3.5" aria-hidden="true" />
             All account activity
@@ -145,10 +182,10 @@ export default function GeneralLedgerPage() {
         </div>
         <div className="px-5 py-4">
           <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
-            {jeLoading ? (
-              <div className="py-12 text-center text-sm text-gray-400">Loading journal entry lines...</div>
-            ) : jeError ? (
-              <div className="m-4 border border-amber-200 bg-amber-50 rounded-md px-4 py-3 text-sm text-amber-800">{jeError}</div>
+            {focusedLoading ? (
+              <div className="py-12 text-center text-sm text-gray-400">Loading general ledger lines...</div>
+            ) : focusedError ? (
+              <div className="m-4 border border-amber-200 bg-amber-50 rounded-md px-4 py-3 text-sm text-amber-800">{focusedError}</div>
             ) : (
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 border-b border-gray-200">
@@ -159,7 +196,7 @@ export default function GeneralLedgerPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {jeRows.map(row => (
+                  {focusedRows.map(row => (
                     <tr key={row.line_id}>
                       <td className="px-3 py-2 font-mono text-gray-500">{row.je_date}</td>
                       <td className="px-3 py-2 font-mono font-semibold">
@@ -169,7 +206,7 @@ export default function GeneralLedgerPage() {
                         </Link>
                       </td>
                       <td className="px-3 py-2">
-                        <Link to={`/account-detail-ledger?accountId=${row.account_id}`} className="font-medium text-blue-700 hover:text-blue-900">
+                        <Link to={`/account-detail-ledger?accountId=${row.account_id}&jeId=${row.je_id}&dateFrom=${row.je_date}&dateTo=${row.je_date}`} className="font-medium text-blue-700 hover:text-blue-900">
                           {row.account_code} - {row.account_name}
                         </Link>
                       </td>
@@ -222,7 +259,7 @@ export default function GeneralLedgerPage() {
         <div className="px-5 py-4">
           {account && (
             <div className="mb-3 flex items-baseline gap-3">
-              <Link to={`/account-detail-ledger?accountId=${account.id}`}
+              <Link to={`/account-detail-ledger?accountId=${account.id}&dateFrom=${dateFrom}&dateTo=${dateTo}`}
                 className="inline-flex items-center gap-1.5 text-base font-semibold text-blue-700 hover:text-blue-900 font-mono">
                 {account.account_code} — {account.account_name}
                 <BookOpen className="h-4 w-4" aria-hidden="true" />

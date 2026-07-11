@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
+Generated: 2026-07-11. Migrations scanned: 81. Tests present: 26.
 
-## Functions (172)
+## Functions (187)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -14,52 +14,60 @@ Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
 | `fn_acknowledge_supplier_debit_memo` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_add_cost_layer` | `20260630000028_inventory.sql` | 1 |
 | `fn_add_posting_line` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_add_tax_detail` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_ap_aging_asof` | `20260702000003_ar_ap_aging_asof_rpcs.sql` | 1 |
 | `fn_apply_vendor_credit` | `20260701000011_vendor_credit_application_reversal.sql` | 4 |
-| `fn_approve_petty_cash_voucher` | `20260630000024_banking_treasury_functions.sql` | 1 |
+| `fn_approve_petty_cash_voucher` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_approve_purchase_order` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_approve_sales_invoice` | `20260701000008_accounting_readiness_approval.sql` | 3 |
 | `fn_approve_vendor_bill` | `20260701000008_accounting_readiness_approval.sql` | 3 |
 | `fn_ar_aging_asof` | `20260702000003_ar_ap_aging_asof_rpcs.sql` | 1 |
+| `fn_assert_posting_source` | `20260711000001_posting_engine_completion.sql` | 1 |
+| `fn_assert_source_journal_link` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_atc_code_is_current` | `20260701000018_atc_effective_date_governance.sql` | 1 |
 | `fn_atc_code_used` | `20260701000018_atc_effective_date_governance.sql` | 1 |
 | `fn_audit_trigger` | `20260630000021_gap_fill.sql` | 2 |
+| `fn_begin_source_posting` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_block_pv_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` | 1 |
 | `fn_block_receipt_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` | 1 |
 | `fn_block_si_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` | 1 |
 | `fn_block_vb_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` | 1 |
-| `fn_bounce_receipt` | `20260702000009_tax_ledger_void_reversal.sql` | 4 |
-| `fn_bt_reverse_je` | `20260630000024_banking_treasury_functions.sql` | 1 |
+| `fn_bounce_receipt` | `20260711000001_posting_engine_completion.sql` | 5 |
+| `fn_bt_reverse_je` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_can_perform` | `20260702000010_can_perform_role_actions.sql` | 1 |
 | `fn_cancel_amortization_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_cancel_bank_adjustment` | `20260630000024_banking_treasury_functions.sql` | 1 |
-| `fn_cancel_check_voucher` | `20260705000001_cv_ewt_supplier_validation.sql` | 2 |
+| `fn_cancel_check_voucher` | `20260711000001_posting_engine_completion.sql` | 3 |
 | `fn_cancel_fund_transfer` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_cancel_inter_branch_transfer` | `20260630000024_banking_treasury_functions.sql` | 1 |
-| `fn_cancel_payment_voucher` | `20260702000009_tax_ledger_void_reversal.sql` | 3 |
+| `fn_cancel_payment_voucher` | `20260711000001_posting_engine_completion.sql` | 4 |
 | `fn_cancel_petty_cash_voucher` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_cancel_purchase_order` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_cancel_revenue_recognition_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
-| `fn_complete_purchase_return` | `20260630000021_gap_fill.sql` | 3 |
+| `fn_complete_purchase_return` | `20260711000001_posting_engine_completion.sql` | 4 |
+| `fn_complete_secondary_posting` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_compute_depr_schedule` | `20260630000027_fixed_assets.sql` | 1 |
 | `fn_compute_ewt_return` | `20260710000001_ewt_return_reconciliation_gate.sql` | 1 |
 | `fn_confirm_receiving_report` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_consume_cost_layers` | `20260630000028_inventory.sql` | 1 |
 | `fn_create_amortization_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
-| `fn_create_posted_journal_entry` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_create_posted_journal_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_create_revenue_recognition_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_dispose_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
 | `fn_enforce_approval_sod` | `20260703000001_approval_sod_enforcement.sql` | 1 |
 | `fn_enforce_journal_entry_balanced` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_enforce_journal_entry_source` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_ensure_stock_balance` | `20260630000028_inventory.sql` | 1 |
-| `fn_execute_recurring_template` | `20260630000025_accounting_module.sql` | 1 |
+| `fn_execute_recurring_template` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_finalize_journal_entry` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_form2307_period_bounds` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_form2307_report_payload` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_generate_form_2307_issued` | `20260705000001_cv_ewt_supplier_validation.sql` | 3 |
 | `fn_generate_tax_calendar` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_generate_tax_calendar_trigger` | `20260628000005_sprint2_tax.sql` | 1 |
-| `fn_get_accounting_trace` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_get_accounting_trace` | `20260711000002_accounting_trace_reports.sql` | 2 |
+| `fn_get_report_snapshot_trace_links` | `20260711000002_accounting_trace_reports.sql` | 1 |
+| `fn_get_report_trace_set` | `20260711000002_accounting_trace_reports.sql` | 1 |
 | `fn_gl_impact_payload` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_grant_all_users_on_new_company` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_grant_creator_company_ownership` | `20260630000021_gap_fill.sql` | 2 |
@@ -76,33 +84,36 @@ Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
 | `fn_link_fixed_asset_journal_source` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_link_purchase_return_journal_source` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_link_schedule_journal_source` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_lock_unwrapped_posting_source` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_mark_tax_event_filed` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_next_document_number` | `20260630000021_gap_fill.sql` | 3 |
-| `fn_post_amortization_entry` | `20260630000026_amortization_revenuerecon.sql` | 1 |
-| `fn_post_bank_adjustment` | `20260630000024_banking_treasury_functions.sql` | 1 |
-| `fn_post_cash_purchase` | `20260703000002_vat_ledger_completeness.sql` | 4 |
+| `fn_normalize_report_source_type` | `20260711000002_accounting_trace_reports.sql` | 1 |
+| `fn_post_amortization_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_bank_adjustment` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_cash_purchase` | `20260711000001_posting_engine_completion.sql` | 5 |
 | `fn_post_check_voucher` | `20260705000001_cv_ewt_supplier_validation.sql` | 2 |
-| `fn_post_credit_memo` | `20260710000002_vat_registration_all_documents.sql` | 4 |
-| `fn_post_debit_memo` | `20260710000002_vat_registration_all_documents.sql` | 4 |
-| `fn_post_depreciation_entry` | `20260630000027_fixed_assets.sql` | 1 |
-| `fn_post_fund_transfer` | `20260630000024_banking_treasury_functions.sql` | 1 |
-| `fn_post_goods_issue` | `20260630000028_inventory.sql` | 1 |
-| `fn_post_inter_branch_transfer` | `20260630000024_banking_treasury_functions.sql` | 1 |
+| `fn_post_credit_memo` | `20260711000001_posting_engine_completion.sql` | 5 |
+| `fn_post_debit_memo` | `20260711000001_posting_engine_completion.sql` | 5 |
+| `fn_post_depreciation_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_fund_transfer` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_goods_issue` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_inter_branch_transfer` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_manual_je` | `20260704000001_je_line_dimensions.sql` | 2 |
-| `fn_post_payment_voucher` | `20260701000016_pv_ewt_explicit_basis.sql` | 6 |
-| `fn_post_petty_cash_replenishment` | `20260630000024_banking_treasury_functions.sql` | 1 |
-| `fn_post_physical_count` | `20260630000028_inventory.sql` | 1 |
-| `fn_post_receipt` | `20260704000003_receipt_cwt_explicit_base.sql` | 6 |
-| `fn_post_revenue_recognition_entry` | `20260630000026_amortization_revenuerecon.sql` | 1 |
-| `fn_post_sales_invoice` | `20260703000002_vat_ledger_completeness.sql` | 6 |
-| `fn_post_stock_adjustment` | `20260630000028_inventory.sql` | 1 |
-| `fn_post_stock_transfer` | `20260630000028_inventory.sql` | 1 |
-| `fn_post_vendor_bill` | `20260703000002_vat_ledger_completeness.sql` | 4 |
-| `fn_post_vendor_credit` | `20260710000002_vat_registration_all_documents.sql` | 5 |
+| `fn_post_payment_voucher` | `20260711000001_posting_engine_completion.sql` | 7 |
+| `fn_post_petty_cash_replenishment` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_physical_count` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_receipt` | `20260711000001_posting_engine_completion.sql` | 7 |
+| `fn_post_revenue_recognition_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_sales_invoice` | `20260711000001_posting_engine_completion.sql` | 7 |
+| `fn_post_stock_adjustment` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_stock_transfer` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_vendor_bill` | `20260711000001_posting_engine_completion.sql` | 5 |
+| `fn_post_vendor_credit` | `20260711000001_posting_engine_completion.sql` | 6 |
 | `fn_preview_gl_impact` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_rebuild_document_vat_details` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_receive_inventory` | `20260630000028_inventory.sql` | 1 |
 | `fn_record_impairment` | `20260630000027_fixed_assets.sql` | 1 |
+| `fn_record_posting_event` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_register_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
 | `fn_report_snapshot_key_uuid` | `20260703000006_report_snapshots_vat_exports.sql` | 1 |
 | `fn_require_admin_for_accounting_lifecycle` | `20260702000010_can_perform_role_actions.sql` | 3 |
@@ -127,8 +138,10 @@ Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
 | `fn_require_vb_line_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_require_vb_vat_registration_status` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_required_approval_workflow` | `20260703000001_approval_sod_enforcement.sql` | 1 |
-| `fn_reverse_je` | `20260704000001_je_line_dimensions.sql` | 2 |
-| `fn_reverse_tax_detail_entries` | `20260702000009_tax_ledger_void_reversal.sql` | 1 |
+| `fn_resolve_posting_source` | `20260711000001_posting_engine_completion.sql` | 1 |
+| `fn_reverse_je` | `20260711000001_posting_engine_completion.sql` | 3 |
+| `fn_reverse_posted_journal_entry` | `20260711000001_posting_engine_completion.sql` | 1 |
+| `fn_reverse_tax_detail_entries` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_reverse_vendor_credit_application` | `20260701000011_vendor_credit_application_reversal.sql` | 1 |
 | `fn_revert_si_to_draft` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_revert_vendor_bill_to_draft` | `20260630000021_gap_fill.sql` | 2 |
@@ -164,20 +177,22 @@ Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
 | `fn_validate_company_vat_amount` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_validate_company_vat_code` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_validate_document_vat_registration` | `20260710000002_vat_registration_all_documents.sql` | 1 |
+| `fn_validate_invoice_posting_totals` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_validate_payment_voucher_ewt_ready` | `20260701000016_pv_ewt_explicit_basis.sql` | 2 |
 | `fn_validate_payment_voucher_line_ewt` | `20260701000018_atc_effective_date_governance.sql` | 3 |
 | `fn_validate_receipt_cwt_ready` | `20260704000003_receipt_cwt_explicit_base.sql` | 2 |
 | `fn_validate_receipt_line_cwt` | `20260704000003_receipt_cwt_explicit_base.sql` | 3 |
 | `fn_validate_sales_invoice_accounting_ready` | `20260701000008_accounting_readiness_approval.sql` | 1 |
 | `fn_validate_sales_invoice_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
+| `fn_validate_settlement_posting` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_validate_supplier_atc_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |
 | `fn_validate_vendor_bill_accounting_ready` | `20260701000008_accounting_readiness_approval.sql` | 1 |
 | `fn_validate_vendor_bill_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_vat_gl_reconciliation` | `20260702000005_gl_reversal_visibility.sql` | 2 |
 | `fn_vat_return_period_bounds` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
 | `fn_vat_return_report_payload` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
-| `fn_void_sales_invoice` | `20260702000009_tax_ledger_void_reversal.sql` | 4 |
-| `fn_void_vendor_bill` | `20260702000009_tax_ledger_void_reversal.sql` | 4 |
+| `fn_void_sales_invoice` | `20260711000001_posting_engine_completion.sql` | 5 |
+| `fn_void_vendor_bill` | `20260711000001_posting_engine_completion.sql` | 5 |
 | `fn_wht_gl_reconciliation` | `20260703000007_report_snapshots_wht_exports.sql` | 1 |
 | `is_any_company_admin` | `20260630000021_gap_fill.sql` | 2 |
 | `is_company_member` | `20260630000021_gap_fill.sql` | 2 |
@@ -189,21 +204,21 @@ Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
 | ---- | ----------------- | ---- |
 | `vw_ap_aging` | `20260630000021_gap_fill.sql` | 2 |
 | `vw_credit_memo_register` | `20260629000005_sprint5_views.sql` | 1 |
-| `vw_customer_ledger` | `20260630000021_gap_fill.sql` | 3 |
-| `vw_cwt_summary_ar` | `20260703000007_report_snapshots_wht_exports.sql` | 1 |
+| `vw_customer_ledger` | `20260711000002_accounting_trace_reports.sql` | 4 |
+| `vw_cwt_summary_ar` | `20260711000002_accounting_trace_reports.sql` | 2 |
 | `vw_debit_memo_register` | `20260629000005_sprint5_views.sql` | 1 |
 | `vw_deposits_in_transit` | `20260630000024_banking_treasury_functions.sql` | 1 |
-| `vw_ewt_summary_ap` | `20260702000009_tax_ledger_void_reversal.sql` | 5 |
+| `vw_ewt_summary_ap` | `20260711000002_accounting_trace_reports.sql` | 6 |
 | `vw_general_ledger` | `20260704000001_je_line_dimensions.sql` | 3 |
-| `vw_input_vat_review` | `20260703000003_vat_review_views_ledger_backed.sql` | 4 |
-| `vw_output_vat_review` | `20260703000003_vat_review_views_ledger_backed.sql` | 2 |
+| `vw_input_vat_review` | `20260711000002_accounting_trace_reports.sql` | 5 |
+| `vw_output_vat_review` | `20260711000002_accounting_trace_reports.sql` | 3 |
 | `vw_outstanding_checks` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `vw_payment_register` | `20260630000021_gap_fill.sql` | 2 |
 | `vw_receipt_register` | `20260629000005_sprint5_views.sql` | 1 |
 | `vw_sales_invoice_register` | `20260629000005_sprint5_views.sql` | 1 |
 | `vw_sdm_register` | `20260630000021_gap_fill.sql` | 2 |
 | `vw_slp_export` | `20260630000021_gap_fill.sql` | 2 |
-| `vw_supplier_ledger` | `20260630000021_gap_fill.sql` | 2 |
+| `vw_supplier_ledger` | `20260711000002_accounting_trace_reports.sql` | 3 |
 | `vw_trial_balance` | `20260702000005_gl_reversal_visibility.sql` | 2 |
 | `vw_vendor_bill_register` | `20260630000021_gap_fill.sql` | 2 |
 
@@ -343,7 +358,7 @@ Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
 | `tax_calendar_events` | `20260628000005_sprint2_tax.sql` | 1 | `20260628000005_sprint2_tax.sql` |
 | `tax_codes` | `20260628000003_sprint2.sql` | 2 | `20260628000004_fixes.sql` |
 | `tax_credits_schedule` | `20260701000004_income_tax.sql` | 0 | `—` |
-| `tax_detail_entries` | `20260629000019_hardening_v2.sql` | 3 | `20260701000016_pv_ewt_explicit_basis.sql` |
+| `tax_detail_entries` | `20260629000019_hardening_v2.sql` | 4 | `20260711000001_posting_engine_completion.sql` |
 | `units_of_measure` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `user_company_memberships` | `20260629000008_rls_hardening.sql` | 2 | `20260630000021_gap_fill.sql` |
 | `uses` | `20260630000021_gap_fill.sql` | 0 | `—` |
@@ -359,7 +374,7 @@ Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
 | `warehouse_zones` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 
-## Triggers (224)
+## Triggers (226)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -522,6 +537,7 @@ Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
 | `trg_journal_entry_line_posting_guard` | `20260710000003_posting_engine_preview_trace.sql` |
 | `trg_journal_entry_lines_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_journal_entry_posting_guard` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_journal_entry_source_integrity` | `20260711000001_posting_engine_completion.sql` |
 | `trg_journal_line_balanced_deferred` | `20260710000003_posting_engine_preview_trace.sql` |
 | `trg_link_amortization_entry_je` | `20260710000003_posting_engine_preview_trace.sql` |
 | `trg_link_fixed_asset_acquisition_je` | `20260710000003_posting_engine_preview_trace.sql` |
@@ -530,6 +546,7 @@ Generated: 2026-07-10. Migrations scanned: 79. Tests present: 25.
 | `trg_link_fixed_asset_impairment_je` | `20260710000003_posting_engine_preview_trace.sql` |
 | `trg_link_purchase_return_je` | `20260710000003_posting_engine_preview_trace.sql` |
 | `trg_link_revenue_recognition_entry_je` | `20260710000003_posting_engine_preview_trace.sql` |
+| `trg_lock_unwrapped_posting_source` | `20260711000001_posting_engine_completion.sql` |
 | `trg_new_company_grant_access` | `20260630000021_gap_fill.sql` |
 | `trg_new_user_grant_companies` | `20260630000021_gap_fill.sql` |
 | `trg_payment_voucher_lines_updated_at` | `20260630000021_gap_fill.sql` |

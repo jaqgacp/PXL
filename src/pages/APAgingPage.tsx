@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { AccountingTraceLink } from '@/components/AccountingTraceLink'
 
 
 type Tab = 'aging' | 'ledger'
@@ -194,7 +195,11 @@ export default function APAgingPage() {
                       </tr>
                       {expandedSupplier === row.supplier_id && supplierBills.map(b => (
                         <tr key={b.id} className="bg-blue-50">
-                          <td className="px-3 py-1.5 pl-8 text-gray-600 font-mono">{b.bill_number}</td>
+                          <td className="px-3 py-1.5 pl-8 font-mono">
+                            <AccountingTraceLink sourceType="VB" sourceId={b.id} title="Open vendor bill accounting trace">
+                              {b.bill_number}
+                            </AccountingTraceLink>
+                          </td>
                           <td className="px-3 py-1.5 text-right font-mono text-gray-500">{b.due_date || b.bill_date}</td>
                           <td colSpan={4} className="px-3 py-1.5 text-xs text-gray-500">{b.days_overdue > 0 ? `${b.days_overdue} days overdue` : 'Current'}</td>
                           <td className="px-3 py-1.5 text-right font-mono text-gray-700">{fmt(b.balance_due)}</td>

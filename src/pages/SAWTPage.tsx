@@ -1,12 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
+import { ReportTraceLink } from '@/components/AccountingTraceLink'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
-type Row = { customer_tin: string | null; customer_name: string | null; income_payment: number; cwt_withheld: number }
-type Agg = { customer_key: string; customer_name: string; customer_tin: string; payments: number; cwt: number }
+type Row = { customer_id: string | null; customer_tin: string | null; customer_name: string | null; income_payment: number; cwt_withheld: number }
+type Agg = { customer_key: string; customer_id: string | null; customer_name: string; customer_tin: string; payments: number; cwt: number }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const QUARTERS: Record<number, number[]> = { 1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12] }
+const quarterDates = (year: number, quarter: number) => {
+  const months = QUARTERS[quarter]
+  return {
+    dateFrom: `${year}-${String(months[0]).padStart(2, '0')}-01`,
+    dateTo: new Date(year, months[2], 0).toISOString().split('T')[0],
+  }
+}
 
 export default function SAWTPage() {
   const { companyId } = useAppCtx()
@@ -16,29 +24,28 @@ export default function SAWTPage() {
   const [loading, setLoading] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [rows, setRows] = useState<Agg[]>([])
+  const { dateFrom, dateTo } = quarterDates(year, quarter)
 
   const load = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
-    const months = QUARTERS[quarter]
-    const startDate = `${year}-${String(months[0]).padStart(2, '0')}-01`
-    const endDate = new Date(year, months[2], 0).toISOString().split('T')[0]
 
     const { data } = await supabase.from('vw_cwt_summary_ar')
-      .select('customer_tin,customer_name,income_payment,cwt_withheld')
+      .select('customer_id,customer_tin,customer_name,income_payment,cwt_withheld')
       .eq('company_id', companyId)
-      .gte('receipt_date', startDate).lte('receipt_date', endDate)
+      .gte('receipt_date', dateFrom).lte('receipt_date', dateTo)
 
     const byCustomer: Record<string, Agg> = {}
     for (const r of (data || []) as unknown as Row[]) {
-      const tin = r.customer_tin || 'unknown'
-      if (!byCustomer[tin]) byCustomer[tin] = { customer_key: tin, customer_name: r.customer_name || 'Unknown', customer_tin: r.customer_tin || '', payments: 0, cwt: 0 }
-      byCustomer[tin].payments += Number(r.income_payment)
-      byCustomer[tin].cwt += Number(r.cwt_withheld)
+      const key = r.customer_tin || 'unknown'
+      if (!byCustomer[key]) byCustomer[key] = { customer_key: key, customer_id: r.customer_id, customer_name: r.customer_name || 'Unknown', customer_tin: r.customer_tin || '', payments: 0, cwt: 0 }
+      else if (byCustomer[key].customer_id !== r.customer_id) byCustomer[key].customer_id = null
+      byCustomer[key].payments += Number(r.income_payment)
+      byCustomer[key].cwt += Number(r.cwt_withheld)
     }
     setRows(Object.values(byCustomer).sort((a, b) => a.customer_name.localeCompare(b.customer_name)))
     setLoading(false)
-  }, [companyId, year, quarter])
+  }, [companyId, dateFrom, dateTo])
 
   useEffect(() => { if (companyId) load() }, [load, companyId])
 
@@ -104,7 +111,18 @@ export default function SAWTPage() {
               ) : rows.map(r => (
                 <tr key={r.customer_key} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-2.5 text-gray-700">{r.customer_tin || '—'}</td>
-                  <td className="px-4 py-2.5 text-gray-700">{r.customer_name}</td>
+                  <td className="px-4 py-2.5 text-gray-700">
+                    {r.customer_id ? (
+                      <ReportTraceLink
+                        companyId={companyId}
+                        reportFamily="tax"
+                        filters={{ tax_kind: 'cwt_receivable', counterparty_id: r.customer_id, date_from: dateFrom, date_to: dateTo }}
+                        title="Open the accounting sources included for this payer"
+                      >
+                        {r.customer_name}
+                      </ReportTraceLink>
+                    ) : r.customer_name}
+                  </td>
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700">{fmt(r.payments)}</td>
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-900 font-semibold">{fmt(r.cwt)}</td>
                 </tr>

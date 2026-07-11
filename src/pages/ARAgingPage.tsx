@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AmountCell } from '@/components/ui/shared'
+import { AccountingTraceLink } from '@/components/AccountingTraceLink'
 
 // ── Types ─────────────────────────────────────────────────────
 type Tab = 'aging' | 'ledger'
@@ -227,7 +228,11 @@ export default function ARAgingPage() {
                                 {customerInvoices.map(inv => (
                                   <tr key={inv.id} className="border-t border-gray-200">
                                     <td className="px-8 py-1.5 text-gray-600">{inv.date}</td>
-                                    <td className="px-4 py-1.5 font-mono font-semibold text-gray-700">{inv.si_number}</td>
+                                    <td className="px-4 py-1.5 font-mono font-semibold">
+                                      <AccountingTraceLink sourceType="SI" sourceId={inv.id} title="Open sales invoice accounting trace">
+                                        {inv.si_number}
+                                      </AccountingTraceLink>
+                                    </td>
                                     <td className="px-4 py-1.5 text-gray-500">{inv.due_date || '—'}</td>
                                     <td className="px-4 py-1.5 text-right font-mono tabular-nums">{fmt(inv.total_amount)}</td>
                                     <td className="px-4 py-1.5 text-right font-mono tabular-nums font-semibold text-gray-900">{fmt(inv.balance_due)}</td>

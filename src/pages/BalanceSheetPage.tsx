@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
 type COA = { id: string; account_code: string; account_name: string; account_type: string; parent_id: string | null }
 type GLAgg = { account_id: string; debit_amount: number; credit_amount: number }
-type Line = { account_code: string; account_name: string; amount: number }
+type Line = { account_id: string; account_code: string; account_name: string; amount: number }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
@@ -16,6 +17,7 @@ export default function BalanceSheetPage() {
   const [liabilities, setLiabilities] = useState<Line[]>([])
   const [equity, setEquity] = useState<Line[]>([])
   const [netIncome, setNetIncome] = useState(0)
+  const [periodStart, setPeriodStart] = useState(`${new Date().getFullYear()}-01-01`)
   const [loading, setLoading] = useState(false)
   const [applied, setApplied] = useState(false)
 
@@ -47,14 +49,15 @@ export default function BalanceSheetPage() {
     for (const a of coaList) {
       const net = balances[a.id] || 0
       if (Math.abs(net) < 0.005 && a.account_type !== 'asset' && a.account_type !== 'liability' && a.account_type !== 'equity') continue
-      if (a.account_type === 'asset') { if (Math.abs(net) >= 0.005) assetLines.push({ account_code: a.account_code, account_name: a.account_name, amount: net }) }
-      else if (a.account_type === 'liability') { if (Math.abs(net) >= 0.005) liabLines.push({ account_code: a.account_code, account_name: a.account_name, amount: -net }) }
-      else if (a.account_type === 'equity') { if (Math.abs(net) >= 0.005) eqLines.push({ account_code: a.account_code, account_name: a.account_name, amount: -net }) }
+      if (a.account_type === 'asset') { if (Math.abs(net) >= 0.005) assetLines.push({ account_id: a.id, account_code: a.account_code, account_name: a.account_name, amount: net }) }
+      else if (a.account_type === 'liability') { if (Math.abs(net) >= 0.005) liabLines.push({ account_id: a.id, account_code: a.account_code, account_name: a.account_name, amount: -net }) }
+      else if (a.account_type === 'equity') { if (Math.abs(net) >= 0.005) eqLines.push({ account_id: a.id, account_code: a.account_code, account_name: a.account_name, amount: -net }) }
       else if (a.account_type === 'revenue') revTotal += -net
       else if (a.account_type === 'expense') expTotal += net
     }
 
     const fy = (fiscalYears || [])[0] as { start_date: string; end_date: string } | undefined
+    setPeriodStart(fy?.start_date || `${asOfDate.slice(0, 4)}-01-01`)
     let ytdNetIncome = revTotal - expTotal
     if (fy) {
       // Recompute net income strictly within the current fiscal year (revenue/expense accounts reset each FY)
@@ -112,7 +115,11 @@ export default function BalanceSheetPage() {
                 {assets.length === 0 ? <tr><td className="px-4 py-8 text-center text-gray-400">No asset balances.</td></tr> : assets.map(l => (
                   <tr key={l.account_code} className="border-b border-gray-100">
                     <td className="px-4 py-1.5 text-gray-500 text-xs w-20">{l.account_code}</td>
-                    <td className="px-4 py-1.5 text-gray-700">{l.account_name}</td>
+                    <td className="px-4 py-1.5">
+                      <Link to={`/account-detail-ledger?accountId=${l.account_id}&dateFrom=${periodStart}&dateTo=${asOfDate}`} className="text-blue-700 hover:text-blue-900">
+                        {l.account_name}
+                      </Link>
+                    </td>
                     <td className="px-4 py-1.5 text-right font-mono tabular-nums text-gray-700">{fmt(l.amount)}</td>
                   </tr>
                 ))}
@@ -131,7 +138,11 @@ export default function BalanceSheetPage() {
                   {liabilities.length === 0 ? <tr><td className="px-4 py-8 text-center text-gray-400">No liability balances.</td></tr> : liabilities.map(l => (
                     <tr key={l.account_code} className="border-b border-gray-100">
                       <td className="px-4 py-1.5 text-gray-500 text-xs w-20">{l.account_code}</td>
-                      <td className="px-4 py-1.5 text-gray-700">{l.account_name}</td>
+                      <td className="px-4 py-1.5">
+                        <Link to={`/account-detail-ledger?accountId=${l.account_id}&dateFrom=${periodStart}&dateTo=${asOfDate}`} className="text-blue-700 hover:text-blue-900">
+                          {l.account_name}
+                        </Link>
+                      </td>
                       <td className="px-4 py-1.5 text-right font-mono tabular-nums text-gray-700">{fmt(l.amount)}</td>
                     </tr>
                   ))}
@@ -149,7 +160,11 @@ export default function BalanceSheetPage() {
                   {equity.map(l => (
                     <tr key={l.account_code} className="border-b border-gray-100">
                       <td className="px-4 py-1.5 text-gray-500 text-xs w-20">{l.account_code}</td>
-                      <td className="px-4 py-1.5 text-gray-700">{l.account_name}</td>
+                      <td className="px-4 py-1.5">
+                        <Link to={`/account-detail-ledger?accountId=${l.account_id}&dateFrom=${periodStart}&dateTo=${asOfDate}`} className="text-blue-700 hover:text-blue-900">
+                          {l.account_name}
+                        </Link>
+                      </td>
                       <td className="px-4 py-1.5 text-right font-mono tabular-nums text-gray-700">{fmt(l.amount)}</td>
                     </tr>
                   ))}

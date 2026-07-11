@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -20,14 +21,18 @@ export default function StatementOfCashFlowsPage() {
   const [assetAcquisitions, setAssetAcquisitions] = useState(0)
   const [disposalProceeds, setDisposalProceeds] = useState(0)
   const [financingMovement, setFinancingMovement] = useState(0)
+  const [arAccountId, setArAccountId] = useState('')
+  const [apAccountId, setApAccountId] = useState('')
 
   const run = useCallback(async () => {
     if (!companyId) return
     setLoading(true)
 
     const { data: cfg } = await supabase.from('company_accounting_config').select('ar_account_id,ap_account_id').eq('company_id', companyId).maybeSingle()
-    const arAccountId = cfg?.ar_account_id as string | undefined
-    const apAccountId = cfg?.ap_account_id as string | undefined
+    const configuredArId = (cfg?.ar_account_id as string | null) || ''
+    const configuredApId = (cfg?.ap_account_id as string | null) || ''
+    setArAccountId(configuredArId)
+    setApAccountId(configuredApId)
 
     const [{ data: periodGl }, { data: depData }, { data: acqData }, { data: dispData }] = await Promise.all([
       supabase.from('vw_general_ledger').select('account_id,account_type,debit_amount,credit_amount').eq('company_id', companyId).gte('je_date', dateFrom).lte('je_date', dateTo),
@@ -41,8 +46,8 @@ export default function StatementOfCashFlowsPage() {
       if (r.account_type === 'revenue') rev += Number(r.credit_amount) - Number(r.debit_amount)
       if (r.account_type === 'expense') exp += Number(r.debit_amount) - Number(r.credit_amount)
       if (r.account_type === 'equity') equityMov += Number(r.credit_amount) - Number(r.debit_amount)
-      if (arAccountId && r.account_id === arAccountId) arDelta += Number(r.debit_amount) - Number(r.credit_amount)
-      if (apAccountId && r.account_id === apAccountId) apDelta += Number(r.credit_amount) - Number(r.debit_amount)
+      if (configuredArId && r.account_id === configuredArId) arDelta += Number(r.debit_amount) - Number(r.credit_amount)
+      if (configuredApId && r.account_id === configuredApId) apDelta += Number(r.credit_amount) - Number(r.debit_amount)
     }
 
     setNetIncome(rev - exp)
@@ -63,12 +68,18 @@ export default function StatementOfCashFlowsPage() {
   const financingTotal = financingMovement
   const netCashChange = operatingTotal + investingTotal + financingTotal
 
-  const Row = ({ label, value, italic }: { label: string; value: number; italic?: boolean }) => (
+  const Row = ({ label, value, italic, to }: { label: string; value: number; italic?: boolean; to: string }) => (
     <tr className="border-b border-gray-100">
-      <td className={`px-4 py-1.5 text-gray-700 ${italic ? 'italic' : ''}`}>{label}</td>
-      <td className="px-4 py-1.5 text-right font-mono tabular-nums text-gray-700">{fmt(value)}</td>
+      <td className={`px-4 py-1.5 ${italic ? 'italic' : ''}`}>
+        <Link to={to} className="text-blue-700 hover:text-blue-900">{label}</Link>
+      </td>
+      <td className="px-4 py-1.5 text-right font-mono tabular-nums">
+        <Link to={to} className="text-blue-700 hover:text-blue-900">{fmt(value)}</Link>
+      </td>
     </tr>
   )
+
+  const glRange = `dateFrom=${dateFrom}&dateTo=${dateTo}`
 
   return (
     <div className="space-y-4">
@@ -95,10 +106,10 @@ export default function StatementOfCashFlowsPage() {
           <div className="px-4 py-3 border-b border-gray-100 bg-gray-50"><h2 className="text-sm font-semibold text-gray-900">Operating Activities</h2></div>
           <table className="w-full text-sm">
             <tbody>
-              <Row label="Net Income" value={netIncome} />
-              <Row label="Add: Depreciation" value={depreciation} italic />
-              <Row label="(Increase)/Decrease in Accounts Receivable" value={arChange} italic />
-              <Row label="Increase/(Decrease) in Accounts Payable" value={apChange} italic />
+              <Row label="Net Income" value={netIncome} to={`/general-ledger?accountType=revenue,expense&${glRange}`} />
+              <Row label="Add: Depreciation" value={depreciation} italic to={`/general-ledger?sourceType=FA_DEPR&${glRange}`} />
+              <Row label="(Increase)/Decrease in Accounts Receivable" value={arChange} italic to={arAccountId ? `/account-detail-ledger?accountId=${arAccountId}&${glRange}` : `/general-ledger?accountType=asset&${glRange}`} />
+              <Row label="Increase/(Decrease) in Accounts Payable" value={apChange} italic to={apAccountId ? `/account-detail-ledger?accountId=${apAccountId}&${glRange}` : `/general-ledger?accountType=liability&${glRange}`} />
             </tbody>
             <tfoot className="border-t border-gray-300 bg-gray-50">
               <tr><td className="px-4 py-2 text-sm font-semibold text-gray-900">Net Cash from Operating Activities</td><td className="px-4 py-2 text-right font-mono text-sm font-semibold tabular-nums text-gray-900">{fmt(operatingTotal)}</td></tr>
@@ -108,8 +119,8 @@ export default function StatementOfCashFlowsPage() {
           <div className="px-4 py-3 border-b border-t-4 border-t-gray-100 border-gray-100 bg-gray-50"><h2 className="text-sm font-semibold text-gray-900">Investing Activities</h2></div>
           <table className="w-full text-sm">
             <tbody>
-              <Row label="Fixed Asset Acquisitions" value={assetAcquisitions} />
-              <Row label="Proceeds from Asset Disposals" value={disposalProceeds} />
+              <Row label="Fixed Asset Acquisitions" value={assetAcquisitions} to={`/general-ledger?sourceType=FA&${glRange}`} />
+              <Row label="Proceeds from Asset Disposals" value={disposalProceeds} to={`/general-ledger?sourceType=FA_DISP&${glRange}`} />
             </tbody>
             <tfoot className="border-t border-gray-300 bg-gray-50">
               <tr><td className="px-4 py-2 text-sm font-semibold text-gray-900">Net Cash from Investing Activities</td><td className="px-4 py-2 text-right font-mono text-sm font-semibold tabular-nums text-gray-900">{fmt(investingTotal)}</td></tr>
@@ -119,7 +130,7 @@ export default function StatementOfCashFlowsPage() {
           <div className="px-4 py-3 border-b border-t-4 border-t-gray-100 border-gray-100 bg-gray-50"><h2 className="text-sm font-semibold text-gray-900">Financing Activities</h2></div>
           <table className="w-full text-sm">
             <tbody>
-              <Row label="Equity Contributions / (Withdrawals)" value={financingMovement} />
+              <Row label="Equity Contributions / (Withdrawals)" value={financingMovement} to={`/general-ledger?accountType=equity&${glRange}`} />
             </tbody>
             <tfoot className="border-t border-gray-300 bg-gray-50">
               <tr><td className="px-4 py-2 text-sm font-semibold text-gray-900">Net Cash from Financing Activities</td><td className="px-4 py-2 text-right font-mono text-sm font-semibold tabular-nums text-gray-900">{fmt(financingTotal)}</td></tr>

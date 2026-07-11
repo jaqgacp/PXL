@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { AccountingTraceLink, ReportTraceLink } from '@/components/AccountingTraceLink'
 
 type Row = {
   transaction_id: string
   source_module: string
+  source_doc_type: string
+  source_doc_id: string
   invoice_date: string
   supplier_tin: string | null
   supplier_name: string | null
@@ -35,11 +38,12 @@ export default function VATInputSummaryPage() {
     const endDay = new Date(selYear, selMonth + 1, 0).getDate()
     const endDate = `${selYear}-${String(selMonth + 1).padStart(2, '0')}-${endDay}`
 
-    const { data } = await supabase.from('vw_input_vat_review').select('*')
+    const { data } = await supabase.from('vw_input_vat_review')
+      .select('transaction_id,source_module,source_doc_type,source_doc_id,invoice_date,supplier_tin,supplier_name,system_no,gross_purchases,exempt_purchases,zero_rated,taxable_base,input_vat')
       .eq('company_id', companyId).gte('invoice_date', startDate).lte('invoice_date', endDate)
       .order('invoice_date')
 
-    setRows((data as Row[]) || [])
+    setRows((data as unknown as Row[]) || [])
     setLoading(false)
   }, [companyId, selMonth, selYear])
 
@@ -53,6 +57,8 @@ export default function VATInputSummaryPage() {
   const totalTaxable = filtered.reduce((s, r) => s + r.taxable_base, 0)
   const totalVat = filtered.reduce((s, r) => s + r.input_vat, 0)
   const yearRange = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i)
+  const periodStart = `${selYear}-${String(selMonth + 1).padStart(2, '0')}-01`
+  const periodEnd = `${selYear}-${String(selMonth + 1).padStart(2, '0')}-${new Date(selYear, selMonth + 1, 0).getDate()}`
 
   const exportCSV = () => {
     const header = ['Date', 'Source', 'System No.', 'Supplier', 'TIN', 'Gross Purchases', 'Exempt', 'Zero-Rated', 'Taxable Base', 'Input VAT']
@@ -100,7 +106,11 @@ export default function VATInputSummaryPage() {
         </div>
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-xs text-gray-500 uppercase tracking-wide">Input VAT</p>
-          <p className="text-xl font-bold font-mono tabular-nums text-gray-900 mt-1">{fmt(totalVat)}</p>
+          <p className="text-xl font-bold font-mono tabular-nums text-gray-900 mt-1">
+            <ReportTraceLink companyId={companyId || ''} reportFamily="tax" filters={{ tax_kind: 'input_vat', date_from: periodStart, date_to: periodEnd }} title="Open contributing input VAT sources">
+              {fmt(totalVat)}
+            </ReportTraceLink>
+          </p>
         </div>
       </div>
 
@@ -127,7 +137,13 @@ export default function VATInputSummaryPage() {
               ) : filtered.map(r => (
                 <tr key={r.transaction_id} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-2.5 text-gray-700">{r.invoice_date}</td>
-                  <td className="px-4 py-2.5 text-gray-700">{r.system_no || '—'}</td>
+                  <td className="px-4 py-2.5 text-gray-700">
+                    {r.system_no ? (
+                      <AccountingTraceLink sourceType={r.source_doc_type} sourceId={r.source_doc_id} title="Open source accounting trace">
+                        {r.system_no}
+                      </AccountingTraceLink>
+                    ) : '—'}
+                  </td>
                   <td className="px-4 py-2.5 text-gray-700">{r.supplier_name || '—'}</td>
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700">{fmt(r.gross_purchases)}</td>
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-500">{fmt(r.exempt_purchases)}</td>
@@ -145,7 +161,11 @@ export default function VATInputSummaryPage() {
                   <td className="px-4 py-2.5 text-right font-mono text-sm font-bold tabular-nums text-gray-900">{fmt(totalExempt)}</td>
                   <td className="px-4 py-2.5 text-right font-mono text-sm font-bold tabular-nums text-gray-900">{fmt(totalZero)}</td>
                   <td className="px-4 py-2.5 text-right font-mono text-sm font-bold tabular-nums text-gray-900">{fmt(totalTaxable)}</td>
-                  <td className="px-4 py-2.5 text-right font-mono text-sm font-bold tabular-nums text-gray-900">{fmt(totalVat)}</td>
+                  <td className="px-4 py-2.5 text-right font-mono text-sm font-bold tabular-nums text-gray-900">
+                    <ReportTraceLink companyId={companyId || ''} reportFamily="tax" filters={{ tax_kind: 'input_vat', date_from: periodStart, date_to: periodEnd }} title="Open contributing input VAT sources">
+                      {fmt(totalVat)}
+                    </ReportTraceLink>
+                  </td>
                 </tr>
               </tfoot>
             )}

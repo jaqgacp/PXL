@@ -15,7 +15,7 @@ Status: `Todo`, `In Progress`, `Blocked`, `Done`. Priority: P0 correctness/secur
 | AIQ-005 | P1 | Done | Context | Create generated `PXL_SCHEMA_SUMMARY.md`. | `supabase/migrations/` | Done 2026-07-02; regenerate after migrations. |
 | AIQ-006 | P1 | Done | Accounting | Create `PXL_ACCOUNTING_RULES.md`. | Accounting docs/matrix | Done 2026-07-04. |
 | AIQ-007 | P1 | Todo | VAT/EWT | Create `PXL_TAX_RULES_PH.md`. | Compliance docs/matrix/audit/test book | Concise PH tax summary exists and points to source docs. |
-| AIQ-008 | P0 | In Progress | Audit | Continue highest-severity open audit findings until none remain. | Audit findings, test book, transaction matrix | Current finding fixed or genuinely blocked; tests/docs/hosted state updated. Session 59 closed AUD-002, AUD-006, DA-001, and DA-006; advanced DA-002/004/005/007 and AUD-049. Standing 35 passed / 17 in progress / 18 open; five Criticals remain (DA-002/004/008/009/019). |
+| AIQ-008 | P0 | In Progress | Audit | Continue highest-severity open audit findings until none remain. | Audit findings, test book, transaction matrix | Current finding fixed or genuinely blocked; tests/docs/hosted state updated. Session 59 closed AUD-002, AUD-006, DA-001, and DA-006. Session 60 added PXL-AUD-051 (Open) and fixed PXL-AUD-052. Session 61 implemented the DA-004/005/007 posting-engine completion (`20260711000001`) and the DA-002 report trace contract (`20260711000002`); the 2026-07-11 recovery session fixed a draft defect, verified 474/474 pgTAP across 26 files, pushed both migrations to hosted, and committed sessions 59–61 to origin/main. DA-002/004/005/007 statuses await a dedicated retest pass. Standing: 36 passed / 17 in progress / 19 open; five Criticals remain (DA-002/004/008/009/019). |
 | AIQ-009 | P1 | Todo | Testing | Add or improve tests for the next open accounting/tax/reporting risk. | Accounting test book | Test exists, runs where practical, and expected scenario is documented. |
 | AIQ-010 | P2 | Done | Context | Add high-risk quick orientation to large state docs. | Matrix/audit findings | Done 2026-07-04. |
 | AIQ-011 | P1 | Done | Autonomy | Move AI operating files under `AI/` and repair references. | User request | Done 2026-07-02. |
@@ -32,6 +32,6 @@ Status: `Todo`, `In Progress`, `Blocked`, `Done`. Priority: P0 correctness/secur
 
 ## Current Recommended Next Task
 
-Continue AIQ-008 with **PXL-DA-002**: extend the session-59 accounting trace contract into financial statement, subledger, VAT/WHT, 2307/QAP, and report-snapshot rows, with route tests. Alternative P0: **PXL-DA-004** posting-engine completion (writer migration, tax/reversal primitives, physical source validation, locks/concurrency). DA-008/009/019 remain parallel Critical lanes.
+Continue AIQ-008: run a dedicated retest/closure pass for **PXL-DA-002/004/005/007** against the deployed `20260711000001/2` contracts and decide their statuses. After that: **PXL-AUD-051** or the remaining Critical lanes **DA-008/DA-009/DA-019**.
 
-Do not redo AUD-002, AUD-006, DA-001, or DA-006. Run `npm run gen:types` after every migration. Exclude unrelated local migrations 00004/00005 and test 027 unless explicitly taking ownership of that work.
+Do not redo AUD-002, AUD-006, DA-001, or DA-006. The unowned ATC/CAS work (`20260710000004/00005` + test 027) is confirmed broken (breaks test 021; own test fails 15/30), stays untracked and off hosted per the user's 2026-07-11 decision, and must be held out of resets/tests/pushes until explicitly owned and fixed.

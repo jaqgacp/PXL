@@ -1,43 +1,47 @@
 # AI State
 
-Last updated: 2026-07-10 (session 59)
+Last updated: 2026-07-11 (session 61 recovery: verified, fixed, deployed to hosted, and committed)
 
 ## Project Status
 
-PXL is a React 19 + TypeScript + Vite frontend backed by Supabase/PostgreSQL. Audit hardening is active under AIQ-008. The authoritative finding standing is **35 Retested Passed / 17 In Progress / 18 Open (70)**. Five Critical findings remain: PXL-DA-002, PXL-DA-004, PXL-DA-008, PXL-DA-009, and PXL-DA-019.
+PXL is a React 19 + TypeScript + Vite frontend backed by Supabase/PostgreSQL. Audit hardening is active under AIQ-008. The authoritative finding standing is **36 Retested Passed / 17 In Progress / 19 Open (72)**. Five Critical findings remain: PXL-DA-002, PXL-DA-004, PXL-DA-008, PXL-DA-009, and PXL-DA-019. Session 61's DA-002/004/005/007 implementation is now verified and deployed; statuses stay In Progress pending a dedicated retest/closure pass.
+
+Session 60 was a user-directed TEST-environment session: it built three repeatable demo seeds (`supabase/seeds/demo_company_setup_seed.sql`, `demo_master_data_seed.sql`, `demo_items_inventory_seed.sql`), brought the hosted PXL Demo company to a fully green Company Setup Checklist with complete master data, logged new finding PXL-AUD-051 (document-code registry drift, Open), and found+fixed PXL-AUD-052 (Cash Purchase item lookup column drift, Retested Passed). It also recorded **DEC-013**: the **PXL Standard Transaction Workspace** (`docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`) is the official Phase 2 product vision; audit findings retain absolute priority; adoption stays adopt-on-touch.
 
 ## Current Active Task
 
-Session 59 closed the next three Criticals:
+**Session 61 (2026-07-11) was interrupted mid-AIQ-008; a same-day recovery session completed its wrap-up: verification, one migration defect fix, docs, hosted deployment, and Git commits (user-directed).** What session 61 built:
 
-- **PXL-AUD-002:** Company Setup now has a live readiness checklist for legal profile, branch, fiscal calendar, COA, core number series, compliance/tax codes, and applicable GL mappings. Core and VAT-bearing transaction pages block save/post on relevant readiness gaps and link back to the checklist.
-- **PXL-AUD-006:** `20260710000002_vat_registration_all_documents.sql` extends registration/direction/amount enforcement through CM/DM/cash sale/cash purchase/vendor credit and VAT exports, rebuilds CM/DM/VC tax detail per code, and denies authenticated direct tax-ledger mutation.
-- **PXL-DA-001:** `20260710000003_posting_engine_preview_trace.sql` adds exact rollback GL preview, governed source types, source links, accounting trace, and central period/account/balance/source-idempotency guards. GL Impact/preflight is broadly deployed; atomic unsaved cash/fixed-asset forms show a labeled estimate.
-
-The same work advanced PXL-DA-002/004/005/007 and PXL-AUD-049 to In Progress, and closed PXL-DA-006.
+- **`supabase/migrations/20260711000001_posting_engine_completion.sql`** (2,268 lines; PXL-DA-004/005/007): (1) registry-backed `fn_resolve_posting_source` with optional row locking and deferred-JE integrity; (2) shared tax writer with stable source-line identity and safe uniqueness; (3) shared posting/reversal audit and reversal mutation primitive; (4) core AR/AP writers migrated to create/add/finalize + the shared tax writer with unchanged public signatures; (5) core reversal paths on the shared exact-opposite primitive; (6) secondary saved-source writers acquire the same source-row lock; (7) privilege boundary — helpers revoked from application callers. Header states it deliberately does NOT take ownership of held-out migrations 00004/00005.
+- **`supabase/migrations/20260711000002_accounting_trace_reports.sql`** (961 lines; PXL-DA-002): appends canonical `source_doc_type`/`source_doc_id` to `vw_customer_ledger`, `vw_supplier_ledger`, `vw_output_vat_review`, `vw_input_vat_review`, `vw_ewt_summary_ap`, `vw_cwt_summary_ar`; hardens `fn_get_accounting_trace` (JE/source mismatch fails closed; routes to the new generic `/accounting-source` page); adds internal `fn_normalize_report_source_type`, read-only `fn_get_report_snapshot_trace_links`, and membership-scoped `fn_get_report_trace_set` for aggregate report rows. Never rewrites immutable snapshot payloads/hashes.
+- **UI (unstaged/untracked):** new `src/lib/accountingTrace.ts`, `src/components/AccountingTraceLink.tsx`, `src/pages/AccountingSourcePage.tsx` + `/accounting-source` route; `AccountingTracePage.tsx` extended ~261 lines for report-family trace sets; drillback links adopted across ~20 report/compliance pages (GL, Account Detail Ledger, BS/IS/SCF/SCE/Comparative FS, AP/AR Aging, VAT input/output summaries, Input VAT Review, SAWT, QAP, 2307 Issued/Received, Report Snapshots).
+- **Tests:** `025_posting_preview_invariants_test.sql` updated to the generic `/accounting-source` route (still 40 assertions); new `026_accounting_trace_report_routes_test.sql` (ACCOUNTING-TRACE-REPORTS-001, 26 assertions, includes fail-closed orphan/cross-company trace cases).
 
 ## Verification and Hosted State
 
-- Fresh local replay through `20260710000003`: passed.
-- pgTAP: **448/448 across 25 files**.
-- VAT-REG-ALL-DOCS-001: 35 assertions passed.
-- GL-PREVIEW-PARITY-001: 40 assertions passed.
-- `npm run build`: passed.
-- `npm run lint`: zero warnings, exit 0.
-- Generated `src/lib/database.types.ts` and scoped `docs/PXL/PXL_SCHEMA_SUMMARY.md` refreshed.
-- Hosted Supabase: migrations `20260710000002` and `20260710000003` pushed from a scoped workdir and verified local=remote through 00003. The known post-push pg-delta CA-cache warning occurred after successful application.
+Recovery-session verification and deployment (2026-07-11, user-directed):
+
+- **Defect fixed in the interrupted draft:** `fn_resolve_posting_source` in `20260711000001` referenced `v_ref.date_column`; the real column (from `20260710000003`) is `document_date_column`. Only fresh-reset replay exposed it — session 61 had applied a corrected version ad hoc, so the live DB masked the broken file.
+- Fresh `supabase db reset` through `20260711000002` with unowned migrations 00004/00005 and test 027 held out: clean.
+- Full pgTAP: **474/474 across 26 files** (updated 025: 40/40; new 026: 26/26).
+- `npm run build`: passed. `npm run lint`: zero warnings, exit 0.
+- `npm run gen:types` run (report views now expose `source_doc_type`/`source_doc_id`); scoped `docs/PXL/PXL_SCHEMA_SUMMARY.md` regenerated (187 functions, 19 views, 147 tables, 226 triggers).
+- Test book entry ACCOUNTING-TRACE-REPORTS-001 added; `scripts/check_docs_consistency.sh` green (72 findings, 26 test files).
+- **Hosted Supabase pushed:** `20260711000001` and `20260711000002` pushed via `supabase db push --linked` (dry-run confirmed exactly those two). `supabase migration list --linked` shows local=remote through `20260711000002`; remote function probe confirms the new functions. The known benign post-push pg-delta CA-cache warning occurred again. Hosted does **NOT** have 00004/00005 (deliberate — see Known Boundaries).
+- **Git:** sessions 59–61 committed and pushed to `origin/main` (see AI_HANDOFF for the commit breakdown).
+
+Hosted demo environment (session 60, unchanged): PXL Demo Trading Corporation with full company setup, master data, and items/operational seeds applied and verified; no posted transactions. Rerun order: `demo_company_setup_seed.sql` → `demo_master_data_seed.sql` → `demo_items_inventory_seed.sql` (all idempotent; see AI_HANDOFF for rerun mechanics).
 
 ## Known Boundaries
 
-- Unrelated local work remains uncommitted/unpublished: migrations `20260710000004`, `20260710000005`, and test `027_cas_end_to_end_controls_test.sql`. Session 59 excluded them from reset, deployment, schema-summary generation, docs-consistency evidence, and Git scope.
-- Exact server rollback preview requires a saved source. Atomic create-and-post cash/fixed-asset forms use a clearly labeled client estimate until those RPCs gain input-payload dry-run contracts.
-- PXL-DA-002 still needs financial statement, subledger, tax, certificate, and export-snapshot row adoption.
-- PXL-DA-004/005/007 still need writer migration, shared tax/reversal primitives, physical source existence/company enforcement, source locking, tax-row uniqueness, and concurrency tests.
+- **Unowned ATC/CAS work is confirmed broken and stays held out (user decision 2026-07-11):** `20260710000004_atc_document_date_versioning.sql`, `20260710000005_cas_numbering_void_dat_controls.sql`, `027_cas_end_to_end_controls_test.sql` remain untracked, uncommitted, and NOT on hosted. Evidence: 00005's reservation-model rewrite of `fn_next_document_number` breaks previously-passing test 021 ("unresolved document-number reservation already exists"), and test 027 fails 15/30 with pgTAP parse errors. They must be finished (or discarded) before inclusion; a plain local `supabase db reset` WILL apply them because the files sit in `supabase/migrations/` — hold them out for verified runs.
+- PXL-AUD-051 (document-code registry drift) remains Open; session 60's "fix AUD-051 next" prompt was superseded by session 61's DA-002/DA-004 work.
+- Exact server rollback preview still requires a saved source; atomic cash/fixed-asset forms show a labeled client estimate.
 - The CSP in `index.html` restricts local Supabase frontend access unless bypassed.
 
 ## Next Recommended Step
 
-Continue AIQ-008 with **PXL-DA-002** (finish report/compliance drillback using the new trace contract) or **PXL-DA-004** (complete posting-engine writer/tax/reversal/locking consolidation). PXL-DA-008, PXL-DA-009, and PXL-DA-019 remain parallel Critical lanes. Do not redo AUD-002, AUD-006, DA-001, or DA-006.
+Session 61 is fully wrapped. Next: a dedicated retest/closure pass to decide PXL-DA-002/004/005/007 statuses on the deployed contracts, then PXL-AUD-051 or the remaining Criticals (PXL-DA-008, PXL-DA-009, PXL-DA-019). Separately, the unowned ATC/CAS work (00004/00005 + test 027) needs an owner to finish or discard it.
 
 ## Decisions Needed From User
 
