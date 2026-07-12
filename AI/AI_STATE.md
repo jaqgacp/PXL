@@ -28,7 +28,7 @@ Executed 2026-07-12 with the unowned ATC/CAS files held out:
 - `npm run gen:types` and `scripts/gen_schema_summary.sh`: complete; schema summary remains 187 functions / 19 views / 147 tables / 226 triggers.
 - `scripts/check_docs_consistency.sh`: green (72 findings, 27 owned test files).
 - Hosted migration push: **PENDING**. `supabase db push --linked --dry-run` could not authenticate because `SUPABASE_ACCESS_TOKEN` is absent. Hosted remains synced only through `20260711000002`.
-- Git commit/push: not performed in this session.
+- Git: implementation/docs commit `06bf705` pushed to `origin/main`.
 
 Hosted demo reference (unchanged): PXL Demo Trading Corporation has the session-60 setup/master/item seeds and no posted transactions. Local resets remove local demo seed data; rerun the three idempotent seeds in handoff order if needed.
 

@@ -26,7 +26,7 @@ Last updated: 2026-07-12 (session 62: closed DA-002/004/008 and AUD-014; DA-005/
 - `scripts/check_docs_consistency.sh` green: 72 findings, 27 owned tests.
 - Independent read-only review found the register-view bypass; revised migration/test re-review found no remaining defect.
 - Hosted push is **PENDING**: linked dry-run failed because `SUPABASE_ACCESS_TOKEN` is not available. Hosted is still through `20260711000002`.
-- Git commit/push not performed.
+- Git: implementation/docs commit `06bf705` pushed to `origin/main`.
 
 ## Unowned ATC/CAS Work — Keep Held Out
 
