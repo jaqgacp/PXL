@@ -1,6 +1,6 @@
 # AI State
 
-Last updated: 2026-07-12 (session 64 — local verification complete; hosted/Git push pending)
+Last updated: 2026-07-12 (session 64 — verified, committed, and pushed to Git + hosted)
 
 ## Project Status
 
@@ -19,7 +19,7 @@ The first safe PXL-DA-019 CAS/BIR control slice is built and fully verified loca
 - Held-out-safe fresh `supabase db reset` (unowned `20260710000004`/`00005` + test `027` moved aside, then restored byte-for-byte): **full pgTAP 601/601 across 31 owned files**.
 - `supabase db lint --local --level warning`: the three prior actionable errors are gone; the four new CAS trigger functions add zero warnings. Remaining findings are the known temp-table/dynamic-`record`/`fn_row_written_by_current_txn` STABLE-vs-VOLATILE false positives.
 - `npm run gen:types` regenerated `src/lib/database.types.ts`; `npm run build` passed; `npm run lint` zero warnings; schema summary regenerated (197 functions / 20 views / 149 tables / 229 triggers); `scripts/check_docs_consistency.sh` green (72 findings, 31 tests).
-- Two failing test-032 assertions found during this session were fixed in the migration (pre-void `OLD` snapshot; owner-proof `P0001` immutability trigger). Working tree is **not yet committed**; the new migrations are **not yet pushed to hosted** — hosted remains last verified through `20260712000002` from session 63.
+- Two failing test-032 assertions found during this session were fixed in the migration (pre-void `OLD` snapshot; owner-proof `P0001` immutability trigger). Committed as `ffe7782` and pushed to `origin/main`. **Hosted push complete**: `20260712000003`/`20260712000004` were pushed to linked project `bskjkogijpbhukjkagfj` with the held-out `20260710000004`/`00005` moved aside during the push (they remain off hosted — blank Remote in `migration list`). Hosted is now synced through `20260712000004` (local = remote).
 
 ## Known Boundaries
 
@@ -29,7 +29,7 @@ The first safe PXL-DA-019 CAS/BIR control slice is built and fully verified loca
 
 ## Next Recommended Step
 
-Commit the working tree, then dry-run and push the two new migrations to the linked hosted project and verify parity (see `AI/AI_HANDOFF.md` for the exact sequence). Afterward continue DA-019's remaining slices (true BIR DAT record layout, books reconciliation, exported-byte hashing) or advance DA-009 dependencies.
+Continue DA-019's remaining slices (true BIR DAT record layout, immutable books reconciliation, exported-byte export provenance) or advance DA-009 dependencies (safe ATC date/version, PXL-AUD-041 remittance flow). Git and hosted are synced through `20260712000004`.
 
 ## Decisions Needed From User
 
