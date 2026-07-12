@@ -15,7 +15,7 @@ Last updated: 2026-07-12 (session 63: closed DA-005/007 with executed evidence; 
 - Test 029 run twice back-to-back: 14/14 both times (pre-clean works).
 - `scripts/check_docs_consistency.sh` green: 72 findings, 28 owned tests (run with held-out test 027 moved aside, then restored; checksums verified byte-for-byte).
 - Build/lint not rerun: no frontend or migration source changed; session-62 results stand.
-- Hosted push still **PENDING** on `SUPABASE_ACCESS_TOKEN`; hosted synced through `20260711000002` only.
+- Hosted push **DONE 2026-07-12** (user supplied token): dry-run listed only `20260712000001`, push applied it, `supabase migration list --linked` shows local = remote through `20260712000001`. Held-out 00004/00005 were moved aside for the push and restored byte-for-byte (checksums verified).
 
 ## Unowned ATC/CAS Work — Keep Held Out
 

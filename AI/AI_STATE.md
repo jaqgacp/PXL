@@ -25,7 +25,7 @@ Executed 2026-07-12 with the unowned ATC/CAS files held out and restored byte-fo
 - `scripts/check_docs_consistency.sh`: green (72 findings, 28 owned test files).
 - `npm run build` / `npm run lint`: not rerun — no frontend or migration source changed this session; session-62 state (build passed, zero lint warnings) stands.
 - Schema summary unchanged (no migrations added): 187 functions / 19 views / 147 tables / 226 triggers.
-- Hosted migration push: **PENDING**. `20260712000001` still needs `SUPABASE_ACCESS_TOKEN`; hosted remains synced only through `20260711000002`.
+- Hosted migration push: **DONE 2026-07-12**. User supplied the access token; `supabase db push --linked` applied `20260712000001` with the unowned 00004/00005 held out (dry-run confirmed only that one migration), and `supabase migration list --linked` shows local = remote through `20260712000001`.
 
 Hosted demo reference (unchanged): PXL Demo Trading Corporation has the session-60 setup/master/item seeds and no posted transactions. Local resets remove local demo seed data; rerun the three idempotent seeds in handoff order if needed.
 
@@ -43,4 +43,4 @@ Fix PXL-AUD-051 completely: registry/code alignment (DM vs DM-S; JE/SDM/PRT/FA a
 
 ## Decisions Needed From User
 
-None. DEC-008 standing autonomy remains active. Hosted push only needs the missing Supabase access token; record it as pending until credentials exist.
+None. DEC-008 standing autonomy remains active. Hosted push is complete; no credentials are outstanding.
