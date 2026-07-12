@@ -1,12 +1,16 @@
 # AI State
 
-Last updated: 2026-07-12 (session 64 — verified, committed, and pushed to Git + hosted)
+Last updated: 2026-07-12 (session 65 — priority pivot: Standard Transaction Workspace is the active sole priority per DEC-015)
 
 ## Project Status
 
-PXL is a React 19 + TypeScript + Vite frontend backed by Supabase/PostgreSQL. The standing remains **43 Retested Passed / 11 In Progress / 18 Open (72)** — DA-019 stays Critical/Open because session 64 delivered only its first slice. Two Critical findings remain: **PXL-DA-009** and **PXL-DA-019**.
+PXL is a React 19 + TypeScript + Vite frontend backed by Supabase/PostgreSQL. Audit standing is unchanged at **43 Retested Passed / 11 In Progress / 18 Open (72)**. The two remaining Criticals, **PXL-DA-009** and **PXL-DA-019**, are **paused** (still Open, not withdrawn) by user directive: the **Standard Transaction Workspace (DEC-013)** is now the active sole development priority (DEC-015).
 
 ## Current Active Task
+
+**AIQ-015 — Standard Transaction Workspace**, phased and monitored (see the AIQ-015 Phase Plan in `AI/AI_WORK_QUEUE.md`; in-session task list mirrors it). Pilot = Sales Invoice (blueprint §17), adopt-on-touch. Shipped this session: Phase 0 governance (DEC-015 + queue + issue-routing), Phase 1 shell (`src/components/document/DocumentLayout.tsx`), and the Phase 2/3 SI pilot — a deep-linkable read-only document view (`src/pages/SalesInvoiceDocumentPage.tsx`, route `/sales-invoices/:id`, reachable via "Open ↗" from the list) rendering `DocumentLayout` with tabs (Lines · GL Impact · Posting Validation · Audit Trail · Related) + right-rail Financial Summary/Party + workflow strip. build+lint green, HMR-verified; existing list+modal untouched. Also shipped: Phase 4 (`FinancialSummaryPanel` + `PostingValidationPanel` with live `useTransactionReadiness` preflight) and Phase 5 (`LineGrid` column-group grid + VAT-only `TaxImpactPanel`, user-approved scope — EWT/CWT deferred pending the paused AUD-031/032/033). All six shared components now exist under `src/components/document/`. Next: Phase 6 — roll `DocumentLayout` across the core four (OR/VB/PV) adopt-on-touch, then secondary docs + `RelatedDocumentsTab` + config layer. Discovered defects route to the audit findings doc in severity order (DEC-015); enhancements to vision/backlog.
+
+### Session 64 (previous, shipped) — PXL-DA-019 first CAS slice
 
 The first safe PXL-DA-019 CAS/BIR control slice is built and fully verified locally on the deployed branch-scoped numbering contract (the broken held-out `20260710000005` was not adopted). What shipped:
 
@@ -29,8 +33,8 @@ The first safe PXL-DA-019 CAS/BIR control slice is built and fully verified loca
 
 ## Next Recommended Step
 
-Continue DA-019's remaining slices (true BIR DAT record layout, immutable books reconciliation, exported-byte export provenance) or advance DA-009 dependencies (safe ATC date/version, PXL-AUD-041 remittance flow). Git and hosted are synced through `20260712000004`.
+Execute the AIQ-015 phase plan in order. Immediate next: **P1 Shell** — build `DocumentLayout` (header bar + StatusBadge + workflow strip + fixed toolbar + tabs shell + right-rail zone), `WorkflowStrip`, and `TransactionTabs` in `src/components/document/`, reusing `src/components/ui/shared.tsx` atoms; then P2 routes for the Sales Invoice pilot. Verify with `npm run build` / `npm run lint` / `npm run gen:types` after each phase. DA-009/DA-019 stay paused. Git and hosted are synced through `20260712000004`.
 
 ## Decisions Needed From User
 
-None. DEC-008 standing autonomy remains active.
+None. DEC-008 standing autonomy remains active; DEC-015 records the workspace-first priority pivot (DA-009/DA-019 paused).

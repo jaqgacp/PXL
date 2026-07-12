@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
@@ -639,6 +640,7 @@ export default function SalesInvoicePage() {
                     {['SI Number','Date','Customer','TIN','Net of VAT','VAT','Total Amount','Status'].map(h => (
                       <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">{h}</th>
                     ))}
+                    <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">Open</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
@@ -656,6 +658,12 @@ export default function SalesInvoicePage() {
                         <td className="px-4 py-2.5 text-right font-mono text-xs font-semibold text-gray-900"><AmountCell amount={si.total_amount} /></td>
                         <td className="px-4 py-2.5">
                           <StatusBadge status={statusToShared[si.status]} label={si.status.charAt(0).toUpperCase() + si.status.slice(1)} />
+                        </td>
+                        <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                          <Link to={`/sales-invoices/${si.id}`} onClick={e => e.stopPropagation()}
+                            className="text-xs font-medium text-blue-600 hover:text-blue-800 hover:underline">
+                            Open ↗
+                          </Link>
                         </td>
                       </tr>
                     )

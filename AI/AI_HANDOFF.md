@@ -1,8 +1,20 @@
 # AI Handoff
 
-Last updated: 2026-07-12 (session 64 — verified, committed, and pushed to Git + hosted)
+Last updated: 2026-07-12 (session 65 — priority pivot to the Standard Transaction Workspace, DEC-015)
 
-## Work In Progress
+## Active Priority (session 65)
+
+**AIQ-015 — Standard Transaction Workspace is the active sole priority (DEC-015).** The two remaining Criticals (**PXL-DA-009**, **PXL-DA-019**) are **paused** — still Open, not withdrawn, revisited only after the scheduled workspace phases or on user direction. Do not resume them without the user.
+
+Work the AIQ-015 phase plan (`AI/AI_WORK_QUEUE.md`) in order; the in-session task list mirrors it. Done this session (65): Phase 0 governance (DEC-015 + queue + issue-routing + state/handoff); **Phase 1 Shell** — `src/components/document/DocumentLayout.tsx` exports `DocumentLayout`, `WorkflowStrip`, `TransactionTabs`, `DocumentToolbar` (fixed order + More ▾), reusing `StatusBadge`; **Phase 2 routes** — `/sales-invoices/:id` deep-link route in `src/App.tsx`; list rows link via "Open ↗" (`src/pages/SalesInvoicePage.tsx`); **Phase 3 SI view** — `src/pages/SalesInvoiceDocumentPage.tsx` renders a read-only document-of-record through `DocumentLayout` with tabs Lines · GL Impact (`GLImpactPanel`, real posted JE) · Posting Validation (derived checklist) · Audit Trail (`AuditTrailSection`, PXL-AUD-050 now visible) · Related, plus a right-rail Financial Summary (§8 SI contract) + Party card and a workflow strip. `npm run build` + `npm run lint` green; Vite dev server HMR-verified. The existing list+modal for create/edit is untouched (adopt-on-touch).
+
+Phase 4 also shipped this session: `src/components/document/FinancialSummaryPanel.tsx` (generic group-based §8 panel) and `PostingValidationPanel.tsx` (with `readinessToChecks`, which bridges the live `useTransactionReadiness` server preflight into the §11 checklist); the SI document page consumes both (right-rail summary + live preflight for draft/approved, derived checks for posted/voided). build + lint (0 warnings) green, HMR verified.
+
+Phase 5 also shipped this session (user-approved VAT-only scope): `src/components/document/LineGrid.tsx` (column-group-aware, read-only, totals footer, structured for later editing) — the SI Lines tab uses it with a Revenue-Acct provenance column (§5); and `TaxImpactPanel.tsx` (reads `tax_detail_entries`, **VAT kinds only**, draft fallback) added as the Tax Impact tab. EWT/CWT rows and the full §7 account-determination ladder + editable line entry are deferred (the withholding base needs PXL-AUD-031/032/033; editing needs the route-driven create/edit form). build + lint (0 warnings) green, HMR verified.
+
+**Exact next step: Phase 6** — roll `DocumentLayout` across the core four (Official Receipt, Vendor Bill, Payment Voucher) adopt-on-touch, reusing the now-built shared components (`DocumentLayout`, `FinancialSummaryPanel`, `PostingValidationPanel`, `LineGrid`, `TaxImpactPanel`, `WorkflowStrip`); each needs its own §8 summary contract + §5 columns + document-code/config for the readiness hook. Then secondary docs, the `RelatedDocumentsTab` (§12, reads existing links), and the config layer (§14). Still-open deferred sub-items: route-driven `/sales-invoices/new` + `/:id/edit`; editable `LineGrid` mode; role-gated accounting columns. Verify each with `npm run build` / `npm run lint`. Issue-routing (DEC-015): defects → `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` in severity order; enhancements → vision/backlog.
+
+## Work In Progress (session 64, shipped)
 
 The first PXL-DA-019 CAS/BIR slice is complete, verified, committed (`ffe7782`, pushed to `origin/main`), and pushed to hosted (`20260712000003`/`20260712000004` applied to `bskjkogijpbhukjkagfj`; held-out `20260710000004`/`00005` moved aside during the push and remain off hosted; local = remote through `20260712000004`). Delivered this session:
 

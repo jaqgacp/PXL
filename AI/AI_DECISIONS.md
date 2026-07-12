@@ -542,3 +542,45 @@ Related Source Files:
 - `supabase/tests/032_cas_numbering_void_evidence_test.sql`
 - `src/pages/CASDocumentVoidRegisterPage.tsx`
 - `src/pages/CASATPUsageLogPage.tsx`
+
+## DEC-015 - Standard Transaction Workspace Is the Active Sole Priority; Remaining Criticals Paused
+
+Date: 2026-07-12
+Status: Approved (direct user directive)
+
+Decision:
+
+The user directed (session 65, 2026-07-12) that the Standard Transaction Workspace (DEC-013, `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`) becomes the **active sole development priority now**, and that the two remaining Critical audit findings — **PXL-DA-009** (ATC date/versioning + remittance) and **PXL-DA-019** (BIR DAT layout / books reconciliation / exported-byte provenance) — are **paused** (they stay Open, are not withdrawn, and are revisited after the scheduled workspace phases). This temporarily supersedes DEC-013's "production-critical audit findings always come first" ordering, by explicit user choice recorded here so it remains reviewable and reversible.
+
+Guardrails that still apply (DEC-008): the pause does not weaken, remove, or bypass any deployed accounting/tax/audit-trail/security/immutability control — DA-009/DA-019 remaining Open simply means their new hardening is deferred, not that existing controls are relaxed. Any genuine accounting/tax/security/posting/GL/data-integrity/immutability bug newly discovered while building the workspace still becomes a NEW audit finding immediately (routing below) and is fixed at once if it blocks the workspace work; otherwise it is recorded in priority order for later. Workspace adoption remains adopt-on-touch and must not silently change posting/tax behavior — behavior is owned by the transaction matrix + migrations (document hierarchy unchanged).
+
+Issue-routing discipline for this initiative (unchanged from DEC-012, restated as the operating rule):
+
+- Functional/accounting/tax/security/posting/GL/data-integrity bug → NEW row in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`, inserted in severity/priority order (Critical → High → Medium → Low) so it appears in the fix queue.
+- Architectural enhancement → `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` (vision-level) or `docs/PXL/PXL_PRODUCT_BACKLOG.md` (feature-level).
+- Permanent architectural/business decision → this file.
+
+Business Reason:
+
+User directive 2026-07-12: make the Standard Transaction Workspace the priority, divide and monitor the work, and ensure discovered issues are logged in priority order for fix. The user accepted, after being shown the trade-off, that DA-009/DA-019 hardening is deferred while the workspace is built.
+
+Technical Reason:
+
+A single, monitored, phased plan (AIQ-015) with a durable work-queue entry and an in-session task list keeps the multi-session build consistent and prevents per-page divergence. Deferring DA-009/DA-019 changes no deployed behavior; it only reorders future work.
+
+Alternatives Considered:
+
+- Run the workspace in parallel with the two Criticals still winning conflicts. Offered; the user chose sole-focus instead.
+- Finish DA-009/DA-019 first, then the workspace. Offered; rejected by the user for speed of workspace progress.
+
+Related Documents:
+
+- `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`
+- `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md`
+- `AI/AI_WORK_QUEUE.md` (AIQ-015)
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-009, PXL-DA-019 — paused/Open)
+
+Related Source Files:
+
+- `src/components/document/` (new — DocumentLayout and workspace panels)
+- `src/App.tsx` (per-document routes)

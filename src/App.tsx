@@ -27,6 +27,7 @@ const TaxCalendarPage         = lazy(() => import('@/pages/TaxCalendarPage'))
 const BIRFormConfigPage       = lazy(() => import('@/pages/BIRFormConfigPage'))
 const DashboardPage           = lazy(() => import('@/pages/DashboardPage'))
 const SalesInvoicePage        = lazy(() => import('@/pages/SalesInvoicePage'))
+const SalesInvoiceDocumentPage = lazy(() => import('@/pages/SalesInvoiceDocumentPage'))
 const ReceiptsPage            = lazy(() => import('@/pages/ReceiptsPage'))
 const CreditMemosPage         = lazy(() => import('@/pages/CreditMemosPage'))
 const DebitMemosPage          = lazy(() => import('@/pages/DebitMemosPage'))
@@ -250,6 +251,7 @@ export default function App() {
             <Route path="/tax-calendar" element={<TaxCalendarPage />} />
             <Route path="/bir-form-config" element={<BIRFormConfigPage />} />
             <Route path="/sales-invoices" element={<SalesInvoicePage />} />
+            <Route path="/sales-invoices/:id" element={<SalesInvoiceDocumentPage />} />
             <Route path="/receipts" element={<ReceiptsPage />} />
             <Route path="/credit-memos" element={<CreditMemosPage />} />
             <Route path="/debit-memos" element={<DebitMemosPage />} />

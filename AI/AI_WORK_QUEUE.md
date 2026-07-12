@@ -22,6 +22,21 @@ Status: `Todo`, `In Progress`, `Blocked`, `Done`. Priority: P0 correctness/secur
 | AIQ-012 | P1 | Done | Autonomy | Finalize/version AIOS and documentation governance. | User request | Done 2026-07-02. |
 | AIQ-013 | P1 | Done | Autonomy | Add findings index/readiness gate/schema generator/docs consistency/delegation controls. | User request | Done 2026-07-02. |
 | AIQ-014 | P2 | Done | Context | Create product backlog and enforce defect-vs-enhancement separation. | User request, DEC-012 | Done 2026-07-03. |
+| AIQ-015 | P0 | In Progress | Product/UI | **ACTIVE SOLE PRIORITY (DEC-015):** Build the Standard Transaction Workspace (DEC-013) across all transaction pages, phased and monitored. DA-009/DA-019 paused. | User directive 2026-07-12; `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`; blueprint §17 | Each phase below shipped: verified (build/lint/types green), committed. Initiative done when core four + secondary docs run under `DocumentLayout` with the standard tab set. Issues found → routed per DEC-015 (defects to audit findings in priority order; enhancements to vision/backlog). |
+
+## AIQ-015 Phase Plan (Standard Transaction Workspace)
+
+Pilot = Sales Invoice (blueprint §17). Adopt-on-touch, reuse components, never fork, never change posting/tax behavior.
+
+| Phase | Scope | Status |
+| --- | --- | --- |
+| P0 Governance | DEC-015, this queue entry, issue-routing, state/handoff | Done (session 65) |
+| P1 Shell | `DocumentLayout` + `WorkflowStrip` + `TransactionTabs` (build first; §15) | Done (session 65) — `src/components/document/DocumentLayout.tsx`, build+lint green |
+| P2 Routes | Deep-linkable `/sales-invoices/:id` view route added; list links to it ("Open ↗"). `/new`+`/:id/edit` stay in the list modal for now (route-driven create/edit deferred to a later slice). | Done (session 65) |
+| P3 SI view | Done (session 65) — `src/pages/SalesInvoiceDocumentPage.tsx`: read-only document-of-record via `DocumentLayout`; tabs Lines · GL Impact (`GLImpactPanel`) · Posting Validation (checklist) · Audit Trail (`AuditTrailSection`, PXL-AUD-050) · Related; right rail = Financial Summary (§8 SI contract) + Party. Workflow strip + fixed toolbar. build+lint green, HMR verified. | Done (session 65) |
+| P4 Panels | Done (session 65) — `src/components/document/FinancialSummaryPanel.tsx` (generic group-based, §8) + `PostingValidationPanel.tsx` (`readinessToChecks` bridges the live `useTransactionReadiness` server preflight, §11). SI doc page now uses both: right-rail summary + live preflight on draft/approved, derived checks on posted/voided. build+lint(0 warn) green, HMR verified. | Done (session 65) |
+| P5 Tax+Grid | Done (session 65, user-approved VAT-only scope) — `src/components/document/LineGrid.tsx` (column-group-aware, read-only now, totals footer, structured for later editing; SI Lines tab uses it with a Revenue-Acct provenance column, §5) + `TaxImpactPanel.tsx` (reads `tax_detail_entries`, **VAT kinds only** with draft fallback; EWT/CWT deferred pending PXL-AUD-031/032/033, §10 correctness gate). Tax Impact tab added next to GL Impact. build+lint(0 warn) green, HMR verified. Deferred: editable line entry + full §7 account-determination ladder (arrives with route-driven create/edit). | Done (session 65) |
+| P6 Rollout | Core four (OR, VB, PV) → secondary docs; `RelatedDocumentsTab` (§12); config layer (§14) | Todo |
 
 ## Agent Selection Rule
 
@@ -32,6 +47,8 @@ Status: `Todo`, `In Progress`, `Blocked`, `Done`. Priority: P0 correctness/secur
 
 ## Current Recommended Next Task
 
-Session 64's DA-019 first slice is fully shipped (verified + committed + Git + hosted, synced through `20260712000004`). Continue AIQ-008 with **PXL-DA-019**'s remaining slices (true BIR DAT record layout, immutable books reconciliation, exported-byte export provenance) or advance **PXL-DA-009** dependencies (safe ATC date/version, PXL-AUD-041 remittance flow).
+**AIQ-015 is the active sole priority (DEC-015, user directive 2026-07-12).** Work the phase plan above in order: currently P0 Governance → next P1 Shell (`DocumentLayout` + `WorkflowStrip` + `TransactionTabs`). AIQ-008's remaining Criticals (**PXL-DA-009**, **PXL-DA-019**) are **paused** — still Open, not withdrawn, revisited after the scheduled workspace phases. Do not resume them without user direction.
+
+Discovered issues during workspace work are routed per DEC-015: genuine defects → NEW rows in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` in severity order (so they queue for fix); enhancements → vision/backlog. A defect is fixed mid-phase only if it blocks the phase.
 
 Do not redo AUD-002, AUD-006, AUD-014, AUD-051, DA-001, DA-002, DA-004, DA-005, DA-006, DA-007, or DA-008. The unowned ATC/CAS work (`20260710000004/00005` + test 027) is confirmed broken (breaks test 021; own test fails 15/30), stays untracked and off hosted per the user's 2026-07-11 decision, and must be held out of resets/tests/pushes/docs-gate runs until explicitly owned and fixed.
