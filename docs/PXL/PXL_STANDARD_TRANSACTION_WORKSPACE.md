@@ -142,6 +142,52 @@ Existing inventory (see blueprint §2 for adoption state): `GLImpactPanel`, `Set
 
 Every transactional page in PXL feels like a single, intelligent ERP workspace rather than a collection of disconnected forms. Users can understand, validate, approve, post, audit, reconcile, and navigate an entire business transaction from one consistent interface. This is the official long-term UI/UX vision of PXL and guides all module development after production readiness is achieved.
 
+## Pilot Reference Implementation (Sales Invoice)
+
+Sales Invoice is the canonical pilot. Every other transaction adopts this shape.
+
+- **Canonical route:** `/sales-invoices/:id` → `src/pages/SalesInvoiceDocumentPage.tsx` renders `DocumentLayout`. This is the single viewing/review/lifecycle surface for a saved invoice. The register (`SalesInvoicePage`) routes non-draft rows here; draft create/edit still uses the register editor until the form is relocated onto the route (the final consolidation step).
+- **Lifecycle actions on the route:** Submit for Approval / Post / Return to Draft / Void (reason dialog) call the existing RPCs (`fn_approve_sales_invoice`, `fn_post_sales_invoice`, `fn_revert_si_to_draft`, `fn_void_sales_invoice`); the server enforces role/SoD. Toolbar actions are shown only for states that allow them; posted invoices are never editable.
+- **Primary Information** (`PrimaryInformationPanel`) between header and tabs: Document / Customer / Sales-Context groups, auto-populated read-only from the SI snapshot + Customer master, with provenance hints (§6).
+- **Header statuses:** primary StatusBadge + Posting / Collection / Lock badges; full workflow strip Draft → Approved → Posted → Partially Paid → Paid (Voided terminal), collection state derived from posted receipt applications.
+- **Tabs (12, fixed order):** Lines (`LineGrid` + `LineDetailPanel` on row-select) · Financial Summary (`FinancialSummaryPanel`, full contract incl. collection) · GL Impact (`GLImpactPanel`) · Tax Impact (`TaxImpactPanel`, VAT-only until PXL-AUD-031/032/033) · Posting Validation (`PostingValidationPanel` live preflight) · Approval (`approval_instances` or empty state) · Audit Trail (`AuditTrailSection`) · Related Documents (`RelatedDocumentsTab`) · Attachments (deferred empty state — no storage yet) · Activity Timeline (lifecycle facts; semantic stream pending PXL-DA-016) · Notes (memo; threaded notes deferred) · System.
+- **Right rail:** Financial Summary · Customer Snapshot (from Customer master: VAT class, withholding, terms, credit limit, available credit) · Tax Summary · Posting Validation · Quick Actions · Audit Summary — via the shared `SidebarCard`.
+- **Master Data gaps found (SI pilot):** Salesperson, Price List, and default Project/Department/Cost-Center/Location are not modeled on Customer/Item master or the SI, so Sales Context fields are placeholders. These are enhancements (routed to the backlog, not audit findings) — resolve by extending Customer/Item master rather than adding manual SI fields (§6). Credit-limit exists on `customers`; per-invoice outstanding AR is derived from posted receipt applications.
+
+### Reusable RelatedDocumentsTab contract (§12 / spec §14)
+
+`src/components/document/RelatedDocumentsTab.tsx` renders the FULL expected chain — existing stages are clickable, missing stages show "None / Not created" plus an allowed create action. The owning page supplies `RelatedDocRow[]` (`relationship`, `docType`, `direction` upstream/current/downstream, `number`, `date`, `status`, `amount`, `href`, `action`, `note`); the component hardcodes no chain, so sales, purchasing, and accounting chains all reuse it. Existing links resolved for SI today: **Journal Entry** (`journal_entries.reference_doc_type='SI'` + `reference_doc_id`) and **Receipts** (`receipt_lines.invoice_id`). Upstream Quotation/SO/DR and CM/DM are shown as chain-skeleton rows (not yet linked on the SI record).
+
+Expected chains (drilldown/drillback both directions):
+- **Sales:** Quotation → Sales Order → Delivery Receipt → **Sales Invoice** → Official Receipt → Journal Entry; Credit/Debit Memo branch off SI; 2307-received + VAT snapshot where applicable.
+- **Purchasing:** Purchase Request → Purchase Order → Receiving Report → Vendor Bill → Payment Voucher → Vendor Credit → 2307 → Journal Entry.
+
+### Rollout Matrix
+
+Adoption: ✅ done · ⬜ not started. Fill per-page detail (tabs, line-grid profile, sidebar cards, gaps) as each page is adopted on-touch. All shared components below are built and ready to reuse.
+
+| Transaction | Canonical route (target) | Workspace adoption | Related-doc chain |
+| --- | --- | --- | --- |
+| Sales Invoice | `/sales-invoices/:id` | ✅ pilot (view + lifecycle; draft-form pending) | Quo→SO→DR→SI→OR→JE; CM/DM |
+| Cash Sale | `/cash-sales/:id` | ⬜ | Cash Sale→JE |
+| Receipt (OR) | `/receipts/:id` | ⬜ | SI→OR→JE; 2307 recv |
+| Credit Memo | `/credit-memos/:id` | ⬜ | SI→CM→JE |
+| Debit Memo | `/debit-memos/:id` | ⬜ | SI→DM→JE |
+| Quotation | `/quotations/:id` | ⬜ | Quo→SO |
+| Sales Order | `/sales-orders/:id` | ⬜ | Quo→SO→DR→SI |
+| Delivery Receipt | `/delivery-receipts/:id` | ⬜ | SO→DR→SI |
+| Customer Return | `/customer-returns/:id` | ⬜ | SI→Return→JE |
+| Purchase Order | `/purchase-orders/:id` | ⬜ | PR→PO→RR→VB |
+| Receiving Report | `/receiving-reports/:id` | ⬜ | PO→RR→VB |
+| Vendor Bill | `/vendor-bills/:id` | ⬜ (recommended next) | PO→RR→VB→PV→JE |
+| Cash Purchase | `/cash-purchases/:id` | ⬜ | Cash Purchase→JE |
+| Payment Voucher | `/payment-vouchers/:id` | ⬜ | VB→PV→JE; 2307 issued |
+| Vendor Credit | `/vendor-credits/:id` | ⬜ | VB→VC→JE |
+| Purchase Return | `/purchase-returns/:id` | ⬜ | RR/VB→Return→JE |
+| Journal Entry | `/journal-entries/:id` | ⬜ | JE ↔ source ↔ reversal |
+
+Reusable components available for adoption (`src/components/document/`): `DocumentLayout` (+ `WorkflowStrip`, `TransactionTabs`, `DocumentToolbar`), `FinancialSummaryPanel`, `PostingValidationPanel`, `LineGrid`, `TaxImpactPanel`, `RelatedDocumentsTab`.
+
 ## Maintenance
 
 Whenever architecture decisions affect transaction pages, update this document. Keep the session-48 blueprint (`PXL_TRANSACTION_EXPERIENCE_STANDARD.md`) synchronized as the implementation-detail layer; keep per-feature rows in `PXL_PRODUCT_BACKLOG.md`.

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
@@ -158,6 +158,14 @@ function ItemSearch({ items, value, onChange }: {
 // ── Main ──────────────────────────────────────────────────────
 export default function SalesInvoicePage() {
   const { companyId, branchId } = useAppCtx()
+  const navigate = useNavigate()
+  // Canonical viewing consolidation (DEC-013): saved non-draft invoices open
+  // in the routed workspace; drafts open the register editor until the
+  // create/edit form is relocated onto the route (final consolidation step).
+  const openDocument = (si: SI) => {
+    if (si.status === 'draft') openEdit(si)
+    else navigate(`/sales-invoices/${si.id}`)
+  }
 
   // Reference data
   const [customers, setCustomers] = useState<CustomerRef[]>([])
@@ -647,7 +655,7 @@ export default function SalesInvoicePage() {
                   {filteredList.map(si => {
                     const netOfVat = si.total_taxable_amount + si.total_zero_rated_amount + si.total_exempt_amount
                     return (
-                      <tr key={si.id} onClick={() => openEdit(si)}
+                      <tr key={si.id} onClick={() => openDocument(si)}
                         className="hover:bg-gray-50 cursor-pointer transition-colors">
                         <td className="px-4 py-2.5 font-mono font-semibold text-xs text-gray-900 whitespace-nowrap">{si.si_number}</td>
                         <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap"><DateCell date={si.date} /></td>

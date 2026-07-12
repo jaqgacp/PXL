@@ -180,6 +180,7 @@ export function DocumentLayout({
   meta = [],
   workflow,
   actions = [],
+  primary,
   tabs,
   rightRail,
   onBack,
@@ -194,6 +195,8 @@ export function DocumentLayout({
   meta?: DocumentMetaField[]
   workflow?: { steps: WorkflowStep[]; currentKey: string }
   actions?: ToolbarAction[]
+  /** Primary Information section rendered between the header and the tabs. */
+  primary?: React.ReactNode
   tabs: DocumentTab[]
   /** Contextual cards (Financial Summary, Posting Validation, …) shown on wide screens. */
   rightRail?: React.ReactNode
@@ -241,10 +244,13 @@ export function DocumentLayout({
         )}
       </div>
 
-      {/* Body: tabs + right rail */}
+      {/* Body: (primary info + tabs) + right rail */}
       <div className="flex flex-col lg:flex-row gap-4 items-start">
-        <div className="flex-1 min-w-0 bg-white border border-gray-200 rounded-lg px-6 py-4 w-full">
-          <TransactionTabs tabs={tabs} activeKey={activeTabKey} onChange={onTabChange} />
+        <div className="flex-1 min-w-0 w-full space-y-4">
+          {primary}
+          <div className="bg-white border border-gray-200 rounded-lg px-6 py-4">
+            <TransactionTabs tabs={tabs} activeKey={activeTabKey} onChange={onTabChange} />
+          </div>
         </div>
         {rightRail && (
           <aside className="w-full lg:w-80 shrink-0 space-y-4">{rightRail}</aside>

@@ -27,11 +27,17 @@ export function LineGrid<T>({
   rows,
   getRowKey,
   emptyLabel = 'No lines on this document.',
+  onRowClick,
+  selectedKey,
 }: {
   columns: LineColumn<T>[]
   rows: T[]
   getRowKey: (row: T, index: number) => string
   emptyLabel?: string
+  /** Row click (e.g. to open a Line Detail Panel). */
+  onRowClick?: (row: T, index: number) => void
+  /** Key of the currently-selected row, highlighted. */
+  selectedKey?: string
 }) {
   const visible = columns.filter(c => !c.hidden)
   const hasFooter = visible.some(c => c.footer != null)
@@ -53,15 +59,19 @@ export function LineGrid<T>({
         <tbody className="divide-y divide-gray-100">
           {rows.length === 0 ? (
             <tr><td colSpan={visible.length} className="px-3 py-8 text-center text-sm text-gray-400">{emptyLabel}</td></tr>
-          ) : rows.map((row, i) => (
-            <tr key={getRowKey(row, i)} className="hover:bg-gray-50/60">
+          ) : rows.map((row, i) => {
+            const key = getRowKey(row, i)
+            return (
+            <tr key={key}
+              onClick={onRowClick ? () => onRowClick(row, i) : undefined}
+              className={`${onRowClick ? 'cursor-pointer' : ''} ${selectedKey === key ? 'bg-blue-50/60' : 'hover:bg-gray-50/60'}`}>
               {visible.map(c => (
                 <td key={c.key} className={`px-3 py-2 text-xs text-gray-800 ${alignCls(c.align)}`}>
                   {c.render(row, i)}
                 </td>
               ))}
             </tr>
-          ))}
+          )})}
         </tbody>
         {hasFooter && rows.length > 0 && (
           <tfoot>

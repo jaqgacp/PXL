@@ -2,6 +2,30 @@
 
 Last updated: 2026-07-12 (session 65 — priority pivot to the Standard Transaction Workspace, DEC-015)
 
+## Active Priority (session 67 — SI complete reference workspace)
+
+Sales Invoice is now the **complete reference implementation** of the Standard Transaction Workspace (build + lint 0 warnings green; HMR verified; **uncommitted**). Added this session on `SalesInvoiceDocumentPage.tsx` + new shared components:
+
+- **`PrimaryInformationPanel`** (new) — Document / Customer / Sales-Context groups, auto-populated read-only with provenance hints (§5/§6). Fetches Customer master, branch, payment terms.
+- **Header statuses**: Posting / Collection / Lock badges + full workflow strip (Draft→Approved→Posted→Partially Paid→Paid; Voided). Collection derived from posted `receipt_lines`.
+- **12 tabs**: Lines (+ new **`LineDetailPanel`** on row-select via new `LineGrid` `onRowClick`/`selectedKey`) · Financial Summary (full contract incl. collection) · GL Impact · Tax Impact · Posting Validation · **Approval** (`approval_instances` or empty state) · Audit Trail · Related Documents · **Attachments** (deferred empty state) · **Activity Timeline** (lifecycle facts) · **Notes** (memo) · System.
+- **Full right sidebar** via new **`SidebarCard`**/`CardRow`: Financial Summary · Customer Snapshot (credit limit, available credit) · Tax Summary · Posting Validation · Quick Actions · Audit Summary.
+- **`DocumentLayout`** gained a `primary` slot (renders Primary Information above tabs).
+- Docs: workspace-doc pilot section rewritten; Master Data gaps (Salesperson/Price List/dimensions) logged in the backlog (enhancement, not a finding).
+
+**Remaining for a fully-complete pilot (next):** (1) **draft create/edit FORM relocation** onto the route to fully retire the register modal (biggest remaining; touches `fn_save_sales_invoice` + line editing — verify posting unchanged) — task 7; (2) **register list** column expansion + status-aware Actions menu — task 10; (3) accountant/auditor **line-grid column profiles** + column chooser; (4) visual/density polish + PXL_TRANSACTION_MATRIX SI-workspace note — task 12. Then roll to **Vendor Bill**. Verify each with `npm run build` / `npm run lint`. Issue-routing (DEC-015): defects → audit findings in severity order; enhancements → backlog/vision.
+
+## Active Priority (session 66 — SI canonical pilot refinement)
+
+User directive: make the **Sales Invoice** the canonical/reference implementation of the Standard Transaction Workspace, and consolidate the duplicate viewing experience into ONE routed workspace. Shipped this session (build + lint 0 warnings green, HMR verified; committed pending):
+
+- **Viewing consolidated**: `SalesInvoicePage` register now routes non-draft rows to the canonical `/sales-invoices/:id` workspace (`openDocument`); drafts still open the register editor. The modal read-only view path is no longer reached from the list.
+- **Lifecycle actions on the route**: `SalesInvoiceDocumentPage` toolbar does Submit-for-Approval / Post / Return-to-Draft / Void (reason dialog) via `fn_approve/post/revert/void_sales_invoice`; server enforces role/SoD; actions shown only for the states that allow them; posted = never editable.
+- **Reusable `RelatedDocumentsTab`** (`src/components/document/RelatedDocumentsTab.tsx`): renders the full chain, existing links clickable (JE via `journal_entries.reference_doc_type='SI'`; receipts via `receipt_lines.invoice_id`), missing stages show None + create action. Wired into the SI Related Documents tab.
+- **System tab** added; docs updated (`PXL_STANDARD_TRANSACTION_WORKSPACE.md`: pilot section + RelatedDocuments contract + rollout matrix).
+
+**Exact next step (remaining for a complete pilot):** (1) relocate the draft create/edit FORM onto the canonical route so the modal is fully retired (final consolidation — biggest remaining piece; touches `fn_save_sales_invoice` + line editing; verify posting unchanged); (2) upgrade GL Impact / Tax Impact / Approval tabs to full spec tables + add Line Detail Panel + Attachments/Activity Timeline/Notes tabs (task 9); (3) register column expansion + status-aware Actions menu (task 10); (4) expand right-sidebar cards + Customer Snapshot from master data, logging Master Data gaps (task 11); (5) visual/density pass + finish docs/rollout (task 12). Then roll to Vendor Bill. Verify each with `npm run build` / `npm run lint`. Issue-routing (DEC-015): defects → audit findings in severity order; enhancements → vision/backlog.
+
 ## Active Priority (session 65)
 
 **AIQ-015 — Standard Transaction Workspace is the active sole priority (DEC-015).** The two remaining Criticals (**PXL-DA-009**, **PXL-DA-019**) are **paused** — still Open, not withdrawn, revisited only after the scheduled workspace phases or on user direction. Do not resume them without the user.

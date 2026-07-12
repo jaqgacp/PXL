@@ -47,6 +47,7 @@ Every financial transaction page should converge toward one consistent layout. N
 | Feature | Business Value | Accounting Value | Compliance Value | UX Value | Dependencies | Priority | Complexity | Current Readiness | Phase | UI Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Customer insights panel | Credit decisions at capture time | Balance, aging, open documents from AR views | CWT history and 2307-received status | Context without leaving the invoice | AR aging views (exist), receipts, 2307 tracking | Medium | M | Data exists across views; no aggregation endpoint or panel | Phase 2 | Sidebar on customer select: balance, aging buckets, recent docs, CWT profile |
+| Sales-context master data (Salesperson, Price List, default dimensions) | Fewer manual fields; consistent sales analytics | Correct dimension defaults on JE lines | — | Sales Context auto-populates instead of blank | Customer/Item master extension; PXL-DA-017 dimensions | Medium | M | **Master Data gap found in SI workspace pilot (session 66):** Salesperson, Price List, and default Project/Department/Cost-Center/Location are not modeled on Customer/Item master, so the SI Sales-Context group shows placeholders | Phase 2 | Extend Customer/Item master (do NOT add manual SI fields, §6); then prefill on customer/item select with provenance |
 
 ## Purchasing / AP
 

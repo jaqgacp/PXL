@@ -1,6 +1,6 @@
 # AI State
 
-Last updated: 2026-07-12 (session 65 — priority pivot: Standard Transaction Workspace is the active sole priority per DEC-015)
+Last updated: 2026-07-12 (session 67 — Sales Invoice built out as the complete reference workspace: Primary Information, 12 tabs, Line Detail Panel, full sidebar, header statuses; draft-form relocation + register actions remain)
 
 ## Project Status
 
