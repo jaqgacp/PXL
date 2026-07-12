@@ -1,7 +1,7 @@
 -- ACCOUNTING-TRACE-REPORTS-001
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
-SELECT plan(26);
+SELECT plan(29);
 
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -163,6 +163,30 @@ INSERT INTO sales_invoices (
     '22222222-2222-2222-2222-222222222127',
     '33333333-3333-3333-3333-333333333127',
     'SI-FOREIGN-127', '2026-07-10', NULL,
+    '55555555-5555-5555-5555-555555555127',
+    'Foreign Customer Inc', '444-555-666-127', 'Foreign HQ',
+    50, 6, 56, 'posted',
+    '11111111-1111-1111-1111-111111111126',
+    '11111111-1111-1111-1111-111111111126'
+  ),
+  (
+    -- Unlinked same-company source for the normal-trigger positive control.
+    '77777777-7777-7777-7777-777777777128',
+    '22222222-2222-2222-2222-222222222126',
+    '33333333-3333-3333-3333-333333333126',
+    'SI-TRACE-128', '2026-07-10', '44444444-4444-4444-4444-444444444226',
+    '55555555-5555-5555-5555-555555555126',
+    'Trace Customer Inc', '444-555-666-126', 'Customer HQ',
+    100, 12, 112, 'posted',
+    '11111111-1111-1111-1111-111111111126',
+    '11111111-1111-1111-1111-111111111126'
+  ),
+  (
+    -- Unlinked foreign-company source for the normal-trigger cross-company negative.
+    '77777777-7777-7777-7777-777777777129',
+    '22222222-2222-2222-2222-222222222127',
+    '33333333-3333-3333-3333-333333333127',
+    'SI-FOREIGN-129', '2026-07-10', NULL,
     '55555555-5555-5555-5555-555555555127',
     'Foreign Customer Inc', '444-555-666-127', 'Foreign HQ',
     50, 6, 56, 'posted',
@@ -621,6 +645,68 @@ SELECT is(
    WHERE id = 'cccccccc-cccc-cccc-cccc-ccccccccc126'),
   'legacy-hash-unchanged',
   'deriving legacy/new snapshot links preserves the immutable source hash'
+);
+
+-- ---------------------------------------------------------------------------
+-- PXL-DA-005 closure evidence: writer-boundary negatives under NORMAL trigger
+-- execution. The replica-mode fixtures above queued no constraint events, so
+-- making the deferred source-integrity constraint immediate fires
+-- fn_enforce_journal_entry_source for each statement below exactly as it does
+-- at commit time in production.
+-- ---------------------------------------------------------------------------
+SET CONSTRAINTS trg_journal_entry_source_integrity IMMEDIATE;
+
+SELECT lives_ok(
+  $q$INSERT INTO journal_entries (
+    company_id, branch_id, je_number, je_date, fiscal_period_id,
+    description, reference_doc_type, reference_doc_id, status,
+    total_debit, total_credit, created_by, updated_by
+  ) VALUES (
+    '22222222-2222-2222-2222-222222222126',
+    '33333333-3333-3333-3333-333333333126',
+    'JE-LIVE-SOURCE-126', '2026-07-23', '44444444-4444-4444-4444-444444444226',
+    'Live-source normal-trigger control', 'SI', '77777777-7777-7777-7777-777777777128',
+    'posted', 1, 1,
+    '11111111-1111-1111-1111-111111111126',
+    '11111111-1111-1111-1111-111111111126'
+  )$q$,
+  'normal-trigger control: a posted JE with an existing same-company source is accepted'
+);
+
+SELECT throws_like(
+  $q$INSERT INTO journal_entries (
+    company_id, branch_id, je_number, je_date, fiscal_period_id,
+    description, reference_doc_type, reference_doc_id, status,
+    total_debit, total_credit, created_by, updated_by
+  ) VALUES (
+    '22222222-2222-2222-2222-222222222126',
+    '33333333-3333-3333-3333-333333333126',
+    'JE-ORPHAN-LIVE-126', '2026-07-23', '44444444-4444-4444-4444-444444444226',
+    'Orphan-source normal-trigger negative', 'SI', '77777777-7777-7777-7777-777777777998',
+    'posted', 1, 1,
+    '11111111-1111-1111-1111-111111111126',
+    '11111111-1111-1111-1111-111111111126'
+  )$q$,
+  '%Posting source SI.% does not exist%',
+  'normal trigger immediately rejects a posted JE whose governed source row does not exist'
+);
+
+SELECT throws_like(
+  $q$INSERT INTO journal_entries (
+    company_id, branch_id, je_number, je_date, fiscal_period_id,
+    description, reference_doc_type, reference_doc_id, status,
+    total_debit, total_credit, created_by, updated_by
+  ) VALUES (
+    '22222222-2222-2222-2222-222222222126',
+    '33333333-3333-3333-3333-333333333126',
+    'JE-CROSS-LIVE-126', '2026-07-23', '44444444-4444-4444-4444-444444444226',
+    'Cross-company normal-trigger negative', 'SI', '77777777-7777-7777-7777-777777777129',
+    'posted', 1, 1,
+    '11111111-1111-1111-1111-111111111126',
+    '11111111-1111-1111-1111-111111111126'
+  )$q$,
+  '%Posting source company % does not match journal company %',
+  'normal trigger immediately rejects a posted JE linked to another company''s source'
 );
 
 -- Remove foreign-company membership and verify both aggregate and direct

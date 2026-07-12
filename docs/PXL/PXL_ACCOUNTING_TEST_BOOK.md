@@ -662,7 +662,7 @@ Status: Executed Passing (session 59, 2026-07-10) in `supabase/tests/025_posting
 
 ## ACCOUNTING-TRACE-REPORTS-001 - Report-Wide Drillback Trace Contracts
 
-Status: Executed Passing (session 61, 2026-07-11) in `supabase/tests/026_accounting_trace_report_routes_test.sql`, 26 assertions. Related findings: PXL-DA-002.
+Status: Executed Passing (session 63, 2026-07-12) in `supabase/tests/026_accounting_trace_report_routes_test.sql`, 29 assertions. Related findings: PXL-DA-002, PXL-DA-005.
 
 | Step | Action | Expected Behavior |
 | ---- | ------ | ----------------- |
@@ -671,3 +671,20 @@ Status: Executed Passing (session 61, 2026-07-11) in `supabase/tests/026_account
 | 3 | Create deliberate orphan and cross-company source links via replica-mode fixtures | The trace reader rejects them; no foreign-company source record is ever returned to a member of another company. |
 | 4 | Request report snapshot trace links | Links are derived read-only from the immutable snapshot payload; payloads and hashes are never rewritten. |
 | 5 | Request aggregate report trace sets by family (financial, subledger, tax, 2307, snapshot) | Row sets are membership-scoped to the caller's company and filtered by the family's filter keys. |
+| 6 | With `SET CONSTRAINTS trg_journal_entry_source_integrity IMMEDIATE`, insert posted JEs under normal trigger execution: one referencing a live same-company SI, one referencing a nonexistent SI, one referencing another company's SI | The live-source JE is accepted; the orphan-source and cross-company JEs are rejected by the real writer-boundary constraint at statement time (PXL-DA-005 closure evidence). |
+
+## POSTING-RACE-001 - Genuine Two-Session Posting Race and Idempotency
+
+Status: Executed Passing (session 63, 2026-07-12) in `supabase/tests/029_posting_race_two_session_test.sql`, 14 assertions. Related findings: PXL-DA-007, PXL-DA-004.
+
+Local-harness-only by design: the test opens two extra real database sessions with dblink through the same TCP endpoint the pgTAP harness uses, so its fixture company is committed, pre-cleaned on entry, and deleted on exit (rerunnable back-to-back).
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Build a committed approved SI through the governed save/approve RPCs in an autonomous setup session | A single approved sales invoice exists as the race target. |
+| 2 | Session A begins a transaction and posts the SI without committing | Session A holds the governed `FOR UPDATE` source lock. |
+| 3 | Session B posts the same SI concurrently | Session B observably blocks on the source lock (`pg_stat_activity` shows a `Lock` wait). |
+| 4 | Session A commits | Session B resumes without error and resolves to a governed no-op: exactly one original JE and one live output VAT tax set exist, and the SI links the single surviving JE. |
+| 5 | Re-post the same SI sequentially afterward | Idempotent no-op; no additional JE or tax rows. |
+| 6 | Directly insert a second live original JE or a second live VAT tax row for the raced source | Structurally impossible: rejected by `ux_journal_entries_live_source` and `ux_tde_vat_source_code`. |
+| 7 | Delete the committed fixture company | Nothing is left behind; the test is rerunnable. |

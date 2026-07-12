@@ -1,47 +1,45 @@
 # AI State
 
-Last updated: 2026-07-12 (session 62: dedicated posting/trace closure retest and DA-008 VAT amount authority)
+Last updated: 2026-07-12 (session 63: closed PXL-DA-005 and PXL-DA-007 with executed writer-boundary and two-session race evidence)
 
 ## Project Status
 
-PXL is a React 19 + TypeScript + Vite frontend backed by Supabase/PostgreSQL. Audit hardening continues under AIQ-008. The authoritative standing is **40 Retested Passed / 13 In Progress / 19 Open (72)**. Two Critical findings remain: **PXL-DA-009** (withholding architecture) and **PXL-DA-019** (CAS/BIR readiness).
+PXL is a React 19 + TypeScript + Vite frontend backed by Supabase/PostgreSQL. Audit hardening continues under AIQ-008. The authoritative standing is **42 Retested Passed / 11 In Progress / 19 Open (72)**. Two Critical findings remain: **PXL-DA-009** (withholding architecture) and **PXL-DA-019** (CAS/BIR readiness).
 
-Session 62 closed PXL-DA-002, PXL-DA-004, PXL-DA-008, and PXL-AUD-014. PXL-DA-005 and PXL-DA-007 remain In Progress because their implementations are present but closure evidence is incomplete: normal-trigger orphan/cross-company JE negatives for DA-005, and a genuine two-session same-source posting race for DA-007.
+Session 63 closed PXL-DA-005 and PXL-DA-007 — the two implementation-complete findings that were held open only for missing closure evidence. No schema or application code changed; the session added test evidence only.
 
 ## Current Active Task
 
-Session 62 completed two AIQ-008 slices:
+Session 63 delivered two closure test slices:
 
-- **Dedicated retest:** `20260711000002` covers financial, subledger, VAT/WHT, 2307, and report-snapshot trace families, so DA-002 is Retested Passed. `20260711000001` supplies the common source-lock/create-add-finalize/tax/reversal/audit protocol for direct and compatibility-wrapped writers, so DA-004 is Retested Passed. DA-005/007 stayed open only for the evidence gaps above.
-- **Next Critical (DA-008):** new `supabase/migrations/20260712000001_vat_amount_rpc_authority.sql` makes SI/VB/CM/DM/cash-purchase/vendor-credit headers and lines RPC-only for application mutations. It removes mutation policies and INSERT/UPDATE/DELETE/TRUNCATE grants while preserving RLS-scoped reads and SECURITY DEFINER save/lifecycle RPCs. It also closes a review-discovered bypass: automatically updatable `vw_sales_invoice_register`/`vw_vendor_bill_register` are application-read-only and `security_invoker`, so callers cannot forge VAT through a view or read another company through the view owner's RLS bypass.
-- **Tests/docs:** new VAT-AMOUNT-INTEGRITY-001 (`supabase/tests/028_vat_amount_integrity_test.sql`, 25 assertions) proves forged payload fields are ignored across all six persisted VAT document families, base/view mutations are denied, register views are tenant-scoped, and mixed SI/VB amounts reconcile document -> tax ledger -> GL VAT controls -> VAT review. Test 014 now expects direct SI status mutation to fail at the stronger RPC-only boundary.
+- **PXL-DA-005 -> Retested Passed:** test 026 (now 29 assertions) adds writer-boundary negatives under normal trigger execution. `SET CONSTRAINTS trg_journal_entry_source_integrity IMMEDIATE` makes the real deferred JE source constraint fire at statement time: a posted JE referencing a live same-company SI is accepted; posted JEs referencing a nonexistent SI (orphan) or another company's SI are rejected by the actual trigger, not by forged reader fixtures.
+- **PXL-DA-007 -> Retested Passed:** new `supabase/tests/029_posting_race_two_session_test.sql` (POSTING-RACE-001, 14 assertions) opens two real extra database sessions with dblink through the harness TCP endpoint (`inet_server_addr()`; loopback is trust-authenticated so dblink needs the scram path). Two sessions race `fn_post_sales_invoice` on one committed approved SI: the second session observably blocks on the governed `FOR UPDATE` source lock (`pg_stat_activity` wait state), resumes after the first commit as a governed no-op, and exactly one original JE/tax set survives with the SI linked to it. Sequential re-post is a no-op; duplicate JE/tax rows remain structurally impossible (`ux_journal_entries_live_source`, `ux_tde_vat_source_code`). The committed race fixture is pre-cleaned on entry and deleted on exit, so the test is rerunnable (verified back-to-back).
 
 ## Verification and Hosted State
 
-Executed 2026-07-12 with the unowned ATC/CAS files held out:
+Executed 2026-07-12 with the unowned ATC/CAS files held out and restored byte-for-byte afterward (checksums verified):
 
 - Fresh `supabase db reset --local` replay through `20260712000001`: clean.
-- Full pgTAP: **499/499 across 27 owned test files**.
-- Focused VAT/posting/trace set: **173/173**.
-- `npm run build`: passed.
-- `npm run lint`: zero warnings, exit 0.
-- `npm run gen:types` and `scripts/gen_schema_summary.sh`: complete; schema summary remains 187 functions / 19 views / 147 tables / 226 triggers.
-- `scripts/check_docs_consistency.sh`: green (72 findings, 27 owned test files).
-- Hosted migration push: **PENDING**. `supabase db push --linked --dry-run` could not authenticate because `SUPABASE_ACCESS_TOKEN` is absent. Hosted remains synced only through `20260711000002`.
-- Git: implementation/docs commit `06bf705` pushed to `origin/main`.
+- Full pgTAP: **516/516 across 28 owned test files** (499 prior + 3 new in test 026 + 14 in test 029).
+- Test 029 verified rerunnable back-to-back against a live database.
+- `scripts/check_docs_consistency.sh`: green (72 findings, 28 owned test files).
+- `npm run build` / `npm run lint`: not rerun — no frontend or migration source changed this session; session-62 state (build passed, zero lint warnings) stands.
+- Schema summary unchanged (no migrations added): 187 functions / 19 views / 147 tables / 226 triggers.
+- Hosted migration push: **PENDING**. `20260712000001` still needs `SUPABASE_ACCESS_TOKEN`; hosted remains synced only through `20260711000002`.
 
 Hosted demo reference (unchanged): PXL Demo Trading Corporation has the session-60 setup/master/item seeds and no posted transactions. Local resets remove local demo seed data; rerun the three idempotent seeds in handoff order if needed.
 
 ## Known Boundaries
 
-- **Unowned broken files remain excluded by user decision (2026-07-11):** `20260710000004_atc_document_date_versioning.sql`, `20260710000005_cas_numbering_void_dat_controls.sql`, and `027_cas_end_to_end_controls_test.sql` are untracked and must be moved aside before reset/test/push. Migration 00005 breaks test 021 and test 027 fails 15/30. Do not absorb or deploy them implicitly.
+- **Unowned broken files remain excluded by user decision (2026-07-11):** `20260710000004_atc_document_date_versioning.sql`, `20260710000005_cas_numbering_void_dat_controls.sql`, and `027_cas_end_to_end_controls_test.sql` are untracked and must be moved aside before reset/test/push/docs-gate. Migration 00005 breaks test 021 and test 027 fails 15/30. Do not absorb or deploy them implicitly.
+- **Test 029 is local-harness-only by design:** it uses dblink with the local supabase credentials (postgres/postgres over the container TCP address). pgTAP is never run against hosted, so this is acceptable; keep it in mind if the harness transport ever changes.
 - **PXL-AUD-051 is larger than its original note:** FA/JE/PRT/SDM registry rows and DM-S readiness still need repair, but eight shipped fixed-asset/inventory functions also call a nonexistent two-argument numbering overload. Fix those callers with the correct branch; do not adopt the held-out overload that chooses an arbitrary branch.
 - PXL-DA-009 depends on safe ATC document-date/version work and the controlled remittance flow (PXL-AUD-041). PXL-DA-019 depends on document-code/numbering repair and CAS lifecycle work; its held-out draft remains broken.
 - Exact server rollback preview still requires a saved source; atomic cash/fixed-asset forms show a labeled client estimate.
 
 ## Next Recommended Step
 
-Close PXL-DA-005 with normal-trigger orphan/cross-company JE assertions and PXL-DA-007 with a true two-session posting race. Then fix PXL-AUD-051 completely (registry/code alignment, DM-S readiness, seed realignment, and branch-scoped repair of all eight two-argument numbering callers) to unblock PXL-DA-019.
+Fix PXL-AUD-051 completely: registry/code alignment (DM vs DM-S; JE/SDM/PRT/FA absent from the registry), DM-S readiness, demo-seed realignment, and branch-scoped repair of all eight two-argument `fn_next_document_number` callers (never the held-out arbitrary-branch overload). That unblocks PXL-DA-019. PXL-DA-009 remains blocked on safe ATC date/version work plus PXL-AUD-041.
 
 ## Decisions Needed From User
 
