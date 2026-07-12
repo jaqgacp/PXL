@@ -4,7 +4,7 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-11. Migrations scanned: 81. Tests present: 26.
+Generated: 2026-07-12. Migrations scanned: 82. Tests present: 27.
 
 ## Functions (187)
 

@@ -351,7 +351,7 @@ Scenario (company with owner, admin, and member; workflow W1 governs all `sales`
 | 5 | Owner (creator) approves their own SI via RPC | Rejected: "segregation of duties" — creator cannot approve. |
 | 6 | Admin approves the SI | Approved; an `approval_instances` row records workflow, actor, and timestamp. |
 | 7 | Owner (creator) posts the approved SI | Allowed: the approver differed from the creator, so the creator may post. |
-| 8 | Owner directly UPDATEs a second SI to `approved` | Rejected identically: trigger-based enforcement catches RPC shortcuts. |
+| 8 | Owner directly UPDATEs a second SI to `approved` | Rejected at the RPC-only table boundary; the approval RPC separately enforces approver-not-creator. |
 | 9 | Post with no instance and legacy `approved_by` = creator | Rejected: no qualifying approval. |
 | 10 | Post with legacy `approved_by` = a different admin | Allowed: pre-migration approvals qualify when the approver differed. |
 | 11 | Deactivate W1, owner approves their own new SI | Allowed: no active workflow means only the DEC-009 role gate applies. |
@@ -634,6 +634,18 @@ Status: Executed Passing (session 59, 2026-07-10) in `supabase/tests/024_vat_reg
 | 3 | Post valid VAT-company CM/DM/VC documents | Canonical per-code tax-detail rows carry the correct signed base/tax; legacy lump rows from the wrapped writer are replaced in the same transaction. |
 | 4 | Authenticated user directly inserts/updates/deletes `tax_detail_entries` | Denied; SECURITY DEFINER posting/reversal RPCs remain the only writers. |
 | 5 | Non-VAT company requests SLSP/RELIEF through VAT or CAS snapshot entry points, or inserts a VAT export snapshot | Rejected before export evidence is created; non-VAT CAS report types remain available. |
+
+## VAT-AMOUNT-INTEGRITY-001 - Server-Authoritative Operational VAT Amounts
+
+Status: Executed Passing (session 62, 2026-07-12) in `supabase/tests/028_vat_amount_integrity_test.sql`, 25 assertions. Related findings: PXL-DA-008, PXL-AUD-014.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Submit forged line net/VAT/total fields and forged header totals through SI, VB, CM, DM, cash-purchase, and vendor-credit save RPCs | Every derived field is ignored; the server recomputes line and header amounts from quantity/price/discount plus the VAT classification/rate masters. |
+| 2 | Post mixed regular/zero-rated/exempt SI and VB fixtures | Per-code tax detail preserves every classification base; document totals, output/input VAT GL controls, and ledger-backed VAT review rows match exactly. |
+| 3 | Inspect application-role grants and RLS policies on all six VAT headers/line tables and the updatable SI/VB register views | SELECT remains available through company-scoped RLS, but INSERT/UPDATE/DELETE/TRUNCATE grants and mutation policies are absent. The register views run as `security_invoker`. |
+| 4 | As `authenticated`, directly alter a base header/line, update an updatable register view, or truncate source evidence | Rejected with table/view-permission denial; register reads expose no foreign-company rows. |
+| 5 | As `authenticated`, edit a draft document through its SECURITY DEFINER save RPC | Allowed; the normal application workflow remains operational and server-authoritative. |
 
 ## GL-PREVIEW-PARITY-001 - Exact Rollback Preview and Posting Invariants
 

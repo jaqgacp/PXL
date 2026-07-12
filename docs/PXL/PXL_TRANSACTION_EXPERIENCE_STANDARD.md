@@ -178,7 +178,7 @@ All summary figures are drill sources: clicking Output VAT opens the Tax Impact 
 
 1. **Draft preview** — delivered for saved sources via the PXL-DA-001 rollback preview RPC (same code path as posting); atomic unsaved forms show a clearly labeled client estimate. Account, description, debit, credit, balance, account source, date, period, branch, and rule explanation are shown.
 2. **Posted journal** — delivered: JE number/date/lines plus links to JE, GL, account detail, source, and full accounting trace. Reversal-pair presentation remains a layout enhancement.
-3. **Drillback** — the PXL-DA-002 trace RPC/page and core routes are live; financial/compliance report adoption remains.
+3. **Drillback** — PXL-DA-002 is Retested Passed: governed source/JE/GL routes and report-family trace sets cover financial, subledger, tax, 2307, and snapshot surfaces. Universal amount-level links and breadcrumb presentation remain Phase 2 layout enhancements.
 4. Coverage: broad posting-surface rollout completed in session 59; PXL-AUD-049 remains In Progress only for withholding tax-ledger/2307/QAP drilldown.
 
 ## 10. Tax Impact Standard

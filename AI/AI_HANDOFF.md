@@ -1,35 +1,41 @@
 # AI Handoff
 
-Last updated: 2026-07-11 (session 61 recovery: reconstructed the interrupted session, fixed one migration defect, verified, deployed to hosted, committed and pushed — all user-directed)
+Last updated: 2026-07-12 (session 62: closed DA-002/004/008 and AUD-014; DA-005/007 retained for missing evidence)
 
 ## What Was Done
 
-Session 61 (interrupted) had implemented AIQ-008 work for **PXL-DA-002** (report/compliance drillback) and **PXL-DA-004/005/007** (posting-engine completion) but never reached wrap-up. The recovery session finished it:
-
-- **`supabase/migrations/20260711000001_posting_engine_completion.sql`**: registry-backed `fn_resolve_posting_source` (resolution + `FOR UPDATE` locking + deferred-JE integrity); shared tax writer with stable source-line identity and safe uniqueness; shared posting/reversal audit and exact-opposite reversal mutation primitive; core AR/AP writers migrated to create/add/finalize + shared tax writer (public signatures unchanged); core reversal paths and secondary saved-source writers on the shared primitives; helpers revoked from application callers.
-- **`supabase/migrations/20260711000002_accounting_trace_reports.sql`**: canonical `source_doc_type`/`source_doc_id` appended to `vw_customer_ledger`, `vw_supplier_ledger`, `vw_output_vat_review`, `vw_input_vat_review`, `vw_ewt_summary_ap`, `vw_cwt_summary_ar`; fail-closed `fn_get_accounting_trace` routing to the generic read-only `/accounting-source` page; internal `fn_normalize_report_source_type`; read-only `fn_get_report_snapshot_trace_links`; membership-scoped `fn_get_report_trace_set`.
-- **UI**: `src/lib/accountingTrace.ts`, `AccountingTraceLink.tsx`, `AccountingSourcePage.tsx` (+ route); `AccountingTracePage` report-family trace sets; drillback adopted across ~20 report/compliance pages (GL, account detail ledger, BS/IS/SCF/SCE/comparative, AP/AR aging, VAT summaries/review, SAWT, QAP, 2307 issued/received, report snapshots).
-- **Recovery fix**: the interrupted migration draft referenced `v_ref.date_column`; the real column is `document_date_column` (`20260710000003`). Fixed in `fn_resolve_posting_source` (two lines). The bug was masked on the live DB because session 61 had applied a corrected version ad hoc; only fresh-reset replay exposed the broken file.
-- **Docs**: test book entry ACCOUNTING-TRACE-REPORTS-001 (test 026); session-61 row appended to the audit findings session log; finding statuses deliberately unchanged (DA-002/004/005/007 remain In Progress pending a dedicated retest pass); types and scoped schema summary regenerated.
+- Dedicated retest of deployed session-61 contracts:
+  - **PXL-DA-002 -> Retested Passed:** canonical report source keys, fail-closed trace routing, immutable snapshot trace links, and membership-scoped trace sets cover financial, subledger/aging, VAT/WHT, 2307, and snapshot report families.
+  - **PXL-DA-004 -> Retested Passed:** registry-backed source locks, common JE create/add/finalize, shared tax identity/writer, exact reversal, audit primitives, and compatibility-wrapped secondary writers form the common posting protocol.
+  - **PXL-DA-005 stays In Progress:** implementation exists, but test 026's forged fixtures bypass triggers; add normal-trigger orphan and cross-company JE negatives.
+  - **PXL-DA-007 stays In Progress:** locks and JE/tax uniqueness exist, but there is no genuine two-session post race.
+- Fixed the next unblocked Critical, **PXL-DA-008**, and closed **PXL-AUD-014**:
+  - Added `supabase/migrations/20260712000001_vat_amount_rpc_authority.sql`.
+  - SI/VB/CM/DM/cash-purchase/vendor-credit headers/lines are RLS-read + RPC-write only for application roles; direct INSERT/UPDATE/DELETE/TRUNCATE grants and mutation policies are removed.
+  - Review found an alternate bypass through automatically updatable SI/VB register views. Both views are now application-read-only and `security_invoker`, closing mutation and cross-company read bypasses.
+  - Added VAT-AMOUNT-INTEGRITY-001 (`supabase/tests/028_vat_amount_integrity_test.sql`, 25 assertions): all six persisted VAT families ignore forged derived payloads; base/view DML and truncate fail; foreign-company register rows stay hidden; mixed SI/VB documents reconcile to per-code tax detail, GL VAT controls, and ledger-backed reviews.
+  - Updated APPROVAL-SOD-001 because direct SI status changes now fail earlier at the stronger RPC-only table boundary.
+- Updated findings/index/standing, test book, transaction matrix, product backlog/experience references, schema summary, and AI continuity files. Final standing: **40 Passed / 13 In Progress / 19 Open; two Criticals remain (DA-009, DA-019).**
 
 ## Evidence
 
-- Fresh `supabase db reset` through `20260711000002` (unowned 00004/00005 and test 027 held out): clean.
-- Full pgTAP: **474/474 across 26 files** (025 updated for the generic source route, 40/40; new 026, 26/26, includes fail-closed orphan/cross-company trace fixtures).
-- `npm run build` passed; `npm run lint` zero warnings; `scripts/check_docs_consistency.sh` green (72 findings, 26 test files).
-- Hosted push: `supabase db push --linked` dry-run listed exactly `20260711000001/2`; push applied them; `supabase migration list --linked` shows local=remote through `20260711000002`; remote probe confirms `fn_resolve_posting_source`, `fn_get_report_trace_set`, `fn_get_report_snapshot_trace_links` exist. Known benign post-push pg-delta CA-cache warning recurred.
-- Git: sessions 59–61 committed (three logical commits: session-59 staged work; session-60 seeds/DEC-013/AUD-052; session-61 posting/trace work + recovery) and pushed to `origin/main`.
+- Fresh reset through `20260712000001` with held-out files excluded: clean.
+- Full pgTAP: **499/499 across 27 owned files**; focused VAT/posting/trace: **173/173**.
+- `npm run build` passed; `npm run lint` zero warnings.
+- Types regenerated; schema summary: 187 functions / 19 views / 147 tables / 226 triggers.
+- `scripts/check_docs_consistency.sh` green: 72 findings, 27 owned tests.
+- Independent read-only review found the register-view bypass; revised migration/test re-review found no remaining defect.
+- Hosted push is **PENDING**: linked dry-run failed because `SUPABASE_ACCESS_TOKEN` is not available. Hosted is still through `20260711000002`.
+- Git commit/push not performed.
 
-## Unowned ATC/CAS Work — Confirmed Broken, Held Out (user decision 2026-07-11)
+## Unowned ATC/CAS Work — Keep Held Out
 
-`20260710000004_atc_document_date_versioning.sql`, `20260710000005_cas_numbering_void_dat_controls.sql`, and `027_cas_end_to_end_controls_test.sql` remain on disk, untracked, uncommitted, and NOT on hosted. Evidence gathered this session: with them applied, previously-passing test 021 fails (00005's reservation-model `fn_next_document_number` raises "unresolved document-number reservation already exists for CS") and their own test 027 fails 15/30 with pgTAP parse errors. The user was shown this and chose to push only the verified pair. **Warning:** a plain local `supabase db reset` applies them because the files sit in `supabase/migrations/` — hold them out (move aside, reset, restore) for any verified run, exactly as this session did.
+`20260710000004_atc_document_date_versioning.sql`, `20260710000005_cas_numbering_void_dat_controls.sql`, and `027_cas_end_to_end_controls_test.sql` remain untracked, broken, uncommitted, and off hosted per the user's 2026-07-11 decision. A normal reset/push will pick up 00004/00005 if they are left in place. Move all three aside, verify owned work, then restore them byte-for-byte. Migration 00005 breaks previously-green test 021; test 027 fails 15/30.
 
-## Session 60 Reference (unchanged, still relevant)
+## Important AUD-051 Discovery
 
-- Hosted demo environment: **PXL Demo Trading Corporation** with green Company Setup Checklist, master data (5 payment terms / 5 customers / 5 suppliers), items/operational data (10 items, warehouses, banks, employees, petty cash, FA categories). No posted transactions; no stock balances by design. Note: local resets this session wiped local seed data — rerun the seeds locally if needed.
-- Rerun seeds in order (all idempotent): `demo_company_setup_seed.sql` → `demo_master_data_seed.sql` → `demo_items_inventory_seed.sql`. Local: `docker exec -i supabase_db_PXL psql -U postgres -d postgres < supabase/seeds/<file>`. Hosted: POST as `{"query": ...}` to `https://api.supabase.com/v1/projects/bskjkogijpbhukjkagfj/database/query` with the management token, or the SQL editor.
-- PXL-AUD-051 (document-code registry drift: DM vs DM-S readiness/numbering; JE/SDM/PRT/FA absent from `ref_document_types`) remains **Open**.
+PXL-AUD-051 needs more than four registry rows and a DM readiness edit. Eight shipped fixed-asset/inventory functions call nonexistent `fn_next_document_number(company_id, code)` signatures. The held-out overload chooses an arbitrary branch and is not acceptable. The eventual fix must pass the correct branch at every caller, align FA/JE/PRT/SDM registry and series FKs, use DM-S consistently, realign the demo seed, and test a real FA/inventory path.
 
 ## Exact Next Prompt
 
-Run a dedicated retest/closure pass for PXL-DA-002/004/005/007 against the deployed `20260711000001/2` contracts and decide their statuses in the Findings Status Index (rerun `scripts/check_docs_consistency.sh` after any status change). Then pick up PXL-AUD-051 (registry rows + DM readiness code + pgTAP registry assertion + seed alias realignment) or the remaining Criticals DA-008/DA-009/DA-019. Keep unowned migrations 00004/00005 and test 027 held out of resets, tests, hosted pushes, and Git until someone explicitly takes ownership and fixes them (test 021 must pass again with them applied before they can ship).
+Close PXL-DA-005 with normal-trigger orphan/cross-company JE assertions and PXL-DA-007 with a genuine two-session same-source posting race; decide both statuses and rerun the fresh full suite with unowned 00004/00005/test027 held out. Then fix PXL-AUD-051 completely, including branch-scoped repair of all eight broken two-argument numbering callers (do not use the held-out arbitrary-branch overload). Keep hosted push of `20260712000001` pending until `SUPABASE_ACCESS_TOKEN` is available.

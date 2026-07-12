@@ -213,14 +213,14 @@ SELECT lives_ok(
   format('SELECT fn_post_sales_invoice(%L)', (SELECT id FROM t_ctx WHERE key='si1')),
   'the creator may post once someone else approved');
 
--- ── Direct status-UPDATE shortcut is equally gated ─────────────────────────────
+-- ── Direct status-UPDATE shortcut is blocked at the RPC-only boundary ─────────
 INSERT INTO t_ctx SELECT 'si2', pg_temp.save_si('2026-05-11', 20000);
 
 SELECT throws_like(
   format($q$UPDATE sales_invoices SET status = 'approved', updated_by = auth.uid()
          WHERE id = %L$q$, (SELECT id FROM t_ctx WHERE key='si2')),
-  '%segregation of duties%',
-  'creator cannot self-approve through a direct status update either');
+  '%permission denied for table sales_invoices%',
+  'creator cannot bypass approval through a direct status update');
 
 SELECT pg_temp.as_user('11111111-1111-1111-1111-111111111152');
 SELECT lives_ok(
