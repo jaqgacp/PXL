@@ -22,7 +22,7 @@ Last updated: 2026-07-12 (session 63: closed DA-005, DA-007, and AUD-051)
 - Schema summary regenerated: 192 functions / 19 views / 147 tables / 226 triggers (rose from 187 because the five inventory `_source_locked_impl` helpers are now captured; no new functions/overloads).
 - Demo seed idempotent on fresh DB (28 active series).
 - `scripts/check_docs_consistency.sh` green: 72 findings, 29 owned tests (run with test 027 held out, then restored; checksums verified).
-- Hosted push: `20260712000001` DONE (local = remote). **`20260712000002` PENDING** — token is available this session; push with 00004/00005 held out.
+- Hosted push: **DONE through `20260712000002`** — pushed with 00004/00005 held out (dry-run listed only that migration; `migration list --linked` shows local = remote; follow-up dry-run "Remote database is up to date"). A non-fatal pgdelta catalog-cache warning printed after apply (CLI quirk, not a failure).
 
 ## Unowned ATC/CAS Work — Keep Held Out
 
@@ -30,4 +30,4 @@ Last updated: 2026-07-12 (session 63: closed DA-005, DA-007, and AUD-051)
 
 ## Exact Next Prompt
 
-Push `20260712000002_aud051_numbering_registry_alignment.sql` to hosted: hold out `20260710000004/00005`, run `SUPABASE_ACCESS_TOKEN=<token> supabase db push --linked` (dry-run first — it should list only that migration), verify with `supabase migration list --linked`, restore the held-out files. Then start Critical **PXL-DA-019** (CAS/BIR readiness: immutable document numbering, void register + reason, immutable books reconciliation, ATP/permit metadata, DAT/audit-package export provenance from posted ledgers) — design it fresh; do NOT adopt the broken held-out 00005. Numbering is now registry-consistent (AUD-051), so CAS numbering can build on the governed `fn_next_document_number(company, branch, code)` contract.
+Start Critical **PXL-DA-019** (CAS/BIR readiness: immutable document numbering, void register + reason, immutable books reconciliation, ATP/permit metadata, DAT/audit-package export provenance from posted ledgers) — design it fresh; do NOT adopt the broken held-out 00005. Numbering is now registry-consistent (AUD-051) and hosted is current through `20260712000002`, so CAS numbering can build on the governed `fn_next_document_number(company, branch, code)` contract. Alternatively advance **PXL-DA-009** dependencies (safe ATC date/version, PXL-AUD-041 remittance flow).

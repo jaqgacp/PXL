@@ -26,7 +26,7 @@ Executed 2026-07-12 with the unowned ATC/CAS files held out and restored byte-fo
 - Schema summary regenerated: **192 functions** / 19 views / 147 tables / 226 triggers. The count rose from 187 because the five inventory `_source_locked_impl` helpers are now captured (my migration defines them with `public.`-qualified names the generator indexes); no new functions or overloads were created.
 - Demo seed idempotent on fresh DB (28 active number series after realignment).
 - `scripts/check_docs_consistency.sh`: green (72 findings, 29 owned test files; run with test 027 held out, then restored).
-- Hosted migration push: `20260712000001` is **DONE** (local = remote through it). `20260712000002_aud051_numbering_registry_alignment.sql` is **PENDING** hosted push — push it the same way (hold out 00004/00005, `supabase db push --linked`, verify `migration list`).
+- Hosted migration push: **DONE 2026-07-12** through `20260712000002`. Pushed with 00004/00005 held out (dry-run listed only `20260712000002`); `supabase migration list --linked` shows local = remote through `20260712000002` and a follow-up dry-run reports "Remote database is up to date". (A non-fatal `pgdelta catalog` cache warning printed after apply — a CLI cert-cache quirk, not a migration failure; verified by the up-to-date check.)
 
 Hosted demo reference (unchanged): PXL Demo Trading Corporation has the session-60 setup/master/item seeds and no posted transactions. Local resets remove local demo seed data; rerun the three idempotent seeds in handoff order if needed.
 
@@ -40,8 +40,8 @@ Hosted demo reference (unchanged): PXL Demo Trading Corporation has the session-
 
 ## Next Recommended Step
 
-Push `20260712000002` to hosted (hold out 00004/00005 first). Then tackle Critical PXL-DA-019 (CAS/BIR readiness end-to-end: immutable numbering, void register, books reconciliation, DAT export provenance) now that numbering is registry-consistent — but design fresh; do not adopt the broken held-out 00005. Alternatively advance PXL-DA-009 dependencies (safe ATC date/version, PXL-AUD-041 remittance flow).
+Tackle Critical PXL-DA-019 (CAS/BIR readiness end-to-end: immutable numbering, void register, books reconciliation, DAT export provenance) now that numbering is registry-consistent and hosted is current — but design fresh; do not adopt the broken held-out 00005. Alternatively advance PXL-DA-009 dependencies (safe ATC date/version, PXL-AUD-041 remittance flow).
 
 ## Decisions Needed From User
 
-None. DEC-008 standing autonomy remains active. Hosted push of `20260712000002` is pending only the mechanical push step (token already available this session).
+None. DEC-008 standing autonomy remains active. Hosted is fully synced through `20260712000002`; no push is outstanding.
