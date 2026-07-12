@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
+Generated: 2026-07-12. Migrations scanned: 85. Tests present: 31.
 
-## Functions (192)
+## Functions (197)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -28,6 +28,7 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `fn_atc_code_used` | `20260701000018_atc_effective_date_governance.sql` | 1 |
 | `fn_audit_trigger` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_begin_source_posting` | `20260711000001_posting_engine_completion.sql` | 1 |
+| `fn_bind_cas_document_number` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
 | `fn_block_pv_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` | 1 |
 | `fn_block_receipt_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` | 1 |
 | `fn_block_si_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` | 1 |
@@ -44,7 +45,9 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `fn_cancel_petty_cash_voucher` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_cancel_purchase_order` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_cancel_revenue_recognition_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
+| `fn_capture_cas_document_void` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
 | `fn_complete_purchase_return` | `20260711000001_posting_engine_completion.sql` | 4 |
+| `fn_complete_purchase_return_source_locked_impl` | `20260712000003_posting_runtime_repairs.sql` | 1 |
 | `fn_complete_secondary_posting` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_compute_depr_schedule` | `20260630000027_fixed_assets.sql` | 1 |
 | `fn_compute_ewt_return` | `20260710000001_ewt_return_reconciliation_gate.sql` | 1 |
@@ -60,6 +63,7 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `fn_ensure_stock_balance` | `20260630000028_inventory.sql` | 1 |
 | `fn_execute_recurring_template` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_finalize_journal_entry` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_forbid_cas_void_evidence_change` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
 | `fn_form2307_period_bounds` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_form2307_report_payload` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_generate_form_2307_issued` | `20260705000001_cv_ewt_supplier_validation.sql` | 3 |
@@ -73,6 +77,7 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `fn_grant_creator_company_ownership` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_grant_new_user_all_companies` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_guard_atc_code_history` | `20260701000018_atc_effective_date_governance.sql` | 1 |
+| `fn_guard_cas_number_series` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
 | `fn_guard_doc_header` | `20260704000002_status_immutability.sql` | 1 |
 | `fn_guard_doc_lines` | `20260704000002_status_immutability.sql` | 1 |
 | `fn_guard_form2307_snapshot_immutable` | `20260703000005_report_snapshots_form2307.sql` | 1 |
@@ -86,7 +91,7 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `fn_link_schedule_journal_source` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_lock_unwrapped_posting_source` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_mark_tax_event_filed` | `20260630000021_gap_fill.sql` | 2 |
-| `fn_next_document_number` | `20260630000021_gap_fill.sql` | 3 |
+| `fn_next_document_number` | `20260712000004_cas_numbering_void_evidence.sql` | 4 |
 | `fn_normalize_report_source_type` | `20260711000002_accounting_trace_reports.sql` | 1 |
 | `fn_post_amortization_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_bank_adjustment` | `20260711000001_posting_engine_completion.sql` | 2 |
@@ -104,14 +109,14 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `fn_post_payment_voucher` | `20260711000001_posting_engine_completion.sql` | 7 |
 | `fn_post_petty_cash_replenishment` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_physical_count` | `20260711000001_posting_engine_completion.sql` | 2 |
-| `fn_post_physical_count_source_locked_impl` | `20260712000002_aud051_numbering_registry_alignment.sql` | 1 |
+| `fn_post_physical_count_source_locked_impl` | `20260712000003_posting_runtime_repairs.sql` | 2 |
 | `fn_post_receipt` | `20260711000001_posting_engine_completion.sql` | 7 |
 | `fn_post_revenue_recognition_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_sales_invoice` | `20260711000001_posting_engine_completion.sql` | 7 |
 | `fn_post_stock_adjustment` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_stock_adjustment_source_locked_impl` | `20260712000002_aud051_numbering_registry_alignment.sql` | 1 |
 | `fn_post_stock_transfer` | `20260711000001_posting_engine_completion.sql` | 2 |
-| `fn_post_stock_transfer_source_locked_impl` | `20260712000002_aud051_numbering_registry_alignment.sql` | 1 |
+| `fn_post_stock_transfer_source_locked_impl` | `20260712000003_posting_runtime_repairs.sql` | 2 |
 | `fn_post_vendor_bill` | `20260711000001_posting_engine_completion.sql` | 5 |
 | `fn_post_vendor_credit` | `20260711000001_posting_engine_completion.sql` | 6 |
 | `fn_preview_gl_impact` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
@@ -162,7 +167,7 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `fn_save_receiving_report` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_save_sales_invoice` | `20260630000021_gap_fill.sql` | 3 |
 | `fn_save_supplier_debit_memo` | `20260630000021_gap_fill.sql` | 2 |
-| `fn_save_vendor_bill` | `20260630000021_gap_fill.sql` | 2 |
+| `fn_save_vendor_bill` | `20260712000003_posting_runtime_repairs.sql` | 3 |
 | `fn_save_vendor_credit` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_send_supplier_debit_memo` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_set_updated_at` | `20260629000001_dashboard.sql` | 1 |
@@ -203,11 +208,12 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `is_company_member` | `20260630000021_gap_fill.sql` | 2 |
 | `update_updated_at` | `20260628000001_companies.sql` | 1 |
 
-## Views (19)
+## Views (20)
 
 | View | Latest definition | Defs |
 | ---- | ----------------- | ---- |
 | `vw_ap_aging` | `20260630000021_gap_fill.sql` | 2 |
+| `vw_cas_atp_usage` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
 | `vw_credit_memo_register` | `20260629000005_sprint5_views.sql` | 1 |
 | `vw_customer_ledger` | `20260711000002_accounting_trace_reports.sql` | 4 |
 | `vw_cwt_summary_ar` | `20260711000002_accounting_trace_reports.sql` | 2 |
@@ -227,7 +233,7 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `vw_trial_balance` | `20260702000005_gl_reversal_visibility.sql` | 2 |
 | `vw_vendor_bill_register` | `20260630000021_gap_fill.sql` | 2 |
 
-## Tables (147)
+## Tables (149)
 
 | Table | Created in | Alters | Last altered in |
 | ----- | ---------- | ------ | --------------- |
@@ -250,6 +256,8 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `book_tax_reconciliation` | `20260701000004_income_tax.sql` | 0 | `—` |
 | `branches` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `cas_attachment_register` | `20260701000005_audit_cas.sql` | 1 | `20260701000005_audit_cas.sql` |
+| `cas_document_number_issuances` | `20260712000004_cas_numbering_void_evidence.sql` | 1 | `20260712000004_cas_numbering_void_evidence.sql` |
+| `cas_document_void_events` | `20260712000004_cas_numbering_void_evidence.sql` | 1 | `20260712000004_cas_numbering_void_evidence.sql` |
 | `cas_export_log` | `20260701000005_audit_cas.sql` | 2 | `20260703000008_report_snapshots_cas_exports.sql` |
 | `cash_count_sheets` | `20260630000023_banking_treasury_schema.sql` | 1 | `20260630000023_banking_treasury_schema.sql` |
 | `cash_purchase_lines` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
@@ -370,7 +378,7 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `vat_codes` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `vat_returns` | `20260701000002_vat.sql` | 1 | `20260701000002_vat.sql` |
 | `vendor_bill_lines` | `20260629000017_purchasing.sql` | 2 | `20260630000021_gap_fill.sql` |
-| `vendor_bills` | `20260629000017_purchasing.sql` | 3 | `20260630000021_gap_fill.sql` |
+| `vendor_bills` | `20260629000017_purchasing.sql` | 4 | `20260712000003_posting_runtime_repairs.sql` |
 | `vendor_credit_applications` | `20260629000019_hardening_v2.sql` | 3 | `20260701000011_vendor_credit_application_reversal.sql` |
 | `vendor_credit_lines` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
 | `vendor_credits` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
@@ -379,7 +387,7 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `warehouse_zones` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 
-## Triggers (226)
+## Triggers (229)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -608,4 +616,7 @@ Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 | `trg_vendor_bills_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_wh_updated_at` | `20260630000028_inventory.sql` |
 | `trg_wis_updated_at` | `20260630000029_master_data_completion.sql` |
+| `trg_zz_forbid_cas_void_evidence_row` | `20260712000004_cas_numbering_void_evidence.sql` |
+| `trg_zz_forbid_cas_void_evidence_stmt` | `20260712000004_cas_numbering_void_evidence.sql` |
+| `trg_zz_guard_cas_number_series` | `20260712000004_cas_numbering_void_evidence.sql` |
 | `uom_updated_at` | `20260628000003_sprint2.sql` |

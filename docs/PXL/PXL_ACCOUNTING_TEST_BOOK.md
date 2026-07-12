@@ -700,3 +700,31 @@ Status: Executed Passing (session 63, 2026-07-12) in `supabase/tests/030_documen
 | 3 | Check the registry for `JE`, `FA`, `SDM`, `PRT`, and `DM-S` | All governed (the four added codes plus the code `DebitMemosPage` readiness now uses). |
 | 4 | Register a fixed asset through `fn_register_fixed_asset` with a branch-scoped FA and JE series | The asset number is `FA-2026-…`, the acquisition journal number is `JE-2026-…`, the JE posts balanced, and it links back to the asset as an `FA` source (previously the branch-less numbering aborted the RPC). |
 | 5 | Call the branch-scoped `fn_next_document_number(company, branch, 'JE')` used by the inventory posters | Resolves and increments against a registry-consistent setup. |
+
+## POSTING-RUNTIME-REPAIRS-001 - Physical Count, Stock Transfer, and Purchase-Return Posting Repairs
+
+Status: Executed Passing (session 64, 2026-07-12) in `supabase/tests/031_posting_runtime_repairs_test.sql`, 49 assertions. Related findings: PXL-DA-019 (prerequisite runtime defects surfaced by schema lint before CAS work).
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Assert schema shape after the repair migration | `physical_count_sheet_lines.variance_cost` does not exist (variance stays derived), and `vendor_bills.rr_id` exists as an optional receiving-report link. |
+| 2 | Post a physical count with a nonzero variance | Posting succeeds without referencing the removed derived column; the applied unit cost is frozen on the count line and the derived +20.00 variance cost lands on the immutable inventory transaction, raising source stock 10→12 and cost 100.00→120.00. |
+| 3 | Inspect the physical-count JE | Draws the first governed source-branch JE number, records a balanced 20.00 debit/credit, debits inventory and credits the variance account by the derived cost. |
+| 4 | Post a cross-warehouse stock transfer with different GL accounts | Posts successfully; the JE number comes from the source warehouse branch series (the destination branch series is not consumed) while the JE itself stays branch-unattributed; debits destination and credits source inventory. |
+| 5 | Save vendor bills against receiving reports through `fn_save_vendor_bill` | Rejects an RR that is not received and an RR belonging to another supplier; still accepts a bill with no RR (link stays NULL) and a received same-company/same-supplier RR (link persisted and durable across approve/post). |
+| 6 | Complete a purchase return against the linked RR | Fails closed when the RR has no linked posted bill; with the restored explicit link it completes without error, reaching `completed` with a reversing JE that uses the governed source-branch JE series, the return date (not execution date) for period resolution, the `PR` source type, and a balanced 20.00 AP-debit / matched-purchase-expense-credit reversal linked back to the source. |
+
+## CAS-NUMBERING-VOID-EVIDENCE-001 - Governed Document Numbering and Immutable Void Evidence
+
+Status: Executed Passing (session 64, 2026-07-12) in `supabase/tests/032_cas_numbering_void_evidence_test.sql`, 25 assertions. Related findings: PXL-DA-019.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Allocate two ordinary (non-ATP) JE numbers directly through `fn_next_document_number` | Sequential `JE-000001`/`JE-000002`; both unresolved reservations remain visible as accountable evidence — a reservation is evidence, not a session-wide lock blocking the next allocation. |
+| 2 | Save an ATP-authorized SI (range 100–101) | Receives sequence 100 with frozen formatting `SI-000100`; the reservation is atomically bound to the saved source as an `issued` evidence row. |
+| 3 | Approve, post, then void the SI through the real RPCs with an explicit reason | The source reaches `cancelled`; the same immutable issuance row is marked `voided` (never deleted or reusable). |
+| 4 | Inspect the captured void event | Freezes reason, actor, and original/reversal JE links; `source_snapshot` retains the pre-void (`posted`) document content; the links resolve to the reversed original and posted reversal JEs. |
+| 5 | Attempt to mutate void evidence as the table owner | Rejected with `P0001` — terminal-document evidence is immutable to any statement, including the owner. |
+| 6 | Save a second SI, then attempt a third beyond the ATP range | The second consumes 101 (never reusing voided 100); the third fails with `ATP range exhausted` and does not drift the governed counter (`current_sequence` stays 101), and no evidence is created beyond the authorized range. |
+| 7 | As an application (`authenticated`) caller, attempt to roll the counter back, rewrite number formatting, or directly mutate/delete issuance/void evidence | All rejected: `P0001` for backward/format changes on `number_series`; `42501` for direct DML on the evidence tables (RLS/grants). |
+| 8 | Read `vw_cas_atp_usage` for the SI series | Reports issued/voided counts and `is_exhausted`/alert-threshold status from evidence (0 reserved, 1 issued, 1 voided, 2 allocated, 0 remaining, 100.00% used, exhausted). |

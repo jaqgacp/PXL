@@ -1,33 +1,23 @@
 # AI Handoff
 
-Last updated: 2026-07-12 (session 63: closed DA-005, DA-007, and AUD-051)
+Last updated: 2026-07-12 (session 64 — local verification complete; hosted/Git push pending)
 
-## What Was Done
+## Work In Progress
 
-- **PXL-DA-005 -> Retested Passed** (test 026, now 29 assertions): writer-boundary negatives under normal trigger execution via `SET CONSTRAINTS trg_journal_entry_source_integrity IMMEDIATE` — live same-company source accepted; orphan and cross-company sources rejected by the real trigger.
-- **PXL-DA-007 -> Retested Passed** (new `supabase/tests/029_posting_race_two_session_test.sql`, 14 assertions): a genuine two-database-session race via dblink. Session B observably blocks on the `FOR UPDATE` source lock, then resumes as a governed no-op; exactly one JE/tax set survives. Committed fixture is pre-cleaned/removed so it is rerunnable.
-- **PXL-AUD-051 -> Retested Passed** (new migration `20260712000002_aud051_numbering_registry_alignment.sql`, new test `030`): document-code/numbering reconciliation.
-  - Added governed rows `JE`, `FA`, `SDM`, `PRT` to `ref_document_types` (Option A: smallest blast radius, keeps existing hosted/demo series valid — every code shipped functions request now exists).
-  - Fixed `src/pages/DebitMemosPage.tsx` readiness code `DM` → `DM-S` (its `fn_save_debit_memo` numbering code; `DM-S` already governed).
-  - Branch-scoped repair of all eight fixed-asset/inventory callers of the nonexistent two-argument `fn_next_document_number`. Each now passes the branch it already writes onto its journal_entries row: `fn_register_fixed_asset` (v_branch_id, for both FA and JE), `fn_dispose_fixed_asset`/`fn_record_impairment`/`fn_post_depreciation_entry_source_locked_impl` (v_asset.branch_id), and the four inventory posters (v_adj/v_tx/v_gi/v_cs.branch_id). The held-out arbitrary-branch overload from `20260710000005` was deliberately NOT used. Function bodies were captured from the deployed definitions via `pg_get_functiondef` and edited with a single precise callsite change each (CREATE OR REPLACE preserves the existing owner-only ACLs).
-  - Realigned `supabase/seeds/demo_company_setup_seed.sql`: each series points at its own governed type and an FA series is added (28 series total).
-  - New test 030 (DOCUMENT-NUMBERING-REGISTRY-001, 11 assertions): mechanical guard that every requested code is registry-backed, structural guard that no two-argument caller remains, and a real `fn_register_fixed_asset` path drawing governed FA + JE numbers, posting a balanced acquisition JE, and linking it back as an FA source.
-- Updated findings index/detail/session log, test book, transaction matrix (Number Series row), and AI continuity files. Final standing: **43 Passed / 11 In Progress / 18 Open; two Criticals remain (DA-009, DA-019 — DA-019 now unblocked on numbering).**
+The first PXL-DA-019 CAS/BIR slice is complete and verified locally; only the hosted/Git push remains. Delivered this session:
 
-## Evidence
+- `20260712000003_posting_runtime_repairs.sql` / test 031 (49 assertions): repaired the three schema-lint-surfaced deployed defects — source-warehouse branch for stock-transfer JE numbering (JE stays branch-unattributed); physical-count value kept derived on the immutable line/inventory transaction (no `variance_cost` column); explicit optional `vendor_bills.rr_id` FK validated by `fn_save_vendor_bill` (received + same company/supplier) and consumed by purchase-return completion.
+- `20260712000004_cas_numbering_void_evidence.sql` / test 032 (25 assertions): immutable issuance/void evidence on the preserved three-argument branch-scoped allocator (no two-argument overload, no one-unresolved-reservation rule), `number_series` guard, atomic ATP exhaustion without counter drift, allocation/void triggers, an owner-proof `P0001` immutability trigger on void evidence, historical backfill, and `vw_cas_atp_usage`. Two initially-failing test-032 assertions were fixed in the migration during this session: void evidence now snapshots the pre-void `OLD` row (status `posted`), and a `BEFORE UPDATE/DELETE/TRUNCATE` trigger makes void evidence immutable even to the table owner.
+- `VendorBillsPage` captures the optional receiving report; CAS Void Register / ATP Usage / Dashboard / Audit Report pages read the governed objects. README PostgreSQL-version/migration wording and disabled opt-in demo seeding were corrected. DEC-014 records the database-governed numbering/void-evidence decision.
 
-- Fresh `supabase db reset --local` through `20260712000002` with held-out files excluded: clean.
-- Full pgTAP: **527/527 across 29 owned files**.
-- `npm run build` passed; `npm run lint` zero warnings.
-- Schema summary regenerated: 192 functions / 19 views / 147 tables / 226 triggers (rose from 187 because the five inventory `_source_locked_impl` helpers are now captured; no new functions/overloads).
-- Demo seed idempotent on fresh DB (28 active series).
-- `scripts/check_docs_consistency.sh` green: 72 findings, 29 owned tests (run with test 027 held out, then restored; checksums verified).
-- Hosted push: **DONE through `20260712000002`** — pushed with 00004/00005 held out (dry-run listed only that migration; `migration list --linked` shows local = remote; follow-up dry-run "Remote database is up to date"). A non-fatal pgdelta catalog-cache warning printed after apply (CLI quirk, not a failure).
+## Recovery / Exact Next Step
 
-## Unowned ATC/CAS Work — Keep Held Out
+Local verification is done (see `AI_STATE.md` Verification State: pgTAP 601/601 across 31 files, clean lint, green build/oxlint/docs-gate, regenerated types/schema summary). Remaining:
 
-`20260710000004`, `20260710000005`, and `027_cas_end_to_end_controls_test.sql` remain untracked, broken, and off hosted per the user's 2026-07-11 decision. Move aside for reset/test/push/docs-gate, restore byte-for-byte. Migration 00005 breaks test 021; test 027 fails 15/30. DA-019 must be built fresh, not on 00005.
+1. Commit the working tree. Untracked to add: `20260712000003`, `20260712000004`, tests `031`, `032`. Keep excluded and do **not** commit the user-owned broken drafts `20260710000004_atc_document_date_versioning.sql`, `20260710000005_cas_numbering_void_dat_controls.sql`, and `027_cas_end_to_end_controls_test.sql` (still held out per the 2026-07-11 decision).
+2. Dry-run then push the two new migrations to linked project `bskjkogijpbhukjkagfj` (`supabase db push --linked`), verify local = remote parity, then record the hosted push and push `main`.
+3. Re-run the held-out-safe verification only if further edits are made (move the three drafts aside byte-for-byte, reset, full pgTAP, schema lint, gen types/schema summary, build/lint, docs consistency, restore).
 
-## Exact Next Prompt
+## Known Remaining DA-019 Boundary
 
-Start Critical **PXL-DA-019** (CAS/BIR readiness: immutable document numbering, void register + reason, immutable books reconciliation, ATP/permit metadata, DAT/audit-package export provenance from posted ledgers) — design it fresh; do NOT adopt the broken held-out 00005. Numbering is now registry-consistent (AUD-051) and hosted is current through `20260712000002`, so CAS numbering can build on the governed `fn_next_document_number(company, branch, code)` contract. Alternatively advance **PXL-DA-009** dependencies (safe ATC date/version, PXL-AUD-041 remittance flow).
+The current CAS export RPC hashes frozen JSON rows, but the browser still serializes the downloaded CSV bytes. Exact exported-byte hashing and verified BIR DAT layout remain a later DA-019 slice; do not mark the full Critical finding closed after numbering/void evidence alone.

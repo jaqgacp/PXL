@@ -11,6 +11,7 @@ type VBStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
 
 type VB = {
   id: string; company_id: string; branch_id: string
+  rr_id: string | null
   bill_number: string; supplier_invoice_number: string | null
   bill_date: string; due_date: string | null
   supplier_id: string; supplier_name_snapshot: string
@@ -52,6 +53,10 @@ type TaxRegistration = 'vat' | 'non_vat' | 'exempt'
 type COARef = { id: string; account_code: string; account_name: string; account_type: string }
 type Branch = { id: string; branch_code: string; branch_name: string }
 type VoidReason = { id: string; code: string; description: string }
+type ReceivingReportRef = {
+  id: string; rr_number: string; rr_date: string
+  supplier_id: string; supplier_name_snapshot: string
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -108,6 +113,7 @@ export default function VendorBillsPage() {
   const [expenseAccounts, setExpenseAccounts] = useState<COARef[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
   const [voidReasons, setVoidReasons] = useState<VoidReason[]>([])
+  const [receivingReports, setReceivingReports] = useState<ReceivingReportRef[]>([])
 
   const [fStatus, setFStatus] = useState('')
   const [fSearch, setFSearch] = useState('')
@@ -152,13 +158,17 @@ export default function VendorBillsPage() {
 
   const loadRefs = useCallback(async () => {
     if (!companyId) return
-    const [companyRes, suppRes, vatRes, coaRes, brRes, vrRes] = await Promise.all([
+    const [companyRes, suppRes, vatRes, coaRes, brRes, vrRes, rrRes] = await Promise.all([
       supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('suppliers').select('id,registered_name,tin,registered_address,default_tax_type,default_terms_id,default_gl_account_id,payment_terms(days_to_due)').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
       supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true),
       supabase.from('chart_of_accounts').select('id,account_code,account_name,account_type').eq('company_id', companyId).eq('is_active', true).eq('is_postable', true).order('account_code'),
       supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
       supabase.from('void_reason_codes').select('id,code,description'),
+      supabase.from('receiving_reports')
+        .select('id,rr_number,rr_date,supplier_id,supplier_name_snapshot')
+        .eq('company_id', companyId).eq('status', 'received')
+        .order('rr_date', { ascending: false }),
     ])
     const companyTaxRegistration = ((companyRes.data?.tax_registration as TaxRegistration) || 'vat')
     setTaxRegistration(companyTaxRegistration)
@@ -169,6 +179,7 @@ export default function VendorBillsPage() {
     setExpenseAccounts(coaRes.data as COARef[] || [])
     setBranches(brRes.data as Branch[] || [])
     setVoidReasons(vrRes.data as VoidReason[] || [])
+    setReceivingReports(rrRes.data as ReceivingReportRef[] || [])
     // Items
     const { data: itemData } = await supabase.from('items').select('id,item_code,description,uom_id,units_of_measure(uom_code),standard_selling_price,default_purchase_vat_id,purchase_account_id').eq('company_id', companyId).eq('is_active', true).order('item_code')
     setItems((itemData || []).map((i: any) => ({ ...i, uom_label: i.units_of_measure?.uom_code ?? '' })))
@@ -221,7 +232,26 @@ export default function VendorBillsPage() {
     const daysToAdd = s.payment_terms?.days_to_due
     const due = daysToAdd ? new Date(Date.now() + daysToAdd * 86400000).toISOString().split('T')[0] : undefined
     setEditVB(v => ({ ...v, supplier_id: id, supplier_name_snapshot: s.registered_name,
-      supplier_tin_snapshot: s.tin, payment_terms_id: s.default_terms_id || '', due_date: due || v?.due_date }))
+      supplier_tin_snapshot: s.tin, payment_terms_id: s.default_terms_id || '', due_date: due || v?.due_date,
+      rr_id: receivingReports.some(rr => rr.id === v?.rr_id && rr.supplier_id === id) ? v?.rr_id : null }))
+  }
+
+  const pickReceivingReport = (id: string) => {
+    if (!id) {
+      setEditVB(v => ({ ...v, rr_id: null }))
+      return
+    }
+    const rr = receivingReports.find(row => row.id === id)
+    const supplier = rr ? suppliers.find(row => row.id === rr.supplier_id) : null
+    if (!rr || !supplier) return
+    setEditVB(v => ({
+      ...v,
+      rr_id: rr.id,
+      supplier_id: supplier.id,
+      supplier_name_snapshot: supplier.registered_name,
+      supplier_tin_snapshot: supplier.tin,
+      payment_terms_id: supplier.default_terms_id || v?.payment_terms_id || '',
+    }))
   }
 
   const pickItem = (lineKey: string, itemId: string) => {
@@ -315,6 +345,7 @@ export default function VendorBillsPage() {
       const header = {
         company_id: companyId, branch_id: editVB.branch_id || branchId || '',
         supplier_id: editVB.supplier_id || '',
+        rr_id: editVB.rr_id || '',
         supplier_name_snapshot: editVB.supplier_name_snapshot || '',
         supplier_tin_snapshot: editVB.supplier_tin_snapshot || '',
         supplier_invoice_number: editVB.supplier_invoice_number || '',
@@ -553,6 +584,15 @@ export default function VendorBillsPage() {
             {h('Supplier Invoice #', (
               <input value={editVB?.supplier_invoice_number || ''} disabled={readOnly}
                 onChange={e => setEditVB(v => ({ ...v, supplier_invoice_number: e.target.value }))} className={inputCls} />
+            ))}
+            {h('Receiving Report (optional)', (
+              <select value={editVB?.rr_id || ''} disabled={readOnly}
+                onChange={e => pickReceivingReport(e.target.value)} className={inputCls}>
+                <option value="">— direct bill / no RR —</option>
+                {receivingReports
+                  .filter(rr => !editVB?.supplier_id || rr.supplier_id === editVB.supplier_id)
+                  .map(rr => <option key={rr.id} value={rr.id}>{rr.rr_number} — {rr.rr_date}</option>)}
+              </select>
             ))}
             {h('Bill Date', (
               <input type="date" value={editVB?.bill_date || today()} disabled={readOnly}

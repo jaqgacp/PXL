@@ -1456,6 +1456,207 @@ export type Database = {
           },
         ]
       }
+      cas_document_number_issuances: {
+        Row: {
+          allocated_at: string
+          allocated_by: string | null
+          branch_id: string | null
+          company_id: string
+          document_code: string
+          document_number: string
+          id: string
+          issued_at: string | null
+          number_series_id: string | null
+          sequence_number: number | null
+          source_id: string | null
+          source_table: string | null
+          status: string
+          void_reason: string | null
+          voided_at: string | null
+        }
+        Insert: {
+          allocated_at?: string
+          allocated_by?: string | null
+          branch_id?: string | null
+          company_id: string
+          document_code: string
+          document_number: string
+          id?: string
+          issued_at?: string | null
+          number_series_id?: string | null
+          sequence_number?: number | null
+          source_id?: string | null
+          source_table?: string | null
+          status?: string
+          void_reason?: string | null
+          voided_at?: string | null
+        }
+        Update: {
+          allocated_at?: string
+          allocated_by?: string | null
+          branch_id?: string | null
+          company_id?: string
+          document_code?: string
+          document_number?: string
+          id?: string
+          issued_at?: string | null
+          number_series_id?: string | null
+          sequence_number?: number | null
+          source_id?: string | null
+          source_table?: string | null
+          status?: string
+          void_reason?: string | null
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cas_document_number_issuances_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_document_number_issuances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_document_number_issuances_number_series_id_fkey"
+            columns: ["number_series_id"]
+            isOneToOne: false
+            referencedRelation: "number_series"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_document_number_issuances_number_series_id_fkey"
+            columns: ["number_series_id"]
+            isOneToOne: false
+            referencedRelation: "vw_cas_atp_usage"
+            referencedColumns: ["number_series_id"]
+          },
+        ]
+      }
+      cas_document_void_events: {
+        Row: {
+          branch_id: string | null
+          company_id: string
+          document_amount: number | null
+          document_code: string
+          document_date: string | null
+          document_number: string
+          event_actor_id: string | null
+          id: string
+          number_issuance_id: string | null
+          occurred_at: string
+          original_journal_entry_id: string | null
+          party_id: string | null
+          party_name: string | null
+          party_tin: string | null
+          party_type: string | null
+          reason_code_id: string | null
+          reason_text: string
+          reversal_journal_entry_id: string | null
+          source_id: string
+          source_snapshot: Json
+          source_table: string
+          terminal_status: string
+        }
+        Insert: {
+          branch_id?: string | null
+          company_id: string
+          document_amount?: number | null
+          document_code: string
+          document_date?: string | null
+          document_number: string
+          event_actor_id?: string | null
+          id?: string
+          number_issuance_id?: string | null
+          occurred_at?: string
+          original_journal_entry_id?: string | null
+          party_id?: string | null
+          party_name?: string | null
+          party_tin?: string | null
+          party_type?: string | null
+          reason_code_id?: string | null
+          reason_text: string
+          reversal_journal_entry_id?: string | null
+          source_id: string
+          source_snapshot: Json
+          source_table: string
+          terminal_status: string
+        }
+        Update: {
+          branch_id?: string | null
+          company_id?: string
+          document_amount?: number | null
+          document_code?: string
+          document_date?: string | null
+          document_number?: string
+          event_actor_id?: string | null
+          id?: string
+          number_issuance_id?: string | null
+          occurred_at?: string
+          original_journal_entry_id?: string | null
+          party_id?: string | null
+          party_name?: string | null
+          party_tin?: string | null
+          party_type?: string | null
+          reason_code_id?: string | null
+          reason_text?: string
+          reversal_journal_entry_id?: string | null
+          source_id?: string
+          source_snapshot?: Json
+          source_table?: string
+          terminal_status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cas_document_void_events_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_document_void_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_document_void_events_number_issuance_id_fkey"
+            columns: ["number_issuance_id"]
+            isOneToOne: false
+            referencedRelation: "cas_document_number_issuances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_document_void_events_original_journal_entry_id_fkey"
+            columns: ["original_journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_document_void_events_reason_code_id_fkey"
+            columns: ["reason_code_id"]
+            isOneToOne: false
+            referencedRelation: "void_reason_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_document_void_events_reversal_journal_entry_id_fkey"
+            columns: ["reversal_journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cas_export_log: {
         Row: {
           company_id: string
@@ -10862,6 +11063,7 @@ export type Database = {
           posted_at: string | null
           posted_by: string | null
           reference: string | null
+          rr_id: string | null
           status: string
           supplier_id: string
           supplier_invoice_number: string | null
@@ -10896,6 +11098,7 @@ export type Database = {
           posted_at?: string | null
           posted_by?: string | null
           reference?: string | null
+          rr_id?: string | null
           status?: string
           supplier_id: string
           supplier_invoice_number?: string | null
@@ -10930,6 +11133,7 @@ export type Database = {
           posted_at?: string | null
           posted_by?: string | null
           reference?: string | null
+          rr_id?: string | null
           status?: string
           supplier_id?: string
           supplier_invoice_number?: string | null
@@ -10978,6 +11182,13 @@ export type Database = {
             columns: ["payment_terms_id"]
             isOneToOne: false
             referencedRelation: "payment_terms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_bills_rr_id_fkey"
+            columns: ["rr_id"]
+            isOneToOne: false
+            referencedRelation: "receiving_reports"
             referencedColumns: ["id"]
           },
           {
@@ -11574,6 +11785,49 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_cas_atp_usage: {
+        Row: {
+          at_or_below_alert_threshold: boolean | null
+          atp_alert_threshold: number | null
+          atp_series_end: number | null
+          atp_series_start: number | null
+          branch_id: string | null
+          branch_name: string | null
+          company_id: string | null
+          current_sequence: number | null
+          document_code: string | null
+          document_name: string | null
+          is_active: boolean | null
+          is_exhausted: boolean | null
+          issued_count: number | null
+          next_sequence: number | null
+          number_series_id: string | null
+          numbers_remaining: number | null
+          padding: number | null
+          prefix: string | null
+          reserved_count: number | null
+          suffix: string | null
+          total_allocated_count: number | null
+          usage_percent: number | null
+          voided_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "number_series_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "number_series_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]

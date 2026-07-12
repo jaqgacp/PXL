@@ -30,15 +30,15 @@ export default function CASDashboardPage() {
     setLoading(true)
     const startDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`
 
-    const [{ count: changeCount }, { data: atpSeries }, { count: attCount }] = await Promise.all([
+    const [{ count: changeCount }, { count: atpAlertCount }, { count: attCount }] = await Promise.all([
       supabase.from('sys_audit_logs').select('id', { count: 'exact', head: true }).eq('company_id', companyId).gte('changed_at', startDate),
-      supabase.from('number_series').select('next_number,atp_series_end,atp_alert_threshold').eq('company_id', companyId).not('atp_series_start', 'is', null),
+      supabase.from('vw_cas_atp_usage').select('number_series_id', { count: 'exact', head: true })
+        .eq('company_id', companyId).eq('is_active', true).eq('at_or_below_alert_threshold', true),
       supabase.from('cas_attachment_register').select('id', { count: 'exact', head: true }).eq('company_id', companyId),
     ])
 
     setChangesThisMonth(changeCount || 0)
-    setAtpAlerts(((atpSeries || []) as { next_number: number; atp_series_end: number; atp_alert_threshold: number | null }[])
-      .filter(s => s.atp_alert_threshold != null && (s.atp_series_end - s.next_number + 1) <= s.atp_alert_threshold).length)
+    setAtpAlerts(atpAlertCount || 0)
     setAttachmentCount(attCount || 0)
     setLoading(false)
   }, [companyId, now])

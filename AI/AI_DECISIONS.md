@@ -503,3 +503,42 @@ Related Documents:
 Related Source Files:
 
 - `src/components/GLImpactPanel.tsx`; `src/components/SetupReadiness.tsx`; `src/components/ui/shared.tsx` (existing panel inventory to extend, not fork).
+
+## DEC-014 - CAS Number and Void Evidence Is Database-Governed
+
+Date: 2026-07-12
+Status: Approved (delegated per DEC-008)
+
+Decision:
+
+Every call to the existing branch-scoped `fn_next_document_number(company, branch, code)` permanently consumes a sequence and creates immutable CAS issuance evidence. The allocator remains callable by authenticated transaction pages and save RPCs; it does not introduce an arbitrary company-only overload or block subsequent allocations because an earlier browser reservation has not yet linked. Database insert triggers bind allocations to their source rows, while unused reservations remain visible gaps and are never recycled.
+
+Configured ATP ranges are enforced atomically by the allocator. Sequence counters cannot move backward, and a series identity/format cannot be rewritten after it has issued evidence. Terminal document transitions create separate immutable void-event rows containing reason, actor, party/amount snapshot, and original/reversal journal links. Evidence tables are application-read-only; only security-definer allocation/binding/lifecycle code may write them.
+
+Business Reason:
+
+BIR/CAS review requires a complete explanation for issued, unused, and voided numbers. Reusing a number, hiding a failed reservation, or reconstructing reasons later from mutable documents breaks that chain of custody.
+
+Technical Reason:
+
+Number allocation and lifecycle transitions already occur inside PostgreSQL. Capturing evidence at those boundaries is concurrency-safe, works for both RPC-backed and legacy direct-insert pages, preserves existing caller compatibility, and gives CAS pages one governed source instead of client-side unions over live tables.
+
+Alternatives Considered:
+
+- One unresolved reservation per user/series. Rejected because existing save flows may allocate multiple numbers atomically (for example cash sale plus receipt), and a failed browser insert must not deadlock future work.
+- Revoke the allocator from authenticated callers. Rejected while ten legacy pages still allocate before inserting; migration to atomic save RPCs is separate work.
+- Derive the void register from current document statuses. Rejected because current rows do not reliably preserve the transition actor, reason, exact event time, or reversal link.
+
+Related Documents:
+
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-019)
+- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/10. Compliance/06. Audit & CAS/07. Document Void Register.md`
+- `docs/PXL/10. Compliance/06. Audit & CAS/08. ATP Usage Log.md`
+
+Related Source Files:
+
+- `supabase/migrations/20260712000004_cas_numbering_void_evidence.sql`
+- `supabase/tests/032_cas_numbering_void_evidence_test.sql`
+- `src/pages/CASDocumentVoidRegisterPage.tsx`
+- `src/pages/CASATPUsageLogPage.tsx`

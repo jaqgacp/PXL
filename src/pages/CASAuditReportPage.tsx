@@ -24,12 +24,11 @@ export default function CASAuditReportPage() {
     if (!companyId) return
     setLoading(true)
 
-    const [{ data: auditData }, { data: siVoid }, { data: vbVoid }, { data: pvVoid }, { data: atpSeries }, { count: datCount }] = await Promise.all([
+    const [{ data: auditData }, { data: voidEvents }, { count: atpAlertCount }, { count: datCount }] = await Promise.all([
       supabase.from('sys_audit_logs').select('table_name,action').eq('company_id', companyId).gte('changed_at', dateFrom).lte('changed_at', dateTo + 'T23:59:59').limit(5000),
-      supabase.from('sales_invoices').select('total_amount').eq('company_id', companyId).eq('status', 'cancelled').gte('date', dateFrom).lte('date', dateTo),
-      supabase.from('vendor_bills').select('total_amount').eq('company_id', companyId).eq('status', 'cancelled').gte('bill_date', dateFrom).lte('bill_date', dateTo),
-      supabase.from('payment_vouchers').select('total_amount').eq('company_id', companyId).eq('status', 'cancelled').gte('voucher_date', dateFrom).lte('voucher_date', dateTo),
-      supabase.from('number_series').select('next_number,atp_series_end,atp_alert_threshold').eq('company_id', companyId).not('atp_series_start', 'is', null),
+      supabase.from('cas_document_void_events').select('document_amount').eq('company_id', companyId).gte('occurred_at', dateFrom).lte('occurred_at', dateTo + 'T23:59:59'),
+      supabase.from('vw_cas_atp_usage').select('number_series_id', { count: 'exact', head: true })
+        .eq('company_id', companyId).eq('is_active', true).eq('at_or_below_alert_threshold', true),
       supabase.from('cas_export_log').select('id', { count: 'exact', head: true }).eq('company_id', companyId).eq('export_type', 'dat_file').gte('generated_at', dateFrom).lte('generated_at', dateTo + 'T23:59:59'),
     ])
 
@@ -45,13 +44,11 @@ export default function CASAuditReportPage() {
     setByTable(Object.entries(tableCounts).map(([table, count]) => ({ table, count })).sort((a, b) => b.count - a.count).slice(0, 10))
     setByAction(actionCounts)
 
-    const voids = [...(siVoid || []), ...(vbVoid || []), ...(pvVoid || [])] as { total_amount: number }[]
+    const voids = (voidEvents || []) as { document_amount: number | null }[]
     setVoidCount(voids.length)
-    setVoidAmount(voids.reduce((s, v) => s + Number(v.total_amount), 0))
+    setVoidAmount(voids.reduce((s, v) => s + Number(v.document_amount || 0), 0))
 
-    const alerts = ((atpSeries || []) as { next_number: number; atp_series_end: number; atp_alert_threshold: number | null }[])
-      .filter(s => s.atp_alert_threshold != null && (s.atp_series_end - s.next_number + 1) <= s.atp_alert_threshold).length
-    setAtpAlerts(alerts)
+    setAtpAlerts(atpAlertCount || 0)
     setDatFilesGenerated(datCount || 0)
 
     setLoading(false)

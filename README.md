@@ -9,7 +9,7 @@ React 19 + TypeScript + Vite frontend backed by Supabase (PostgreSQL + PostgREST
 | Layer | Technology |
 |---|---|
 | Frontend | React 19, TypeScript, Vite 8, Tailwind CSS v4 |
-| Backend | Supabase (PostgreSQL 15, PostgREST, GoTrue Auth) |
+| Backend | Supabase (PostgreSQL 17, PostgREST, GoTrue Auth) |
 | Routing | react-router-dom v7 (BrowserRouter) |
 | Data fetching | `@supabase/supabase-js`, with generated TypeScript DB types |
 | CSV parsing | PapaParse |
@@ -73,7 +73,7 @@ npm run dev
 
 ## Database Migrations
 
-Migrations live in `supabase/migrations/` and are applied in filename order. This repository currently has 75 migration files, through `20260704000003_receipt_cwt_explicit_base.sql`.
+Migrations live in `supabase/migrations/` and are applied in filename order. The generated schema summary below is the authoritative map of the current migration chain; avoid copying a migration count or endpoint into operational instructions because both change during hardening work.
 
 For the current object-by-object schema map, use the generated summary in `docs/PXL/PXL_SCHEMA_SUMMARY.md`. Regenerate it after migration changes with:
 
