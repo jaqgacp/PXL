@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-12. Migrations scanned: 82. Tests present: 27.
+Generated: 2026-07-12. Migrations scanned: 83. Tests present: 29.
 
-## Functions (187)
+## Functions (192)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -53,7 +53,7 @@ Generated: 2026-07-12. Migrations scanned: 82. Tests present: 27.
 | `fn_create_amortization_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_create_posted_journal_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_create_revenue_recognition_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
-| `fn_dispose_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
+| `fn_dispose_fixed_asset` | `20260712000002_aud051_numbering_registry_alignment.sql` | 2 |
 | `fn_enforce_approval_sod` | `20260703000001_approval_sod_enforcement.sql` | 1 |
 | `fn_enforce_journal_entry_balanced` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_enforce_journal_entry_source` | `20260711000001_posting_engine_completion.sql` | 1 |
@@ -95,26 +95,31 @@ Generated: 2026-07-12. Migrations scanned: 82. Tests present: 27.
 | `fn_post_credit_memo` | `20260711000001_posting_engine_completion.sql` | 5 |
 | `fn_post_debit_memo` | `20260711000001_posting_engine_completion.sql` | 5 |
 | `fn_post_depreciation_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_depreciation_entry_source_locked_impl` | `20260712000002_aud051_numbering_registry_alignment.sql` | 1 |
 | `fn_post_fund_transfer` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_goods_issue` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_goods_issue_source_locked_impl` | `20260712000002_aud051_numbering_registry_alignment.sql` | 1 |
 | `fn_post_inter_branch_transfer` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_manual_je` | `20260704000001_je_line_dimensions.sql` | 2 |
 | `fn_post_payment_voucher` | `20260711000001_posting_engine_completion.sql` | 7 |
 | `fn_post_petty_cash_replenishment` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_physical_count` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_physical_count_source_locked_impl` | `20260712000002_aud051_numbering_registry_alignment.sql` | 1 |
 | `fn_post_receipt` | `20260711000001_posting_engine_completion.sql` | 7 |
 | `fn_post_revenue_recognition_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_sales_invoice` | `20260711000001_posting_engine_completion.sql` | 7 |
 | `fn_post_stock_adjustment` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_stock_adjustment_source_locked_impl` | `20260712000002_aud051_numbering_registry_alignment.sql` | 1 |
 | `fn_post_stock_transfer` | `20260711000001_posting_engine_completion.sql` | 2 |
+| `fn_post_stock_transfer_source_locked_impl` | `20260712000002_aud051_numbering_registry_alignment.sql` | 1 |
 | `fn_post_vendor_bill` | `20260711000001_posting_engine_completion.sql` | 5 |
 | `fn_post_vendor_credit` | `20260711000001_posting_engine_completion.sql` | 6 |
 | `fn_preview_gl_impact` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_rebuild_document_vat_details` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_receive_inventory` | `20260630000028_inventory.sql` | 1 |
-| `fn_record_impairment` | `20260630000027_fixed_assets.sql` | 1 |
+| `fn_record_impairment` | `20260712000002_aud051_numbering_registry_alignment.sql` | 2 |
 | `fn_record_posting_event` | `20260711000001_posting_engine_completion.sql` | 1 |
-| `fn_register_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
+| `fn_register_fixed_asset` | `20260712000002_aud051_numbering_registry_alignment.sql` | 2 |
 | `fn_report_snapshot_key_uuid` | `20260703000006_report_snapshots_vat_exports.sql` | 1 |
 | `fn_require_admin_for_accounting_lifecycle` | `20260702000010_can_perform_role_actions.sql` | 3 |
 | `fn_require_customer_cwt_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |

@@ -688,3 +688,15 @@ Local-harness-only by design: the test opens two extra real database sessions wi
 | 5 | Re-post the same SI sequentially afterward | Idempotent no-op; no additional JE or tax rows. |
 | 6 | Directly insert a second live original JE or a second live VAT tax row for the raced source | Structurally impossible: rejected by `ux_journal_entries_live_source` and `ux_tde_vat_source_code`. |
 | 7 | Delete the committed fixture company | Nothing is left behind; the test is rerunnable. |
+
+## DOCUMENT-NUMBERING-REGISTRY-001 - Document-Code Registry and Branch-Scoped Numbering
+
+Status: Executed Passing (session 63, 2026-07-12) in `supabase/tests/030_document_numbering_registry_test.sql`, 11 assertions. Related findings: PXL-AUD-051.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Extract every document code passed to `fn_next_document_number` by shipped functions and left-join `ref_document_types` | Zero unmatched codes — the registry covers every consumer (JE, FA, SDM, PRT included). |
+| 2 | Scan every deployed function for a two-argument `fn_next_document_number(company, code)` call | Zero remain; numbering is always per company+branch+code (DEC-006). |
+| 3 | Check the registry for `JE`, `FA`, `SDM`, `PRT`, and `DM-S` | All governed (the four added codes plus the code `DebitMemosPage` readiness now uses). |
+| 4 | Register a fixed asset through `fn_register_fixed_asset` with a branch-scoped FA and JE series | The asset number is `FA-2026-…`, the acquisition journal number is `JE-2026-…`, the JE posts balanced, and it links back to the asset as an `FA` source (previously the branch-less numbering aborted the RPC). |
+| 5 | Call the branch-scoped `fn_next_document_number(company, branch, 'JE')` used by the inventory posters | Resolves and increments against a registry-consistent setup. |

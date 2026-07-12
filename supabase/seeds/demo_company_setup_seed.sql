@@ -297,10 +297,9 @@ BEGIN
   -- E. Number series: one active series per document code the application
   --    actually requests (UI readiness checks + live posting RPCs), plus the
   --    remaining governed registry codes. Format: <PREFIX>-2026-000001.
-  --    Codes JE, SDM, PRT are requested by live RPCs but absent from
-  --    ref_document_types; they are seeded against the closest governed type
-  --    (JV, DM-P, PR) since fn_next_document_number matches on document_code.
-  --    Code FA (fixed assets) has no plausible type and is NOT seeded.
+  --    Every requested code (incl. JE, FA, SDM, PRT) now exists in
+  --    ref_document_types (PXL-AUD-051), so each series points at its own
+  --    governed type and fn_next_document_number matches on document_code.
   -- ---------------------------------------------------------------------------
   INSERT INTO number_series (company_id, branch_id, document_type_id,
     document_code, prefix, has_dynamic_year, number_length, padding,
@@ -316,9 +315,9 @@ BEGIN
     ('OR',   'OR'),   ('CM',  'CM'),  ('DM-S', 'DM-S'), ('CR', 'CR'),
     -- purchasing
     ('PO',   'PO'),   ('RR',  'RR'),  ('VB', 'VB'), ('CP', 'CP'), ('PV', 'PV'),
-    ('VC',   'VC'),   ('SDM', 'DM-P'), ('PRT', 'PR'),
-    -- accounting / treasury / petty cash
-    ('JE',   'JV'),   ('RJV', 'RJV'), ('CV', 'CV'), ('PCF', 'PCF'),
+    ('VC',   'VC'),   ('SDM', 'SDM'), ('PRT', 'PRT'),
+    -- accounting / treasury / petty cash / fixed assets
+    ('JE',   'JE'),   ('FA',  'FA'),  ('RJV', 'RJV'), ('CV', 'CV'), ('PCF', 'PCF'),
     ('PCV',  'PCV'),  ('PCR', 'PCR'), ('CCS', 'CCS'),
     ('FT',   'FT'),   ('IBT', 'IBT'), ('BADJ', 'BADJ')
   ) AS x(code, type_code)

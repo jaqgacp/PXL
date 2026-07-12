@@ -1,30 +1,33 @@
 # AI Handoff
 
-Last updated: 2026-07-12 (session 63: closed DA-005/007 with executed evidence; no code changes)
+Last updated: 2026-07-12 (session 63: closed DA-005, DA-007, and AUD-051)
 
 ## What Was Done
 
-- **PXL-DA-005 -> Retested Passed** (test 026, now 29 assertions): added writer-boundary negatives under normal trigger execution. `SET CONSTRAINTS trg_journal_entry_source_integrity IMMEDIATE` fires the real deferred JE source constraint at statement time: live same-company source accepted; orphan source and cross-company source both rejected by the actual trigger. Two extra unlinked SI fixtures (one per company) support these without colliding with `ux_journal_entries_live_source`.
-- **PXL-DA-007 -> Retested Passed** (new `supabase/tests/029_posting_race_two_session_test.sql`, POSTING-RACE-001, 14 assertions): a genuine two-database-session race. dblink opens two real sessions through the harness TCP endpoint — connection string built from `inet_server_addr()`/`inet_server_port()` because loopback is trust-authenticated and dblink refuses passwordless non-superuser connections; the container address uses scram. Session A posts a committed approved SI inside an open transaction; session B's identical post observably blocks (`pg_stat_activity` `Lock` wait), then resumes after A commits as a governed no-op. Exactly one original JE/tax set survives; sequential re-post is a no-op; duplicate JE/tax rows are structurally impossible. The committed fixture company is pre-cleaned on entry (dynamic delete over every base table with `company_id`, under `SET session_replication_role = replica` issued as a statement — `set_config()` is denied by supautils) and deleted on exit; rerunnable back-to-back.
-- Updated findings index + detail rows + session log (session 63), test book (ACCOUNTING-TRACE-REPORTS-001 to 29 assertions with the new step; new POSTING-RACE-001 section), and AI continuity files. Final standing: **42 Passed / 11 In Progress / 19 Open; two Criticals remain (DA-009, DA-019).**
+- **PXL-DA-005 -> Retested Passed** (test 026, now 29 assertions): writer-boundary negatives under normal trigger execution via `SET CONSTRAINTS trg_journal_entry_source_integrity IMMEDIATE` — live same-company source accepted; orphan and cross-company sources rejected by the real trigger.
+- **PXL-DA-007 -> Retested Passed** (new `supabase/tests/029_posting_race_two_session_test.sql`, 14 assertions): a genuine two-database-session race via dblink. Session B observably blocks on the `FOR UPDATE` source lock, then resumes as a governed no-op; exactly one JE/tax set survives. Committed fixture is pre-cleaned/removed so it is rerunnable.
+- **PXL-AUD-051 -> Retested Passed** (new migration `20260712000002_aud051_numbering_registry_alignment.sql`, new test `030`): document-code/numbering reconciliation.
+  - Added governed rows `JE`, `FA`, `SDM`, `PRT` to `ref_document_types` (Option A: smallest blast radius, keeps existing hosted/demo series valid — every code shipped functions request now exists).
+  - Fixed `src/pages/DebitMemosPage.tsx` readiness code `DM` → `DM-S` (its `fn_save_debit_memo` numbering code; `DM-S` already governed).
+  - Branch-scoped repair of all eight fixed-asset/inventory callers of the nonexistent two-argument `fn_next_document_number`. Each now passes the branch it already writes onto its journal_entries row: `fn_register_fixed_asset` (v_branch_id, for both FA and JE), `fn_dispose_fixed_asset`/`fn_record_impairment`/`fn_post_depreciation_entry_source_locked_impl` (v_asset.branch_id), and the four inventory posters (v_adj/v_tx/v_gi/v_cs.branch_id). The held-out arbitrary-branch overload from `20260710000005` was deliberately NOT used. Function bodies were captured from the deployed definitions via `pg_get_functiondef` and edited with a single precise callsite change each (CREATE OR REPLACE preserves the existing owner-only ACLs).
+  - Realigned `supabase/seeds/demo_company_setup_seed.sql`: each series points at its own governed type and an FA series is added (28 series total).
+  - New test 030 (DOCUMENT-NUMBERING-REGISTRY-001, 11 assertions): mechanical guard that every requested code is registry-backed, structural guard that no two-argument caller remains, and a real `fn_register_fixed_asset` path drawing governed FA + JE numbers, posting a balanced acquisition JE, and linking it back as an FA source.
+- Updated findings index/detail/session log, test book, transaction matrix (Number Series row), and AI continuity files. Final standing: **43 Passed / 11 In Progress / 18 Open; two Criticals remain (DA-009, DA-019 — DA-019 now unblocked on numbering).**
 
 ## Evidence
 
-- Fresh reset through `20260712000001` with held-out files excluded: clean.
-- Full pgTAP: **516/516 across 28 owned files** (499 prior + 3 + 14 new).
-- Test 029 run twice back-to-back: 14/14 both times (pre-clean works).
-- `scripts/check_docs_consistency.sh` green: 72 findings, 28 owned tests (run with held-out test 027 moved aside, then restored; checksums verified byte-for-byte).
-- Build/lint not rerun: no frontend or migration source changed; session-62 results stand.
-- Hosted push **DONE 2026-07-12** (user supplied token): dry-run listed only `20260712000001`, push applied it, `supabase migration list --linked` shows local = remote through `20260712000001`. Held-out 00004/00005 were moved aside for the push and restored byte-for-byte (checksums verified).
+- Fresh `supabase db reset --local` through `20260712000002` with held-out files excluded: clean.
+- Full pgTAP: **527/527 across 29 owned files**.
+- `npm run build` passed; `npm run lint` zero warnings.
+- Schema summary regenerated: 192 functions / 19 views / 147 tables / 226 triggers (rose from 187 because the five inventory `_source_locked_impl` helpers are now captured; no new functions/overloads).
+- Demo seed idempotent on fresh DB (28 active series).
+- `scripts/check_docs_consistency.sh` green: 72 findings, 29 owned tests (run with test 027 held out, then restored; checksums verified).
+- Hosted push: `20260712000001` DONE (local = remote). **`20260712000002` PENDING** — token is available this session; push with 00004/00005 held out.
 
 ## Unowned ATC/CAS Work — Keep Held Out
 
-`20260710000004_atc_document_date_versioning.sql`, `20260710000005_cas_numbering_void_dat_controls.sql`, and `027_cas_end_to_end_controls_test.sql` remain untracked, broken, uncommitted, and off hosted per the user's 2026-07-11 decision. A normal reset/push picks up 00004/00005 if left in place, and the docs gate flags 027. Move all three aside, verify owned work, then restore byte-for-byte. Migration 00005 breaks previously-green test 021; test 027 fails 15/30.
-
-## Important AUD-051 Discovery (unchanged)
-
-PXL-AUD-051 needs more than four registry rows and a DM readiness edit. Eight shipped fixed-asset/inventory functions call nonexistent `fn_next_document_number(company_id, code)` signatures. The held-out overload chooses an arbitrary branch and is not acceptable. The eventual fix must pass the correct branch at every caller, align FA/JE/PRT/SDM registry and series FKs, use DM-S consistently, realign the demo seed, and test a real FA/inventory path.
+`20260710000004`, `20260710000005`, and `027_cas_end_to_end_controls_test.sql` remain untracked, broken, and off hosted per the user's 2026-07-11 decision. Move aside for reset/test/push/docs-gate, restore byte-for-byte. Migration 00005 breaks test 021; test 027 fails 15/30. DA-019 must be built fresh, not on 00005.
 
 ## Exact Next Prompt
 
-Fix PXL-AUD-051 completely: reconcile document-code drift between `ref_document_types`, UI readiness codes, and RPC numbering codes (DM vs DM-S; JE/SDM/PRT/FA absent from the registry; FA numbering not configurable); repair all eight broken two-argument `fn_next_document_number` callers with the correct branch passed explicitly (do not use the held-out arbitrary-branch overload); realign the demo seed; add a real FA/inventory numbering test. Verify with a fresh reset and full suite with unowned 00004/00005/test 027 held out. Keep hosted push of `20260712000001` pending until `SUPABASE_ACCESS_TOKEN` is available.
+Push `20260712000002_aud051_numbering_registry_alignment.sql` to hosted: hold out `20260710000004/00005`, run `SUPABASE_ACCESS_TOKEN=<token> supabase db push --linked` (dry-run first — it should list only that migration), verify with `supabase migration list --linked`, restore the held-out files. Then start Critical **PXL-DA-019** (CAS/BIR readiness: immutable document numbering, void register + reason, immutable books reconciliation, ATP/permit metadata, DAT/audit-package export provenance from posted ledgers) — design it fresh; do NOT adopt the broken held-out 00005. Numbering is now registry-consistent (AUD-051), so CAS numbering can build on the governed `fn_next_document_number(company, branch, code)` contract.

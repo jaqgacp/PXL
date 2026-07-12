@@ -189,7 +189,7 @@ export default function DebitMemosPage() {
   const readiness = useTransactionReadiness({
     companyId,
     branchId: fBranch || branchId,
-    documentCode: 'DM',
+    documentCode: 'DM-S',
     postingDate: fDate,
     requiredConfig,
   })
