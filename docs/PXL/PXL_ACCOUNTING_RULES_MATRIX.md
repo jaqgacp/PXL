@@ -360,7 +360,7 @@ These gaps must be resolved before `PXL Accounting Core Ready`:
 
 - Account Determination Engine is not fully implemented.
 - Tax Engine is not yet a unified configuration-driven evaluator.
-- ATC and tax-code effective dating/versioning need safe production implementation.
+- ATC effective dating/versioning is DONE (session 77, `20260713000002`): validators/callers resolve the ATC window by document date and one official code carries effective-dated versions (`fn_atc_version_asof`). Tax-code (VAT/PT) effective-dated versioning is still open.
 - Withholding profiles are incomplete.
 - Settlement total authority for OR/PV must move fully server-side.
 - Financial statement and year-end close rules are incomplete.

@@ -281,8 +281,8 @@ Current strengths:
 
 Current architectural gaps:
 
-- ATC validation still needs document-date effective versioning in the trusted baseline.
-- ATC code uniqueness/versioning is not production-ready.
+- ~~ATC validation still needs document-date effective versioning in the trusted baseline.~~ DONE (session 77, `20260713000002`): validators/callers evaluate the ATC window as of the document date.
+- ~~ATC code uniqueness/versioning is not production-ready.~~ DONE (session 77, `20260713000002`): version-aware uniqueness, overlap/successor guard, and `fn_atc_version_asof` resolver.
 - EWT/CWT/FWT/Percentage Tax are not yet one unified configurable tax engine.
 - Company withholding profile flags do not consistently gate transaction surfaces.
 - TWA auto-EWT is not operationally governed.
@@ -298,7 +298,7 @@ Current architectural gaps:
 | --- | --- | --- | --- | --- |
 | VAT | Strongest tax lane; server-computed/gated for major flows. | Effective-date governance and report rollout still need core stability. | High | Keep VAT as reference implementation for tax engine contracts. |
 | Percentage Tax | Compliance pages/tables exist. | Needs configurable applicability, posting/report source, reconciliation, and filing rules. | High | Define PT tax-rule model before expansion. |
-| EWT | PV/CV validation and 2307 hardening exist. | ATC versioning, remittance flow, profile gating, cash purchases/advances incomplete. | Critical | Complete DA-009 dependencies and PXL-AUD-035/036/041/037/038/039/042/043. |
+| EWT | PV/CV validation, 2307 hardening, and document-date ATC versioning (session 77) exist. | Remittance flow, profile gating, cash purchases/advances incomplete. | Critical | ATC as-of-date/versioning DONE (AUD-035/036); complete remaining DA-009 dependencies and PXL-AUD-041/037/038/039/042/043. |
 | CWT | OR CWT detail and customer defaults exist. | 2307 received lifecycle, over-claim guard, stale/reversal handling incomplete. | High | Complete PXL-AUD-047 and customer CWT default-flow tests. |
 | FWT | Tables/returns exist. | No mature posted FWT tax-detail engine. | High | Define FWT tax engine path before enabling FWT filing readiness. |
 | Future BIR changes | Existing tables are partly configurable. | Need versioned tax-rule/rate model, not code edits per rate change. | Critical | Add effective-dated rule resolution by document date. |
@@ -307,8 +307,8 @@ Current architectural gaps:
 
 | Gap ID | Gap | Existing reference | Severity | Next action |
 | --- | --- | --- | --- | --- |
-| TAX-001 | ATC effective window must use document date, not current date. | PXL-AUD-035 | High | Implement safe trusted migration/test, replacing held-out draft if needed. |
-| TAX-002 | ATC versions must support rate changes under one official code. | PXL-AUD-036 | High | Implement versioned uniqueness and as-of resolver. |
+| TAX-001 | ATC effective window must use document date, not current date. | PXL-AUD-035 | ~~High~~ Resolved (session 77) | DONE — `20260713000002` threads the document date through the PV/OR/CV EWT-CWT validators and all callers; validators evaluate the ATC window as of the document date. Test 033. |
+| TAX-002 | ATC versions must support rate changes under one official code. | PXL-AUD-036 | ~~High~~ Resolved (session 77) | DONE — `20260713000002` adds version-aware uniqueness `(code, tax_category, effective_from)`, overlap/successor guard, `fn_atc_version_asof` resolver, and effective_from immutability once used. Test 033. |
 | TAX-003 | SAWT/QAP reconciliation and multi-ATC supplier scenarios remain incomplete. | PXL-DA-009 | Critical | Complete reconciliation scenarios after ATC versioning and remittance flow. |
 | TAX-004 | Controlled remittance/application flow is missing. | PXL-AUD-041 | High | Build governed remittance/application documents before filing finalization. |
 | TAX-005 | Withholding basis policy is not configurable. | PXL-AUD-037 | High | Decide and encode payment/accrual policy per company/document/profile. |
@@ -406,7 +406,7 @@ Do not build these transactions now. This section records accounting requirement
 | --- | --- | --- | --- | --- |
 | Critical | SAWT/QAP and multi-ATC withholding reconciliation incomplete. | Tax Engine | Compliance filings can be wrong. | PXL-DA-009 |
 | Critical | CAS DAT layout, books reconciliation, exported-byte hashing incomplete. | Accounting/Compliance | BIR CAS evidence can be rejected. | PXL-DA-019 |
-| Critical | Future tax changes require versioned effective-date rule resolution. | Tax Engine | Rates can be wrong for historical/future documents. | TAX-001, TAX-002 |
+| ~~Critical~~ ATC lane done (session 77) | ATC rate changes now resolve by document date and version (`20260713000002`). A fully generic configurable rule engine across all regimes (PT/FWT) is still future work. | Tax Engine | Rates can be wrong for historical/future documents. | TAX-001, TAX-002 (done); generic engine under TAX-006-style work |
 | Critical | New transaction tables can bypass core controls if not registered/classified. | Accounting Engine | Source trace, immutability, and audit may fail. | ACR-001, ACR-003 |
 | Critical | New posting behavior can diverge without the Accounting Rules Matrix. | Accounting/Posting Engine | Future modules can invent inconsistent posting logic. | `PXL_ACCOUNTING_RULES_MATRIX.md` |
 | High | Financial statement/close model incomplete. | Accounting Engine | TB/FS can be misleading. | PXL-AUD-013, PXL-DA-014 |
@@ -462,7 +462,7 @@ Current concrete lane inside this sequence:
 
 1. Maintain `PXL_ACCOUNTING_RULES_MATRIX.md` as the accounting behavior source of truth.
 2. Re-open the critical accounting/tax lane: DA-009 and DA-019.
-3. Complete ATC document-date versioning safely, replacing the held-out draft rather than adopting it as-is.
+3. ~~Complete ATC document-date versioning safely, replacing the held-out draft rather than adopting it as-is.~~ DONE (session 77, `20260713000002`, test 033; held-out draft `20260710000004` stays excluded).
 4. Complete controlled EWT remittance/CWT application flow.
 5. Decide and encode withholding basis policy.
 6. Server-recompute OR/PV cash totals from lines.

@@ -734,3 +734,22 @@ Status: Executed Passing (session 64, 2026-07-12) in `supabase/tests/032_cas_num
 | 6 | Save a second SI, then attempt a third beyond the ATP range | The second consumes 101 (never reusing voided 100); the third fails with `ATP range exhausted` and does not drift the governed counter (`current_sequence` stays 101), and no evidence is created beyond the authorized range. |
 | 7 | As an application (`authenticated`) caller, attempt to roll the counter back, rewrite number formatting, or directly mutate/delete issuance/void evidence | All rejected: `P0001` for backward/format changes on `number_series`; `42501` for direct DML on the evidence tables (RLS/grants). |
 | 8 | Read `vw_cas_atp_usage` for the SI series | Reports issued/voided counts and `is_exhausted`/alert-threshold status from evidence (0 reserved, 1 issued, 1 voided, 2 allocated, 0 remaining, 100.00% used, exhausted). |
+
+## ATC-DOCDATE-VERSION-001 - Document-Date ATC Validation and Effective-Dated Rate Versioning
+
+Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/033_atc_document_date_versioning_test.sql`, 15 assertions. Related findings: PXL-AUD-035, PXL-AUD-036 (safe trusted replacement for the held-out draft `20260710000004`).
+
+Scenario: official ATC `WI777` withholds 1% through 2026-06-30 and 2% from 2026-07-01 (a BIR rate change under the same official code), created as two effective-dated versions with a successor link.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Resolve the code as of a June and a July date via `fn_atc_version_asof` | Returns the 1% version for the June date and the 2% version for the July date. |
+| 2 | Count active rows for the official code | Two effective-dated versions of the same `code` coexist — the former global `UNIQUE (code)` key is replaced by version-aware uniqueness `(code, tax_category, effective_from)`. |
+| 3 | Validate PV EWT with the 2% version on a June-dated document | Rejected: the version is not effective on the document date (error names the document date, not `CURRENT_DATE`). |
+| 4 | Validate PV EWT with the 1% version on a June-dated document, and the 2% version on a July-dated document | Both pass at the amount matching the version's rate on the taxable base. |
+| 5 | Validate OR CWT with the 2% version on a June-dated receipt, and the 1% version on a June-dated receipt | The future version is rejected as-of the receipt date; the in-force version validates. |
+| 6 | Insert a backdated (June 20) check voucher using the 1% version through `trg_cv_ewt_validation` | Accepted — the CV caller now evaluates ATC validity as of `voucher_date`, so a legitimate backdated document in an open period posts even though the 1% version is expired as of today. |
+| 7 | Insert the same backdated CV using the not-yet-effective 2% version | Rejected: the version is not effective on the June voucher date. |
+| 8 | Insert a third active version overlapping the open 2% window | Rejected by the version-integrity guard — the prior version's `effective_to` must be closed before a successor starts. |
+| 9 | Insert a successor pointing at a predecessor with a different official code | Rejected — a successor must keep the same official code and tax category (alphalists must carry the official ATC). |
+| 10 | After the 1% version is used, attempt to move its `effective_from`, close its `effective_to`, or change its `rate` | `effective_from` and `rate` are immutable once used; `effective_to` can still be closed to end the window. |

@@ -1,8 +1,22 @@
 # AI Handoff
 
-Last updated: 2026-07-13 (session 76 — Accounting Rules Matrix documented)
+Last updated: 2026-07-13 (session 77 — ATC document-date validation + rate versioning; AUD-035/036 closed)
 
-## Active Priority (session 76 — Accounting Rules Matrix under PXL Accounting Core Ready)
+## Active Priority (session 77 — ATC document-date validation + rate versioning)
+
+Under **PXL Accounting Core Ready** (DEC-017), session 77 delivered the first accounting-core implementation lane after the documentation passes: safe ATC document-date validation and rate versioning, closing **PXL-AUD-035** and **PXL-AUD-036**.
+
+Shipped locally (verified, uncommitted, hosted push pending):
+
+- `supabase/migrations/20260713000002_atc_document_date_versioning.sql` — a trusted replacement for the held-out draft `20260710000004` (which stays untracked/excluded). AUD-035: the PV/OR/CV EWT-CWT validators take a trailing `p_document_date DATE` and evaluate the ATC effective window as of the document date; all callers thread `voucher_date`/`receipt_date`. AUD-036: version-aware uniqueness `(code, tax_category, effective_from)`, overlap/successor integrity guard, `fn_atc_version_asof` resolver, and effective_from immutability once used.
+- `supabase/tests/033_atc_document_date_versioning_test.sql` — ATC-DOCDATE-VERSION-001, 15 assertions.
+- Docs updated: findings (AUD-035/036 → Retested Passed + detail + changelog + standing 45/11/16), readiness (TAX-001/002 done), rules matrix, test book, state/handoff/queue.
+
+Verification: held-out-safe reset replayed through `20260713000002`; full pgTAP **616/616 across 32 files**; build/lint green; types + schema summary regenerated; docs gate green (72 findings, 32 tests). The three broken drafts were restored byte-for-byte (checksums verified).
+
+Exact next step: push `20260713000001` + `20260713000002` to hosted once a `SUPABASE_ACCESS_TOKEN` is present (move held-out `20260710000004`/`00005` aside during the push). Then advance **DA-009** (SAWT/QAP multi-ATC reconciliation, now unblocked by ATC versioning) or the EWT lane (AUD-041 remittance/application flow, then AUD-037 basis policy). Optional UI follow-up: resolve frontend ATC pickers through `fn_atc_version_asof` by document date.
+
+## Prior Priority (session 76 — Accounting Rules Matrix under PXL Accounting Core Ready)
 
 User directed that the Sales Invoice Workspace and Report Workspace standards are now documented, and that no new UI standards, report pilots, dashboards, or transaction workspace rollouts should be started. The next milestone is **PXL Accounting Core Ready**.
 

@@ -12759,6 +12759,10 @@ export type Database = {
         Returns: boolean
       }
       fn_atc_code_used: { Args: { p_atc_id: string }; Returns: boolean }
+      fn_atc_version_asof: {
+        Args: { p_as_of?: string; p_code: string; p_tax_category: string }
+        Returns: string
+      }
       fn_begin_source_posting: {
         Args: {
           p_document_type: string
@@ -13472,27 +13476,18 @@ export type Database = {
         Args: { p_voucher_id: string }
         Returns: undefined
       }
-      fn_validate_payment_voucher_line_ewt:
-        | {
-            Args: {
-              p_atc_code_id: string
-              p_company_id: string
-              p_ewt_amount: number
-              p_payment_amount: number
-            }
-            Returns: undefined
-          }
-        | {
-            Args: {
-              p_atc_code_id: string
-              p_company_id: string
-              p_ewt_amount: number
-              p_ewt_tax_base?: number
-              p_ewt_variance_reason?: string
-              p_payment_amount: number
-            }
-            Returns: undefined
-          }
+      fn_validate_payment_voucher_line_ewt: {
+        Args: {
+          p_atc_code_id: string
+          p_company_id: string
+          p_document_date?: string
+          p_ewt_amount: number
+          p_ewt_tax_base?: number
+          p_ewt_variance_reason?: string
+          p_payment_amount: number
+        }
+        Returns: undefined
+      }
       fn_validate_receipt_cwt_ready: {
         Args: { p_receipt_id: string }
         Returns: undefined
@@ -13504,6 +13499,7 @@ export type Database = {
           p_cwt_amount: number
           p_cwt_tax_base?: number
           p_cwt_variance_reason?: string
+          p_document_date?: string
           p_payment_amount: number
         }
         Returns: undefined
@@ -13718,3 +13714,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
