@@ -1,8 +1,32 @@
 # AI Handoff
 
-Last updated: 2026-07-13 (session 72 — saved views and professional table framework)
+Last updated: 2026-07-13 (session 73 — official Sales Invoice Transaction Workspace Standard documented)
 
-## Active Priority (session 72 — Saved Views / Professional Table Experience)
+## Active Priority (session 73 — Official Transaction Workspace Standard)
+
+User directed that before implementing any additional transaction workspaces, the Sales Invoice Workspace must be fully documented as the official PXL Transaction Workspace Standard. Completed as a documentation-only pass:
+
+- Replaced `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` with the canonical standard document.
+- The document now covers:
+  - workspace philosophy and ERP rationale;
+  - header standard, allowed/forbidden header data, toolbar actions, status chips, KPIs;
+  - three-card information band standard and master-data link rules;
+  - complete tab architecture for Lines, Financial, GL Impact, Tax Impact, Validation, Workflow, Approval, Audit, Related Docs, Related Party, Attachments, Activity, Notes, and System;
+  - Lines/Smart Grid behavior, saved views, column chooser, pinned columns, totals, expandable rows, and cross-module reuse;
+  - accounting/supporting tab standards;
+  - UI/UX standards for spacing, borders, typography, color, tables, empty/loading states, responsiveness, and accessibility;
+  - reusable component inventory and current file ownership;
+  - future transaction extension rules;
+  - developer guidelines for folder structure, React/TypeScript contracts, data loading, permissions, testing, and naming;
+  - Sales Invoice reference implementation details;
+  - UX decision log documenting removed duplicate right rail, Quick Actions card, duplicated header/card data, status strip, workflow header path, decorative color, and simple column chooser;
+  - rollout matrix and maintenance rules.
+- No code/schema/API/business behavior was changed.
+- Verify with `git diff --check` before commit/push; docs-only build is not required unless additional code changes occur.
+
+Next implementation work must use `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` as the governing reference before building Purchase Invoice/Vendor Bill, Sales Order, Purchase Order, Delivery Receipt, Official Receipt, Credit Memo, Debit Memo, Journal Entry, Inventory Transactions, etc.
+
+## Previous Active Priority (session 72 — Saved Views / Professional Table Experience)
 
 User requested the next table-only enhancement after declaring the Transaction Workspace visually complete. Implemented as a reusable `LineGrid` enhancement, not a page redesign and with no schema/API/posting/business changes:
 
