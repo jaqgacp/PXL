@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
+Generated: 2026-07-13. Migrations scanned: 100. Tests present: 42.
 
-## Functions (244)
+## Functions (248)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -16,6 +16,7 @@ Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
 | `fn_add_posting_line` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_add_tax_detail` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_ap_aging_asof` | `20260713000010_withholding_basis_policy.sql` | 2 |
+| `fn_apply_cash_purchase_line_ewt_profile` | `20260713000015_cash_purchase_ewt.sql` | 1 |
 | `fn_apply_vendor_bill_line_ewt_profile` | `20260713000011_withholding_profile_gates.sql` | 1 |
 | `fn_apply_vendor_credit` | `20260701000011_vendor_credit_application_reversal.sql` | 4 |
 | `fn_approve_petty_cash_voucher` | `20260711000001_posting_engine_completion.sql` | 2 |
@@ -118,6 +119,7 @@ Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
 | `fn_post_amortization_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_bank_adjustment` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_cash_purchase` | `20260711000001_posting_engine_completion.sql` | 5 |
+| `fn_post_cash_purchase_source_locked_impl` | `20260713000015_cash_purchase_ewt.sql` | 1 |
 | `fn_post_check_voucher` | `20260713000002_atc_document_date_versioning.sql` | 3 |
 | `fn_post_credit_memo` | `20260711000001_posting_engine_completion.sql` | 5 |
 | `fn_post_debit_memo` | `20260711000001_posting_engine_completion.sql` | 5 |
@@ -154,6 +156,7 @@ Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
 | `fn_render_cas_dat_text` | `20260713000008_cas_dat_layout.sql` | 1 |
 | `fn_report_snapshot_key_uuid` | `20260703000006_report_snapshots_vat_exports.sql` | 1 |
 | `fn_require_admin_for_accounting_lifecycle` | `20260702000010_can_perform_role_actions.sql` | 3 |
+| `fn_require_cash_purchase_post_ewt_profile` | `20260713000015_cash_purchase_ewt.sql` | 1 |
 | `fn_require_check_voucher_post_ewt_profile` | `20260713000011_withholding_profile_gates.sql` | 1 |
 | `fn_require_company_ewt_payable_enabled` | `20260713000011_withholding_profile_gates.sql` | 1 |
 | `fn_require_customer_cwt_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |
@@ -189,7 +192,7 @@ Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
 | `fn_revert_si_to_draft` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_revert_vendor_bill_to_draft` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_row_written_by_current_txn` | `20260704000002_status_immutability.sql` | 1 |
-| `fn_save_cash_purchase` | `20260630000021_gap_fill.sql` | 2 |
+| `fn_save_cash_purchase` | `20260713000015_cash_purchase_ewt.sql` | 3 |
 | `fn_save_cash_sale` | `20260704000003_receipt_cwt_explicit_base.sql` | 5 |
 | `fn_save_credit_memo` | `20260630000022_tax_ledger_completeness.sql` | 4 |
 | `fn_save_debit_memo` | `20260630000022_tax_ledger_completeness.sql` | 4 |
@@ -227,6 +230,7 @@ Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
 | `fn_update_form_2307_issued_status` | `20260701000015_form2307_issued_generation_rpc.sql` | 1 |
 | `fn_update_payment_tracking` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_update_wac` | `20260630000028_inventory.sql` | 1 |
+| `fn_validate_cash_purchase_ewt_ready` | `20260713000015_cash_purchase_ewt.sql` | 1 |
 | `fn_validate_company_vat_amount` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_validate_company_vat_code` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_validate_document_vat_registration` | `20260710000002_vat_registration_all_documents.sql` | 1 |
@@ -308,8 +312,8 @@ Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
 | `cas_export_artifacts` | `20260713000008_cas_dat_layout.sql` | 1 | `20260713000008_cas_dat_layout.sql` |
 | `cas_export_log` | `20260701000005_audit_cas.sql` | 4 | `20260713000008_cas_dat_layout.sql` |
 | `cash_count_sheets` | `20260630000023_banking_treasury_schema.sql` | 1 | `20260630000023_banking_treasury_schema.sql` |
-| `cash_purchase_lines` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
-| `cash_purchases` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
+| `cash_purchase_lines` | `20260629000018_purchasing_full.sql` | 3 | `20260713000015_cash_purchase_ewt.sql` |
+| `cash_purchases` | `20260629000018_purchasing_full.sql` | 3 | `20260713000015_cash_purchase_ewt.sql` |
 | `chart_of_accounts` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `check_voucher_lines` | `20260630000023_banking_treasury_schema.sql` | 1 | `20260630000023_banking_treasury_schema.sql` |
 | `check_vouchers` | `20260630000023_banking_treasury_schema.sql` | 2 | `20260705000001_cv_ewt_supplier_validation.sql` |
@@ -437,7 +441,7 @@ Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `withholding_remittances` | `20260713000005_withholding_remittance_flow.sql` | 1 | `20260713000005_withholding_remittance_flow.sql` |
 
-## Triggers (250)
+## Triggers (252)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -499,6 +503,7 @@ Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
 | `trg_block_vb_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` |
 | `trg_cas_ar_updated_at` | `20260701000005_audit_cas.sql` |
 | `trg_cash_count_sheets_updated_at` | `20260630000023_banking_treasury_schema.sql` |
+| `trg_cash_purchase_post_ewt_profile` | `20260713000015_cash_purchase_ewt.sql` |
 | `trg_check_voucher_post_ewt_profile` | `20260713000011_withholding_profile_gates.sql` |
 | `trg_check_vouchers_updated_at` | `20260630000023_banking_treasury_schema.sql` |
 | `trg_cm_line_vat_registration` | `20260710000002_vat_registration_all_documents.sql` |
@@ -508,6 +513,7 @@ Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
 | `trg_cp_line_vat_registration` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_cp_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_cp_vat_registration_status` | `20260710000002_vat_registration_all_documents.sql` |
+| `trg_cpl_ewt_profile` | `20260713000015_cash_purchase_ewt.sql` |
 | `trg_cpl_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_credit_memo_lines_updated_at` | `20260629000003_sprint5_ar.sql` |
 | `trg_credit_memos_updated_at` | `20260629000003_sprint5_ar.sql` |

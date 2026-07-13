@@ -1903,6 +1903,11 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string
+          ewt_amount: number
+          ewt_atc_code_id: string | null
+          ewt_income_nature: string | null
+          ewt_tax_base: number | null
+          ewt_variance_reason: string | null
           expense_account_id: string | null
           id: string
           input_vat_amount: number
@@ -1923,6 +1928,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description: string
+          ewt_amount?: number
+          ewt_atc_code_id?: string | null
+          ewt_income_nature?: string | null
+          ewt_tax_base?: number | null
+          ewt_variance_reason?: string | null
           expense_account_id?: string | null
           id?: string
           input_vat_amount?: number
@@ -1943,6 +1953,11 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string
+          ewt_amount?: number
+          ewt_atc_code_id?: string | null
+          ewt_income_nature?: string | null
+          ewt_tax_base?: number | null
+          ewt_variance_reason?: string | null
           expense_account_id?: string | null
           id?: string
           input_vat_amount?: number
@@ -1970,6 +1985,13 @@ export type Database = {
             columns: ["cp_id"]
             isOneToOne: false
             referencedRelation: "cash_purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_purchase_lines_ewt_atc_code_id_fkey"
+            columns: ["ewt_atc_code_id"]
+            isOneToOne: false
+            referencedRelation: "atc_codes"
             referencedColumns: ["id"]
           },
           {
@@ -2023,6 +2045,7 @@ export type Database = {
           supplier_name_snapshot: string | null
           supplier_tin_snapshot: string | null
           total_amount: number
+          total_ewt_amount: number
           total_exempt_amount: number
           total_input_vat_amount: number
           total_taxable_amount: number
@@ -2051,6 +2074,7 @@ export type Database = {
           supplier_name_snapshot?: string | null
           supplier_tin_snapshot?: string | null
           total_amount?: number
+          total_ewt_amount?: number
           total_exempt_amount?: number
           total_input_vat_amount?: number
           total_taxable_amount?: number
@@ -2079,6 +2103,7 @@ export type Database = {
           supplier_name_snapshot?: string | null
           supplier_tin_snapshot?: string | null
           total_amount?: number
+          total_ewt_amount?: number
           total_exempt_amount?: number
           total_input_vat_amount?: number
           total_taxable_amount?: number
@@ -13943,6 +13968,10 @@ export type Database = {
           p_unit_cost_in: number
           p_warehouse_id: string
         }
+        Returns: undefined
+      }
+      fn_validate_cash_purchase_ewt_ready: {
+        Args: { p_cp_id: string }
         Returns: undefined
       }
       fn_validate_company_vat_amount: {

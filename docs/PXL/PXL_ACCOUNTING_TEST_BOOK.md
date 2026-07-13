@@ -684,13 +684,17 @@ Status: Not Yet Implemented. Related finding: PXL-AUD-039.
 
 ## CASH-PURCHASE-EWT-001 - Withholding on Cash Purchases
 
-Status: Not Yet Implemented. Related finding: PXL-AUD-043.
+Status: Executed Passing (session 88, 2026-07-13) in `supabase/tests/042_cash_purchase_ewt_test.sql`, 10 assertions. Related finding: PXL-AUD-043.
 
 | Step | Transaction | Expected Behavior |
 | ---- | ----------- | ----------------- |
-| 1 | Cash purchase of services from an EWT-subject supplier with ATC + explicit net base | Posts DR expense/input VAT, CR cash (net of EWT), CR EWT payable; ewt_payable tax detail row written. |
-| 2 | Cash purchase to an EWT-subject supplier with zero EWT | Warned or blocked per policy. |
-| 3 | Quarter 2307/QAP | Include the cash-purchase withholding. |
+| 1 | Cash purchase of services from an EWT-subject supplier with ATC + explicit net base | Header stores gross VAT totals plus `total_ewt_amount`; `total_amount` is net cash paid. |
+| 2 | Post the cash purchase | Posts DR expense/input VAT, CR EWT payable, CR cash net of EWT; JE totals equal gross purchase value. |
+| 3 | Tax detail / WHT reconciliation | Writes a source-line `ewt_payable` tax-detail row with ATC, explicit base, supplier TIN/name, and income nature; `fn_wht_gl_reconciliation` ties EWT tax detail to the EWT payable GL control. |
+| 4 | Company active compliance profile is not EWT registered | EWT cash purchase save is blocked by the profile gate. |
+| 5 | ATC amount does not match explicit base/rate | Save is rejected unless a controlled variance reason is supplied. |
+
+Remaining PXL-AUD-043 scope: customer advances with CWT and supplier down-payments with EWT are not covered by this scenario and still need a governed advance/down-payment document policy.
 
 ## SETUP-READINESS-001 - Guided Minimum Accounting Setup
 

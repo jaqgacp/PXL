@@ -287,7 +287,7 @@ Current architectural gaps:
 - ~~Company withholding profile flags do not consistently gate transaction surfaces.~~ DONE (session 84, `20260713000011`): active non-EWT profiles gate VB/PV/CV EWT payable, EWT returns, and QAP exports.
 - ~~TWA auto-EWT is not operationally governed.~~ DONE (session 84, `20260713000011`): supplier-subject source-basis VB lines default to WC158 1% goods or WC160 2% services when the TWA profile is active.
 - ~~Withholding basis policy is not configurable for payment vs accrual.~~ DONE (session 83, `20260713000010`): company-level AP EWT recognition policy defaults to source/accrual at VB and keeps explicit payment-basis compatibility.
-- Cash purchases, advances, and down-payments have incomplete withholding support.
+- Cash-purchase EWT is implemented; advances and down-payments still have incomplete withholding support.
 - Percentage Tax exists as compliance/reporting structures but is not fully integrated as a generic posting tax engine.
 - FWT return structures exist, but no broad posted FWT tax-detail flow is production-ready.
 - Some tax behavior is still expressed through document-specific SQL/RPC logic rather than a reusable tax-rule evaluator.
@@ -298,7 +298,7 @@ Current architectural gaps:
 | --- | --- | --- | --- | --- |
 | VAT | Strongest tax lane; server-computed/gated for major flows. Effective-date/version governance on VAT/PT rate codes delivered (PXL-DA-010, `20260713000012`): versioned rates, used-rate immutability, and a document-date `fn_tax_code_version_asof` resolver. | Report rollout still needs core stability; document/item pickers should route through the as-of resolver (backlog UI). | Medium | Keep VAT as reference implementation for tax engine contracts. |
 | Percentage Tax | Compliance pages/tables exist. | Needs configurable applicability, posting/report source, reconciliation, and filing rules. | High | Define PT tax-rule model before expansion. |
-| EWT | PV/CV validation, 2307 hardening, document-date ATC versioning, controlled remittance flow, QAP multi-ATC reconciliation, AP source-basis EWT policy, and withholding profile gates exist. | Cash purchases/advances, 2307 month layout, duplicate withholding masters, and received-2307 lifecycle remain incomplete. | High | Complete PXL-AUD-043/040/044/047. |
+| EWT | PV/CV validation, 2307 hardening, document-date ATC versioning, controlled remittance flow, QAP multi-ATC reconciliation, AP source-basis EWT policy, withholding profile gates, and cash-purchase EWT exist. | Advances/down-payments, 2307 month layout, duplicate withholding masters, and received-2307 lifecycle remain incomplete. | High | Complete the remaining PXL-AUD-043 advance policy plus PXL-AUD-040/044/047. |
 | CWT | OR CWT detail and customer defaults exist. | 2307 received lifecycle, over-claim guard, stale/reversal handling incomplete. | High | Complete PXL-AUD-047 and customer CWT default-flow tests. |
 | FWT | Tables/returns exist. | No mature posted FWT tax-detail engine. | High | Define FWT tax engine path before enabling FWT filing readiness. |
 | Future BIR changes | Effective-dated, version-locked **rate** governance now exists for ATC and VAT/PT codes (PXL-DA-010): a statutory rate change is a new successor version, not an in-place edit, and historical postings keep their frozen rate. | The versioned **rate** model exists, but a full configuration-driven **rule** model (applicability/selection logic beyond rates) is still needed. | High | Extend the versioned-rate primitive into a configuration-driven tax-rule model; route pickers through the as-of resolver. |
@@ -315,7 +315,7 @@ Current architectural gaps:
 | TAX-006 | PV/OR header totals must be server-recomputed from lines. | PXL-AUD-038, PXL-AUD-048 | ~~High~~ Resolved (session 77) | DONE — `20260713000003` derives OR/PV cash and withholding totals from persisted lines and blocks divergent header totals. Test 034. |
 | TAX-007 | Over-apply guards must account for CM/VC applications. | PXL-AUD-039 | ~~High~~ Resolved (session 77) | DONE — `20260713000004` nets AR credit memos and AP vendor-credit applications in over-apply guards. Test 035. |
 | TAX-008 | Withholding profile gating is incomplete. | PXL-AUD-042 | ~~High~~ Resolved (session 84) | DONE — `20260713000011` gates explicit non-EWT profiles across AP-side EWT payable, EWT returns, and QAP exports, and implements TWA goods/services auto-EWT defaults. Test 038. |
-| TAX-009 | Cash purchases and advances/down-payments withholding are incomplete. | PXL-AUD-043 | High | Define document policies before implementation. |
+| TAX-009 | Advances/down-payments withholding is incomplete; cash-purchase EWT is implemented and tested. | PXL-AUD-043 | High | Define governed AR advance with CWT and AP down-payment with EWT policies before implementation. |
 | TAX-010 | 2307 received claim lifecycle is not governed. | PXL-AUD-047 | Medium | Add validation, over-claim guard, stale/reversal handling. |
 
 ## 8. Master Data Governance review
@@ -388,7 +388,7 @@ Do not build these transactions now. This section records accounting requirement
 | --- | --- | --- | --- |
 | Official Receipt | Strong core posting exists. | Lifecycle contract, CWT profile defaults, over-apply guard including CMs, cash total recomputation, reversal/bounce audit. | PXL-AUD-038, PXL-AUD-039, PXL-AUD-045, PXL-AUD-046. |
 | Vendor Bill | Strong core posting exists, including source/accrual EWT policy and net AP posting when supplier EWT applies. | Supplier withholding profile breadth, RR linkage policy, expense account determination. | PXL-AUD-008, ACR-006. |
-| Payment Voucher | Strong core posting exists, including line-derived totals, VC-aware over-apply, controlled remittance linkage, duplicate-withholding block for source-accrued VBs, and explicit non-EWT profile gates. | Non-VB/down-payment withholding policies. | PXL-AUD-043. |
+| Payment Voucher | Strong core posting exists, including line-derived totals, VC-aware over-apply, controlled remittance linkage, duplicate-withholding block for source-accrued VBs, and explicit non-EWT profile gates. | Non-VB/down-payment withholding policies remain. | PXL-AUD-043. |
 | Credit Memo | Posting exists. | CM application trace, OR over-apply interaction, reversal/void semantics, VAT/tax counter-row confirmation. | PXL-AUD-039, ACR-003. |
 | Debit Memo | Posting exists. | Consistent numbering/readiness, application semantics, reversal/void behavior, tax trace. | ACR-003, ACR-004. |
 | Sales Order | Non-posting operational document. | Clear non-posting status lifecycle, downstream source trace to DR/SI, reserved inventory policy. | Source-chain readiness and master-data defaults. |
