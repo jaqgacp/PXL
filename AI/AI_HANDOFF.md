@@ -6,6 +6,8 @@ Last updated: 2026-07-13 (session 77 — ATC versioning + settlement-total autho
 
 Under **PXL Accounting Core Ready** (DEC-017), session 77 delivered three accounting-core fixes on the shared PV/OR posting path: ATC document-date validation + rate versioning (**AUD-035/036**), PV/OR settlement-total line authority (**AUD-038/048**), and CM/VC-aware over-apply guards (**AUD-039**). Each migration builds on the previous one's `fn_save_*` bodies, preserving all prior behavior.
 
+**Commit / push status (session 77 committed cleanly; interrupted after commit):** all three fixes are committed on branch `fix/atc-document-date-versioning` as `664f700` (AUD-035/036), `dc287f2` (AUD-038/048), and `f0c7502` (AUD-039) — each commit bundled its migration, test, and all doc updates — and pushed to `origin/fix/atc-document-date-versioning` (branch is 3 commits ahead of `main`). **Still outstanding:** (1) merge the branch into `main`; (2) push `20260713000001`..`20260713000004` to hosted Supabase once a `SUPABASE_ACCESS_TOKEN` is present (move held-out `20260710000004`/`00005` aside during the push). The three held-out broken drafts remain untracked/excluded.
+
 Third fix — `supabase/migrations/20260713000004_cm_vc_aware_overapply_guards.sql` + `supabase/tests/035_cm_vc_aware_overapply_test.sql` (CM-VC-OVERAPPLY-001, 6 assertions): the `fn_save_receipt`/`fn_save_payment_voucher` over-apply guards now net applied credit memos (AR) and non-reversed vendor-credit applications on open/applied vendor credits (AP) from the invoice/bill outstanding, mirroring `fn_ar_aging_asof`/`fn_ap_aging_asof` (scalar subqueries so the two credit sources don't fan out). Test 004 stays green.
 
 **Next fix:** AUD-041 (controlled EWT remittance / CWT application flow — Large; unblocks SAWT/QAP exports and the Critical DA-009), then AUD-037 (withholding basis policy — needs a DEC).
@@ -14,7 +16,7 @@ Second fix — `20260713000003_settlement_total_line_authority.sql` + test 034 (
 
 First fix (below) — ATC document-date validation and rate versioning, closing **PXL-AUD-035** and **PXL-AUD-036**.
 
-Shipped locally (verified, uncommitted, hosted push pending):
+Shipped (verified; committed `664f700` + pushed to origin branch; hosted push + merge-to-main pending):
 
 - `supabase/migrations/20260713000002_atc_document_date_versioning.sql` — a trusted replacement for the held-out draft `20260710000004` (which stays untracked/excluded). AUD-035: the PV/OR/CV EWT-CWT validators take a trailing `p_document_date DATE` and evaluate the ATC effective window as of the document date; all callers thread `voucher_date`/`receipt_date`. AUD-036: version-aware uniqueness `(code, tax_category, effective_from)`, overlap/successor integrity guard, `fn_atc_version_asof` resolver, and effective_from immutability once used.
 - `supabase/tests/033_atc_document_date_versioning_test.sql` — ATC-DOCDATE-VERSION-001, 15 assertions.
