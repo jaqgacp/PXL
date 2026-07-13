@@ -649,6 +649,19 @@ Status: Executed Passing (session 86, 2026-07-13) in `supabase/tests/040_financi
 | 5 | Post-closing Trial Balance (regular+opening+adjusting+closing) | Revenue and expense accounts net to zero; retained earnings carries net income 100,000 − 35,000 = 65,000. |
 | 6 | Fiscal year + periods after close | Year status = `closed`, all periods `is_locked`; re-closing the year is rejected. |
 
+## TRANSACTION-EVENTS-001 - Semantic Transaction Lifecycle Events
+
+Status: Executed Passing (session 87, 2026-07-13) in `supabase/tests/041_transaction_events_test.sql`, 14 assertions. Related finding: PXL-DA-016.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | Post a manual journal entry with an authenticated actor | `transaction_events` records a POSTED event with company, source, source document number, actor id, actor role, and linked JE evidence. |
+| 2 | Attempt direct application-role insert into `transaction_events` | Rejected; application users can read through RLS but cannot write lifecycle evidence directly. |
+| 3 | Reverse the posted JE with a reason | A REVERSED semantic event is written and the legacy `sys_audit_logs` posting_event row remains present with a link back to `transaction_events`. |
+| 4 | Insert/update approval evidence | `approval_instances` writes APPROVED lifecycle evidence with actor and status transition context. |
+| 5 | Insert a report snapshot export | `report_snapshots` writes EXPORTED evidence so filed/exported report activity appears in the same lifecycle stream. |
+| 6 | Read as a non-member | RLS returns zero lifecycle events for another company's user. |
+
 ## PV-OR-HEADER-TOTALS-001 - Header/Line Cash Total Integrity
 
 Status: Not Yet Implemented. Related findings: PXL-AUD-038, PXL-AUD-048.

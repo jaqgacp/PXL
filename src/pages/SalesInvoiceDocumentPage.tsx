@@ -685,7 +685,7 @@ export default function SalesInvoiceDocumentPage() {
     </div>,
   )
 
-  // ── Activity Timeline (lifecycle facts; semantic events pending PXL-DA-016) ──
+  // ── Activity Timeline (lifecycle facts; transaction_events UI wiring remains PXL-AUD-050) ──
   const timelineEvents = [
     { label: 'Created', at: si.created_at },
     ...(si.approved_at ? [{ label: 'Approved', at: si.approved_at }] : []),
@@ -704,7 +704,7 @@ export default function SalesInvoiceDocumentPage() {
           <div className="text-xs text-gray-400">{e.at ? formatDateTime(e.at) : '—'}</div>
         </li>
       ))}
-      <li className="ml-4 text-[11px] text-gray-400">Semantic event stream (edited/printed/emailed) arrives with PXL-DA-016 transaction_events.</li>
+      <li className="ml-4 text-[11px] text-gray-400">Semantic lifecycle events are available in transaction_events; this tab will use that stream when timeline wiring is expanded.</li>
     </ol>,
   )
 

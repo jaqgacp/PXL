@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-13. Migrations scanned: 98. Tests present: 39.
+Generated: 2026-07-13. Migrations scanned: 99. Tests present: 41.
 
-## Functions (237)
+## Functions (244)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -48,7 +48,11 @@ Generated: 2026-07-13. Migrations scanned: 98. Tests present: 39.
 | `fn_cancel_petty_cash_voucher` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `fn_cancel_purchase_order` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_cancel_revenue_recognition_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
+| `fn_capture_approval_instance_event` | `20260713000014_transaction_events.sql` | 1 |
 | `fn_capture_cas_document_void` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
+| `fn_capture_journal_entry_event` | `20260713000014_transaction_events.sql` | 1 |
+| `fn_capture_registered_source_event` | `20260713000014_transaction_events.sql` | 1 |
+| `fn_capture_report_snapshot_event` | `20260713000014_transaction_events.sql` | 1 |
 | `fn_close_fiscal_year` | `20260713000013_je_classification_and_close.sql` | 1 |
 | `fn_company_ap_ewt_policy` | `20260713000010_withholding_basis_policy.sql` | 1 |
 | `fn_company_ewt_payable_enabled` | `20260713000011_withholding_profile_gates.sql` | 1 |
@@ -143,7 +147,8 @@ Generated: 2026-07-13. Migrations scanned: 98. Tests present: 39.
 | `fn_rebuild_document_vat_details` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_receive_inventory` | `20260630000028_inventory.sql` | 1 |
 | `fn_record_impairment` | `20260712000002_aud051_numbering_registry_alignment.sql` | 2 |
-| `fn_record_posting_event` | `20260711000001_posting_engine_completion.sql` | 1 |
+| `fn_record_posting_event` | `20260713000014_transaction_events.sql` | 2 |
+| `fn_record_transaction_event` | `20260713000014_transaction_events.sql` | 1 |
 | `fn_register_fixed_asset` | `20260712000002_aud051_numbering_registry_alignment.sql` | 2 |
 | `fn_render_cas_dat` | `20260713000008_cas_dat_layout.sql` | 1 |
 | `fn_render_cas_dat_text` | `20260713000008_cas_dat_layout.sql` | 1 |
@@ -215,6 +220,8 @@ Generated: 2026-07-13. Migrations scanned: 98. Tests present: 39.
 | `fn_tax_code_is_current` | `20260713000012_tax_code_effective_date_governance.sql` | 1 |
 | `fn_tax_code_used` | `20260713000012_tax_code_effective_date_governance.sql` | 1 |
 | `fn_tax_code_version_asof` | `20260713000012_tax_code_effective_date_governance.sql` | 1 |
+| `fn_transaction_actor_role` | `20260713000014_transaction_events.sql` | 1 |
+| `fn_transaction_event_type_for_status` | `20260713000014_transaction_events.sql` | 1 |
 | `fn_transfer_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
 | `fn_twa_ewt_atc_asof` | `20260713000011_withholding_profile_gates.sql` | 1 |
 | `fn_update_form_2307_issued_status` | `20260701000015_form2307_issued_generation_rpc.sql` | 1 |
@@ -273,7 +280,7 @@ Generated: 2026-07-13. Migrations scanned: 98. Tests present: 39.
 | `vw_trial_balance` | `20260702000005_gl_reversal_visibility.sql` | 2 |
 | `vw_vendor_bill_register` | `20260630000021_gap_fill.sql` | 2 |
 
-## Tables (151)
+## Tables (152)
 
 | Table | Created in | Alters | Last altered in |
 | ----- | ---------- | ------ | --------------- |
@@ -413,6 +420,7 @@ Generated: 2026-07-13. Migrations scanned: 98. Tests present: 39.
 | `tax_codes` | `20260628000003_sprint2.sql` | 3 | `20260713000012_tax_code_effective_date_governance.sql` |
 | `tax_credits_schedule` | `20260701000004_income_tax.sql` | 0 | `—` |
 | `tax_detail_entries` | `20260629000019_hardening_v2.sql` | 4 | `20260711000001_posting_engine_completion.sql` |
+| `transaction_events` | `20260713000014_transaction_events.sql` | 1 | `20260713000014_transaction_events.sql` |
 | `units_of_measure` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `user_company_memberships` | `20260629000008_rls_hardening.sql` | 2 | `20260630000021_gap_fill.sql` |
 | `uses` | `20260630000021_gap_fill.sql` | 0 | `—` |
@@ -429,7 +437,7 @@ Generated: 2026-07-13. Migrations scanned: 98. Tests present: 39.
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `withholding_remittances` | `20260713000005_withholding_remittance_flow.sql` | 1 | `20260713000005_withholding_remittance_flow.sql` |
 
-## Triggers (242)
+## Triggers (250)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -648,6 +656,14 @@ Generated: 2026-07-13. Migrations scanned: 98. Tests present: 39.
 | `trg_sync_number_series_shape` | `20260702000001_number_series_document_code_alignment.sql` |
 | `trg_tax_code_history_guard` | `20260713000012_tax_code_effective_date_governance.sql` |
 | `trg_tax_code_version_rules` | `20260713000012_tax_code_effective_date_governance.sql` |
+| `trg_transaction_event_approval_insert` | `20260713000014_transaction_events.sql` |
+| `trg_transaction_event_approval_status` | `20260713000014_transaction_events.sql` |
+| `trg_transaction_event_journal_insert` | `20260713000014_transaction_events.sql` |
+| `trg_transaction_event_journal_source_link` | `20260713000014_transaction_events.sql` |
+| `trg_transaction_event_journal_status` | `20260713000014_transaction_events.sql` |
+| `trg_transaction_event_report_snapshot` | `20260713000014_transaction_events.sql` |
+| `trg_transaction_event_source_insert` | `20260713000014_transaction_events.sql` |
+| `trg_transaction_event_source_status` | `20260713000014_transaction_events.sql` |
 | `trg_vat_code_history_guard` | `20260713000012_tax_code_effective_date_governance.sql` |
 | `trg_vat_return_snapshot` | `20260703000004_report_snapshots_vat_returns.sql` |
 | `trg_vat_return_snapshot_guard` | `20260703000004_report_snapshots_vat_returns.sql` |

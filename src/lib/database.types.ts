@@ -10801,6 +10801,78 @@ export type Database = {
           },
         ]
       }
+      transaction_events: {
+        Row: {
+          actor_id: string | null
+          actor_role: string | null
+          after_status: string | null
+          before_status: string | null
+          company_id: string
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          journal_entry_id: string | null
+          occurred_at: string
+          reason: string | null
+          source_doc_id: string | null
+          source_doc_type: string
+          source_document_no: string | null
+          source_table: string | null
+        }
+        Insert: {
+          actor_id?: string | null
+          actor_role?: string | null
+          after_status?: string | null
+          before_status?: string | null
+          company_id: string
+          created_at?: string
+          details?: Json
+          event_type: string
+          id?: string
+          journal_entry_id?: string | null
+          occurred_at?: string
+          reason?: string | null
+          source_doc_id?: string | null
+          source_doc_type: string
+          source_document_no?: string | null
+          source_table?: string | null
+        }
+        Update: {
+          actor_id?: string | null
+          actor_role?: string | null
+          after_status?: string | null
+          before_status?: string | null
+          company_id?: string
+          created_at?: string
+          details?: Json
+          event_type?: string
+          id?: string
+          journal_entry_id?: string | null
+          occurred_at?: string
+          reason?: string | null
+          source_doc_id?: string | null
+          source_doc_type?: string
+          source_document_no?: string | null
+          source_table?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_events_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       units_of_measure: {
         Row: {
           base_uom_id: string | null
@@ -13565,6 +13637,21 @@ export type Database = {
         }
         Returns: string
       }
+      fn_record_transaction_event: {
+        Args: {
+          p_after_status?: string
+          p_before_status?: string
+          p_company_id: string
+          p_details?: Json
+          p_event_type: string
+          p_journal_entry_id?: string
+          p_reason?: string
+          p_source_doc_id: string
+          p_source_doc_type: string
+          p_source_table?: string
+        }
+        Returns: string
+      }
       fn_register_fixed_asset: { Args: { p_data: Json }; Returns: string }
       fn_render_cas_dat: { Args: { p_snapshot_id: string }; Returns: Json }
       fn_render_cas_dat_text: {
@@ -13820,6 +13907,11 @@ export type Database = {
       fn_tax_code_used: { Args: { p_tax_code_id: string }; Returns: boolean }
       fn_tax_code_version_asof: {
         Args: { p_as_of?: string; p_code: string }
+        Returns: string
+      }
+      fn_transaction_actor_role: { Args: never; Returns: string }
+      fn_transaction_event_type_for_status: {
+        Args: { p_after_status: string; p_before_status: string }
         Returns: string
       }
       fn_transfer_fixed_asset: { Args: { p_data: Json }; Returns: string }
