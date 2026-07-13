@@ -296,12 +296,12 @@ Current architectural gaps:
 
 | Tax area | Current state | Gap | Severity | Required before core ready |
 | --- | --- | --- | --- | --- |
-| VAT | Strongest tax lane; server-computed/gated for major flows. | Effective-date governance and report rollout still need core stability. | High | Keep VAT as reference implementation for tax engine contracts. |
+| VAT | Strongest tax lane; server-computed/gated for major flows. Effective-date/version governance on VAT/PT rate codes delivered (PXL-DA-010, `20260713000012`): versioned rates, used-rate immutability, and a document-date `fn_tax_code_version_asof` resolver. | Report rollout still needs core stability; document/item pickers should route through the as-of resolver (backlog UI). | Medium | Keep VAT as reference implementation for tax engine contracts. |
 | Percentage Tax | Compliance pages/tables exist. | Needs configurable applicability, posting/report source, reconciliation, and filing rules. | High | Define PT tax-rule model before expansion. |
 | EWT | PV/CV validation, 2307 hardening, document-date ATC versioning, controlled remittance flow, QAP multi-ATC reconciliation, AP source-basis EWT policy, and withholding profile gates exist. | Cash purchases/advances, 2307 month layout, duplicate withholding masters, and received-2307 lifecycle remain incomplete. | High | Complete PXL-AUD-043/040/044/047. |
 | CWT | OR CWT detail and customer defaults exist. | 2307 received lifecycle, over-claim guard, stale/reversal handling incomplete. | High | Complete PXL-AUD-047 and customer CWT default-flow tests. |
 | FWT | Tables/returns exist. | No mature posted FWT tax-detail engine. | High | Define FWT tax engine path before enabling FWT filing readiness. |
-| Future BIR changes | Existing tables are partly configurable. | Need versioned tax-rule/rate model, not code edits per rate change. | Critical | Add effective-dated rule resolution by document date. |
+| Future BIR changes | Effective-dated, version-locked **rate** governance now exists for ATC and VAT/PT codes (PXL-DA-010): a statutory rate change is a new successor version, not an in-place edit, and historical postings keep their frozen rate. | The versioned **rate** model exists, but a full configuration-driven **rule** model (applicability/selection logic beyond rates) is still needed. | High | Extend the versioned-rate primitive into a configuration-driven tax-rule model; route pickers through the as-of resolver. |
 
 ### 7.5 Tax gaps to resolve first
 

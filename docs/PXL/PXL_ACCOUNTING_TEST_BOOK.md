@@ -623,6 +623,19 @@ Status: Executed Passing (session 84, 2026-07-13) in `supabase/tests/038_withhol
 | 6 | Profile updated to `ewt_registered = true`, `is_twa = true`, `twa_auto_ewt_enabled = true` | TWA auto-EWT becomes active as of the document date. |
 | 7 | Supplier-subject source-basis VB has one inventory-item line and one service/expense line with no explicit ATC | Goods line defaults to WC158 at 1% (100.00 on 10,000.00); service line defaults to WC160 at 2% (200.00 on 10,000.00); VB expected EWT syncs to 300.00. |
 
+## TAX-CODE-VERSION-001 - VAT/PT Rate Effective-Date + Version Governance
+
+Status: Executed Passing (session 85, 2026-07-13) in `supabase/tests/039_tax_code_effective_date_governance_test.sql`, 17 assertions. Related finding: PXL-DA-010.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | `tax_codes`/`vat_codes` schema | Both carry `effective_from` governance columns; the global `tax_codes_code_key` is replaced by version-aware `(code, effective_from)`. |
+| 2 | One official code `TESTVAT` at 12% (through 2026-06-30) and a 14% successor (from 2026-07-01) | Both versions coexist; a duplicate `(code, effective_from)`, an overlapping active window, and a successor starting before its predecessor are all rejected. |
+| 3 | `fn_tax_code_version_asof('TESTVAT', <date>)` | A March 2026 document resolves to the 12% version; an August 2026 document resolves to the 14% successor. |
+| 4 | The 12% version is referenced by a posted tax-ledger row, then edited/deleted | `fn_tax_code_used` reads true; its rate, effective-start, and code are frozen; it cannot be deleted; the unused 14% successor stays editable. |
+| 5 | A VAT code used through the tax ledger, then re-pointed | The tax code reads as used through its VAT code; the used VAT code's classification is frozen. |
+| 6 | Deprecate the 12% version after the 14% successor exists | The historical 12% version keeps its 12.00 rate, so historical VAT/PT reports remain unchanged. |
+
 ## PV-OR-HEADER-TOTALS-001 - Header/Line Cash Total Integrity
 
 Status: Not Yet Implemented. Related findings: PXL-AUD-038, PXL-AUD-048.

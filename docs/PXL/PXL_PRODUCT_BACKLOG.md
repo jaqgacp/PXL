@@ -61,6 +61,12 @@ Every financial transaction page should converge toward one consistent layout. N
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Supplier insights panel | Payment planning per supplier | Balance, aging, open bills, credits | EWT/ATC profile, 2307-issued history | Context without leaving the bill/PV | AP aging views (exist), `vw_ewt_summary_ap`, 2307 issuances | Medium | M | Data exists across views; no aggregation endpoint or panel | Phase 2 | Sidebar on supplier select: balance, aging, ATC defaults, recent 2307s |
 
+## Setup / Master Data
+
+| Feature | Business Value | Accounting Value | Compliance Value | UX Value | Dependencies | Priority | Complexity | Current Readiness | Phase | UI Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| VAT/PT rate-version admin UI on `TaxSetupPage` | Admins can enact a statutory VAT/PT rate change without a migration | Deprecate-and-succeed keeps historical postings on their frozen rate | Effective-dated rate versions tie exports to the rate in force on each document date | Guided "close current version + start successor" flow instead of hand-editing rows | DB governance delivered (PXL-DA-010, `20260713000012`): `fn_tax_code_version_asof`, version-aware uniqueness, overlap/successor guards, used-code immutability | Medium | M | DB layer enforces versioning/immutability; `TaxSetupPage` shows ATC windows but has no VAT/PT successor-management UI, and pickers still resolve by row rather than by document date via the `*_version_asof` resolvers | Phase 2 | Mirror the ATC effective-window presentation: show active version + history, a "New rate version" action that sets the prior version's `effective_to` and links `supersedes_tax_code_id`, and route document pickers through `fn_tax_code_version_asof` by document date |
+
 ## Reports / Reconciliation
 
 | Feature | Business Value | Accounting Value | Compliance Value | UX Value | Dependencies | Priority | Complexity | Current Readiness | Phase | UI Notes |

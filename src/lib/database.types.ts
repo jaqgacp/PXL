@@ -10544,11 +10544,16 @@ export type Database = {
           code: string
           created_at: string | null
           created_by: string | null
+          deprecated_at: string | null
+          deprecated_reason: string | null
           description: string
+          effective_from: string
+          effective_to: string | null
           gl_account_id: string | null
           id: string
           is_active: boolean | null
           rate: number
+          supersedes_tax_code_id: string | null
           tax_type: string
           updated_at: string | null
           updated_by: string | null
@@ -10557,11 +10562,16 @@ export type Database = {
           code: string
           created_at?: string | null
           created_by?: string | null
+          deprecated_at?: string | null
+          deprecated_reason?: string | null
           description: string
+          effective_from?: string
+          effective_to?: string | null
           gl_account_id?: string | null
           id?: string
           is_active?: boolean | null
           rate: number
+          supersedes_tax_code_id?: string | null
           tax_type: string
           updated_at?: string | null
           updated_by?: string | null
@@ -10570,11 +10580,16 @@ export type Database = {
           code?: string
           created_at?: string | null
           created_by?: string | null
+          deprecated_at?: string | null
+          deprecated_reason?: string | null
           description?: string
+          effective_from?: string
+          effective_to?: string | null
           gl_account_id?: string | null
           id?: string
           is_active?: boolean | null
           rate?: number
+          supersedes_tax_code_id?: string | null
           tax_type?: string
           updated_at?: string | null
           updated_by?: string | null
@@ -10585,6 +10600,13 @@ export type Database = {
             columns: ["gl_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_codes_supersedes_tax_code_id_fkey"
+            columns: ["supersedes_tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "tax_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -10874,10 +10896,15 @@ export type Database = {
       vat_codes: {
         Row: {
           created_at: string | null
+          deprecated_at: string | null
+          deprecated_reason: string | null
           description: string
+          effective_from: string
+          effective_to: string | null
           id: string
           is_active: boolean | null
           relief_category: string | null
+          supersedes_vat_code_id: string | null
           tax_code_id: string
           transaction_type: string
           vat_classification: string
@@ -10885,10 +10912,15 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          deprecated_at?: string | null
+          deprecated_reason?: string | null
           description: string
+          effective_from?: string
+          effective_to?: string | null
           id?: string
           is_active?: boolean | null
           relief_category?: string | null
+          supersedes_vat_code_id?: string | null
           tax_code_id: string
           transaction_type: string
           vat_classification: string
@@ -10896,16 +10928,28 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          deprecated_at?: string | null
+          deprecated_reason?: string | null
           description?: string
+          effective_from?: string
+          effective_to?: string | null
           id?: string
           is_active?: boolean | null
           relief_category?: string | null
+          supersedes_vat_code_id?: string | null
           tax_code_id?: string
           transaction_type?: string
           vat_classification?: string
           vat_code?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vat_codes_supersedes_vat_code_id_fkey"
+            columns: ["supersedes_vat_code_id"]
+            isOneToOne: false
+            referencedRelation: "vat_codes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vat_codes_tax_code_id_fkey"
             columns: ["tax_code_id"]
@@ -13756,6 +13800,15 @@ export type Database = {
         Args: { p_issuance_id: string; p_reason?: string }
         Returns: string
       }
+      fn_tax_code_is_current: {
+        Args: { p_as_of?: string; p_tax_code_id: string }
+        Returns: boolean
+      }
+      fn_tax_code_used: { Args: { p_tax_code_id: string }; Returns: boolean }
+      fn_tax_code_version_asof: {
+        Args: { p_as_of?: string; p_code: string }
+        Returns: string
+      }
       fn_transfer_fixed_asset: { Args: { p_data: Json }; Returns: string }
       fn_twa_ewt_atc_asof: {
         Args: { p_document_date?: string; p_line_kind: string }
@@ -13869,6 +13922,7 @@ export type Database = {
         Args: { p_bill_id: string }
         Returns: undefined
       }
+      fn_vat_code_used: { Args: { p_vat_code_id: string }; Returns: boolean }
       fn_vat_gl_reconciliation: {
         Args: { p_company_id: string; p_date_from: string; p_date_to: string }
         Returns: {
