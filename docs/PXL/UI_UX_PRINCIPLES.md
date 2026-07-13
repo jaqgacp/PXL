@@ -5,6 +5,17 @@
 
 > These principles govern every screen, component, and interaction in PXL ERP. No exception is permitted without written architectural approval. A screen that violates these principles is not finished — regardless of whether it functions correctly.
 
+Canonical workspace standards now sit above generic UI guidance for their domains:
+
+- Transaction pages are governed by `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`.
+- Report pages are governed by `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md`.
+
+Use this document for shared visual and interaction principles. Use the workspace standards for page architecture, ownership boundaries, reusable components, and rollout rules.
+
+Active gate: `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` now controls sequencing. Do not create additional UI standards, dashboards, report pilots, or transaction workspace rollouts until **PXL Accounting Core Ready** is cleared.
+
+Posting behavior is governed by `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md`; UI screens display and explain accounting behavior but must not redefine it.
+
 ---
 
 ## Table of Contents

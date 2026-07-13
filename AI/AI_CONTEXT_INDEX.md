@@ -65,9 +65,12 @@ Use for GL, journal entries, posting, reversals, trial balance, financial statem
 Read:
 
 - `docs/PXL/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE production-readiness gate before transaction/report expansion, DEC-017)
+- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` (governed posting behavior source of truth, DEC-018)
 - `docs/PXL/PXL_TRANSACTION_MATRIX.md`
 - `docs/PXL/PXL_SCHEMA_SUMMARY.md`
 - `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
+- `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md` when the task touches reports or financial statements
 - `docs/PXL/09. Accounting/`
 - `docs/PXL/11. Reports/01. Financial Statements/`
 - `docs/PXL/11. Reports/02. Trial Balance/`
@@ -147,6 +150,8 @@ Use for VAT, EWT, CWT, FWT, ATC, Form 2307, Form 2306, SAWT, QAP, SLSP, RELIEF, 
 Read:
 
 - `docs/PXL/PXL_TAX_RULES_PH.md`
+- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE production-readiness gate before transaction/report expansion, DEC-017)
+- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` (governed posting/tax behavior source of truth, DEC-018)
 - `docs/PXL/10. Compliance/Tax Applicability Matrix.md`
 - `docs/PXL/10. Compliance/Form 2307 Management.md`
 - `docs/PXL/10. Compliance/01. Percentage Tax/`
@@ -178,7 +183,10 @@ Use for page layout, navigation, visual consistency, component behavior, tables,
 Read:
 
 - `docs/PXL/UI_UX_PRINCIPLES.md`
+- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE gate: no additional transaction/report rollout until Accounting Core Ready, DEC-017)
+- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` (posting behavior is not defined in UI code, DEC-018)
 - `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` (OFFICIAL Phase 2 product vision for all transaction pages, DEC-013; highest product priority after production-critical findings)
+- `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md` (OFFICIAL reporting architecture for all report pages, DEC-016; required before report redesign or implementation)
 - `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md` (design blueprint subordinate to the workspace vision; UI_UX_PRINCIPLES stack notes are aspirational — selective adoption per the backlog governs)
 - `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`
 - `docs/PXL/STATUS.md`
@@ -302,6 +310,9 @@ Use for financial statements, trial balance, tax reports, aging, bank reports, i
 Read:
 
 - `docs/PXL/11. Reports/`
+- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE gate: reports wait until Accounting Core Ready, DEC-017)
+- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` (report impact must reconcile to governed posting behavior, DEC-018)
+- `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md` (OFFICIAL report workspace architecture, DEC-016)
 - `docs/PXL/PXL_ACCOUNTING_RULES.md`
 - `docs/PXL/PXL_TAX_RULES_PH.md` if tax reports are involved
 - `docs/PXL/PXL_TRANSACTION_MATRIX.md`

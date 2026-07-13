@@ -6,13 +6,16 @@ Last updated: 2026-07-13
 
 This document is the governing standard for all future PXL transaction workspaces. Do not implement Purchase Invoice, Sales Order, Purchase Order, Delivery Receipt, Official Receipt, Credit Memo, Debit Memo, Journal Entry, Inventory Transactions, Banking, Fixed Assets, Payroll, or Compliance Registers by inventing a new page shape. Future transaction screens must inherit this architecture and extend it only where the document type genuinely requires it.
 
+Current rollout gate: **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READINESS.md`, DEC-017) must be cleared before expanding this workspace to additional transaction types. This standard remains the UI/UX reference, but accounting engine, tax engine, and master-data governance now take priority over rollout.
+
 ## 1. Document hierarchy and authority
 
-1. `PXL_TRANSACTION_MATRIX.md` + database migrations define transaction behavior, posting rules, statuses, compliance controls, and data contracts. They win for accounting behavior.
-2. **This document** defines the official transaction workspace architecture, UX rationale, component standard, and implementation pattern.
-3. `PXL_TRANSACTION_EXPERIENCE_STANDARD.md` contains lower-level design details and maturity tracking. When it conflicts with this document, update it to match this document.
-4. `UI_UX_PRINCIPLES.md` defines broad visual/interaction principles. Its stack notes are aspirational unless already adopted.
-5. `PXL_PRODUCT_BACKLOG.md` holds feature-level rollout planning and deferred enhancements.
+1. `PXL_ACCOUNTING_RULES_MATRIX.md` defines governed debit/credit behavior, account determination, tax impact, reversal/void/cancel rules, lock behavior, report impact, and test expectations.
+2. `PXL_TRANSACTION_MATRIX.md` + database migrations define transaction lifecycle behavior, statuses, compliance controls, source chains, and data contracts.
+3. **This document** defines the official transaction workspace architecture, UX rationale, component standard, and implementation pattern.
+4. `PXL_TRANSACTION_EXPERIENCE_STANDARD.md` contains lower-level design details and maturity tracking. When it conflicts with this document, update it to match this document.
+5. `UI_UX_PRINCIPLES.md` defines broad visual/interaction principles. Its stack notes are aspirational unless already adopted.
+6. `PXL_PRODUCT_BACKLOG.md` holds feature-level rollout planning and deferred enhancements.
 
 Routing rule for discoveries during workspace work:
 

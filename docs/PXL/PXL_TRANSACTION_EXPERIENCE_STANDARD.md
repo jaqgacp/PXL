@@ -2,16 +2,19 @@
 
 Status: DESIGN BLUEPRINT subordinate to `PXL_STANDARD_TRANSACTION_WORKSPACE.md` (the official product vision, user directive 2026-07-10, DEC-013). This file carries the implementation-level detail (tab specs, line-grid column groups, auto-population matrix, account-determination ladder, panel contracts, maturity table); when the two disagree, the vision document wins and this file must be updated. Nothing here is implemented by this document, and no page is required to change until its Phase 2 session is scheduled. Audit-finding work always outranks this standard (DEC-012).
 
+Active sequencing gate: `PXL_ACCOUNTING_CORE_READINESS.md` (DEC-017). Transaction-experience rollout is paused until **PXL Accounting Core Ready** is cleared. Use this file as a reference only during the core-readiness phase.
+
 ## 1. Purpose and Normative Status
 
 Every accounting document in PXL must eventually expose enough accounting, tax, audit, workflow, and operational information to satisfy a BIR auditor — while remaining capturable by a non-accountant. This document defines that target: the standard layout, tab set, line grid, auto-population rules, account determination, summary panels, and drill contracts that every future transaction page follows. New pages adopt it from day one; existing pages converge when they are next touched ("adopt-on-touch"), never as a mass refactor.
 
 Precedence when documents disagree:
 
-1. `PXL_TRANSACTION_MATRIX.md` + migrations — what transactions DO (behavior; always wins).
-2. This standard — what transaction pages should LOOK like and expose.
-3. `UI_UX_PRINCIPLES.md` — visual/interaction language. Note: its implementation notes name a stack (Zustand stores, react-hook-form + Zod "exclusively", shadcn Tabs) that is installed but deliberately NOT adopted (see `PXL_ARCHITECTURE_SUMMARY.md` and the backlog's Frontend Architecture section, session 42). Those notes are aspirational; the selective-adoption policy in `PXL_PRODUCT_BACKLOG.md` governs. Do not mass-migrate forms to satisfy the principles doc.
-4. `PXL_PRODUCT_BACKLOG.md` — holds the individual enhancement entries; its "Target: Standard Transaction Experience" section is superseded by (and now points to) this document.
+1. `PXL_ACCOUNTING_RULES_MATRIX.md` — governed posting behavior, account determination, tax impact, reversal/void/cancel, and test expectations.
+2. `PXL_TRANSACTION_MATRIX.md` + migrations — transaction lifecycle/source behavior.
+3. This standard — what transaction pages should LOOK like and expose.
+4. `UI_UX_PRINCIPLES.md` — visual/interaction language. Note: its implementation notes name a stack (Zustand stores, react-hook-form + Zod "exclusively", shadcn Tabs) that is installed but deliberately NOT adopted (see `PXL_ARCHITECTURE_SUMMARY.md` and the backlog's Frontend Architecture section, session 42). Those notes are aspirational; the selective-adoption policy in `PXL_PRODUCT_BACKLOG.md` governs. Do not mass-migrate forms to satisfy the principles doc.
+5. `PXL_PRODUCT_BACKLOG.md` — holds the individual enhancement entries; its "Target: Standard Transaction Experience" section is superseded by (and now points to) this document.
 
 ## 2. Historical Baseline (verified 2026-07-04, session 48)
 

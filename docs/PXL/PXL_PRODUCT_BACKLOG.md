@@ -12,6 +12,12 @@ Whenever a module is touched during audit work, perform a lightweight architectu
 
 Priority: High / Medium / Low (product value, independent of audit P0–P2). Complexity: S / M / L. Phase: `Alongside audit` (negligible-risk preparation only) or `Phase 2` (post-audit implementation).
 
+Active gate: **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READINESS.md`, DEC-017). Backlog/UI/report/transaction-expansion work must wait unless it directly fixes accounting, tax, posting, traceability, master-data, or production-readiness defects.
+
+Execution order while the gate is active: Accounting Engine -> Posting Engine -> Account Determination Engine -> Configuration-driven Tax Engine -> Master Data Governance -> CAS/BIR Readiness -> Transaction Rollout -> Report Rollout -> Dashboards -> Client Portal -> AI / Automation.
+
+Posting-related backlog items must first be expressed in `PXL_ACCOUNTING_RULES_MATRIX.md`; backlog entries do not define accounting behavior.
+
 ## Target: Standard Transaction Experience
 
 AUTHORITATIVE DEFINITION: `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` (official product vision, 2026-07-10, DEC-013), detailed by `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md` (session 48 blueprint) — full layout, tab set, line grid, auto-population, account determination, summary/GL/tax panel contracts, drill contracts, adoption sequence, and gap analysis. The seven-section outline below remains as the short form; when they disagree, the standard wins. This file keeps the per-feature priority/complexity rows.

@@ -4,6 +4,12 @@ This file records expected accounting/reporting scenarios that must be executed 
 
 How to execute seeded scenarios: `supabase start` (Docker required; non-essential services are disabled in `supabase/config.toml`), then `npm test` (alias for `supabase test db`). Tests live in `supabase/tests/*.sql` (pgTAP), self-seed inside a transaction, and roll back. `supabase db reset --local` verifies the migration chain replays on a fresh database. CI: `.github/workflows/ci.yml` runs lint/build and the full suite on a fresh database for every push/PR to `main`, so each CI run is also a fresh-replay migration check.
 
+Report-page adoption is governed by `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md`. Any report marked production-ready under that standard must have evidence for its accounting purpose, authoritative source data, filters, date basis, posting-state basis, totals, reconciliation target, drilldown/drillback path, export metadata, snapshot requirements where applicable, permissions, known limitations, and performance-sensitive scenarios. Visual conformance alone is not sufficient for accounting, tax, compliance, or reconciliation reports.
+
+The active production-readiness gate is `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md`. Any item marked **PXL Accounting Core Ready** must have engine-level evidence for posting source locking, lifecycle transitions, JE balance, period locks, numbering, source-to-journal traceability, journal-to-source traceability, reversal/void/cancel behavior, tax-detail posting/counter-rows, cross-company denial, master-data validation, and effective-dated tax-rule resolution where applicable.
+
+`docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` defines the expected accounting behavior and required test scenarios for each transaction type. When a transaction row is added or changed there, this test book must gain matching positive and negative scenarios before the transaction can be marked production-ready.
+
 ## CRITICAL-FLOW-001 - Core AR/AP Journey with VAT, CWT, and EWT
 
 Status: Executed Passing (2026-07-02), 41/41 assertions in `supabase/tests/001_critical_flow_test.sql`.

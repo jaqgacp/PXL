@@ -1,6 +1,14 @@
 # PXL Accounting Rules
 
-Concise accounting reference for PXL. This summarizes standing accounting rules; detailed transaction behavior remains in `docs/PXL/PXL_TRANSACTION_MATRIX.md`, schema ownership in `docs/PXL/PXL_SCHEMA_SUMMARY.md`, and open defects in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`.
+Concise accounting reference for PXL. This summarizes standing accounting rules; governed posting behavior now lives in `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md`, detailed transaction behavior remains in `docs/PXL/PXL_TRANSACTION_MATRIX.md`, schema ownership in `docs/PXL/PXL_SCHEMA_SUMMARY.md`, and open defects live in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`.
+
+## Active Production-Readiness Gate
+
+The active milestone is **PXL Accounting Core Ready**, governed by `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md`.
+
+Until that gate is cleared, do not expand transaction workspace rollout, implement report pilots, create dashboards, or add new UI standards. Accounting/tax correctness, posting-engine hardening, configuration-driven tax rules, governed master data, lifecycle traceability, and production gap closure take priority over UI expansion.
+
+`docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` is the official accounting rules matrix. Any new or changed posting behavior must be defined there before implementation.
 
 ## Core Rules
 
@@ -21,6 +29,12 @@ Source document save validates header and lines, computes accounting/tax amounts
 
 If a posting page does not follow this pattern, treat it as lower maturity and check `PXL_END_TO_END_AUDIT_FINDINGS.md` before extending it.
 
+## Account Determination and Tax Engine
+
+Operational transactions must resolve accounts from configuration, not ad hoc page logic. The target hierarchy is Company -> Tax Profile -> Item Group -> Item -> Customer/Supplier -> Document Type -> Override. Overrides must be role-gated, reason-coded, audited, and visible in GL Impact.
+
+Tax behavior must be configuration-driven for VAT, Percentage Tax, EWT, CWT, FWT, effective dates, future BIR changes, tax versions, company policies, document behavior, posting policies, and reporting policies. Philippine tax rules may be seeded as data; they should not be hardcoded into application pages.
+
 ## Strong Core
 
 The SI/OR/VB/PV core has the strongest current coverage: atomic save/post RPCs, setup readiness blockers, GL impact surfaces, status-aware immutability, and pgTAP coverage. Use those flows as the reference for new or repaired posting pages.
@@ -34,5 +48,6 @@ Secondary pages such as check vouchers, cash sales/purchases, inventory, fixed a
 - `docs/PXL/09. Accounting/03. Subsidiary Ledgers/` - customer/supplier ledgers and control reconciliation.
 - `docs/PXL/09. Accounting/04. Schedules/` - amortization and revenue recognition schedules.
 - `docs/PXL/09. Accounting/05. Period Management/` - period close, fiscal locks, posting/reversal review, scheduled runs.
+- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` - governed posting rules matrix and account/tax engine architecture.
 - `docs/PXL/PXL_TRANSACTION_MATRIX.md` - per-transaction accounting rules and maturity.
 - `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` - executable and planned accounting test scenarios.

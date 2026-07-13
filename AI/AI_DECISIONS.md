@@ -546,11 +546,13 @@ Related Source Files:
 ## DEC-015 - Standard Transaction Workspace Is the Active Sole Priority; Remaining Criticals Paused
 
 Date: 2026-07-12
-Status: Approved (direct user directive)
+Status: Superseded by DEC-017 on 2026-07-13
 
 Decision:
 
 The user directed (session 65, 2026-07-12) that the Standard Transaction Workspace (DEC-013, `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`) becomes the **active sole development priority now**, and that the two remaining Critical audit findings — **PXL-DA-009** (ATC date/versioning + remittance) and **PXL-DA-019** (BIR DAT layout / books reconciliation / exported-byte provenance) — are **paused** (they stay Open, are not withdrawn, and are revisited after the scheduled workspace phases). This temporarily supersedes DEC-013's "production-critical audit findings always come first" ordering, by explicit user choice recorded here so it remains reviewable and reversible.
+
+Supersession note: DEC-017, approved 2026-07-13, ends this temporary pause. PXL-DA-009 and PXL-DA-019 are now part of the active Accounting Core Ready lane.
 
 Guardrails that still apply (DEC-008): the pause does not weaken, remove, or bypass any deployed accounting/tax/audit-trail/security/immutability control — DA-009/DA-019 remaining Open simply means their new hardening is deferred, not that existing controls are relaxed. Any genuine accounting/tax/security/posting/GL/data-integrity/immutability bug newly discovered while building the workspace still becomes a NEW audit finding immediately (routing below) and is fixed at once if it blocks the workspace work; otherwise it is recorded in priority order for later. Workspace adoption remains adopt-on-touch and must not silently change posting/tax behavior — behavior is owned by the transaction matrix + migrations (document hierarchy unchanged).
 
@@ -578,9 +580,143 @@ Related Documents:
 - `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`
 - `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md`
 - `AI/AI_WORK_QUEUE.md` (AIQ-015)
-- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-009, PXL-DA-019 — paused/Open)
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-009, PXL-DA-019 — historically paused by DEC-015, active again under DEC-017)
 
 Related Source Files:
 
 - `src/components/document/` (new — DocumentLayout and workspace panels)
 - `src/App.tsx` (per-document routes)
+
+## DEC-016 - PXL Standard Report Workspace Is the Official Reporting Architecture
+
+Date: 2026-07-13
+Status: Approved (direct user directive)
+
+Decision:
+
+The "PXL Standard Report Workspace" (`docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md`, user directive 2026-07-13) is the canonical UI, UX, data, reconciliation, drilldown, export, audit, provenance, security, performance, and rollout standard for every current and future PXL report page. It is the report-page sibling to the Sales Invoice-based Transaction Workspace Standard (DEC-013).
+
+No additional report pages should be redesigned or implemented as isolated tables or one-off dashboards. Future Accounting, Sales/AR, Purchasing/AP, Banking, Inventory, Fixed Assets, Tax, Compliance, Audit, System, and Management reports must first define purpose, context, filters, authoritative source, modes, reconciliation target, drilldown/drillback path, export metadata, snapshot requirements, audit/provenance, permissions, performance expectations, and test coverage under the standard. Reports that have control-account or source-ledger relationships must not present a green reconciled state without authoritative server-side validation.
+
+Implementation policy: do not mass-rebuild every report. First define the standard, inventory current report routes, identify reusable report components, select one pilot based on production priority and dependency, validate accounting/reconciliation/drilldown/export/UX, freeze the reusable pattern, then roll out module by module. Recommended pilots are Trial Balance, AR Aging, and VAT Reconciliation.
+
+Business Reason:
+
+User directive 2026-07-13: PXL reports must feel like one coherent enterprise ERP reporting system, not unrelated pages. Each report must explain what it answers, which data source is authoritative, which filters/context are active, whether it reconciles, how users drill to source evidence and back, whether it is live or snapshotted, who generated/exported it, and what limitations apply.
+
+Technical Reason:
+
+A single named reporting architecture prevents per-report divergence in filters, tables, exports, snapshots, drill links, audit metadata, permissions, and performance strategy. It also creates a reusable component target (`ReportWorkspaceLayout`, `ReportHeader`, `ReportFilterBar`, `EnterpriseReportTable`, `FinancialStatementView`, `ReconciliationBanner`, `ExportMenu`, `SnapshotPanel`, and `ReportProvenancePanel`) before report rollout begins.
+
+Alternatives Considered:
+
+- Rebuild reports one by one as needed. Rejected: this would repeat the pre-standard transaction-page problem and create inconsistent report behavior.
+- Treat reporting as ordinary grids with export buttons. Rejected: accounting reports require context, reconciliation, traceability, reproducibility, and provenance.
+- Implement all reports immediately. Rejected: the directive is documentation and architecture alignment first; rollout should proceed through a validated pilot.
+
+Related Documents:
+
+- `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md`
+- `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`
+- `docs/PXL/UI_UX_PRINCIPLES.md`
+- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
+- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+
+Related Source Files:
+
+- Future shared report components under `src/components/report/` and report features under `src/features/reports/` once implementation begins.
+
+## DEC-017 - PXL Accounting Core Ready Supersedes UI/Report Expansion
+
+Date: 2026-07-13
+Status: Approved (direct user directive)
+
+Decision:
+
+The next milestone is **PXL Accounting Core Ready**. This supersedes DEC-015's temporary transaction-workspace-first ordering. The documented Sales Invoice Workspace and Report Workspace standards remain authoritative references, but implementation rollout is paused until the accounting core, posting engine, tax engine, and master-data governance are production-ready.
+
+The active priority is now `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md`: review and harden the posting engine, design a configuration-driven tax engine, document governed master-data dependencies, verify future transaction accounting readiness, and maintain a production readiness matrix. Do not create additional UI standards, implement report pilots, roll out more transaction workspaces, or build dashboards during this phase unless the change directly fixes an accounting/tax/core-readiness defect.
+
+Business Reason:
+
+The user directed on 2026-07-13 that correctness now outranks expansion. Future Sales, Purchasing, Inventory, Banking, Payroll, Fixed Assets, Tax, Compliance, and reporting work must rely on one unified accounting and tax engine rather than accumulating document-specific posting and tax logic.
+
+Technical Reason:
+
+PXL already has useful shared posting primitives, trace contracts, tax ledgers, and workspace standards. The remaining risk is core correctness: lifecycle consistency, account determination, period close/financial statement semantics, ATC/rate effective dating, withholding profile policy, settlement-total authority, CAS/DAT evidence, and governed master-data dependencies. Resolving these before rollout prevents multiplying defects across every future transaction and report.
+
+Alternatives Considered:
+
+- Continue Sales Invoice P5B and transaction rollout. Rejected by the user; expansion must wait for accounting core readiness.
+- Start report pilots from DEC-016. Rejected by the user; report implementation must wait for core accounting/tax readiness.
+- Create another UI standard. Rejected explicitly; the next phase is production-readiness hardening.
+
+Related Documents:
+
+- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md`
+- `docs/PXL/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
+- `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`
+- `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md`
+- `AI/AI_WORK_QUEUE.md` (AIQ-017)
+
+Related Source Files:
+
+- `supabase/migrations/20260710000003_posting_engine_preview_trace.sql`
+- `supabase/migrations/20260711000001_posting_engine_completion.sql`
+- `supabase/migrations/20260712000003_posting_runtime_repairs.sql`
+- `supabase/migrations/20260712000004_cas_numbering_void_evidence.sql`
+
+## DEC-018 - PXL Accounting Rules Matrix Is the Governed Posting Source of Truth
+
+Date: 2026-07-13
+Status: Approved (direct user directive)
+
+Decision:
+
+`docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` is the official governed accounting specification for PXL posting behavior. It is the canonical source for transaction business purpose, trigger event, lifecycle, approval requirement, posting trigger, debit accounts, credit accounts, account determination source, tax impact, inventory/fixed-asset/costing/FX impact, master-data dependencies, validations, numbering, audit events, related documents, reversal/void/cancel/lock behavior, affected reports, tests, and known exceptions.
+
+Future implementation must not invent posting rules inside transaction modules, report modules, dashboards, or UI pages. Posting behavior must be defined in the matrix first, then implemented through the accounting engine, posting engine, account determination engine, and configuration-driven tax engine.
+
+The execution order under Accounting Core Ready is now:
+
+1. Accounting Engine.
+2. Posting Engine.
+3. Account Determination Engine.
+4. Configuration-driven Tax Engine.
+5. Master Data Governance.
+6. CAS/BIR Readiness.
+7. Transaction Rollout.
+8. Report Rollout.
+9. Dashboards.
+10. Client Portal.
+11. AI / Automation.
+
+Business Reason:
+
+The user directed on 2026-07-13 that PXL must stop expanding UI/report/transaction surfaces and instead establish one official accounting specification so every future Sales, Purchasing, Inventory, Banking, Payroll, Fixed Assets, Tax, Compliance, and reporting transaction follows one accounting architecture.
+
+Technical Reason:
+
+Existing posting logic is partially unified through shared database primitives, but future modules can still diverge if posting rules are embedded per module. A governed matrix makes account determination, tax behavior, reversal behavior, lifecycle state, reporting impact, and test expectations explicit before implementation.
+
+Alternatives Considered:
+
+- Continue using `PXL_TRANSACTION_MATRIX.md` alone. Rejected: that matrix is too broad; the accounting rules need a focused posting specification.
+- Implement an account determination engine immediately. Rejected: the directive is architecture-first and forbids schema/posting changes in this pass.
+- Allow module-specific posting SQL to define behavior. Rejected: it creates inconsistent accounting logic and weakens auditability.
+
+Related Documents:
+
+- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md`
+- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md`
+- `docs/PXL/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
+- `AI/AI_WORK_QUEUE.md` (AIQ-018)
+
+Related Source Files:
+
+- None changed in this architecture pass.

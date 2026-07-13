@@ -1,8 +1,92 @@
 # AI Handoff
 
-Last updated: 2026-07-13 (session 73 — official Sales Invoice Transaction Workspace Standard documented)
+Last updated: 2026-07-13 (session 76 — Accounting Rules Matrix documented)
 
-## Active Priority (session 73 — Official Transaction Workspace Standard)
+## Active Priority (session 76 — Accounting Rules Matrix under PXL Accounting Core Ready)
+
+User directed that the Sales Invoice Workspace and Report Workspace standards are now documented, and that no new UI standards, report pilots, dashboards, or transaction workspace rollouts should be started. The next milestone is **PXL Accounting Core Ready**.
+
+Completed in this documentation/architecture-alignment pass:
+
+- Added `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` as the active production-readiness control document.
+- Added `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` as the governed posting-behavior source of truth.
+- Added DEC-017 in `AI/AI_DECISIONS.md`: PXL Accounting Core Ready supersedes DEC-015's temporary transaction-workspace-first ordering.
+- Added DEC-018 in `AI/AI_DECISIONS.md`: PXL Accounting Rules Matrix is the governed posting source of truth.
+- Added AIQ-017 in `AI/AI_WORK_QUEUE.md` as the active priority.
+- Added AIQ-018 in `AI/AI_WORK_QUEUE.md` as completed architecture/docs work.
+- Marked AIQ-015 P5B and report pilots as paused until the accounting core is ready.
+- Updated related docs so future work starts from accounting/tax/master-data correctness, not UI expansion.
+
+The active workstreams must be handled in order:
+
+1. Accounting Engine.
+2. Posting Engine.
+3. Account Determination Engine.
+4. Configuration-driven Tax Engine.
+5. Master Data Governance.
+6. CAS/BIR Readiness.
+7. Transaction Rollout.
+8. Report Rollout.
+9. Dashboards.
+10. Client Portal.
+11. AI / Automation.
+
+Do not:
+
+- create new UI standards;
+- implement report pilots;
+- roll out transaction workspaces to additional document types;
+- create dashboards;
+- build new transaction pages unless required to fix accounting/tax/core-readiness defects.
+
+Recommended next implementation lane:
+
+1. Use `PXL_ACCOUNTING_RULES_MATRIX.md` as the accounting behavior reference before any implementation.
+2. Reopen the core Criticals and dependencies: **PXL-DA-009** and **PXL-DA-019**.
+3. Complete safe ATC document-date/version governance, replacing the held-out draft rather than adopting it as-is.
+4. Build controlled EWT remittance / CWT application flow.
+5. Decide and encode withholding basis policy.
+6. Server-recompute OR/PV settlement totals from lines.
+7. Add CM/VC-aware over-apply guards.
+8. Complete financial statement/close readiness.
+9. Complete semantic transaction events.
+10. Define and implement the configuration-driven tax-rule model.
+11. Complete governed master-data gaps required by posting/tax.
+
+Held-out files remain excluded unless explicitly owned and fixed:
+
+- `supabase/migrations/20260710000004_atc_document_date_versioning.sql`
+- `supabase/migrations/20260710000005_cas_numbering_void_dat_controls.sql`
+- `supabase/tests/027_cas_end_to_end_controls_test.sql`
+
+## Previous Active Priority (session 74 — Official Report Workspace Standard)
+
+User directed that before implementing or redesigning additional report pages, PXL must define the official report-page equivalent of the Sales Invoice Transaction Workspace Standard. Completed as a documentation and architecture-alignment pass only:
+
+- Added `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md` as the canonical reporting standard.
+- Added DEC-016 in `AI/AI_DECISIONS.md`: the PXL Standard Report Workspace is the official UI, UX, data, reconciliation, drilldown, export, audit, provenance, security, performance, and rollout architecture for all PXL reports.
+- The document covers:
+  - core reporting philosophy and relationship to transaction workspaces;
+  - standard report page structure;
+  - report header, purpose, company/branch/period/currency context, filter bar, and report modes;
+  - KPI/summary strip rules;
+  - reconciliation states and server-side validation requirements;
+  - enterprise report table behavior;
+  - financial statement presentation;
+  - drilldown and drillback rules;
+  - report tabs/subsections, exceptions, warnings, exports, print, snapshots, audit/provenance, personalization, permissions, security, and performance;
+  - report-specific documentation requirements;
+  - reusable report component inventory;
+  - developer guidelines for future shared report components/hooks/types;
+  - current routed report rollout matrix covering Accounting, Sales/AR, Purchasing/AP, Banking, Inventory, Fixed Assets, Tax/Compliance, Books/CAS, Audit/System, and Management reports;
+  - pilot-first implementation policy and success criteria.
+- No report pages were rebuilt.
+- No schema, API, business logic, posting, tax, reconciliation, or permission behavior was changed.
+- No audit finding was created because this was architecture documentation and no genuine accounting/tax/security/data-integrity/report-correctness defect was confirmed.
+
+After **PXL Accounting Core Ready**, future report work must use `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md` first. Do not redesign isolated report pages. Select a pilot by production priority and dependency; recommended candidates are Trial Balance, AR Aging, and VAT Reconciliation.
+
+## Previous Active Priority (session 73 — Official Transaction Workspace Standard)
 
 User directed that before implementing any additional transaction workspaces, the Sales Invoice Workspace must be fully documented as the official PXL Transaction Workspace Standard. Completed as a documentation-only pass:
 
@@ -24,7 +108,7 @@ User directed that before implementing any additional transaction workspaces, th
 - No code/schema/API/business behavior was changed.
 - Verify with `git diff --check` before commit/push; docs-only build is not required unless additional code changes occur.
 
-Next implementation work must use `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` as the governing reference before building Purchase Invoice/Vendor Bill, Sales Order, Purchase Order, Delivery Receipt, Official Receipt, Credit Memo, Debit Memo, Journal Entry, Inventory Transactions, etc.
+After **PXL Accounting Core Ready**, transaction implementation work must use `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` as the governing reference before building Purchase Invoice/Vendor Bill, Sales Order, Purchase Order, Delivery Receipt, Official Receipt, Credit Memo, Debit Memo, Journal Entry, Inventory Transactions, etc.
 
 ## Previous Active Priority (session 72 — Saved Views / Professional Table Experience)
 
@@ -72,9 +156,9 @@ Session 69 baseline already included:
 - Master-data governance: migration `20260713000001_company_workspace_appearance.sql` adds checked `companies.workspace_accent_color`; Company Setup maintains/previews it; generated database types updated. App content width is 1600px and dynamic transaction breadcrumbs resolve to the register + workspace.
 - Verification: `npm run build` passes; `npm run lint` passes; `git diff --check` clean. Vite remains available on port 5173. The user-owned held-out `20260710000004`, `20260710000005`, and test `027` were not touched.
 
-**Remaining before declaring the entire final brief complete:** (1) relocate draft create/edit + `/sales-invoices/new` into this same routed shell and retire the register form; (2) expand the register actions/columns; (3) create and link the missing governed master-data entities/FKs/UI (Salesperson, Price Level, Territory, Industry, Project, Delivery Terms, Campaign, Opportunity, SI header/line dimensions); (4) attachment/OCR, semantic activity, categorized note storage, document hash/version fields, and e-invoice integration. Do these as schema-backed capabilities, never static selectors. Then use this workspace as the base for Vendor Bill and every other transaction.
+**Historical remaining UI work — paused by DEC-017:** (1) relocate draft create/edit + `/sales-invoices/new` into this same routed shell and retire the register form; (2) expand the register actions/columns; (3) create and link the missing governed master-data entities/FKs/UI (Salesperson, Price Level, Territory, Industry, Project, Delivery Terms, Campaign, Opportunity, SI header/line dimensions); (4) attachment/OCR, semantic activity, categorized note storage, document hash/version fields, and e-invoice integration. These remain valid future tasks, but they must wait until **PXL Accounting Core Ready**.
 
-## Active Priority (session 67 — SI complete reference workspace)
+## Historical Priority (session 67 — SI complete reference workspace; superseded by DEC-017)
 
 Sales Invoice is now the **complete reference implementation** of the Standard Transaction Workspace (build + lint 0 warnings green; HMR verified; **uncommitted**). Added this session on `SalesInvoiceDocumentPage.tsx` + new shared components:
 
@@ -85,9 +169,9 @@ Sales Invoice is now the **complete reference implementation** of the Standard T
 - **`DocumentLayout`** gained a `primary` slot (renders Primary Information above tabs).
 - Docs: workspace-doc pilot section rewritten; Master Data gaps (Salesperson/Price List/dimensions) logged in the backlog (enhancement, not a finding).
 
-**Remaining for a fully-complete pilot (next):** (1) **draft create/edit FORM relocation** onto the route to fully retire the register modal (biggest remaining; touches `fn_save_sales_invoice` + line editing — verify posting unchanged) — task 7; (2) **register list** column expansion + status-aware Actions menu — task 10; (3) accountant/auditor **line-grid column profiles** + column chooser; (4) visual/density polish + PXL_TRANSACTION_MATRIX SI-workspace note — task 12. Then roll to **Vendor Bill**. Verify each with `npm run build` / `npm run lint`. Issue-routing (DEC-015): defects → audit findings in severity order; enhancements → backlog/vision.
+**Historical next step — paused by DEC-017:** draft/edit relocation, register expansion, column profiles, and visual polish remain future transaction-workspace tasks, but the active priority is now accounting-core hardening.
 
-## Active Priority (session 66 — SI canonical pilot refinement)
+## Historical Priority (session 66 — SI canonical pilot refinement; superseded by DEC-017)
 
 User directive: make the **Sales Invoice** the canonical/reference implementation of the Standard Transaction Workspace, and consolidate the duplicate viewing experience into ONE routed workspace. Shipped this session (build + lint 0 warnings green, HMR verified; committed pending):
 
@@ -96,11 +180,11 @@ User directive: make the **Sales Invoice** the canonical/reference implementatio
 - **Reusable `RelatedDocumentsTab`** (`src/components/document/RelatedDocumentsTab.tsx`): renders the full chain, existing links clickable (JE via `journal_entries.reference_doc_type='SI'`; receipts via `receipt_lines.invoice_id`), missing stages show None + create action. Wired into the SI Related Documents tab.
 - **System tab** added; docs updated (`PXL_STANDARD_TRANSACTION_WORKSPACE.md`: pilot section + RelatedDocuments contract + rollout matrix).
 
-**Exact next step (remaining for a complete pilot):** (1) relocate the draft create/edit FORM onto the canonical route so the modal is fully retired (final consolidation — biggest remaining piece; touches `fn_save_sales_invoice` + line editing; verify posting unchanged); (2) upgrade GL Impact / Tax Impact / Approval tabs to full spec tables + add Line Detail Panel + Attachments/Activity Timeline/Notes tabs (task 9); (3) register column expansion + status-aware Actions menu (task 10); (4) expand right-sidebar cards + Customer Snapshot from master data, logging Master Data gaps (task 11); (5) visual/density pass + finish docs/rollout (task 12). Then roll to Vendor Bill. Verify each with `npm run build` / `npm run lint`. Issue-routing (DEC-015): defects → audit findings in severity order; enhancements → vision/backlog.
+**Historical exact next step — paused by DEC-017:** route consolidation, tab expansion, register expansion, right-sidebar/card work, visual pass, and Vendor Bill rollout remain future transaction-workspace tasks. Do not resume them until **PXL Accounting Core Ready**.
 
-## Active Priority (session 65)
+## Historical Priority (session 65 — superseded by DEC-017)
 
-**AIQ-015 — Standard Transaction Workspace is the active sole priority (DEC-015).** The two remaining Criticals (**PXL-DA-009**, **PXL-DA-019**) are **paused** — still Open, not withdrawn, revisited only after the scheduled workspace phases or on user direction. Do not resume them without the user.
+**Historical note:** AIQ-015 was the active sole priority under DEC-015. DEC-017 supersedes that ordering. The two remaining Criticals (**PXL-DA-009**, **PXL-DA-019**) are no longer intentionally paused by workspace work; they are part of the active accounting-core lane.
 
 Work the AIQ-015 phase plan (`AI/AI_WORK_QUEUE.md`) in order; the in-session task list mirrors it. Done this session (65): Phase 0 governance (DEC-015 + queue + issue-routing + state/handoff); **Phase 1 Shell** — `src/components/document/DocumentLayout.tsx` exports `DocumentLayout`, `WorkflowStrip`, `TransactionTabs`, `DocumentToolbar` (fixed order + More ▾), reusing `StatusBadge`; **Phase 2 routes** — `/sales-invoices/:id` deep-link route in `src/App.tsx`; list rows link via "Open ↗" (`src/pages/SalesInvoicePage.tsx`); **Phase 3 SI view** — `src/pages/SalesInvoiceDocumentPage.tsx` renders a read-only document-of-record through `DocumentLayout` with tabs Lines · GL Impact (`GLImpactPanel`, real posted JE) · Posting Validation (derived checklist) · Audit Trail (`AuditTrailSection`, PXL-AUD-050 now visible) · Related, plus a right-rail Financial Summary (§8 SI contract) + Party card and a workflow strip. `npm run build` + `npm run lint` green; Vite dev server HMR-verified. The existing list+modal for create/edit is untouched (adopt-on-touch).
 
@@ -108,7 +192,7 @@ Phase 4 also shipped this session: `src/components/document/FinancialSummaryPane
 
 Phase 5 also shipped this session (user-approved VAT-only scope): `src/components/document/LineGrid.tsx` (column-group-aware, read-only, totals footer, structured for later editing) — the SI Lines tab uses it with a Revenue-Acct provenance column (§5); and `TaxImpactPanel.tsx` (reads `tax_detail_entries`, **VAT kinds only**, draft fallback) added as the Tax Impact tab. EWT/CWT rows and the full §7 account-determination ladder + editable line entry are deferred (the withholding base needs PXL-AUD-031/032/033; editing needs the route-driven create/edit form). build + lint (0 warnings) green, HMR verified.
 
-**Exact next step: Phase 6** — roll `DocumentLayout` across the core four (Official Receipt, Vendor Bill, Payment Voucher) adopt-on-touch, reusing the now-built shared components (`DocumentLayout`, `FinancialSummaryPanel`, `PostingValidationPanel`, `LineGrid`, `TaxImpactPanel`, `WorkflowStrip`); each needs its own §8 summary contract + §5 columns + document-code/config for the readiness hook. Then secondary docs, the `RelatedDocumentsTab` (§12, reads existing links), and the config layer (§14). Still-open deferred sub-items: route-driven `/sales-invoices/new` + `/:id/edit`; editable `LineGrid` mode; role-gated accounting columns. Verify each with `npm run build` / `npm run lint`. Issue-routing (DEC-015): defects → `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` in severity order; enhancements → vision/backlog.
+**Historical exact next step — paused by DEC-017:** Phase 6 rollout to the core four, secondary docs, RelatedDocumentsTab, and config layer must wait until **PXL Accounting Core Ready**.
 
 ## Work In Progress (session 64, shipped)
 

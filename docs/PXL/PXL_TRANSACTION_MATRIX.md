@@ -1,13 +1,18 @@
 # PXL Transaction Matrix
 
-Last synced: 2026-07-10
+Last synced: 2026-07-13
 
-Purpose: this is the living source of truth for PXL transactions. Any code change that adds, removes, modifies, fixes, posts, reverses, voids, reports, or validates a transaction must update this file in the same session.
+Purpose: this is the living source of truth for PXL transaction lifecycle, source chains, UX status, and implementation maturity. Governed posting behavior is now defined in `PXL_ACCOUNTING_RULES_MATRIX.md`. Any code change that adds, removes, modifies, fixes, posts, reverses, voids, reports, or validates a transaction must update this file and, when accounting behavior changes, `PXL_ACCOUNTING_RULES_MATRIX.md` in the same session.
+
+Active gate: **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READINESS.md`, DEC-017). Do not roll out additional transaction workspaces or build new transaction types until the accounting engine, tax engine, master-data governance, lifecycle, traceability, numbering, reversal, and production-readiness gaps in that document are cleared or explicitly accepted.
+
+Accounting rule authority: `PXL_ACCOUNTING_RULES_MATRIX.md` is the canonical posting matrix for debit/credit behavior, account determination, tax impact, reversal/void/cancel rules, lock behavior, report impact, and test expectations.
 
 ## Quick Orientation
 
 Use this section first when choosing transaction work; then read the specific row and relevant addendum before editing code.
 
+- **Active priority:** Accounting core hardening. The Sales Invoice and Report Workspace standards are documented, but rollout is paused. Start from `PXL_ACCOUNTING_CORE_READINESS.md` and the open Critical/High accounting-tax findings before any UI or transaction expansion.
 - **Current high-risk lane:** EWT. All four session-47 EWT Criticals are fixed (receipt CWT net base; check-voucher EWT supplier linkage/validation/counter-row cancel; 1601EQ server-computed reconciliation gate). Next EWT work is the High tier: PXL-AUD-035+036 (ATC as-of-document-date validation + rate versioning), then PXL-AUD-041 (controlled remittance flow — now also the unblock for finalizing a 1601EQ quarter that contains remittance JEs).
 - **Strongest implemented core:** SI/OR/VB/PV have atomic save/post RPCs, guided setup readiness, exact saved-source GL preview, status-aware immutability, and pgTAP coverage. Company Setup now provides the aggregate readiness checklist.
 - **Secondary transaction caution:** GL Impact coverage now spans CM/DM/cash/CV/treasury/inventory/fixed-asset/schedule/recurring/purchase-return posting surfaces. Atomic create-and-post cash/fixed-asset forms show a labeled client estimate; report/compliance drillback, some tax validation, and reconciliation remain incomplete.
@@ -129,6 +134,19 @@ New transaction row (previously missing from this matrix):
 | Transaction | Canonical workspace | Implemented UI contract | Known boundary |
 | --- | --- | --- | --- |
 | Sales Invoice | `/sales-invoices/:id` (`SalesInvoiceDocumentPage`) | Company-accent compact header + subtle workspace/tab tint; clickable Customer and Invoice Total/Collected/Balance Due; Posting/Collection/Lock chips in the header; header-only actions with portal-based More menu; exactly three information cards and no right rail; compact tabs including Workflow and Related Party; reusable saved-view line table with Default/Accounting/Tax/Audit/Inventory/Sales/Custom views, grouped column chooser, persisted order/width/density/sort/filter state, sticky pinned columns, inline detail, export, refresh, and totals; authoritative GL preview and VAT-ledger impact; validation, approval, chronological audit evidence, full related chain, attachment table state, activity, four note categories, and system metadata. | Draft create/edit and `/sales-invoices/new` still use the register form pending routed consolidation. Missing Sales/Customer/dimension fields remain unassigned until governed master-data entities/FKs/UI exist. Attachment/OCR, semantic activity, categorized-note persistence, document hash/version, and e-invoice integration are not yet stored. |
+
+## Matrix Readiness Addendum - 2026-07-13 Accounting Core Ready
+
+User directive 2026-07-13 pauses additional transaction workspace rollout until **PXL Accounting Core Ready**. The required review is documented in `PXL_ACCOUNTING_CORE_READINESS.md`.
+
+| Workstream | Matrix impact |
+| --- | --- |
+| Accounting Engine | Every transaction row must explicitly declare lifecycle, posting trigger, reversal/void/cancel semantics, immutable fields, JE source type, branch policy, and source-to-JE trace path before rollout. |
+| Posting Matrix | Every transaction's debit/credit, tax, account determination, reversal, void, cancel, lock, report, and test rules must be defined in `PXL_ACCOUNTING_RULES_MATRIX.md` before implementation. |
+| Tax Engine | Every VAT/PT/EWT/CWT/FWT row must consume configurable tax profiles, effective-dated tax/ATC rules, document-date rate resolution, and governed posting policies instead of page-specific hardcoding. |
+| Master Data Governance | Any selector referenced by a transaction row must point to governed master data. Missing masters are blockers or explicit gaps, not static fields. |
+| Transaction Readiness | OR, VB, PV, CM, DM, SO, PO, DR, JE, Inventory, Banking, Fixed Assets, and Payroll require accounting-readiness signoff before UI implementation. |
+| Production Gap Analysis | Critical and High accounting/tax/report-correctness gaps win over UI polish, workspace rollout, and report pilots. |
 
 ## Maintenance Rules
 
