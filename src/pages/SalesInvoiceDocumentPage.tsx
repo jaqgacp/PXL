@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { DocumentLayout, type DocumentTab, type ToolbarAction } from '@/components/document/DocumentLayout'
+import { DocumentLayout, WorkflowStrip, type DocumentTab, type ToolbarAction } from '@/components/document/DocumentLayout'
 import { PrimaryInformationPanel, type InfoGroup } from '@/components/document/PrimaryInformationPanel'
 import { FinancialSummaryPanel, type SummaryGroup } from '@/components/document/FinancialSummaryPanel'
 import { PostingValidationPanel, readinessToChecks, type ValidationCheck } from '@/components/document/PostingValidationPanel'
@@ -10,6 +10,7 @@ import { LineGrid, type LineColumn, type LineColumnProfile } from '@/components/
 import { LineDetailPanel, type DetailSection } from '@/components/document/LineDetailPanel'
 import { TaxImpactPanel } from '@/components/document/TaxImpactPanel'
 import { RelatedDocumentsTab, type RelatedDocRow } from '@/components/document/RelatedDocumentsTab'
+import { ErpSectionHeader, CompactEmptyState, ERP_EMPTY_CELL, ERP_TABLE, ERP_THEAD, ERP_TH, ERP_TD, ERP_TD_NUM } from '@/components/document/ErpSection'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { AuditTrailSection, StatusBadge, AmountCell, DateCell, EmptyState } from '@/components/ui/shared'
@@ -98,6 +99,12 @@ const TAX_TYPE_LABEL: Record<string, string> = {
 }
 const formatDateTime = (v?: string | null) => (v ? new Date(v).toLocaleString('en-PH') : 'Not recorded')
 const num = (v: unknown) => Number(v ?? 0)
+const erpTabSection = (title: string, description: ReactNode, children: ReactNode) => (
+  <section className="bg-white border border-gray-200 rounded p-3 space-y-2">
+    <ErpSectionHeader title={title} description={description} className="pb-2 border-b border-gray-100" />
+    {children}
+  </section>
+)
 
 export default function SalesInvoiceDocumentPage() {
   const { id } = useParams<{ id: string }>()
@@ -266,7 +273,7 @@ export default function SalesInvoiceDocumentPage() {
 
   const backToList = () => navigate('/sales-invoices')
 
-  if (loading) return <div className="py-16 text-center text-sm text-gray-400">Loading Sales Invoice…</div>
+  if (loading) return <div className="py-10 text-center text-sm text-gray-400">Loading Sales Invoice…</div>
   if (notFound || !si) {
     return (
       <div className="py-10">
@@ -302,7 +309,7 @@ export default function SalesInvoiceDocumentPage() {
   const lockLabel = si.status === 'draft' ? 'Editable' : 'Frozen'
   const postingLabel = si.status === 'posted' ? 'Posted' : si.status === 'cancelled' ? 'Voided' : 'Unposted'
 
-  // ── Workflow strip (full lifecycle) ─────────────────────────
+  // ── Workflow model (rendered only in the Workflow tab) ──────
   const salesSteps = [
     { key: 'draft', label: 'Draft' }, { key: 'approved', label: 'Approved' },
     { key: 'posted', label: 'Posted' }, { key: 'partially_paid', label: 'Partially Paid' }, { key: 'paid', label: 'Paid' },
@@ -316,8 +323,8 @@ export default function SalesInvoiceDocumentPage() {
   // ── Toolbar — status-aware ──────────────────────────────────
   const actions: ToolbarAction[] = []
   if (si.status === 'draft') {
-    actions.push({ key: 'edit', label: 'Edit', variant: 'primary', onClick: backToList, disabled: busy, title: 'Draft editing opens in the register editor (form relocation pending)' })
-    actions.push({ key: 'approve', label: 'Submit', onClick: () => runAction('fn_approve_sales_invoice', 'Approve'), disabled: busy })
+    actions.push({ key: 'approve', label: 'Submit', variant: 'primary', onClick: () => runAction('fn_approve_sales_invoice', 'Approve'), disabled: busy })
+    actions.push({ key: 'edit', label: 'Edit', group: 'more', onClick: backToList, disabled: busy, title: 'Draft editing opens in the register editor (form relocation pending)' })
   }
   if (si.status === 'approved') {
     actions.push({ key: 'post', label: 'Post', variant: 'primary', onClick: () => runAction('fn_post_sales_invoice', 'Post'), disabled: busy })
@@ -355,13 +362,11 @@ export default function SalesInvoiceDocumentPage() {
     : null
   const notAssigned = (provenance: string) => ({ value: <span className="text-gray-400">Not assigned</span>, provenance })
   const openCustomer = () => navigate(`/customers?customerId=${si.customer_id}`)
-  const openTrace = () => navigate(`/accounting-trace?sourceType=SI&sourceId=${si.id}`)
   const customerLink = (
     <button onClick={openCustomer} className="text-blue-700 hover:underline text-left">
       {si.customer_name_snapshot || customer?.registered_name || '—'}
     </button>
   )
-  const quickButton = 'w-full px-2 py-1 rounded border border-gray-200 bg-gray-50 text-left text-[10px] font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:bg-white disabled:cursor-not-allowed'
   const documentFields: NonNullable<InfoGroup['fields']> = [
     { label: 'Invoice Date', value: <DateCell date={si.date} /> },
     { label: 'Due Date', value: si.due_date ? <DateCell date={si.due_date} /> : '—' },
@@ -390,17 +395,6 @@ export default function SalesInvoiceDocumentPage() {
         { label: 'Department', ...notAssigned('Department master exists but is not yet linked') },
       ],
     },
-    {
-      key: 'quick', title: 'Quick Actions', content: (
-        <div className="grid grid-cols-2 gap-2">
-          <button disabled={si.status !== 'posted'} onClick={() => navigate('/receipts')} className={quickButton}>Create Receipt</button>
-          <button disabled={si.status !== 'posted'} onClick={() => navigate('/credit-memos')} className={quickButton}>Create Credit Memo</button>
-          <button onClick={() => window.print()} className={quickButton}>Print</button>
-          <button onClick={() => actions.find(action => action.key === 'email')?.onClick()} className={quickButton}>Email</button>
-          <button onClick={openTrace} className={`${quickButton} col-span-2`}>Open Full Accounting Trace</button>
-        </div>
-      ),
-    },
   ]
   const primaryInfo = <PrimaryInformationPanel groups={primaryGroups} />
 
@@ -411,38 +405,63 @@ export default function SalesInvoiceDocumentPage() {
     return a ? <span title={a.name}>{a.code}</span> : <span className="text-gray-400">—</span>
   }
   const emptyLineValue = <span className="text-gray-300">—</span>
+  const lineItemCode = (line: LineRow) => line.item_id ? items[line.item_id]?.code ?? '—' : ''
+  const lineItemDescription = (line: LineRow) => line.item_id ? items[line.item_id]?.description ?? '—' : ''
+  const lineUom = (line: LineRow) => line.uom_id ? uoms[line.uom_id]?.code ?? '—' : ''
+  const lineVatCode = (line: LineRow) => line.vat_code_id ? vatCodes[line.vat_code_id]?.code ?? '—' : ''
+  const lineVatRate = (line: LineRow) => line.vat_code_id ? num(vatCodes[line.vat_code_id]?.rate) : 0
+  const lineRevenueAccount = (line: LineRow) => {
+    if (!line.revenue_account_id) return 'Unmapped'
+    const account = accounts[line.revenue_account_id]
+    return account ? `${account.code} ${account.name}` : ''
+  }
+  const linePostingRule = (line: LineRow) => line.revenue_account_id ? 'Line revenue account' : 'Unmapped revenue account'
   const lineColumns: LineColumn<LineRow>[] = [
-    { key: 'no', header: '#', group: 'system', render: line => <span className="text-gray-400">{line.line_number}</span> },
-    { key: 'item_code', header: 'Item Code', group: 'business', render: line => line.item_id ? <span className="font-mono font-medium">{items[line.item_id]?.code ?? '—'}</span> : emptyLineValue },
-    { key: 'item_desc', header: 'Item Description', group: 'business', minWidth: '150px', render: line => line.item_id ? (items[line.item_id]?.description ?? '—') : emptyLineValue },
-    { key: 'desc', header: 'Description', group: 'business', minWidth: '180px', render: line => <span className="text-gray-900">{line.description}</span> },
-    { key: 'qty', header: 'Qty', group: 'business', align: 'right', render: line => <span className="font-mono tabular-nums text-gray-700">{num(line.quantity)}</span> },
-    { key: 'uom', header: 'UOM', group: 'business', render: line => line.uom_id ? <span title={uoms[line.uom_id]?.description}>{uoms[line.uom_id]?.code ?? '—'}</span> : emptyLineValue },
-    { key: 'price', header: 'Unit Price', group: 'business', align: 'right', render: line => <AmountCell amount={num(line.unit_price)} /> },
-    { key: 'disc_pct', header: 'Discount %', group: 'business', align: 'right', render: line => <span className="font-mono">{num(line.discount_percent)}%</span> },
-    { key: 'disc_amt', header: 'Discount Amount', group: 'business', align: 'right', render: line => <AmountCell amount={num(line.discount_amount)} /> },
-    { key: 'net', header: 'Net', group: 'business', align: 'right', render: line => <AmountCell amount={num(line.net_amount)} /> },
-    { key: 'vat_code', header: 'VAT Code', group: 'accounting', render: line => line.vat_code_id ? <span className="font-mono">{vatCodes[line.vat_code_id]?.code ?? '—'}</span> : emptyLineValue },
-    { key: 'vat_pct', header: 'VAT %', group: 'accounting', align: 'right', render: line => line.vat_code_id ? <span className="font-mono">{num(vatCodes[line.vat_code_id]?.rate)}%</span> : emptyLineValue },
-    { key: 'vat_amt', header: 'VAT Amount', group: 'accounting', align: 'right', render: line => <AmountCell amount={num(line.vat_amount)} /> },
-    { key: 'ewt_code', header: 'EWT Code', group: 'withholding', render: () => emptyLineValue },
-    { key: 'ewt_amt', header: 'EWT Amount', group: 'withholding', align: 'right', render: () => emptyLineValue },
-    { key: 'total', header: 'Line Total', group: 'business', align: 'right', render: line => <span className="font-semibold"><AmountCell amount={num(line.total_amount)} /></span> },
-    { key: 'acct', header: 'Revenue Account', group: 'accounting', render: line => <span className="font-mono text-gray-600">{accountLabel(line.revenue_account_id)}</span> },
-    { key: 'department', header: 'Department', group: 'dimensions', render: () => emptyLineValue },
-    { key: 'cost_center', header: 'Cost Center', group: 'dimensions', render: () => emptyLineValue },
-    { key: 'project', header: 'Project', group: 'dimensions', render: () => emptyLineValue },
-    { key: 'warehouse', header: 'Warehouse', group: 'dimensions', render: () => emptyLineValue },
-    { key: 'branch', header: 'Branch', group: 'dimensions', render: () => branchName || '—' },
-    { key: 'location', header: 'Location', group: 'dimensions', render: () => emptyLineValue },
-    { key: 'remarks', header: 'Remarks', group: 'reference', render: () => emptyLineValue },
-    { key: 'reference', header: 'Reference', group: 'reference', render: () => si.reference || emptyLineValue },
+    { key: 'no', header: '#', group: 'system', pinned: true, defaultWidth: 56, sortValue: line => line.line_number, filterValue: line => line.line_number, exportValue: line => line.line_number, render: line => <span className="text-gray-400">{line.line_number}</span> },
+    { key: 'item_code', header: 'Item Code', group: 'sales', pinned: true, defaultWidth: 110, sortValue: lineItemCode, filterValue: lineItemCode, exportValue: lineItemCode, render: line => line.item_id ? <span className="font-mono font-medium">{items[line.item_id]?.code ?? '—'}</span> : emptyLineValue },
+    { key: 'item_desc', header: 'Item Description', group: 'sales', defaultWidth: 160, sortValue: lineItemDescription, filterValue: lineItemDescription, exportValue: lineItemDescription, render: line => line.item_id ? (items[line.item_id]?.description ?? '—') : emptyLineValue },
+    { key: 'desc', header: 'Description', group: 'sales', pinned: true, defaultWidth: 220, sortValue: line => line.description, filterValue: line => line.description, exportValue: line => line.description, render: line => <span className="text-gray-900">{line.description}</span> },
+    { key: 'qty', header: 'Qty', group: 'sales', align: 'right', defaultWidth: 84, sortValue: line => num(line.quantity), filterValue: line => num(line.quantity), exportValue: line => num(line.quantity), render: line => <span className="font-mono tabular-nums text-gray-700">{num(line.quantity)}</span> },
+    { key: 'uom', header: 'UOM', group: 'inventory', defaultWidth: 84, sortValue: lineUom, filterValue: lineUom, exportValue: lineUom, render: line => line.uom_id ? <span title={uoms[line.uom_id]?.description}>{uoms[line.uom_id]?.code ?? '—'}</span> : emptyLineValue },
+    { key: 'price', header: 'Unit Price', group: 'sales', align: 'right', defaultWidth: 112, sortValue: line => num(line.unit_price), filterValue: line => num(line.unit_price), exportValue: line => num(line.unit_price), render: line => <AmountCell amount={num(line.unit_price)} /> },
+    { key: 'disc_pct', header: 'Discount %', group: 'sales', align: 'right', defaultWidth: 104, sortValue: line => num(line.discount_percent), filterValue: line => num(line.discount_percent), exportValue: line => num(line.discount_percent), render: line => <span className="font-mono">{num(line.discount_percent)}%</span> },
+    { key: 'disc_amt', header: 'Discount Amount', group: 'sales', align: 'right', defaultWidth: 132, sortValue: line => num(line.discount_amount), filterValue: line => num(line.discount_amount), exportValue: line => num(line.discount_amount), render: line => <AmountCell amount={num(line.discount_amount)} /> },
+    { key: 'net', header: 'Net', group: 'sales', align: 'right', defaultWidth: 112, sortValue: line => num(line.net_amount), filterValue: line => num(line.net_amount), exportValue: line => num(line.net_amount), render: line => <AmountCell amount={num(line.net_amount)} /> },
+    { key: 'tax_base', header: 'Tax Base', group: 'tax', align: 'right', defaultWidth: 112, sortValue: line => num(line.net_amount), filterValue: line => num(line.net_amount), exportValue: line => num(line.net_amount), render: line => <AmountCell amount={num(line.net_amount)} /> },
+    { key: 'vat_code', header: 'VAT Code', group: 'tax', defaultWidth: 104, sortValue: lineVatCode, filterValue: lineVatCode, exportValue: lineVatCode, render: line => line.vat_code_id ? <span className="font-mono">{vatCodes[line.vat_code_id]?.code ?? '—'}</span> : emptyLineValue },
+    { key: 'vat_pct', header: 'VAT %', group: 'tax', align: 'right', defaultWidth: 80, sortValue: lineVatRate, filterValue: lineVatRate, exportValue: lineVatRate, render: line => line.vat_code_id ? <span className="font-mono">{num(vatCodes[line.vat_code_id]?.rate)}%</span> : emptyLineValue },
+    { key: 'vat_amt', header: 'VAT Amount', group: 'tax', align: 'right', defaultWidth: 116, sortValue: line => num(line.vat_amount), filterValue: line => num(line.vat_amount), exportValue: line => num(line.vat_amount), render: line => <AmountCell amount={num(line.vat_amount)} /> },
+    { key: 'tax_class', header: 'Tax Classification', group: 'tax', defaultWidth: 136, sortValue: line => line.vat_code_id ? vatCodes[line.vat_code_id]?.classification ?? '' : '', filterValue: line => line.vat_code_id ? vatCodes[line.vat_code_id]?.classification ?? '' : '', exportValue: line => line.vat_code_id ? vatCodes[line.vat_code_id]?.classification ?? '' : '', render: line => line.vat_code_id ? vatCodes[line.vat_code_id]?.classification ?? '—' : emptyLineValue },
+    { key: 'atc', header: 'ATC', group: 'tax', defaultWidth: 82, render: () => emptyLineValue },
+    { key: 'ewt_code', header: 'EWT Code', group: 'withholding', defaultWidth: 100, render: () => emptyLineValue },
+    { key: 'ewt_amt', header: 'EWT Amount', group: 'withholding', align: 'right', defaultWidth: 112, sortValue: () => 0, filterValue: () => 0, exportValue: () => 0, render: () => emptyLineValue },
+    { key: 'total', header: 'Line Total', group: 'sales', align: 'right', defaultWidth: 120, sortValue: line => num(line.total_amount), filterValue: line => num(line.total_amount), exportValue: line => num(line.total_amount), render: line => <span className="font-semibold text-gray-900"><AmountCell amount={num(line.total_amount)} /></span> },
+    { key: 'acct', header: 'Revenue Account', group: 'accounting', defaultWidth: 150, sortValue: lineRevenueAccount, filterValue: lineRevenueAccount, exportValue: lineRevenueAccount, render: line => <span className="font-mono text-gray-600">{accountLabel(line.revenue_account_id)}</span> },
+    { key: 'department', header: 'Department', group: 'dimensions', defaultWidth: 118, render: () => emptyLineValue },
+    { key: 'cost_center', header: 'Cost Center', group: 'dimensions', defaultWidth: 118, render: () => emptyLineValue },
+    { key: 'project', header: 'Project', group: 'dimensions', defaultWidth: 118, render: () => emptyLineValue },
+    { key: 'warehouse', header: 'Warehouse', group: 'inventory', defaultWidth: 116, render: () => emptyLineValue },
+    { key: 'branch', header: 'Branch', group: 'dimensions', defaultWidth: 130, sortValue: () => branchName, filterValue: () => branchName, exportValue: () => branchName, render: () => branchName || '—' },
+    { key: 'location', header: 'Location', group: 'inventory', defaultWidth: 112, render: () => emptyLineValue },
+    { key: 'cost', header: 'Cost', group: 'inventory', align: 'right', defaultWidth: 96, render: () => emptyLineValue },
+    { key: 'inventory_account', header: 'Inventory Account', group: 'inventory', defaultWidth: 150, render: () => emptyLineValue },
+    { key: 'remarks', header: 'Remarks', group: 'reference', defaultWidth: 120, render: () => emptyLineValue },
+    { key: 'reference', header: 'Reference', group: 'reference', defaultWidth: 130, sortValue: () => si.reference || '', filterValue: () => si.reference || '', exportValue: () => si.reference || '', render: () => si.reference || emptyLineValue },
+    { key: 'source_doc', header: 'Source Document', group: 'audit', defaultWidth: 140, sortValue: () => si.reference || '', filterValue: () => si.reference || '', exportValue: () => si.reference || '', render: () => si.reference || emptyLineValue },
+    { key: 'journal_entry', header: 'Journal Entry', group: 'audit', defaultWidth: 130, sortValue: () => si.journal_entry_id || '', filterValue: () => si.journal_entry_id || '', exportValue: () => si.journal_entry_id || '', render: () => si.journal_entry_id ? <span className="font-mono">{si.journal_entry_id.slice(0, 8)}…</span> : emptyLineValue },
+    { key: 'posting_rule', header: 'Posting Rule', group: 'audit', defaultWidth: 160, sortValue: linePostingRule, filterValue: linePostingRule, exportValue: linePostingRule, render: line => linePostingRule(line) },
+    { key: 'created_by', header: 'Created By', group: 'audit', defaultWidth: 150, sortValue: line => line.created_by || '', filterValue: line => line.created_by || '', exportValue: line => line.created_by || '', render: line => line.created_by ? <span className="font-mono">{line.created_by}</span> : emptyLineValue },
+    { key: 'created_date', header: 'Created Date', group: 'audit', defaultWidth: 150, sortValue: line => line.created_at, filterValue: line => formatDateTime(line.created_at), exportValue: line => line.created_at, render: line => formatDateTime(line.created_at) },
+    { key: 'uuid', header: 'UUID', group: 'system', defaultWidth: 160, sortValue: line => line.id, filterValue: line => line.id, exportValue: line => line.id, render: line => <span className="font-mono">{line.id.slice(0, 8)}…</span> },
+    { key: 'status', header: 'Status', group: 'audit', defaultWidth: 100, sortValue: () => si.status, filterValue: () => si.status, exportValue: () => si.status, render: () => <StatusBadge status={statusToShared[si.status]} label={si.status} /> },
   ]
   const lineProfiles: LineColumnProfile[] = [
-    { key: 'operations', label: 'Operations', columnKeys: ['no', 'item_code', 'item_desc', 'desc', 'qty', 'uom', 'price', 'disc_pct', 'net', 'vat_code', 'total', 'warehouse'] },
-    { key: 'accounting', label: 'Accounting', columnKeys: ['no', 'item_code', 'desc', 'qty', 'uom', 'price', 'disc_amt', 'net', 'vat_code', 'vat_pct', 'vat_amt', 'ewt_code', 'ewt_amt', 'total', 'acct'] },
-    { key: 'audit', label: 'Audit', columnKeys: ['no', 'item_code', 'item_desc', 'desc', 'net', 'vat_code', 'vat_amt', 'total', 'acct', 'department', 'cost_center', 'project', 'branch', 'reference'] },
-    { key: 'all', label: 'All', columnKeys: lineColumns.map(column => column.key) },
+    { key: 'default', label: 'Default', columnKeys: ['no', 'item_code', 'desc', 'qty', 'uom', 'price', 'disc_pct', 'net', 'vat_code', 'vat_amt', 'total'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
+    { key: 'accounting', label: 'Accounting', columnKeys: ['no', 'item_code', 'desc', 'acct', 'department', 'cost_center', 'branch', 'project', 'vat_code', 'vat_amt', 'ewt_code', 'ewt_amt', 'net', 'total'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
+    { key: 'tax', label: 'Tax', columnKeys: ['no', 'item_code', 'desc', 'vat_code', 'atc', 'tax_base', 'vat_pct', 'vat_amt', 'ewt_code', 'ewt_amt', 'tax_class'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
+    { key: 'audit', label: 'Audit', columnKeys: ['no', 'item_code', 'desc', 'source_doc', 'journal_entry', 'posting_rule', 'created_by', 'created_date', 'uuid', 'status', 'acct', 'branch'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
+    { key: 'inventory', label: 'Inventory', columnKeys: ['no', 'item_code', 'item_desc', 'desc', 'warehouse', 'uom', 'qty', 'cost', 'inventory_account', 'location'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
+    { key: 'sales', label: 'Sales', columnKeys: ['no', 'item_code', 'item_desc', 'desc', 'qty', 'uom', 'price', 'disc_pct', 'disc_amt', 'net', 'total'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
   ]
   const selectedLine = lines.find(line => line.id === selectedLineId) ?? null
   const lineDetailSections: DetailSection[] = selectedLine ? [
@@ -477,10 +496,15 @@ export default function SalesInvoiceDocumentPage() {
     { key: 'related', title: 'Related Documents', fields: [{ label: 'Line-level Links', value: 'Not linked' }] },
     { key: 'notes', title: 'Item Notes', fields: [{ label: 'Notes', value: selectedLine.item_id ? items[selectedLine.item_id]?.notes || 'No item notes' : 'No item selected' }] },
   ] : []
-  const linesTab = (
-    <div>
+  const linesTab = erpTabSection(
+    'Lines',
+    'Transaction line items, tax codes, posting accounts, and dimensions.',
+    <>
       <LineGrid columns={lineColumns} rows={lines} getRowKey={line => line.id} emptyLabel="No lines on this invoice."
-        profiles={lineProfiles} initialProfileKey="accounting"
+        profiles={lineProfiles} initialProfileKey="default"
+        storageKey={`company:${companyId || 'none'}:sales-invoice:lines`}
+        tableLabel="Sales Invoice Lines"
+        onRefresh={load}
         onRowClick={line => setSelectedLineId(previous => previous === line.id ? null : line.id)} selectedKey={selectedLineId ?? undefined}
         renderExpandedRow={() => selectedLine
           ? <LineDetailPanel title={`Line ${selectedLine.line_number} — ${selectedLine.description}`} sections={lineDetailSections} onClose={() => setSelectedLineId(null)} />
@@ -496,7 +520,7 @@ export default function SalesInvoiceDocumentPage() {
           { key: 'grand', label: 'Grand Total', value: <AmountCell amount={num(si.total_amount)} />, emphasis: true },
         ]} />
       <p className="text-[10px] text-gray-400 mt-1.5">Click any row to inspect recognition, inventory, dimensions, tax, audit, source, posting rule, links, and item notes.</p>
-    </div>
+    </>,
   )
 
   // ── Financial Summary (full, §10) ───────────────────────────
@@ -562,35 +586,80 @@ export default function SalesInvoiceDocumentPage() {
         : 'Derived from the saved document. The setup preflight applies to postable (draft/approved) invoices.'} />
   )
 
+  // ── Workflow tab ────────────────────────────────────────────
+  const workflowRows = [
+    { stage: 'Draft', status: si.created_at ? 'Completed' : 'Pending', date: si.created_at, actor: si.created_by },
+    { stage: 'Approved', status: si.approved_at ? 'Completed' : si.status === 'draft' ? 'Pending' : 'Not recorded', date: si.approved_at, actor: si.approved_by },
+    { stage: 'Posted', status: si.posted_at ? 'Completed' : si.status === 'cancelled' ? 'Voided' : 'Pending', date: si.posted_at, actor: si.posted_by },
+    { stage: 'Collection', status: collection.status || 'Not posted', date: null, actor: null },
+    { stage: 'Lock', status: lockLabel, date: si.updated_at, actor: si.updated_by },
+  ]
+  const workflowTab = erpTabSection(
+    'Workflow',
+    'Lifecycle status for this transaction.',
+    <div className="space-y-2">
+      <section className="border border-gray-200 rounded p-3">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-2">Lifecycle</div>
+        <WorkflowStrip steps={workflow.steps} currentKey={workflow.currentKey} />
+      </section>
+      <div className="overflow-x-auto border border-gray-200 rounded">
+        <table className={ERP_TABLE}>
+          <thead className={ERP_THEAD}>
+            <tr>
+              {['Stage', 'Status', 'Date', 'Actor'].map(label => (
+                <th key={label} className={`${ERP_TH} text-left`}>{label}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {workflowRows.map(row => (
+              <tr key={row.stage}>
+                <td className={`${ERP_TD} text-gray-800`}>{row.stage}</td>
+                <td className={`${ERP_TD} text-gray-600`}>{row.status}</td>
+                <td className={`${ERP_TD} text-gray-500 whitespace-nowrap`}>{row.date ? formatDateTime(row.date) : '—'}</td>
+                <td className={`${ERP_TD} font-mono text-gray-500 truncate`}>{row.actor || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>,
+  )
+
   // ── Approval tab ────────────────────────────────────────────
-  const approvalTab = approvals.length > 0 ? (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50 border-b border-gray-200">
+  const approvalTab = erpTabSection(
+    'Approval',
+    'Approval routing and electronic authorization history.',
+    approvals.length > 0 ? (
+    <div className="overflow-x-auto border border-gray-200 rounded">
+      <table className={ERP_TABLE}>
+        <thead className={ERP_THEAD}>
           <tr>
             {['Level', 'Approver', 'Role', 'Action', 'Remarks', 'Date', 'Electronic Signature'].map(label => (
-              <th key={label} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">{label}</th>
+              <th key={label} className={`${ERP_TH} text-left`}>{label}</th>
             ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100">
           {approvals.map(row => (
             <tr key={row.id}>
-              <td className="px-3 py-2 text-xs text-gray-700">{row.step_sequence}</td>
-              <td className="px-3 py-2 text-xs font-mono text-gray-600">{row.actual_approver_id || row.required_approver_id || 'Pending'}</td>
-              <td className="px-3 py-2 text-xs text-gray-600">{row.required_approver_type}</td>
-              <td className="px-3 py-2 text-xs"><StatusBadge status={row.status === 'approved' ? 'approved' : row.status === 'rejected' ? 'error' : 'pending'} label={row.status} /></td>
-              <td className="px-3 py-2 text-xs text-gray-600">{row.remarks || '—'}</td>
-              <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{formatDateTime(row.acted_at || row.submitted_at)}</td>
-              <td className="px-3 py-2 text-xs text-gray-400">Not recorded</td>
+              <td className={ERP_TD}>{row.step_sequence}</td>
+              <td className={`${ERP_TD} font-mono text-gray-600`}>{row.actual_approver_id || row.required_approver_id || 'Pending'}</td>
+              <td className={`${ERP_TD} text-gray-600`}>{row.required_approver_type}</td>
+              <td className={ERP_TD}><StatusBadge status={row.status === 'approved' ? 'approved' : row.status === 'rejected' ? 'error' : 'pending'} label={row.status} /></td>
+              <td className={`${ERP_TD} text-gray-600`}>{row.remarks || '—'}</td>
+              <td className={`${ERP_TD} text-gray-500 whitespace-nowrap`}>{formatDateTime(row.acted_at || row.submitted_at)}</td>
+              <td className={`${ERP_TD} text-gray-400`}>Not recorded</td>
             </tr>
           ))}
         </tbody>
       </table>
     </div>
   ) : (
-    <EmptyState title="No approval workflow configured"
-      description="Sales Invoice has no approval instance for this company. Posting authority is gated by role and segregation-of-duties (DEC-009 / DEC-010): the poster must differ from the creator where a workflow is configured." />
+    <CompactEmptyState>
+      No approval workflow configured for this Sales Invoice.
+    </CompactEmptyState>
+  ),
   )
 
   // ── Audit Trail ─────────────────────────────────────────────
@@ -603,15 +672,17 @@ export default function SalesInvoiceDocumentPage() {
     { label: 'Posted', value: formatDateTime(si.posted_at) },
     { label: 'Lock status', value: lockLabel },
   ]
-  const auditTab = (
-    <div className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+  const auditTab = erpTabSection(
+    'Audit',
+    'Chronological document facts and system audit trail.',
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-x-3 gap-y-2">
         {auditFacts.map(f => (
-          <div key={f.label}><div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{f.label}</div><div className="text-xs font-medium text-gray-700">{f.value}</div></div>
+          <div key={f.label}><div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">{f.label}</div><div className="text-xs text-gray-700">{f.value}</div></div>
         ))}
       </div>
       <AuditTrailSection tableName="sales_invoices" recordId={si.id} initiallyExpanded />
-    </div>
+    </div>,
   )
 
   // ── Activity Timeline (lifecycle facts; semantic events pending PXL-DA-016) ──
@@ -622,21 +693,25 @@ export default function SalesInvoiceDocumentPage() {
     ...(collection.receiptCount > 0 ? [{ label: `Collection applied (${collection.receiptCount} receipt${collection.receiptCount !== 1 ? 's' : ''})`, at: null }] : []),
     ...(si.status === 'cancelled' ? [{ label: 'Voided', at: si.updated_at }] : []),
   ]
-  const timelineTab = (
-    <ol className="relative border-l border-gray-200 ml-2 space-y-4">
+  const timelineTab = erpTabSection(
+    'Activity',
+    'Transaction activity and system events.',
+    <ol className="relative border-l border-gray-200 ml-2 space-y-3">
       {timelineEvents.map((e, i) => (
         <li key={i} className="ml-4">
-          <span className="absolute -left-1.5 w-3 h-3 rounded-full bg-gray-300 border-2 border-white" />
-          <div className="text-sm text-gray-800">{e.label}</div>
+          <span className="absolute -left-1 w-2 h-2 rounded-full bg-gray-300 border border-white" />
+          <div className="text-xs text-gray-800">{e.label}</div>
           <div className="text-xs text-gray-400">{e.at ? formatDateTime(e.at) : '—'}</div>
         </li>
       ))}
       <li className="ml-4 text-[11px] text-gray-400">Semantic event stream (edited/printed/emailed) arrives with PXL-DA-016 transaction_events.</li>
-    </ol>
+    </ol>,
   )
 
   // ── Notes ───────────────────────────────────────────────────
-  const notesTab = (
+  const notesTab = erpTabSection(
+    'Notes',
+    'Internal, customer, accounting, and collection notes.',
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
       {[
         ['Internal Notes', null],
@@ -644,39 +719,43 @@ export default function SalesInvoiceDocumentPage() {
         ['Accounting Notes', null],
         ['Collection Notes', null],
       ].map(([label, value]) => (
-        <section key={label} className="border border-gray-200 rounded-md p-3 min-h-24">
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">{label}</div>
+        <section key={label} className="border border-gray-200 rounded p-3 min-h-20">
+          <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-2">{label}</div>
           <div className="text-xs text-gray-700 whitespace-pre-wrap">{value || <span className="text-gray-400">No notes recorded.</span>}</div>
         </section>
       ))}
-    </div>
+    </div>,
   )
 
   // ── Attachments (no storage integration yet) ────────────────
-  const attachmentsTab = (
-    <div className="overflow-x-auto">
-      <table className="w-full text-xs">
-        <thead className="bg-gray-50 border-b border-gray-200"><tr>
+  const attachmentsTab = erpTabSection(
+    'Attachments',
+    'Files linked to this transaction.',
+    <>
+    <div className="overflow-x-auto border border-gray-200 rounded">
+      <table className={ERP_TABLE}>
+        <thead className={ERP_THEAD}><tr>
           {['File', 'Type', 'Uploaded By', 'Date', 'Preview', 'Download', 'OCR Status'].map(label => (
-            <th key={label} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">{label}</th>
+            <th key={label} className={`${ERP_TH} text-left`}>{label}</th>
           ))}
         </tr></thead>
-        <tbody><tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400">No attachments linked to this invoice.</td></tr></tbody>
+        <tbody><tr><td colSpan={7} className={ERP_EMPTY_CELL}>No attachments linked to this invoice.</td></tr></tbody>
       </table>
-      <p className="text-[10px] text-gray-400 mt-2">Sales Invoice attachment storage and OCR are not configured; the CAS attachment register remains the system-of-record register.</p>
     </div>
+    <p className="text-[10px] text-gray-400">Sales Invoice attachment storage and OCR are not configured; the CAS attachment register remains the system-of-record register.</p>
+    </>,
   )
 
   // ── Related Party — embedded customer profile, not permanent header content ──
   const relatedPartyField = (label: string, value: ReactNode, wide = false) => (
     <div className={wide ? 'sm:col-span-2' : ''} key={label}>
       <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">{label}</div>
-      <div className="text-xs font-medium text-gray-700 break-words">{value ?? '—'}</div>
+      <div className="text-xs text-gray-700 break-words">{value ?? '—'}</div>
     </div>
   )
   const relatedPartySection = (title: string, fields: ReactNode, className = '') => (
-    <section className={`border border-gray-200 rounded-md p-3 min-w-0 ${className}`}>
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">{title}</div>
+    <section className={`border border-gray-200 rounded p-3 min-w-0 ${className}`}>
+      <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-2">{title}</div>
       {fields}
     </section>
   )
@@ -708,8 +787,13 @@ export default function SalesInvoiceDocumentPage() {
     acc.total += amount
     return acc
   }, { current: 0, days_1_30: 0, days_31_60: 0, days_61_90: 0, over_90: 0, total: 0 })
-  const relatedPartyTab = !customer ? (
-    <EmptyState title="Customer master record unavailable" description="The invoice keeps the saved customer snapshot, but the linked Customer master record was not returned." />
+  const relatedPartyTab = erpTabSection(
+    'Related Party',
+    'Embedded customer profile for this transaction.',
+    !customer ? (
+    <CompactEmptyState>
+      Customer master record unavailable. The invoice keeps the saved customer snapshot.
+    </CompactEmptyState>
   ) : (
     <div className="space-y-3">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
@@ -771,7 +855,7 @@ export default function SalesInvoiceDocumentPage() {
             ['Over 90', agingBuckets.over_90],
             ['Total AR', agingBuckets.total],
           ].map(([label, amount]) => (
-            <div key={String(label)} className="bg-gray-50 border border-gray-100 rounded px-2.5 py-2">
+            <div key={String(label)} className="bg-gray-50 border border-gray-100 rounded px-2.5 py-1.5">
               <div className="text-[10px] uppercase tracking-wide text-gray-400">{label}</div>
               <div className="text-xs font-semibold text-gray-800"><AmountCell amount={num(amount)} /></div>
             </div>
@@ -781,25 +865,25 @@ export default function SalesInvoiceDocumentPage() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
         {relatedPartySection('Recent Invoices', (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200"><tr>
+          <div className="overflow-x-auto border border-gray-200 rounded">
+            <table className={ERP_TABLE}>
+              <thead className={ERP_THEAD}><tr>
                 {['Date', 'Invoice', 'Due Date', 'Status', 'Amount'].map(label => (
-                  <th key={label} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">{label}</th>
+                  <th key={label} className={`${ERP_TH} ${label === 'Amount' ? 'text-right' : 'text-left'}`}>{label}</th>
                 ))}
               </tr></thead>
               <tbody className="divide-y divide-gray-100">
                 {recentInvoices.length === 0 ? (
-                  <tr><td colSpan={5} className="px-3 py-5 text-center text-gray-400">No recent invoices found.</td></tr>
+                  <tr><td colSpan={5} className={ERP_EMPTY_CELL}>No recent invoices found.</td></tr>
                 ) : recentInvoices.map(row => (
                   <tr key={row.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2"><DateCell date={row.date} /></td>
-                    <td className="px-3 py-2">
+                    <td className={ERP_TD}><DateCell date={row.date} /></td>
+                    <td className={ERP_TD}>
                       <button onClick={() => navigate(`/sales-invoices/${row.id}`)} className="font-mono text-blue-700 hover:underline">{row.si_number}</button>
                     </td>
-                    <td className="px-3 py-2"><DateCell date={row.due_date} /></td>
-                    <td className="px-3 py-2"><StatusBadge status={statusToShared[row.status as SIStatus] ?? row.status} label={row.status} /></td>
-                    <td className="px-3 py-2 text-right"><AmountCell amount={num(row.total_amount)} /></td>
+                    <td className={ERP_TD}><DateCell date={row.due_date} /></td>
+                    <td className={ERP_TD}><StatusBadge status={statusToShared[row.status as SIStatus] ?? row.status} label={row.status} /></td>
+                    <td className={ERP_TD_NUM}><AmountCell amount={num(row.total_amount)} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -807,25 +891,25 @@ export default function SalesInvoiceDocumentPage() {
           </div>
         ))}
         {relatedPartySection('Recent Payments', (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200"><tr>
+          <div className="overflow-x-auto border border-gray-200 rounded">
+            <table className={ERP_TABLE}>
+              <thead className={ERP_THEAD}><tr>
                 {['Date', 'Receipt', 'Status', 'Amount', 'CWT'].map(label => (
-                  <th key={label} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">{label}</th>
+                  <th key={label} className={`${ERP_TH} ${['Amount', 'CWT'].includes(label) ? 'text-right' : 'text-left'}`}>{label}</th>
                 ))}
               </tr></thead>
               <tbody className="divide-y divide-gray-100">
                 {recentPayments.length === 0 ? (
-                  <tr><td colSpan={5} className="px-3 py-5 text-center text-gray-400">No recent payments found.</td></tr>
+                  <tr><td colSpan={5} className={ERP_EMPTY_CELL}>No recent payments found.</td></tr>
                 ) : recentPayments.map(row => (
                   <tr key={row.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2"><DateCell date={row.receipt_date} /></td>
-                    <td className="px-3 py-2">
+                    <td className={ERP_TD}><DateCell date={row.receipt_date} /></td>
+                    <td className={ERP_TD}>
                       <button onClick={() => navigate('/receipts')} className="font-mono text-blue-700 hover:underline">{row.receipt_number}</button>
                     </td>
-                    <td className="px-3 py-2"><StatusBadge status="posted" label={row.status} /></td>
-                    <td className="px-3 py-2 text-right"><AmountCell amount={num(row.total_amount)} /></td>
-                    <td className="px-3 py-2 text-right"><AmountCell amount={num(row.total_cwt)} /></td>
+                    <td className={ERP_TD}><StatusBadge status="posted" label={row.status} /></td>
+                    <td className={ERP_TD_NUM}><AmountCell amount={num(row.total_amount)} /></td>
+                    <td className={ERP_TD_NUM}><AmountCell amount={num(row.total_cwt)} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -834,10 +918,13 @@ export default function SalesInvoiceDocumentPage() {
         ))}
       </div>
     </div>
+  ),
   )
 
   // ── System ──────────────────────────────────────────────────
-  const systemTab = (
+  const systemTab = erpTabSection(
+    'System',
+    'Technical identifiers and engine metadata for support and audit review.',
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs">
       {[
         ['Record ID', si.id], ['Database ID', si.id], ['Company ID', si.company_id], ['Branch ID', si.branch_id],
@@ -854,7 +941,7 @@ export default function SalesInvoiceDocumentPage() {
           <span className="text-gray-400">{k}</span><span className="font-mono text-gray-600 truncate" title={String(v)}>{v}</span>
         </div>
       ))}
-    </div>
+    </div>,
   )
 
   const tabs: DocumentTab[] = [
@@ -863,6 +950,7 @@ export default function SalesInvoiceDocumentPage() {
     { key: 'gl', label: 'GL Impact', content: glTab },
     { key: 'tax', label: 'Tax Impact', content: taxTab },
     { key: 'validation', label: 'Validation', content: validationTab },
+    { key: 'workflow', label: 'Workflow', content: workflowTab },
     { key: 'approval', label: 'Approval', content: approvalTab },
     { key: 'audit', label: 'Audit', content: auditTab },
     { key: 'related', label: 'Related Docs', content: <RelatedDocumentsTab rows={relatedRows} /> },
@@ -880,8 +968,8 @@ export default function SalesInvoiceDocumentPage() {
       <DocumentLayout
         title="Sales Invoice"
         documentNo={si.si_number}
-        status={statusToShared[si.status]}
-        statusLabel={si.status.charAt(0).toUpperCase() + si.status.slice(1)}
+        status={si.status === 'posted' ? 'posted' : si.status === 'cancelled' ? 'error' : 'draft'}
+        statusLabel={postingLabel}
         identity={{
           name: (
             <button onClick={openCustomer} className="text-white hover:underline text-left truncate">
@@ -895,11 +983,9 @@ export default function SalesInvoiceDocumentPage() {
           { label: 'Balance Due', value: <AmountCell amount={collection.balance} />, emphasis: collection.balance > 0.005 },
         ]}
         meta={[
-          { label: 'Posting', value: <StatusBadge status={si.status === 'posted' ? 'posted' : si.status === 'cancelled' ? 'error' : 'draft'} label={postingLabel} /> },
-          { label: 'Collection', value: <StatusBadge status={collection.status === 'Paid' ? 'success' : collection.status === 'Partially Paid' ? 'pending' : 'open'} label={collection.status || 'Not posted'} /> },
-          { label: 'Lock', value: <StatusBadge status={si.status === 'draft' ? 'draft' : 'locked'} label={lockLabel} /> },
+          { label: 'Collection', value: collection.status || 'Not posted', tone: collection.status === 'Paid' ? 'success' : collection.status === 'Partially Paid' ? 'warning' : collection.status === 'Open' ? 'info' : 'neutral' },
+          { label: 'Lock', value: lockLabel, tone: si.status === 'draft' ? 'neutral' : 'warning' },
         ]}
-        workflow={workflow}
         actions={actions}
         primary={primaryInfo}
         tabs={tabs}
@@ -916,7 +1002,7 @@ export default function SalesInvoiceDocumentPage() {
       {showVoid && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={() => setShowVoid(false)} />
-          <div className="relative bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-md p-6 z-10">
+          <div className="relative bg-white rounded shadow-lg border border-gray-200 w-full max-w-md p-4 z-10">
             <h2 className="text-sm font-semibold text-gray-900 mb-1">Void Sales Invoice</h2>
             <p className="text-xs text-gray-500 mb-4">Voiding <span className="font-mono font-semibold">{si.si_number}</span> is permanent and posts a reversing journal entry. The SI number is never reused (BIR).</p>
             <div className="space-y-3">

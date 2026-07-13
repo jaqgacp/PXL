@@ -1,16 +1,47 @@
 # AI Handoff
 
-Last updated: 2026-07-13 (session 69 — compact-header Sales Invoice refinement)
+Last updated: 2026-07-13 (session 72 — saved views and professional table framework)
 
-## Active Priority (session 69 — compact Sales Invoice master-template UI)
+## Active Priority (session 72 — Saved Views / Professional Table Experience)
 
-User refined the Sales Invoice workspace standard: reduce header height, remove duplicated master/audit/system/related fields from the permanent header/cards, and move the full customer/vendor profile into a new Related Party tab. Implemented on top of the session-68 dense-view baseline (uncommitted):
+User requested the next table-only enhancement after declaring the Transaction Workspace visually complete. Implemented as a reusable `LineGrid` enhancement, not a page redesign and with no schema/API/posting/business changes:
 
-- `DocumentLayout`: shorter company-accent document header with clickable customer name (TIN removed from the colored header), Invoice Total/Collected/Balance Due, inverted status-aware toolbar, tighter one-line Posting/Collection/Lock + workflow strip, 3% accent-derived workspace tint, no right rail, compact footer metadata.
-- `PrimaryInformationPanel`: exactly four independent compact cards — Document Information, Customer Information, Sales Context, Quick Actions. Document card now keeps only Invoice Date, Due Date, Branch, Currency, Payment Terms, and Reference when present. Customer card keeps only clickable Customer, Customer Code, TIN, and VAT Classification. Sales Context keeps only Salesperson, Project, Cost Center, Department. Quick Actions keeps only Create Receipt, Create Credit Memo, Print, Email, and Open Full Accounting Trace.
+- `LineGrid` is now a reusable enterprise transaction table framework with:
+  - Built-in view selector support and system/custom views.
+  - Browser-local persisted preferences scoped by caller `storageKey`: selected view, saved custom views, visible columns, column order, pinned columns, column widths, density, sorting, and global filter.
+  - Custom view management: Save View, Update View / Save as Custom, Rename, Delete, Restore Current View, Restore System Default.
+  - Professional Choose Columns panel: search, Select All, Clear All, reset actions, column groups (General/Sales/Inventory/Tax/Accounting/Dimensions/Audit/System), visible-column drag-and-drop ordering, and pin/unpin controls.
+  - Manual column resizing, sticky headers, sticky totals row where present, sticky pinned identity columns, compact/comfortable/spacious density, global filter, CSV export, and refresh hook.
+- `SalesInvoiceDocumentPage` wires the Sales Invoice line table to the new system:
+  - System views: **Default, Accounting, Tax, Audit, Inventory, Sales**, plus built-in **Custom** from `LineGrid`.
+  - Default pinned columns: `#`, `Item Code`, `Description`.
+  - Column metadata now supplies grouping, default widths, sort/filter/export values, and truthful unavailable states for not-yet-stored fields.
+  - Refresh button reuses the existing invoice `load()` function.
+- Docs updated: `PXL_STANDARD_TRANSACTION_WORKSPACE.md`, `PXL_TRANSACTION_EXPERIENCE_STANDARD.md`, and `PXL_TRANSACTION_MATRIX.md` now record the saved-view table standard.
+- Verification: `npm run build` passes; `npm run lint` passes; `git diff --check` clean. The user-owned held-out `20260710000004`, `20260710000005`, and test `027` were not touched.
+
+Known boundary: persistence is browser-local (`localStorage`) and scoped by workspace/table key (including company for SI), not a database-backed cross-device user preference table. That matches the user's "no schema/API changes" constraint for this UI-only pass; if cross-device per-auth-user preferences become required, add a governed preference table/API as a separate explicit feature.
+
+## Previous Active Priority (session 71 — Sales Invoice workspace final UI polish)
+
+User declared the workspace functionally complete and requested UI/UX refinement only. Implemented on top of the pushed session-69 baseline (uncommitted):
+
+- `DocumentLayout`: reduced header height again, moved Posting / Collection / Lock into compact header chips, removed the separate horizontal status/workflow strip, kept only state color dots, and gave the tab strip a subtle company-accent tint with the active tab using the stronger accent.
+- `DocumentToolbar`: More now renders via `createPortal(document.body)` with fixed positioning, `z-[9999]`, auto flip up/down, viewport-aware left/right alignment, outside-click/Escape close, and a high-elevation shadow. Toolbar auto-limits visible primary actions to at most three buttons plus More.
+- `PrimaryInformationPanel`: now adapts to three compact cards and uses tighter card padding/gaps.
+- `SalesInvoiceDocumentPage`: removed the entire Quick Actions card. Header toolbar is now the single action source (Create Receipt/Post/Submit as primary by state, Print, Email, More). Workflow moved from the permanent header into a dedicated Workflow tab. Draft Edit moved under More.
+- Final visual pass: added shared ERP presentation primitives (`ErpSectionHeader`, compact empty state, table class constants) and standardized tab section headers, table row/header sizing, numeric alignment, total rows, empty states, sharper 2-4px radii, lighter borders/shadows, and calmer neutral row highlights across Lines, Financial, GL Impact, Tax Impact, Validation, Workflow, Approval, Audit, Related Docs, Related Party, Attachments, Activity, Notes, and System.
+- `GLImpactPanel`: removed decorative action icons, compacted header/context rows, converted balanced/out-of-balance to a small state badge, standardized the accounting table, and kept existing links/actions unchanged.
+- `AuditTrailSection` and transaction support cards: compacted internal spacing/table rhythm and sharpened corners to match the workspace.
+- More-menu/deep-link polish retained: lower-frequency actions live under More (Credit/Debit Memo, Open Customer, Open Journal Entry, View Ledger, View Tax Ledger, Generate E-Invoice); `/customers?customerId=...`, `/ar-aging?tab=ledger&customerId=...`, and `/sales-tax-review?sourceId=...` remain wired.
+- No business features were added; this was UI density, hierarchy, color, and duplication cleanup only.
+- Verification: `npm run build` passes; `npm run lint` passes; `git diff --check` clean; port 5173 had returned 200 earlier in the session. The user-owned held-out `20260710000004`, `20260710000005`, and test `027` were not touched.
+
+Session 69 baseline already included:
+
+- `PrimaryInformationPanel`: compact cards — Document Information, Customer Information, Sales Context. Document card keeps only Invoice Date, Due Date, Branch, Currency, Payment Terms, and Reference when present. Customer card keeps only clickable Customer, Customer Code, TIN, and VAT Classification. Sales Context keeps only Salesperson, Project, Cost Center, Department.
 - Moved duplicate fields to the correct homes: Source Type + Document Series to System; Official Receipt links to Related Documents; Created/Last Modified By to Audit; full Customer Master / credit / contact / address / payment / sales / aging data to the new Related Party tab.
 - `Related Party` tab added: identity, contacts, addresses, tax profile, credit profile, payment information, sales information, AR aging summary via `fn_ar_aging_asof`, recent invoices, and recent payments.
-- More-menu/deep-link polish: lower-frequency actions moved to More (Debit Memo, Open Customer, Open Journal Entry, View Ledger, View Tax Ledger, Generate E-Invoice); `/customers?customerId=...` opens the Customer master view; `/ar-aging?tab=ledger&customerId=...` preselects the ledger customer; `/sales-tax-review?sourceId=...` filters to the invoice.
 - `TransactionTabsBar`: equal-width one-line tabs including Related Party, no arrows/horizontal scrollbar; labels shrink/truncate safely.
 - `LineGrid`: Operations/Accounting/Audit/All profiles, individual column chooser, 25-column SI pool, inline expandable line detail, and Lines/Quantity/Net/VAT/EWT/Gross/Discount/Grand Total band. SI row detail exposes recognition, serial/lot/allocation, dimensions, tax, audit, source, posting rule, related docs, and item notes with truthful unavailable states.
 - SI tabs: full Financial contract including explicit untracked values; expanded GL table; expanded tax-ledger table (VAT-only correctness boundary retained); explicit validation checklist; multi-row approval table; chronological audit evidence with IP/device/change fields; attachment table empty state; four note categories; expanded System metadata.

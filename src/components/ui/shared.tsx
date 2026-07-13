@@ -245,36 +245,36 @@ export function AuditTrailSection({ tableName, recordId, initiallyExpanded = fal
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+    <div className="bg-white border border-gray-200 rounded overflow-hidden">
       <button
         onClick={expanded ? () => setExpanded(false) : (loaded ? () => setExpanded(true) : load)}
-        className="w-full flex items-center justify-between px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-widest hover:bg-gray-50">
+        className="w-full flex items-center justify-between px-3 py-2 text-[10px] font-semibold text-gray-500 uppercase tracking-wide hover:bg-gray-50">
         Audit Trail
         <span className="text-gray-400">{expanded ? '▲' : '▼'}</span>
       </button>
       {expanded && (
         <div className="border-t border-gray-100 overflow-x-auto">
           {logs.length === 0
-            ? <p className="px-4 py-4 text-sm text-gray-400">No audit history available.</p>
+            ? <p className="px-3 py-4 text-center text-xs text-gray-400">No audit history available.</p>
             : (
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-4 py-2 font-semibold text-gray-500">Timestamp</th>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-500">Event</th>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-500">User</th>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-500">IP</th>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-500">Device</th>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-500">Changes</th>
+                    <th className="text-left px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">Timestamp</th>
+                    <th className="text-left px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">Event</th>
+                    <th className="text-left px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">User</th>
+                    <th className="text-left px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">IP</th>
+                    <th className="text-left px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">Device</th>
+                    <th className="text-left px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500">Changes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.map(log => (
                     <tr key={log.id} className="border-b border-gray-100">
-                      <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                      <td className="px-2 py-1.5 text-gray-500 whitespace-nowrap">
                         {new Date(log.changed_at).toLocaleString('en-PH')}
                       </td>
-                      <td className="px-4 py-2">
+                      <td className="px-2 py-1.5">
                         <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                           log.action === 'INSERT' ? 'bg-green-50 text-green-700' :
                           log.action === 'UPDATE' ? 'bg-blue-50 text-blue-700' :
@@ -282,10 +282,10 @@ export function AuditTrailSection({ tableName, recordId, initiallyExpanded = fal
                           {log.action}
                         </span>
                       </td>
-                      <td className="px-4 py-2 text-gray-600 font-mono">{log.changed_by || '—'}</td>
-                      <td className="px-4 py-2 text-gray-500 font-mono">{log.ip_address || '—'}</td>
-                      <td className="px-4 py-2 text-gray-500 max-w-48 truncate" title={log.user_agent || ''}>{log.user_agent || '—'}</td>
-                      <td className="px-4 py-2 text-gray-500 max-w-64 truncate" title={changedFields(log.old_data, log.new_data)}>{changedFields(log.old_data, log.new_data)}</td>
+                      <td className="px-2 py-1.5 text-gray-600 font-mono">{log.changed_by || '—'}</td>
+                      <td className="px-2 py-1.5 text-gray-500 font-mono">{log.ip_address || '—'}</td>
+                      <td className="px-2 py-1.5 text-gray-500 max-w-48 truncate" title={log.user_agent || ''}>{log.user_agent || '—'}</td>
+                      <td className="px-2 py-1.5 text-gray-500 max-w-64 truncate" title={changedFields(log.old_data, log.new_data)}>{changedFields(log.old_data, log.new_data)}</td>
                     </tr>
                   ))}
                 </tbody>

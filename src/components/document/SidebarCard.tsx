@@ -18,9 +18,9 @@ export function SidebarCard({
   children: React.ReactNode
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <div className="bg-white border border-gray-200 rounded p-3">
       <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{title}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-500">{title}</span>
         {onView && (
           <button onClick={onView} className="text-[11px] font-medium text-blue-600 hover:text-blue-800 hover:underline">{viewLabel}</button>
         )}

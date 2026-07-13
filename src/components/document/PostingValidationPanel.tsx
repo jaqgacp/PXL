@@ -1,4 +1,5 @@
 import type { SetupReadiness } from '@/lib/setupReadiness'
+import { ErpSectionHeader } from '@/components/document/ErpSection'
 
 // ─────────────────────────────────────────────────────────────
 // PostingValidationPanel — uniform readiness checklist shown on
@@ -54,23 +55,26 @@ export function PostingValidationPanel({
   const blocked = checks.filter(c => c.state === 'blocked').length
   const pending = checks.some(c => c.state === 'pending')
   const ready = !pending && blocked === 0
+  const badge = !pending
+    ? ready
+      ? <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-green-50 text-green-700">Ready to post</span>
+      : <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-red-50 text-red-700">{blocked} blocker{blocked !== 1 ? 's' : ''}</span>
+    : null
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{title}</span>
-        {!pending && (
-          ready
-            ? <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-50 text-green-700">Ready to post</span>
-            : <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-red-50 text-red-700">{blocked} blocker{blocked !== 1 ? 's' : ''}</span>
-        )}
-      </div>
-      <ul className="space-y-1.5">
+    <div className="border border-gray-200 rounded p-3 space-y-2 bg-white">
+      <ErpSectionHeader
+        title={title}
+        description="Validation results checked before posting."
+        badge={badge}
+        className="pb-2 border-b border-gray-100"
+      />
+      <ul className="grid grid-cols-1 lg:grid-cols-2 gap-x-6 gap-y-1.5">
         {checks.map(c => {
           const icon = ICON[c.state]
           return (
-            <li key={c.key} className="flex items-start gap-2 text-sm">
-              <span className={`${icon.cls} leading-5`}>{icon.glyph}</span>
+            <li key={c.key} className="flex items-start gap-2 text-xs">
+              <span className={`${icon.cls} leading-4`}>{icon.glyph}</span>
               <span className="min-w-0">
                 <span className={c.state === 'blocked' ? 'text-gray-800' : c.state === 'ok' ? 'text-gray-700' : 'text-gray-500'}>{c.label}</span>
                 {c.detail && <span className="block text-xs text-gray-400">{c.detail}</span>}

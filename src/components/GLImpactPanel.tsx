@@ -1,14 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  BookOpen,
-  FileText,
-  GitBranch,
-  RefreshCw,
-  Route,
-  Scale,
-} from 'lucide-react'
+import { GitBranch, RefreshCw } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { ErpSectionHeader, ERP_EMPTY_CELL, ERP_TABLE, ERP_THEAD, ERP_TH, ERP_TD, ERP_TD_NUM, ERP_TOTAL_ROW } from '@/components/document/ErpSection'
 
 type ConfigAccountKey =
   | 'ar_account_id'
@@ -224,26 +218,23 @@ export function GLImpactPanel({ companyId, sourceDocType, sourceDocId, postingDa
 
   const actions = sourceDocId ? [
     serverImpact?.source_route
-      ? { label: 'Source', to: serverImpact.source_route, icon: FileText }
+      ? { label: 'Source', to: serverImpact.source_route }
       : null,
     serverImpact?.journal_entry_id
-      ? { label: 'Journal entry', to: `/journal-entries?jeId=${serverImpact.journal_entry_id}`, icon: BookOpen }
+      ? { label: 'Journal entry', to: `/journal-entries?jeId=${serverImpact.journal_entry_id}` }
       : null,
     serverImpact?.journal_entry_id
-      ? { label: 'General ledger', to: `/general-ledger?jeId=${serverImpact.journal_entry_id}`, icon: Scale }
+      ? { label: 'General ledger', to: `/general-ledger?jeId=${serverImpact.journal_entry_id}` }
       : null,
-    { label: 'Full trace', to: tracePath(sourceDocType, sourceDocId, serverImpact?.journal_entry_id), icon: Route },
+    { label: 'Full trace', to: tracePath(sourceDocType, sourceDocId, serverImpact?.journal_entry_id) },
   ].filter((action): action is NonNullable<typeof action> => Boolean(action)) : []
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div className="px-4 py-2.5 border-b border-gray-100 flex items-start justify-between gap-3">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{title}</div>
-          <div className="text-xs text-gray-500 mt-0.5">{loading ? 'Running server preview...' : modeLabel}</div>
-        </div>
+    <div className="bg-white border border-gray-200 rounded overflow-hidden">
+      <div className="px-3 py-2 border-b border-gray-100 flex items-start justify-between gap-3">
+        <ErpSectionHeader title={title} description={loading ? 'Running server preview...' : modeLabel} />
         <div className="flex items-center gap-2">
-          <div className={`text-xs font-medium ${balanced && !missingAccount ? 'text-green-700' : 'text-amber-700'}`}>
+          <div className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium ${balanced && !missingAccount ? 'bg-green-50 text-green-700' : 'bg-orange-50 text-orange-700'}`}>
             {balanced ? 'Balanced' : `Out by ${fmt(totalDebit - totalCredit)}`}
           </div>
           {sourceDocId && (
@@ -262,7 +253,7 @@ export function GLImpactPanel({ companyId, sourceDocType, sourceDocId, postingDa
       </div>
 
       {serverImpact && sourceDocId && (
-        <div className="px-4 py-3 border-b border-gray-100 bg-gray-50 grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="px-3 py-2 border-b border-gray-100 bg-gray-50 grid grid-cols-2 lg:grid-cols-4 gap-x-3 gap-y-2">
           {[
             ['Posting date', serverImpact.posting_date || 'Not assigned'],
             ['Fiscal period', serverImpact.fiscal_period_name || 'Not assigned'],
@@ -270,51 +261,47 @@ export function GLImpactPanel({ companyId, sourceDocType, sourceDocId, postingDa
             ['Source', serverImpact.source_display_name || sourceDocType],
           ].map(([label, value]) => (
             <div key={label} className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</div>
-              <div className="text-xs font-medium text-gray-700 mt-0.5 truncate" title={value}>{value}</div>
+              <div className="text-[10px] font-medium uppercase tracking-wide text-gray-400">{label}</div>
+              <div className="text-xs text-gray-700 mt-0.5 truncate" title={value}>{value}</div>
             </div>
           ))}
         </div>
       )}
 
       {ruleExplanation && !loading && !error && (
-        <div className="px-4 py-2.5 border-b border-gray-100 flex items-start gap-2 text-xs text-gray-600">
+        <div className="px-3 py-2 border-b border-gray-100 flex items-start gap-2 text-xs text-gray-600">
           <GitBranch className="h-3.5 w-3.5 mt-0.5 text-gray-400 shrink-0" aria-hidden="true" />
           <span>{ruleExplanation}</span>
         </div>
       )}
 
       {actions.length > 0 && (
-        <div className="px-4 py-2 border-b border-gray-100 flex items-center gap-x-4 gap-y-2 flex-wrap">
-          {actions.map(action => {
-            const Icon = action.icon
-            return (
-              <Link key={action.label} to={action.to} className="inline-flex items-center gap-1.5 text-xs font-medium text-blue-700 hover:text-blue-900">
-                <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-                {action.label}
-              </Link>
-            )
-          })}
+        <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-x-4 gap-y-1.5 flex-wrap">
+          {actions.map(action => (
+            <Link key={action.label} to={action.to} className="text-xs text-blue-700 hover:text-blue-900 hover:underline">
+              {action.label}
+            </Link>
+          ))}
         </div>
       )}
 
       {error && (
-        <div className="mx-4 my-3 border border-red-200 bg-red-50 rounded-md px-3 py-2 text-xs text-red-700">
+        <div className="mx-3 my-3 border border-red-200 bg-red-50 rounded px-3 py-2 text-xs text-red-700">
           Server GL preview failed: {error}
         </div>
       )}
 
       {!error && !loading && rows.length === 0 ? (
-        <div className="px-4 py-6 text-sm text-gray-400">
+        <div className={ERP_EMPTY_CELL}>
           {sourceDocId ? 'No GL lines are produced by the current posting rule.' : 'Enter transaction lines to preview accounting impact.'}
         </div>
       ) : !error && rows.length > 0 ? (
         <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead className="bg-gray-50 border-b border-gray-200">
+          <table className={ERP_TABLE}>
+            <thead className={ERP_THEAD}>
               <tr>
                 {['GL Account', 'Account Name', 'Description', 'Debit', 'Credit', 'Source', 'Posting Rule', 'Cost Center', 'Department', 'Branch', 'Project', 'Created By Rule', 'Journal Link'].map(header => (
-                  <th key={header} className={`px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap ${['Debit', 'Credit'].includes(header) ? 'text-right' : 'text-left'}`}>
+                  <th key={header} className={`${ERP_TH} ${['Debit', 'Credit'].includes(header) ? 'text-right' : 'text-left'}`}>
                     {header}
                   </th>
                 ))}
@@ -323,28 +310,28 @@ export function GLImpactPanel({ companyId, sourceDocType, sourceDocId, postingDa
             <tbody className="divide-y divide-gray-100">
               {rows.map(row => (
                 <tr key={row.key} className={row.missingAccount ? 'bg-amber-50/40' : ''}>
-                  <td className="px-2 py-2 text-gray-900 whitespace-nowrap">
+                  <td className={`${ERP_TD} text-gray-900 whitespace-nowrap`}>
                     {row.accountId ? (
                       <Link
                         to={`/account-detail-ledger?accountId=${row.accountId}${serverImpact?.journal_entry_id ? `&jeId=${serverImpact.journal_entry_id}` : ''}`}
-                        className="font-medium text-blue-700 hover:text-blue-900"
+                        className="font-medium text-blue-700 hover:text-blue-900 hover:underline"
                       >
                         {row.accountCode}
                       </Link>
                     ) : row.accountCode}
                   </td>
-                  <td className="px-2 py-2 text-gray-700 whitespace-nowrap">{row.accountName || '—'}</td>
-                  <td className="px-2 py-2 text-gray-500 whitespace-nowrap">{row.description}</td>
-                  <td className="px-2 py-2 text-right font-mono tabular-nums text-gray-700">{row.debit ? fmt(row.debit) : '-'}</td>
-                  <td className="px-2 py-2 text-right font-mono tabular-nums text-gray-700">{row.credit ? fmt(row.credit) : '-'}</td>
-                  <td className="px-2 py-2 text-gray-500 whitespace-nowrap">{sourceDocType}</td>
-                  <td className="px-2 py-2 text-gray-500 font-mono text-[11px] whitespace-nowrap">{row.accountSource}</td>
-                  <td className="px-2 py-2 text-gray-500 font-mono text-[11px]">{row.costCenterId || '—'}</td>
-                  <td className="px-2 py-2 text-gray-500 font-mono text-[11px]">{row.departmentId || '—'}</td>
-                  <td className="px-2 py-2 text-gray-500 font-mono text-[11px]">{row.branchId || serverImpact?.branch_name || '—'}</td>
-                  <td className="px-2 py-2 text-gray-400">—</td>
-                  <td className="px-2 py-2 text-gray-500 whitespace-nowrap">{row.accountSource}</td>
-                  <td className="px-2 py-2 whitespace-nowrap">
+                  <td className={`${ERP_TD} whitespace-nowrap`}>{row.accountName || '—'}</td>
+                  <td className={`${ERP_TD} text-gray-500 whitespace-nowrap`}>{row.description}</td>
+                  <td className={ERP_TD_NUM}>{row.debit ? fmt(row.debit) : '-'}</td>
+                  <td className={ERP_TD_NUM}>{row.credit ? fmt(row.credit) : '-'}</td>
+                  <td className={`${ERP_TD} text-gray-500 whitespace-nowrap`}>{sourceDocType}</td>
+                  <td className="px-2 py-1.5 text-gray-500 font-mono text-[11px] whitespace-nowrap">{row.accountSource}</td>
+                  <td className="px-2 py-1.5 text-gray-500 font-mono text-[11px]">{row.costCenterId || '—'}</td>
+                  <td className="px-2 py-1.5 text-gray-500 font-mono text-[11px]">{row.departmentId || '—'}</td>
+                  <td className="px-2 py-1.5 text-gray-500 font-mono text-[11px]">{row.branchId || serverImpact?.branch_name || '—'}</td>
+                  <td className={`${ERP_TD} text-gray-400`}>—</td>
+                  <td className={`${ERP_TD} text-gray-500 whitespace-nowrap`}>{row.accountSource}</td>
+                  <td className={`${ERP_TD} whitespace-nowrap`}>
                     {serverImpact?.journal_entry_id
                       ? <Link to={`/journal-entries?jeId=${serverImpact.journal_entry_id}`} className="text-blue-700 hover:underline">{serverImpact.je_number || 'Open JE'}</Link>
                       : <span className="text-gray-400">Not posted</span>}
@@ -352,11 +339,11 @@ export function GLImpactPanel({ companyId, sourceDocType, sourceDocId, postingDa
                 </tr>
               ))}
             </tbody>
-            <tfoot className="bg-gray-50 border-t border-gray-200">
+            <tfoot className={ERP_TOTAL_ROW}>
               <tr>
-                <td colSpan={3} className="px-2 py-2 text-right font-semibold text-gray-700">Totals</td>
-                <td className="px-2 py-2 text-right font-mono tabular-nums font-bold text-gray-900">{fmt(totalDebit)}</td>
-                <td className="px-2 py-2 text-right font-mono tabular-nums font-bold text-gray-900">{fmt(totalCredit)}</td>
+                <td colSpan={3} className="px-2 py-1.5 text-right font-semibold text-gray-700">Totals</td>
+                <td className="px-2 py-1.5 text-right font-mono tabular-nums font-semibold text-gray-900">{fmt(totalDebit)}</td>
+                <td className="px-2 py-1.5 text-right font-mono tabular-nums font-semibold text-gray-900">{fmt(totalCredit)}</td>
                 <td colSpan={8} />
               </tr>
             </tfoot>

@@ -42,7 +42,7 @@ Maturity against this standard (structure/exposure, not accounting correctness �
 
 Target anatomy for every transactional document (extends UI Principle 39):
 
-**Final 2026-07-13 override:** one routed workspace per transaction (no separate View/Open page); short company-accent header with document number, status, clickable party name, three primary metrics, and status-aware actions; one-line Posting/Collection/Lock/workflow strip; exactly four compact cards (Document, Party, Context, Quick Actions); compact one-line tabs including Related Party; active tab content; footer metadata. There is no right rail. The older diagram below is retained only as design history where it conflicts with this override.
+**Final 2026-07-13 override:** one routed workspace per transaction (no separate View/Open page); compact company-accent header with document number, Posting/Collection/Lock chips, clickable party name, three primary metrics, and the only visible document actions; exactly three compact cards (Document, Party, Context); compact one-line tabs including Workflow and Related Party; active tab content; footer metadata. There is no right rail and no Quick Actions card. The older diagram below is retained only as design history where it conflicts with this override.
 
 ```
 Route model:  /module/docs            list (DataTable + filters + toolbar)
@@ -72,7 +72,8 @@ Rules:
 2. **View mode is the document of record**: posted documents open read-only with the posted JE, tax rows, and audit facts visible without extra clicks.
 3. **The modal-overlay pattern is deprecated** for documents (retained for small masters and confirmations). Documents get routes so auditors, approvers, and support can link to them.
 4. **Toolbar order is fixed** (UI Principle 16); inapplicable actions are disabled, not hidden; destructive actions live under More ▾ with reason capture (void reason codes already exist).
-5. **No right rail and no duplicate header payload.** The four-card band is intentionally short. Full counterparty insight belongs in the Related Party tab; financial, validation, audit, related-document, GL, tax, and system details belong in their dedicated tabs. Do not duplicate them in sidebar cards or oversized header cards.
+5. **No right rail, no Quick Actions card, and no duplicate header payload.** The three-card band is intentionally short. Actions belong only in the header toolbar; full counterparty insight belongs in the Related Party tab; workflow belongs in Workflow/Approval; financial, validation, audit, related-document, GL, tax, and system details belong in their dedicated tabs. Do not duplicate them in sidebar cards or oversized header cards.
+6. **Enterprise polish is standardized, not page-specific.** Every tab starts with a compact section header; tables share one rhythm for headers, rows, numeric alignment, totals, hover states, and empty states; corners stay sharp, borders neutral, shadows light, and color is used only for state or interaction.
 
 ## 4. Standard Tab Set
 
@@ -88,7 +89,7 @@ Rules:
 | Activity Timeline | Semantic lifecycle story (created → approved → posted → …) | All | Depends on PXL-DA-016 `transaction_events`; until then the Audit Trail tab serves both purposes. Do NOT build two tabs before DA-016 lands — merge. |
 | Related Documents | Document chain, both directions (section 12) | All | Includes JE ↔ source doc links, application links (OR↔SI, PV↔VB, VC↔VB, CM↔SI), certificates (PV→2307), returns/exports containing this doc. |
 | Related Party | Embedded customer/vendor profile for the transaction | Sales and purchasing docs | Identity, contacts, addresses, tax profile, credit profile, outstanding AR/AP, recent transactions, aging summary, payment information, and sales/purchasing information. This replaces the old permanent customer/vendor snapshot in the header/right rail. |
-| Workflow | Status-flow visualization with allowed next transitions | All | Until a workflow engine exists this is the status strip in the header, not a separate tab. |
+| Workflow | Status-flow visualization with allowed next transitions | All | Dedicated tab. The header only keeps compact current-state chips; it does not permanently render the lifecycle path. |
 | Attachments | Supporting files (supplier invoice scan, OR image, contract) | All | No storage integration exists today anywhere except the CAS attachment register; Phase 2+. BIR substantiation makes this High value for VB/PV/CV. |
 | Notes | Internal remarks thread | All | Today a single `remarks`/`memo` field exists; keep the field, add threaded notes only when requested. |
 | System Information | IDs, source line provenance, number-series info, fiscal period, snapshot/hash links | All | Collapsed; auditors and support only (role-gated visibility). |
@@ -104,6 +105,8 @@ Not applicable / deferred by type:
 ## 5. Standard Line Grid
 
 One shared grid component (revive the dead `DataTable`, extend for editing) with column groups. Visibility: **R** required, **O** optional (on by default), **H** hidden by default (column picker), **X** not applicable. "Auto" = populated by the system, editable only where noted.
+
+Current implementation direction: the transaction line grid is the reusable enterprise table framework. It supports system views (**Default, Accounting, Tax, Audit, Inventory, Sales, Custom**), user-saved custom views, persisted visible columns/order/widths/pinned columns/density/sort/filter state, grouped column chooser with search and reset actions, drag-and-drop ordering, column resizing, compact/comfortable/spacious density, export, refresh, sticky headers/totals, and sticky pinned identity columns. Future transaction modules must adopt this framework instead of rebuilding table controls.
 
 | Column | Group | SI / Cash Sale | VB / Cash Purchase | OR | PV | JE | CM/DM | VC |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -211,7 +214,7 @@ Contract (PXL-DA-002 owns the enforcement): every JE stores its source (`referen
 
 ## 13. Audit Trail and Workflow Standard
 
-Every document view shows, without navigation (UI Principle 26): Prepared/Created by+at · Last edited by+at · Approved by+at (and SoD identity) · Posted by+at · Voided/Cancelled by+at + reason code + memo · Lock status (draft-editable vs frozen by PXL-DA-011 guards). Below the facts, the `AuditTrailSection` renders `sys_audit_logs` history (component exists, unused — PXL-AUD-050). Workflow: the header status strip shows the document's actual flow (from the matrix status columns) with the current state highlighted and permitted transitions as the enabled toolbar actions; statuses Draft / Submitted / Approved / Rejected / Posted / Cancelled / Voided / Reversed / Bounced render via the shared `StatusBadge` vocabulary.
+Every document view exposes Prepared/Created by+at · Last edited by+at · Approved by+at (and SoD identity) · Posted by+at · Voided/Cancelled by+at + reason code + memo · Lock status (draft-editable vs frozen by PXL-DA-011 guards) in the Audit and Workflow/Approval tabs, not in the permanent header. Below the facts, the `AuditTrailSection` renders `sys_audit_logs` history (component exists, unused — PXL-AUD-050). Workflow: the Workflow tab shows the document's actual flow (from the matrix status columns) with the current state highlighted and permitted transitions represented by the enabled toolbar actions; statuses Draft / Submitted / Approved / Rejected / Posted / Cancelled / Voided / Reversed / Bounced render through the shared status vocabulary.
 
 ## 14. Configurable Experience
 

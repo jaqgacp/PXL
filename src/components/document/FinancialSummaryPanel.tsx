@@ -1,4 +1,5 @@
 import { AmountCell } from '@/components/ui/shared'
+import { ErpSectionHeader } from '@/components/document/ErpSection'
 
 // ─────────────────────────────────────────────────────────────
 // FinancialSummaryPanel — shared, per-document-type summary card
@@ -47,20 +48,20 @@ function Row({ row }: { row: SummaryRow }) {
 export function FinancialSummaryPanel({
   title = 'Financial Summary',
   groups,
+  description = 'Computed financial totals used during posting.',
 }: {
   title?: string
+  description?: string
   groups: SummaryGroup[]
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-2">
-      <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 pb-2 border-b border-gray-100">
-        {title}
-      </div>
+    <div className="bg-white border border-gray-200 rounded p-3 space-y-2">
+      <ErpSectionHeader title={title} description={description} className="pb-2 border-b border-gray-100" />
       {groups.map(group => (
         group.tone === 'info' ? (
-          <div key={group.key} className="mt-1 bg-blue-50/60 rounded-md px-3 py-2 space-y-1">
+          <div key={group.key} className="mt-1 bg-gray-50 rounded px-2.5 py-2 space-y-1">
             {group.rows.map(r => <Row key={r.key} row={r} />)}
-            {group.note && <p className="text-[10px] text-blue-500 leading-snug">{group.note}</p>}
+            {group.note && <p className="text-[10px] text-gray-500 leading-snug">{group.note}</p>}
           </div>
         ) : (
           <div key={group.key} className="space-y-1.5">

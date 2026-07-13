@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { AmountCell } from '@/components/ui/shared'
+import { ErpSectionHeader, ERP_EMPTY_CELL, ERP_TABLE, ERP_THEAD, ERP_TH, ERP_TD, ERP_TD_NUM } from '@/components/document/ErpSection'
 
 // ─────────────────────────────────────────────────────────────
 // TaxImpactPanel — per-document tax ledger view (Standard
@@ -80,36 +81,41 @@ export function TaxImpactPanel({
   const showFallback = !loading && rows.length === 0 && hasFallback
 
   return (
-    <div className="space-y-3">
+    <div className="bg-white border border-gray-200 rounded p-3 space-y-2">
+      <ErpSectionHeader
+        title="Tax Impact"
+        description="Tax ledger rows produced by the posting engine."
+        className="pb-2 border-b border-gray-100"
+      />
       {loading ? (
-        <div className="text-sm text-gray-400">Loading tax impact…</div>
+        <div className="px-3 py-4 text-center text-xs text-gray-400">Loading tax impact…</div>
       ) : rows.length === 0 && !hasFallback ? (
-        <div className="text-sm text-gray-500">No VAT ledger rows for this document.</div>
+        <div className={ERP_EMPTY_CELL}>No VAT ledger rows for this document.</div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
+        <div className="overflow-x-auto border border-gray-200 rounded">
+          <table className={ERP_TABLE}>
+            <thead className={ERP_THEAD}>
               <tr>
                 {['Tax Type', 'ATC', 'VAT Code', 'Tax Base', 'Rate', 'Amount', 'Recoverable', 'Payable', 'Tax Ledger Entry', 'BIR Return', 'Status', 'Source Rule'].map((h, i) => (
-                  <th key={h} className={`px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap ${i >= 3 && i <= 7 ? 'text-right' : 'text-left'}`}>{h}</th>
+                  <th key={h} className={`${ERP_TH} ${i >= 3 && i <= 7 ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {showFallback ? (
                 <tr>
-                  <td className="px-2 py-2 text-xs text-gray-800 whitespace-nowrap">{fallbackLabel}</td>
-                  <td className="px-2 py-2 text-xs text-gray-400">—</td>
-                  <td className="px-2 py-2 text-xs text-gray-400">—</td>
-                  <td className="px-2 py-2 text-xs text-right"><AmountCell amount={fallbackBase ?? 0} /></td>
-                  <td className="px-2 py-2 text-xs text-right text-gray-500">{fallbackRate != null ? `${fallbackRate}%` : '—'}</td>
-                  <td className="px-2 py-2 text-xs text-right font-semibold"><AmountCell amount={fallbackAmount ?? 0} /></td>
-                  <td className="px-2 py-2 text-xs text-right text-gray-400">—</td>
-                  <td className="px-2 py-2 text-xs text-right"><AmountCell amount={fallbackAmount ?? 0} /></td>
-                  <td className="px-2 py-2 text-xs text-gray-400">Not posted</td>
-                  <td className="px-2 py-2 text-xs text-gray-400">Not assigned</td>
-                  <td className="px-2 py-2 text-xs"><span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-[11px]">Estimated</span></td>
-                  <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">Draft tax calculation</td>
+                  <td className={`${ERP_TD} text-gray-800 whitespace-nowrap`}>{fallbackLabel}</td>
+                  <td className={`${ERP_TD} text-gray-400`}>—</td>
+                  <td className={`${ERP_TD} text-gray-400`}>—</td>
+                  <td className={ERP_TD_NUM}><AmountCell amount={fallbackBase ?? 0} /></td>
+                  <td className={`${ERP_TD_NUM} text-gray-500`}>{fallbackRate != null ? `${fallbackRate}%` : '—'}</td>
+                  <td className={`${ERP_TD_NUM} font-semibold text-gray-900`}><AmountCell amount={fallbackAmount ?? 0} /></td>
+                  <td className={`${ERP_TD_NUM} text-gray-400`}>—</td>
+                  <td className={ERP_TD_NUM}><AmountCell amount={fallbackAmount ?? 0} /></td>
+                  <td className={`${ERP_TD} text-gray-400`}>Not posted</td>
+                  <td className={`${ERP_TD} text-gray-400`}>Not assigned</td>
+                  <td className={ERP_TD}><span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-[11px]">Estimated</span></td>
+                  <td className={`${ERP_TD} text-gray-500 whitespace-nowrap`}>Draft tax calculation</td>
                 </tr>
               ) : rows.map(r => {
                 const atc = relatedValue(r.atc_codes)?.code
@@ -118,22 +124,22 @@ export function TaxImpactPanel({
                 const payable = r.tax_kind === 'output_vat' || r.tax_kind === 'percentage_tax' || r.tax_kind === 'ewt_payable'
                 return (
                   <tr key={r.id}>
-                    <td className="px-2 py-2 text-xs text-gray-800 whitespace-nowrap">{KIND_LABEL[r.tax_kind] ?? r.tax_kind}</td>
-                    <td className="px-2 py-2 text-xs font-mono text-gray-600">{atc ?? '—'}</td>
-                    <td className="px-2 py-2 text-xs font-mono text-gray-600">{vatCode ?? '—'}</td>
-                    <td className="px-2 py-2 text-xs text-right"><AmountCell amount={Number(r.tax_base)} /></td>
-                    <td className="px-2 py-2 text-xs text-right text-gray-500">{r.tax_rate != null ? `${Number(r.tax_rate)}%` : '—'}</td>
-                    <td className="px-2 py-2 text-xs text-right font-semibold"><AmountCell amount={Number(r.tax_amount)} /></td>
-                    <td className="px-2 py-2 text-xs text-right">{recoverable ? <AmountCell amount={Number(r.tax_amount)} /> : '—'}</td>
-                    <td className="px-2 py-2 text-xs text-right">{payable ? <AmountCell amount={Number(r.tax_amount)} /> : '—'}</td>
-                    <td className="px-2 py-2 text-[11px] font-mono text-gray-500" title={r.id}>{r.id.slice(0, 8)}…</td>
-                    <td className="px-2 py-2 text-xs text-gray-400 whitespace-nowrap">Not assigned</td>
-                    <td className="px-2 py-2 text-xs">
+                    <td className={`${ERP_TD} text-gray-800 whitespace-nowrap`}>{KIND_LABEL[r.tax_kind] ?? r.tax_kind}</td>
+                    <td className={`${ERP_TD} font-mono text-gray-600`}>{atc ?? '—'}</td>
+                    <td className={`${ERP_TD} font-mono text-gray-600`}>{vatCode ?? '—'}</td>
+                    <td className={ERP_TD_NUM}><AmountCell amount={Number(r.tax_base)} /></td>
+                    <td className={`${ERP_TD_NUM} text-gray-500`}>{r.tax_rate != null ? `${Number(r.tax_rate)}%` : '—'}</td>
+                    <td className={`${ERP_TD_NUM} font-semibold text-gray-900`}><AmountCell amount={Number(r.tax_amount)} /></td>
+                    <td className={ERP_TD_NUM}>{recoverable ? <AmountCell amount={Number(r.tax_amount)} /> : '—'}</td>
+                    <td className={ERP_TD_NUM}>{payable ? <AmountCell amount={Number(r.tax_amount)} /> : '—'}</td>
+                    <td className="px-2 py-1.5 text-[11px] font-mono text-gray-500" title={r.id}>{r.id.slice(0, 8)}…</td>
+                    <td className={`${ERP_TD} text-gray-400 whitespace-nowrap`}>Not assigned</td>
+                    <td className={ERP_TD}>
                       {r.is_reversal
                         ? <span className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 text-[11px]">Reversal</span>
                         : <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 text-[11px]">{r.filing_status}</span>}
                     </td>
-                    <td className="px-2 py-2 text-xs text-gray-500 whitespace-nowrap">Posting engine · {r.tax_kind}</td>
+                    <td className={`${ERP_TD} text-gray-500 whitespace-nowrap`}>Posting engine · {r.tax_kind}</td>
                   </tr>
                 )
               })}
