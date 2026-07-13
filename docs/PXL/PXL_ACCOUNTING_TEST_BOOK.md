@@ -636,6 +636,19 @@ Status: Executed Passing (session 85, 2026-07-13) in `supabase/tests/039_tax_cod
 | 5 | A VAT code used through the tax ledger, then re-pointed | The tax code reads as used through its VAT code; the used VAT code's classification is frozen. |
 | 6 | Deprecate the 12% version after the 14% successor exists | The historical 12% version keeps its 12.00 rate, so historical VAT/PT reports remain unchanged. |
 
+## FINANCIAL-CLOSE-001 - JE Classification, Trial Balance Modes, and Year-End Close
+
+Status: Executed Passing (session 86, 2026-07-13) in `supabase/tests/040_financial_close_readiness_test.sql`, 17 assertions. Related findings: PXL-AUD-013, PXL-DA-014.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | Post a regular revenue JE (100,000) and a regular expense JE (30,000) | Both post; `fn_post_manual_je` stores `entry_class='regular'` by default. |
+| 2 | Post a 5,000 rent accrual with `p_entry_class='adjusting'` | Posts with `entry_class='adjusting'`; a manual JE with `p_entry_class='closing'` is rejected. |
+| 3 | Unadjusted vs adjusted Trial Balance for the rent expense account | Unadjusted (regular+opening) = 30,000; adjusted (+adjusting) = 35,000. |
+| 4 | `fn_close_fiscal_year` for the open year | Posts one balanced closing journal (`entry_class='closing'`, `reference_doc_type='CLOSE'`); returns the JE id. |
+| 5 | Post-closing Trial Balance (regular+opening+adjusting+closing) | Revenue and expense accounts net to zero; retained earnings carries net income 100,000 − 35,000 = 65,000. |
+| 6 | Fiscal year + periods after close | Year status = `closed`, all periods `is_locked`; re-closing the year is rejected. |
+
 ## PV-OR-HEADER-TOTALS-001 - Header/Line Cash Total Integrity
 
 Status: Not Yet Implemented. Related findings: PXL-AUD-038, PXL-AUD-048.

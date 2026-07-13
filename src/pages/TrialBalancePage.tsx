@@ -23,6 +23,17 @@ const TYPE_LABEL: Record<string, string> = {
   asset: 'Assets', liability: 'Liabilities', equity: 'Equity', revenue: 'Revenue', expense: 'Expenses',
 }
 
+// Trial Balance modes filter journal entries by their accounting classification.
+type TBMode = 'unadjusted' | 'adjusted' | 'postclosing'
+const MODE_CLASSES: Record<TBMode, string[]> = {
+  unadjusted: ['regular', 'opening'],
+  adjusted: ['regular', 'opening', 'adjusting'],
+  postclosing: ['regular', 'opening', 'adjusting', 'closing'],
+}
+const MODE_LABEL: Record<TBMode, string> = {
+  unadjusted: 'Unadjusted', adjusted: 'Adjusted', postclosing: 'Post-Closing',
+}
+
 export default function TrialBalancePage() {
   const { companyId } = useAppCtx()
   const [searchParams] = useSearchParams()
@@ -35,7 +46,7 @@ export default function TrialBalancePage() {
   const [dateFrom, setDateFrom] = useState(firstOfYear())
   const [dateTo, setDateTo] = useState(today())
   const [includeZero, setIncludeZero] = useState(false)
-  const [adjusted, setAdjusted] = useState(false)
+  const [mode, setMode] = useState<TBMode>('unadjusted')
 
   const [rows, setRows] = useState<TBRow[]>([])
   const [loading, setLoading] = useState(false)
@@ -76,11 +87,12 @@ export default function TrialBalancePage() {
       start = p.start_date; end = p.end_date
     }
     setLoading(true)
+    const classes = MODE_CLASSES[mode]
     const [movRes, openRes] = await Promise.all([
       supabase.from('vw_general_ledger').select('account_id,debit_amount,credit_amount')
-        .eq('company_id', companyId).gte('je_date', start).lte('je_date', end),
+        .eq('company_id', companyId).in('entry_class', classes).gte('je_date', start).lte('je_date', end),
       supabase.from('vw_general_ledger').select('account_id,debit_amount,credit_amount')
-        .eq('company_id', companyId).lt('je_date', start),
+        .eq('company_id', companyId).in('entry_class', classes).lt('je_date', start),
     ])
     const mov = aggregate((movRes.data as GLAgg[]) || [])
     const open = aggregate((openRes.data as GLAgg[]) || [])
@@ -103,7 +115,6 @@ export default function TrialBalancePage() {
   const visible = rows.filter(r => {
     if (requestedAccountId && r.id !== requestedAccountId) return false
     const nonZero = Math.abs(r.openingNet) > 0.005 || r.periodDebit > 0.005 || r.periodCredit > 0.005 || Math.abs(r.closingNet) > 0.005
-    if (adjusted) return Math.abs(r.closingNet) > 0.005
     if (!includeZero) return nonZero
     return true
   })
@@ -155,11 +166,16 @@ export default function TrialBalancePage() {
               className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
           </>
         )}
+        <div className="flex rounded border border-gray-300 overflow-hidden" title="Trial Balance mode">
+          {(['unadjusted', 'adjusted', 'postclosing'] as TBMode[]).map((m, i) => (
+            <button key={m} onClick={() => { setMode(m); setApplied(false) }}
+              className={`px-3 py-1.5 text-xs font-medium ${i > 0 ? 'border-l border-gray-300' : ''} ${mode === m ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+              {MODE_LABEL[m]}
+            </button>
+          ))}
+        </div>
         <label className="flex items-center gap-1.5 text-xs text-gray-600">
           <input type="checkbox" checked={includeZero} onChange={e => setIncludeZero(e.target.checked)} /> Include zero-balance
-        </label>
-        <label className="flex items-center gap-1.5 text-xs text-gray-600">
-          <input type="checkbox" checked={adjusted} onChange={e => setAdjusted(e.target.checked)} /> Adjusted TB
         </label>
         <button onClick={apply} disabled={loading}
           className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">

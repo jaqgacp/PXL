@@ -720,3 +720,35 @@ Related Documents:
 Related Source Files:
 
 - None changed in this architecture pass.
+
+## DEC-019 - Year-End Close Posts Directly to Retained Earnings
+
+Date: 2026-07-13 (session 86)
+
+Context: Closing PXL-AUD-013 + PXL-DA-014 required a real accounting close process. The choice was whether to close profit-and-loss accounts through an intermediate Income Summary account (two-step: P&L → Income Summary → Retained Earnings) or directly to Retained Earnings.
+
+Decision: `fn_close_fiscal_year` posts one balanced closing journal that debits/credits each revenue and expense account by its year-to-date balance and carries the net (net income or loss) directly to the fiscal year's `retained_earnings_id` equity account. No Income Summary account is used. The journal is classified `entry_class='closing'` with `reference_doc_type='CLOSE'`; the year's periods are then locked and the fiscal year status set to `closed`. Manual JEs may not use the `closing` classification (engine-only), and re-closing a closed year is rejected. Retained earnings is sourced from `fiscal_years.retained_earnings_id` (already modeled), so no new company config column was added.
+
+Rationale:
+
+- Direct-to-retained-earnings close is a valid, widely used method and satisfies the "retained earnings handling" requirement without introducing a new mandatory Income Summary config account for every company.
+- Keeps the config surface minimal and the closing journal auditable as a single entry per year.
+- Trial Balance modes (unadjusted = regular+opening, adjusted = +adjusting, post-closing = +closing) read `journal_entries.entry_class`, so a post-closing TB correctly shows revenue/expense at zero with net income in retained earnings.
+
+Alternatives Considered:
+
+- Income Summary intermediate account. Rejected for now: requires a new mandatory config account and a second journal for negligible additional auditability; can be added later as an enhancement if a client's chart requires it.
+- A separate FS-line mapping table for statement presentation. Deferred to backlog: `account_type` + `normal_balance` already drive basic IS/BS grouping; a configurable FS-line mapping is an enhancement, not a close-correctness defect.
+
+Related Documents:
+
+- `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-AUD-013, PXL-DA-014)
+- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md`
+- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (FINANCIAL-CLOSE-001)
+
+Related Source Files:
+
+- `supabase/migrations/20260713000013_je_classification_and_close.sql`
+- `src/pages/TrialBalancePage.tsx`
+- `src/pages/JournalEntriesPage.tsx`
+- `supabase/tests/040_financial_close_readiness_test.sql`

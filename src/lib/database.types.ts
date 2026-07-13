@@ -6447,6 +6447,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
+          entry_class: string
           fiscal_period_id: string | null
           id: string
           is_auto_reversal: boolean
@@ -6468,6 +6469,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          entry_class?: string
           fiscal_period_id?: string | null
           id?: string
           is_auto_reversal?: boolean
@@ -6489,6 +6491,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
+          entry_class?: string
           fiscal_period_id?: string | null
           id?: string
           is_auto_reversal?: boolean
@@ -12313,6 +12316,7 @@ export type Database = {
           credit_amount: number | null
           debit_amount: number | null
           department_id: string | null
+          entry_class: string | null
           fiscal_period_id: string | null
           is_auto_reversal: boolean | null
           je_date: string | null
@@ -13116,6 +13120,14 @@ export type Database = {
         Args: { p_schedule_id: string }
         Returns: undefined
       }
+      fn_close_fiscal_year: {
+        Args: {
+          p_close_date?: string
+          p_company_id: string
+          p_fiscal_year_id: string
+        }
+        Returns: string
+      }
       fn_company_ap_ewt_policy: {
         Args: { p_company_id: string }
         Returns: string
@@ -13436,6 +13448,7 @@ export type Database = {
           p_branch_id: string
           p_company_id: string
           p_description: string
+          p_entry_class?: string
           p_je_date: string
           p_lines: Json
           p_reference_doc_type: string

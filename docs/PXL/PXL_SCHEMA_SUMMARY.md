@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-13. Migrations scanned: 97. Tests present: 38.
+Generated: 2026-07-13. Migrations scanned: 98. Tests present: 39.
 
-## Functions (236)
+## Functions (237)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -49,6 +49,7 @@ Generated: 2026-07-13. Migrations scanned: 97. Tests present: 38.
 | `fn_cancel_purchase_order` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_cancel_revenue_recognition_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_capture_cas_document_void` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
+| `fn_close_fiscal_year` | `20260713000013_je_classification_and_close.sql` | 1 |
 | `fn_company_ap_ewt_policy` | `20260713000010_withholding_basis_policy.sql` | 1 |
 | `fn_company_ewt_payable_enabled` | `20260713000011_withholding_profile_gates.sql` | 1 |
 | `fn_company_twa_auto_ewt_enabled` | `20260713000011_withholding_profile_gates.sql` | 1 |
@@ -122,7 +123,7 @@ Generated: 2026-07-13. Migrations scanned: 97. Tests present: 38.
 | `fn_post_goods_issue` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_goods_issue_source_locked_impl` | `20260712000002_aud051_numbering_registry_alignment.sql` | 1 |
 | `fn_post_inter_branch_transfer` | `20260711000001_posting_engine_completion.sql` | 2 |
-| `fn_post_manual_je` | `20260704000001_je_line_dimensions.sql` | 2 |
+| `fn_post_manual_je` | `20260713000013_je_classification_and_close.sql` | 3 |
 | `fn_post_payment_voucher` | `20260711000001_posting_engine_completion.sql` | 7 |
 | `fn_post_petty_cash_replenishment` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_post_physical_count` | `20260711000001_posting_engine_completion.sql` | 2 |
@@ -259,7 +260,7 @@ Generated: 2026-07-13. Migrations scanned: 97. Tests present: 38.
 | `vw_debit_memo_register` | `20260629000005_sprint5_views.sql` | 1 |
 | `vw_deposits_in_transit` | `20260630000024_banking_treasury_functions.sql` | 1 |
 | `vw_ewt_summary_ap` | `20260711000002_accounting_trace_reports.sql` | 6 |
-| `vw_general_ledger` | `20260704000001_je_line_dimensions.sql` | 3 |
+| `vw_general_ledger` | `20260713000013_je_classification_and_close.sql` | 4 |
 | `vw_input_vat_review` | `20260711000002_accounting_trace_reports.sql` | 5 |
 | `vw_output_vat_review` | `20260711000002_accounting_trace_reports.sql` | 3 |
 | `vw_outstanding_checks` | `20260630000024_banking_treasury_functions.sql` | 1 |
@@ -356,7 +357,7 @@ Generated: 2026-07-13. Migrations scanned: 97. Tests present: 38.
 | `item_categories` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `items` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `itr_filings` | `20260701000004_income_tax.sql` | 0 | `—` |
-| `journal_entries` | `20260629000013_gl_core.sql` | 6 | `20260710000003_posting_engine_preview_trace.sql` |
+| `journal_entries` | `20260629000013_gl_core.sql` | 7 | `20260713000013_je_classification_and_close.sql` |
 | `journal_entry_lines` | `20260629000013_gl_core.sql` | 3 | `20260704000001_je_line_dimensions.sql` |
 | `mcit_computations` | `20260701000004_income_tax.sql` | 0 | `—` |
 | `nolco_schedule` | `20260701000004_income_tax.sql` | 0 | `—` |

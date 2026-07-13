@@ -14,6 +14,7 @@ type JE = {
   je_number: string; je_date: string; fiscal_period_id: string | null
   description: string | null; reference_doc_type: string | null; reference_doc_id: string | null
   status: JEStatus; total_debit: number; total_credit: number
+  entry_class: string | null
   auto_reverse: boolean; is_auto_reversal: boolean; reversed_by_je_id: string | null
   created_at: string; updated_at: string
 }
@@ -108,7 +109,7 @@ export default function JournalEntriesPage() {
   useEffect(() => { if (companyId) { load(); loadRefs() } }, [load, loadRefs, companyId])
 
   const openNew = () => {
-    setEditJE({ company_id: companyId!, branch_id: branchId || null, je_date: today(), description: '', auto_reverse: false })
+    setEditJE({ company_id: companyId!, branch_id: branchId || null, je_date: today(), description: '', auto_reverse: false, entry_class: 'regular' })
     setLines([newLine(), newLine()])
     setError('')
     setMode('edit')
@@ -199,6 +200,7 @@ export default function JournalEntriesPage() {
         p_reference_doc_type: 'MANUAL',
         p_auto_reverse: !!editJE.auto_reverse,
         p_lines: payload,
+        p_entry_class: editJE.entry_class || 'regular',
       })
       if (e) throw e
       await load()
@@ -409,6 +411,19 @@ export default function JournalEntriesPage() {
               <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Description</label>
               <input value={editJE?.description || ''} disabled={readOnly}
                 onChange={e => setEditJE(v => ({ ...v, description: e.target.value }))} className={inputCls} />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Classification</label>
+              {readOnly ? (
+                <div className={inputCls}>{(editJE?.entry_class || 'regular').replace(/^\w/, c => c.toUpperCase())}</div>
+              ) : (
+                <select value={editJE?.entry_class || 'regular'}
+                  onChange={e => setEditJE(v => ({ ...v, entry_class: e.target.value }))} className={inputCls}>
+                  <option value="regular">Regular</option>
+                  <option value="adjusting">Adjusting</option>
+                  <option value="opening">Opening balance</option>
+                </select>
+              )}
             </div>
             {!readOnly && (
               <label className="flex items-center gap-2 text-sm text-gray-700">
