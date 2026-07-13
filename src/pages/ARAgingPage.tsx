@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AmountCell } from '@/components/ui/shared'
@@ -37,6 +38,7 @@ const DOC_LABELS: Record<string, string> = { SI: 'Invoice', OR: 'Receipt', CM: '
 
 export default function ARAgingPage() {
   const { companyId } = useAppCtx()
+  const [searchParams] = useSearchParams()
   const [tab, setTab] = useState<Tab>('aging')
 
   // ── AR Aging state ─────────────────────────────────────────
@@ -55,6 +57,8 @@ export default function ARAgingPage() {
   const [ledgerLoading, setLedgerLoading] = useState(false)
 
   const [customers, setCustomers] = useState<CustomerRef[]>([])
+  const linkedCustomerId = searchParams.get('customerId') || ''
+  const linkedTab = searchParams.get('tab')
 
   useEffect(() => {
     if (!companyId) return
@@ -62,6 +66,14 @@ export default function ARAgingPage() {
       .eq('company_id', companyId).eq('is_active', true).order('registered_name')
       .then(({ data }) => setCustomers(data as CustomerRef[] || []))
   }, [companyId])
+
+  useEffect(() => {
+    if (linkedTab === 'aging' || linkedTab === 'ledger') setTab(linkedTab)
+    if (linkedCustomerId) {
+      setAgingCustomer(linkedCustomerId)
+      setLedgerCustomer(linkedCustomerId)
+    }
+  }, [linkedCustomerId, linkedTab])
 
   const runAging = useCallback(async () => {
     if (!companyId) return

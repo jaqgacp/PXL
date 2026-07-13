@@ -1,6 +1,6 @@
 # AI State
 
-Last updated: 2026-07-12 (session 67 — Sales Invoice built out as the complete reference workspace: Primary Information, 12 tabs, Line Detail Panel, full sidebar, header statuses; draft-form relocation + register actions remain)
+Last updated: 2026-07-13 (session 69 — compact Sales Invoice header/cards and Related Party tab implemented; routed draft/new consolidation and schema-backed master-data gaps remain)
 
 ## Project Status
 
@@ -8,7 +8,7 @@ PXL is a React 19 + TypeScript + Vite frontend backed by Supabase/PostgreSQL. Au
 
 ## Current Active Task
 
-**AIQ-015 — Standard Transaction Workspace**, phased and monitored (see the AIQ-015 Phase Plan in `AI/AI_WORK_QUEUE.md`; in-session task list mirrors it). Pilot = Sales Invoice (blueprint §17), adopt-on-touch. Shipped this session: Phase 0 governance (DEC-015 + queue + issue-routing), Phase 1 shell (`src/components/document/DocumentLayout.tsx`), and the Phase 2/3 SI pilot — a deep-linkable read-only document view (`src/pages/SalesInvoiceDocumentPage.tsx`, route `/sales-invoices/:id`, reachable via "Open ↗" from the list) rendering `DocumentLayout` with tabs (Lines · GL Impact · Posting Validation · Audit Trail · Related) + right-rail Financial Summary/Party + workflow strip. build+lint green, HMR-verified; existing list+modal untouched. Also shipped: Phase 4 (`FinancialSummaryPanel` + `PostingValidationPanel` with live `useTransactionReadiness` preflight) and Phase 5 (`LineGrid` column-group grid + VAT-only `TaxImpactPanel`, user-approved scope — EWT/CWT deferred pending the paused AUD-031/032/033). All six shared components now exist under `src/components/document/`. Next: Phase 6 — roll `DocumentLayout` across the core four (OR/VB/PV) adopt-on-touch, then secondary docs + `RelatedDocumentsTab` + config layer. Discovered defects route to the audit findings doc in severity order (DEC-015); enhancements to vision/backlog.
+**AIQ-015 — Standard Transaction Workspace**, phased and monitored. The Sales Invoice is the master template. Sessions 68-69 implemented the routed dense viewing/lifecycle standard and then compacted the permanent header/card payload: company-accent short header and tint, clickable customer name, three primary metrics, one-line state/workflow strip, exactly four short information cards, no right rail, one-line tabs including Related Party, profile/chooser-based professional line grid with inline expansion and totals, and expanded accounting/tax/validation/approval/audit/supporting tabs. Full customer/vendor profile data now belongs in Related Party; audit/system/related/accounting/tax details live only in their dedicated tabs. `companies.workspace_accent_color` is governed through Company Setup and migration `20260713000001_company_workspace_appearance.sql`. Unsupported fields remain visibly unassigned/untracked; none were hardcoded. Next is P5B: route-driven draft/new editing, register cleanup, and missing master-data/storage entities before rollout to Vendor Bill.
 
 ### Session 64 (previous, shipped) — PXL-DA-019 first CAS slice
 
@@ -33,7 +33,7 @@ The first safe PXL-DA-019 CAS/BIR control slice is built and fully verified loca
 
 ## Next Recommended Step
 
-Execute the AIQ-015 phase plan in order. Immediate next: **P1 Shell** — build `DocumentLayout` (header bar + StatusBadge + workflow strip + fixed toolbar + tabs shell + right-rail zone), `WorkflowStrip`, and `TransactionTabs` in `src/components/document/`, reusing `src/components/ui/shared.tsx` atoms; then P2 routes for the Sales Invoice pilot. Verify with `npm run build` / `npm run lint` / `npm run gen:types` after each phase. DA-009/DA-019 stay paused. Git and hosted are synced through `20260712000004`.
+Continue AIQ-015 P5B. First relocate draft create/edit and `/sales-invoices/new` into `DocumentLayout` without changing `fn_save_sales_invoice`/posting behavior; retire the register form and add status-aware register actions. Then create/link the missing governed master data and storage contracts listed in the handoff. Verify with `npm run build` / `npm run lint`; run database tests only after explicitly holding out the three user-owned broken drafts. DA-009/DA-019 stay paused.
 
 ## Decisions Needed From User
 

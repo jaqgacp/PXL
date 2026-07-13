@@ -66,12 +66,16 @@ type Account = { id: string; account_code: string; account_name: string }
 type DisplayRow = {
   key: string
   accountId: string | null
-  accountLabel: string
+  accountCode: string
+  accountName: string
   accountSource: string
   description: string
   debit: number
   credit: number
   missingAccount: boolean
+  branchId: string | null
+  departmentId: string | null
+  costCenterId: string | null
 }
 
 type Props = {
@@ -160,12 +164,16 @@ export function GLImpactPanel({ companyId, sourceDocType, sourceDocId, postingDa
       return (serverImpact?.lines || []).map(line => ({
         key: `server-${line.line_number}-${line.account_id}`,
         accountId: line.account_id,
-        accountLabel: `${line.account_code} - ${line.account_name}`,
+        accountCode: line.account_code,
+        accountName: line.account_name,
         accountSource: line.account_source,
         description: line.description || '',
         debit: Number(line.debit),
         credit: Number(line.credit),
         missingAccount: false,
+        branchId: line.branch_id,
+        departmentId: line.department_id,
+        costCenterId: line.cost_center_id,
       }))
     }
 
@@ -177,9 +185,8 @@ export function GLImpactPanel({ companyId, sourceDocType, sourceDocId, postingDa
         return {
           key: `client-${index}-${row.description}`,
           accountId: accountId || null,
-          accountLabel: account
-            ? `${account.account_code} - ${account.account_name}`
-            : row.accountLabel || (row.configKey ? `Missing ${row.configKey.replace(/_/g, ' ')}` : 'Missing account'),
+          accountCode: account?.account_code || row.accountLabel || (row.configKey ? `Missing ${row.configKey.replace(/_/g, ' ')}` : 'Missing account'),
+          accountName: account?.account_name || '',
           accountSource: row.configKey
             ? `company_accounting_config.${row.configKey}`
             : row.accountId
@@ -189,6 +196,9 @@ export function GLImpactPanel({ companyId, sourceDocType, sourceDocId, postingDa
           debit: Number(row.debit),
           credit: Number(row.credit),
           missingAccount: !accountId && !row.accountLabel,
+          branchId: null,
+          departmentId: null,
+          costCenterId: null,
         }
       })
   }, [accounts, config, previewRows, serverImpact, sourceDocId])
@@ -303,8 +313,8 @@ export function GLImpactPanel({ companyId, sourceDocType, sourceDocId, postingDa
           <table className="w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Account', 'Account Source', 'Description', 'Debit', 'Credit'].map(header => (
-                  <th key={header} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 ${['Debit', 'Credit'].includes(header) ? 'text-right' : 'text-left'}`}>
+                {['GL Account', 'Account Name', 'Description', 'Debit', 'Credit', 'Source', 'Posting Rule', 'Cost Center', 'Department', 'Branch', 'Project', 'Created By Rule', 'Journal Link'].map(header => (
+                  <th key={header} className={`px-2 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap ${['Debit', 'Credit'].includes(header) ? 'text-right' : 'text-left'}`}>
                     {header}
                   </th>
                 ))}
@@ -313,28 +323,41 @@ export function GLImpactPanel({ companyId, sourceDocType, sourceDocId, postingDa
             <tbody className="divide-y divide-gray-100">
               {rows.map(row => (
                 <tr key={row.key} className={row.missingAccount ? 'bg-amber-50/40' : ''}>
-                  <td className="px-3 py-2 text-gray-900">
+                  <td className="px-2 py-2 text-gray-900 whitespace-nowrap">
                     {row.accountId ? (
                       <Link
                         to={`/account-detail-ledger?accountId=${row.accountId}${serverImpact?.journal_entry_id ? `&jeId=${serverImpact.journal_entry_id}` : ''}`}
                         className="font-medium text-blue-700 hover:text-blue-900"
                       >
-                        {row.accountLabel}
+                        {row.accountCode}
                       </Link>
-                    ) : row.accountLabel}
+                    ) : row.accountCode}
                   </td>
-                  <td className="px-3 py-2 text-gray-500 font-mono text-[11px]">{row.accountSource}</td>
-                  <td className="px-3 py-2 text-gray-500">{row.description}</td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-700">{row.debit ? fmt(row.debit) : '-'}</td>
-                  <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-700">{row.credit ? fmt(row.credit) : '-'}</td>
+                  <td className="px-2 py-2 text-gray-700 whitespace-nowrap">{row.accountName || '—'}</td>
+                  <td className="px-2 py-2 text-gray-500 whitespace-nowrap">{row.description}</td>
+                  <td className="px-2 py-2 text-right font-mono tabular-nums text-gray-700">{row.debit ? fmt(row.debit) : '-'}</td>
+                  <td className="px-2 py-2 text-right font-mono tabular-nums text-gray-700">{row.credit ? fmt(row.credit) : '-'}</td>
+                  <td className="px-2 py-2 text-gray-500 whitespace-nowrap">{sourceDocType}</td>
+                  <td className="px-2 py-2 text-gray-500 font-mono text-[11px] whitespace-nowrap">{row.accountSource}</td>
+                  <td className="px-2 py-2 text-gray-500 font-mono text-[11px]">{row.costCenterId || '—'}</td>
+                  <td className="px-2 py-2 text-gray-500 font-mono text-[11px]">{row.departmentId || '—'}</td>
+                  <td className="px-2 py-2 text-gray-500 font-mono text-[11px]">{row.branchId || serverImpact?.branch_name || '—'}</td>
+                  <td className="px-2 py-2 text-gray-400">—</td>
+                  <td className="px-2 py-2 text-gray-500 whitespace-nowrap">{row.accountSource}</td>
+                  <td className="px-2 py-2 whitespace-nowrap">
+                    {serverImpact?.journal_entry_id
+                      ? <Link to={`/journal-entries?jeId=${serverImpact.journal_entry_id}`} className="text-blue-700 hover:underline">{serverImpact.je_number || 'Open JE'}</Link>
+                      : <span className="text-gray-400">Not posted</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
             <tfoot className="bg-gray-50 border-t border-gray-200">
               <tr>
-                <td colSpan={3} className="px-3 py-2 text-right font-semibold text-gray-700">Totals</td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums font-bold text-gray-900">{fmt(totalDebit)}</td>
-                <td className="px-3 py-2 text-right font-mono tabular-nums font-bold text-gray-900">{fmt(totalCredit)}</td>
+                <td colSpan={3} className="px-2 py-2 text-right font-semibold text-gray-700">Totals</td>
+                <td className="px-2 py-2 text-right font-mono tabular-nums font-bold text-gray-900">{fmt(totalDebit)}</td>
+                <td className="px-2 py-2 text-right font-mono tabular-nums font-bold text-gray-900">{fmt(totalCredit)}</td>
+                <td colSpan={8} />
               </tr>
             </tfoot>
           </table>

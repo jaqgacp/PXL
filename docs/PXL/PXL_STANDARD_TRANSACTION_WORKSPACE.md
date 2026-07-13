@@ -51,12 +51,11 @@ Every transaction page eventually contains these sections. The layout must remai
 
 ### 1. Document Header
 
-Display: Document Number, Status, Workflow Status, Posting Status, Lock Status, Document Date, Posting Period, Branch, Functional Entity, Currency, Exchange Rate.
-Toolbar: Save, Submit, Approve, Reject, Post, Void, Reverse, Print, Email, Actions.
+Display only the facts needed to immediately identify and process the transaction: document number, status, clickable party name, primary metrics, status-aware actions, and the compact Posting / Collection / Lock / Workflow strip. Keep the header short. Do not permanently display audit metadata, system configuration, related-document links, accounting detail, tax detail, or full party-master fields here.
 
-### 2. Party Snapshot
+### 2. Related Party Snapshot
 
-Customer (sales) / Supplier (purchasing) / Company-subsidiary context (JE). Shows the party's name, TIN, address, contact, payment/credit terms, tax profile, VAT type, ATC defaults, withholding profile, outstanding balance, credit limit, available credit, salesperson, currency, price list, warehouse, project — as applicable.
+Customer (sales) / Supplier (purchasing) / Company-subsidiary context (JE) belongs in the **Related Party** tab, not in a permanent sidebar or expanded header. This tab is the embedded live party profile: identity, contacts, addresses, tax profile, credit profile, outstanding AR/AP, recent payments/invoices/bills, aging summary, payment information, and sales/purchasing information.
 
 ### 3. Financial Summary
 
@@ -78,7 +77,7 @@ Visual document lifecycle, e.g. Draft → Submitted → Approved → Posted → 
 
 ### 6. ERP-Style Tabs
 
-A defining characteristic of PXL (NetSuite-style). Tabs are perspectives on the same transaction: Lines, Financial Summary, GL Impact, Tax Impact, Approval, Audit Trail, Related Documents, Attachments, Activity Timeline, Notes, Workflow, System, Compliance Evidence (future). Hide irrelevant tabs per document type.
+A defining characteristic of PXL (NetSuite-style). Tabs are perspectives on the same transaction: Lines, Financial Summary, GL Impact, Tax Impact, Validation, Approval, Audit Trail, Related Documents, Related Party, Attachments, Activity Timeline, Notes, System, Compliance Evidence (future). Hide irrelevant tabs per document type.
 
 ### 7. Professional Line Grid
 
@@ -88,9 +87,20 @@ Enterprise-grade grid. Column pool: Item, Service, Description, Quantity, Unit, 
 
 Selecting a line exposes: General, Tax Details, Dimensions, Account Determination, Inventory Details, Notes, Attachments, Related Documents, Audit. Avoid overcrowding the main grid.
 
-### 9. Right Sidebar
+### 9. Four-Card Information Band (final standard, 2026-07-13)
 
-Contextual cards without leaving the document: Financial Summary, Posting Validation, GL Preview, Tax Summary, Party Snapshot, Audit Summary, Workflow, Warnings, Quick Actions.
+The workspace has no right sidebar. Directly below the header/status strip it renders exactly four compact white cards: **Document Information · Customer/Vendor Information · Transaction Context · Quick Actions**. Financial Summary, Posting Validation, customer snapshot, audit summary, related-document links, tax detail, GL detail, and system metadata belong in their dedicated tabs and must not be duplicated in cards or a rail.
+
+The four cards are intentionally small:
+
+- **Document Information:** document date, due date, branch, currency, payment terms, and reference if present. Source type, document series, document hash, posting engine, created by, and modified by belong in System/Audit.
+- **Customer/Vendor Information:** clickable party, party code, TIN, and VAT/tax classification only. The full master-record snapshot belongs in Related Party.
+- **Transaction Context:** only dimensions that directly affect posting, such as salesperson, project, cost center, and department. Source documents belong in Related Documents/System; price list, payment method, and delivery terms belong in Related Party; marketing fields belong in the future marketing module; detailed dimensions belong in line detail or a future Dimensions tab.
+- **Quick Actions:** frequent accountant actions only, such as Create Receipt/Payment, Create Credit Memo, Print, Email, and Open Full Accounting Trace. Lower-frequency actions belong under More.
+
+The document header uses the company-selected `companies.workspace_accent_color`; the workspace derives a 3% tint through CSS color mixing while cards remain white. The preference is maintained in Company Setup and consumed by the reusable workspace rather than hardcoded per transaction.
+
+Single-responsibility rule: if a field appears in more than one permanent section, remove one occurrence. Master data lives in master records and the Related Party tab; transaction data lives in the transaction cards/tabs; accounting data lives in GL Impact; tax data lives in Tax Impact; audit data lives in Audit/System.
 
 ## GL Impact
 
@@ -134,7 +144,7 @@ Normal users never manually select accounting accounts unless specifically permi
 
 ## Reusable Component Targets
 
-TransactionHeader · PartySnapshotCard · FinancialSummaryPanel · PostingValidationPanel · WorkflowStrip · TransactionTabs · ProfessionalLineGrid · LineDetailPanel · GLImpactPanel · TaxImpactPanel · AuditTrailPanel · RelatedDocumentsPanel · AttachmentPanel · ActivityTimeline · QuickActionSidebar · SystemInformationPanel
+TransactionHeader · PrimaryInformationPanel (four-card band) · FinancialSummaryPanel · PostingValidationPanel · WorkflowStrip · TransactionTabsBar · ProfessionalLineGrid · LineDetailPanel · GLImpactPanel · TaxImpactPanel · AuditTrailPanel · RelatedDocumentsPanel · AttachmentPanel · ActivityTimeline · SystemInformationPanel
 
 Existing inventory (see blueprint §2 for adoption state): `GLImpactPanel`, `SetupReadinessBanner` (→ PostingValidationPanel), `VATReconciliationPanel`, `StatusBadge`, `AuditTrailSection` (→ AuditTrailPanel), plus built-but-unadopted `DataTable`, `LookupDialog`, `FormSection`, `ConfirmDialog`, `EmptyState`. Extend and rename toward the target names as pages are touched; never fork a second implementation of an existing panel.
 
@@ -148,11 +158,13 @@ Sales Invoice is the canonical pilot. Every other transaction adopts this shape.
 
 - **Canonical route:** `/sales-invoices/:id` → `src/pages/SalesInvoiceDocumentPage.tsx` renders `DocumentLayout`. This is the single viewing/review/lifecycle surface for a saved invoice. The register (`SalesInvoicePage`) routes non-draft rows here; draft create/edit still uses the register editor until the form is relocated onto the route (the final consolidation step).
 - **Lifecycle actions on the route:** Submit for Approval / Post / Return to Draft / Void (reason dialog) call the existing RPCs (`fn_approve_sales_invoice`, `fn_post_sales_invoice`, `fn_revert_si_to_draft`, `fn_void_sales_invoice`); the server enforces role/SoD. Toolbar actions are shown only for states that allow them; posted invoices are never editable.
-- **Primary Information** (`PrimaryInformationPanel`) between header and tabs: Document / Customer / Sales-Context groups, auto-populated read-only from the SI snapshot + Customer master, with provenance hints (§6).
+- **Header and state strip:** company-accent header owns document number/status, Customer/TIN, Invoice Total/Collected/Balance Due, and status-aware actions. The compact strip owns Posting / Collection / Lock plus the full workflow, on one line.
+- **Primary Information** (`PrimaryInformationPanel`) between state strip and tabs: exactly four independent cards — Document Information / Customer Information / Sales Context / Quick Actions. Existing values come from the SI snapshot and governed master data with provenance hints. Unsupported schema fields render truthfully as unassigned and are not populated with static business values.
 - **Header statuses:** primary StatusBadge + Posting / Collection / Lock badges; full workflow strip Draft → Approved → Posted → Partially Paid → Paid (Voided terminal), collection state derived from posted receipt applications.
 - **Tabs (12, fixed order):** Lines (`LineGrid` + `LineDetailPanel` on row-select) · Financial Summary (`FinancialSummaryPanel`, full contract incl. collection) · GL Impact (`GLImpactPanel`) · Tax Impact (`TaxImpactPanel`, VAT-only until PXL-AUD-031/032/033) · Posting Validation (`PostingValidationPanel` live preflight) · Approval (`approval_instances` or empty state) · Audit Trail (`AuditTrailSection`) · Related Documents (`RelatedDocumentsTab`) · Attachments (deferred empty state — no storage yet) · Activity Timeline (lifecycle facts; semantic stream pending PXL-DA-016) · Notes (memo; threaded notes deferred) · System.
-- **Right rail:** Financial Summary · Customer Snapshot (from Customer master: VAT class, withholding, terms, credit limit, available credit) · Tax Summary · Posting Validation · Quick Actions · Audit Summary — via the shared `SidebarCard`.
-- **Master Data gaps found (SI pilot):** Salesperson, Price List, and default Project/Department/Cost-Center/Location are not modeled on Customer/Item master or the SI, so Sales Context fields are placeholders. These are enhancements (routed to the backlog, not audit findings) — resolve by extending Customer/Item master rather than adding manual SI fields (§6). Credit-limit exists on `customers`; per-invoice outstanding AR is derived from posted receipt applications.
+- **No right rail:** duplicate Financial / Customer / Validation / Audit sidebar cards were removed by the final 2026-07-13 standard.
+- **Professional Lines:** Operations / Accounting / Audit / All profiles, individual column chooser, the full requested column pool, inline expandable rows, and the compact totals band are reusable `LineGrid` capabilities. Unstored dimensions/EWT allocation remain blank rather than fabricated.
+- **Master Data gaps found (SI pilot):** Salesperson, Price List, Project, Delivery Terms, Campaign, Opportunity, Customer Industry/Territory/Price Level, and transaction dimension links are not fully modeled on Customer/Item/SI. Department, Cost Center, and Warehouse masters exist but are not linked to SI. Resolve these through master-data entities and foreign keys before making them editable; do not add static transaction options. Company workspace accent is now governed by Company master via migration `20260713000001_company_workspace_appearance.sql`.
 
 ### Reusable RelatedDocumentsTab contract (§12 / spec §14)
 
@@ -168,7 +180,7 @@ Adoption: ✅ done · ⬜ not started. Fill per-page detail (tabs, line-grid pro
 
 | Transaction | Canonical route (target) | Workspace adoption | Related-doc chain |
 | --- | --- | --- | --- |
-| Sales Invoice | `/sales-invoices/:id` | ✅ pilot (view + lifecycle; draft-form pending) | Quo→SO→DR→SI→OR→JE; CM/DM |
+| Sales Invoice | `/sales-invoices/:id` | ✅ final dense view/lifecycle template; draft-form relocation pending | Quo→SO→DR→SI→OR→JE; CM/DM |
 | Cash Sale | `/cash-sales/:id` | ⬜ | Cash Sale→JE |
 | Receipt (OR) | `/receipts/:id` | ⬜ | SI→OR→JE; 2307 recv |
 | Credit Memo | `/credit-memos/:id` | ⬜ | SI→CM→JE |
@@ -186,7 +198,9 @@ Adoption: ✅ done · ⬜ not started. Fill per-page detail (tabs, line-grid pro
 | Purchase Return | `/purchase-returns/:id` | ⬜ | RR/VB→Return→JE |
 | Journal Entry | `/journal-entries/:id` | ⬜ | JE ↔ source ↔ reversal |
 
-Reusable components available for adoption (`src/components/document/`): `DocumentLayout` (+ `WorkflowStrip`, `TransactionTabs`, `DocumentToolbar`), `FinancialSummaryPanel`, `PostingValidationPanel`, `LineGrid`, `TaxImpactPanel`, `RelatedDocumentsTab`.
+Reusable components available for adoption (`src/components/document/`): `DocumentLayout` (+ `WorkflowStrip`, `TransactionTabsBar`, `TransactionTabs`, `DocumentToolbar`), `PrimaryInformationPanel`, `FinancialSummaryPanel`, `PostingValidationPanel`, `LineGrid`, `LineDetailPanel`, `TaxImpactPanel`, `RelatedDocumentsTab`.
+
+**Standard tab bar (`TransactionTabsBar`):** compact NetSuite/SAP-B1/Dynamics-BC density. The twelve tabs share width equally, shrink intelligently, truncate before overflow, and remain one line with no arrows or horizontal scrollbar. `DocumentLayout` renders it at full content width. This is the standard tab component for every Sales/Purchasing/Inventory/Banking/Fixed-Asset/Accounting workspace — do not fork it.
 
 ## Maintenance
 

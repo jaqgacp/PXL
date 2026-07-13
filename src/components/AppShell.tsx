@@ -500,7 +500,8 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
     ? NAV
     : NAV.filter(n => !n.feature || enabledFeatures.has(n.feature))
 
-  const currentPage = location.pathname.slice(1) // e.g. "company-setup"
+  const pathSegments = location.pathname.split('/').filter(Boolean)
+  const currentPage = pathSegments[0] || '' // dynamic document routes inherit their register page
   const breadcrumbSection = currentPage ? findSection(currentPage) : null
 
   const openMenu = (label: string, left = 0) => {
@@ -622,7 +623,7 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
 
       {/* Breadcrumb + main */}
       <main className="pt-16 px-6 pb-6">
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[1600px] mx-auto">
           {/* Breadcrumb */}
           {currentPage && (
             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-4">
@@ -632,7 +633,15 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
                 <span className="text-gray-500">{breadcrumbSection}</span>
               </>}
               <span>›</span>
-              <span className="text-gray-700 font-medium">{PAGE_LABELS[currentPage] || currentPage}</span>
+              {pathSegments.length > 1 ? (
+                <>
+                  <button onClick={() => rrNavigate(`/${currentPage}`)} className="text-gray-500 hover:text-gray-800">{PAGE_LABELS[currentPage] || currentPage}</button>
+                  <span>›</span>
+                  <span className="text-gray-700 font-medium">Transaction Workspace</span>
+                </>
+              ) : (
+                <span className="text-gray-700 font-medium">{PAGE_LABELS[currentPage] || currentPage}</span>
+              )}
             </div>
           )}
           {children}

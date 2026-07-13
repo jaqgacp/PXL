@@ -124,6 +124,12 @@ New transaction row (previously missing from this matrix):
 | Posting protocol | All `journal_entries` / `journal_entry_lines` writers | Governed source resolution/locking, create/add/finalize, stable tax identity, exact reversal, audit, period/account/branch/balance guards, and internal-helper revocation form the common protocol. Core AR/AP writers use the primitives directly; secondary saved sources use compatibility wrappers at the same lock/finalization boundary. PXL-DA-004 is Retested Passed; DA-005 awaits direct trigger-boundary negatives and DA-007 awaits a two-session race test. |
 | VAT amount authority | SI/VB/CM/DM/cash sale/cash purchase/vendor credit; VAT reviews/returns/exports | Save RPCs derive all operational VAT from source quantities/prices/discounts and VAT masters; application roles have SELECT plus governed RPCs but no direct header/line mutation grants or policies. Posted per-code tax detail reconciles to GL VAT controls and ledger-backed reports; final/filed/exported outputs retain reconciliation and immutable snapshot gates. PXL-DA-008 and PXL-AUD-014 are Retested Passed via VAT-AMOUNT-INTEGRITY-001. |
 
+## Matrix UI Addendum - 2026-07-13 Final Sales Invoice Workspace
+
+| Transaction | Canonical workspace | Implemented UI contract | Known boundary |
+| --- | --- | --- | --- |
+| Sales Invoice | `/sales-invoices/:id` (`SalesInvoiceDocumentPage`) | Company-accent header + 3% tint; Customer/TIN and Invoice Total/Collected/Balance Due; one-line Posting/Collection/Lock/workflow; exactly four information cards and no right rail; twelve fixed compact tabs; line profiles/chooser/inline detail/totals; authoritative GL preview and VAT-ledger impact; validation, approval, chronological audit evidence, full related chain, attachment table state, activity, four note categories, and system metadata. | Draft create/edit and `/sales-invoices/new` still use the register form pending routed consolidation. Missing Sales/Customer/dimension fields remain unassigned until governed master-data entities/FKs/UI exist. Attachment/OCR, semantic activity, categorized-note persistence, document hash/version, and e-invoice integration are not yet stored. |
+
 ## Maintenance Rules
 
 1. Any transaction code change must update this matrix in the same session.

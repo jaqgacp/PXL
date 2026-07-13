@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
@@ -26,10 +27,14 @@ const MONTHS = ['January','February','March','April','May','June','July','August
 
 export default function SalesTaxReviewPage() {
   const { companyId } = useAppCtx()
+  const [searchParams] = useSearchParams()
 
   const currentDate = new Date()
-  const [selMonth, setSelMonth] = useState(currentDate.getMonth())
-  const [selYear, setSelYear] = useState(currentDate.getFullYear())
+  const initialMonth = Number(searchParams.get('month'))
+  const initialYear = Number(searchParams.get('year'))
+  const sourceId = searchParams.get('sourceId') || ''
+  const [selMonth, setSelMonth] = useState(initialMonth >= 1 && initialMonth <= 12 ? initialMonth - 1 : currentDate.getMonth())
+  const [selYear, setSelYear] = useState(initialYear >= currentDate.getFullYear() - 10 && initialYear <= currentDate.getFullYear() + 10 ? initialYear : currentDate.getFullYear())
   const [includeVoid, setIncludeVoid] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -46,23 +51,28 @@ export default function SalesTaxReviewPage() {
 
     const statuses = includeVoid ? ['posted', 'cancelled'] : ['posted']
 
+    let invoiceQuery = supabase.from('sales_invoices')
+      .select('id,si_number,date,customer_name_snapshot,customer_tin_snapshot,total_taxable_amount,total_zero_rated_amount,total_exempt_amount,total_vat_amount,total_amount,status')
+      .eq('company_id', companyId).in('status', statuses)
+    invoiceQuery = sourceId
+      ? invoiceQuery.eq('id', sourceId)
+      : invoiceQuery.gte('date', startDate).lte('date', endDate)
+    let creditMemoQuery = supabase.from('credit_memos')
+      .select('cm_number,cm_date,customer_name_snapshot,customer_tin_snapshot,total_taxable_amount,total_zero_rated_amount,total_exempt_amount,total_vat_amount,total_amount')
+      .eq('company_id', companyId).eq('status', 'applied')
+    creditMemoQuery = sourceId
+      ? creditMemoQuery.eq('invoice_id', sourceId)
+      : creditMemoQuery.gte('cm_date', startDate).lte('cm_date', endDate)
+
     const [{ data: sis }, { data: cms }] = await Promise.all([
-      supabase.from('sales_invoices')
-        .select('id,si_number,date,customer_name_snapshot,customer_tin_snapshot,total_taxable_amount,total_zero_rated_amount,total_exempt_amount,total_vat_amount,total_amount,status')
-        .eq('company_id', companyId).in('status', statuses)
-        .gte('date', startDate).lte('date', endDate)
-        .order('date').order('si_number'),
-      supabase.from('credit_memos')
-        .select('cm_number,cm_date,customer_name_snapshot,customer_tin_snapshot,total_taxable_amount,total_zero_rated_amount,total_exempt_amount,total_vat_amount,total_amount')
-        .eq('company_id', companyId).eq('status', 'applied')
-        .gte('cm_date', startDate).lte('cm_date', endDate)
-        .order('cm_date'),
+      invoiceQuery.order('date').order('si_number'),
+      creditMemoQuery.order('cm_date'),
     ])
 
     setInvoices(sis as InvoiceRow[] || [])
     setCMAdjs(cms as CMAdjRow[] || [])
     setLoading(false)
-  }, [companyId, selMonth, selYear, includeVoid])
+  }, [companyId, selMonth, selYear, includeVoid, sourceId])
 
   useEffect(() => { if (companyId) run() }, [run, companyId])
 

@@ -13,7 +13,9 @@ Precedence when documents disagree:
 3. `UI_UX_PRINCIPLES.md` — visual/interaction language. Note: its implementation notes name a stack (Zustand stores, react-hook-form + Zod "exclusively", shadcn Tabs) that is installed but deliberately NOT adopted (see `PXL_ARCHITECTURE_SUMMARY.md` and the backlog's Frontend Architecture section, session 42). Those notes are aspirational; the selective-adoption policy in `PXL_PRODUCT_BACKLOG.md` governs. Do not mass-migrate forms to satisfy the principles doc.
 4. `PXL_PRODUCT_BACKLOG.md` — holds the individual enhancement entries; its "Target: Standard Transaction Experience" section is superseded by (and now points to) this document.
 
-## 2. Current State (verified 2026-07-04, session 48)
+## 2. Historical Baseline (verified 2026-07-04, session 48)
+
+This section records the pre-workspace baseline and is not the current Sales Invoice state. As of 2026-07-13, Sales Invoice is the dense routed reference implementation described by `PXL_STANDARD_TRANSACTION_WORKSPACE.md`; draft/new route consolidation remains pending.
 
 Pattern in production today: every transaction is a **list page + full-screen modal overlay** (`fixed inset-0`) for create/edit/view. There are no per-document routes — a document cannot be deep-linked, bookmarked, or opened from an emailed URL (UI Principle 38 unmet). No page has tabs. The only per-document panels that exist are:
 
@@ -39,6 +41,8 @@ Maturity against this standard (structure/exposure, not accounting correctness �
 ## 3. The Standard Transaction Layout
 
 Target anatomy for every transactional document (extends UI Principle 39):
+
+**Final 2026-07-13 override:** one routed workspace per transaction (no separate View/Open page); short company-accent header with document number, status, clickable party name, three primary metrics, and status-aware actions; one-line Posting/Collection/Lock/workflow strip; exactly four compact cards (Document, Party, Context, Quick Actions); compact one-line tabs including Related Party; active tab content; footer metadata. There is no right rail. The older diagram below is retained only as design history where it conflicts with this override.
 
 ```
 Route model:  /module/docs            list (DataTable + filters + toolbar)
@@ -68,14 +72,14 @@ Rules:
 2. **View mode is the document of record**: posted documents open read-only with the posted JE, tax rows, and audit facts visible without extra clicks.
 3. **The modal-overlay pattern is deprecated** for documents (retained for small masters and confirmations). Documents get routes so auditors, approvers, and support can link to them.
 4. **Toolbar order is fixed** (UI Principle 16); inapplicable actions are disabled, not hidden; destructive actions live under More ▾ with reason capture (void reason codes already exist).
-5. **Side panels** (counterparty insight: balance, aging, open docs, withholding profile) are a Phase 2 enhancement (backlog: customer/supplier insights) — reserved zone in the layout, not required for convergence.
+5. **No right rail and no duplicate header payload.** The four-card band is intentionally short. Full counterparty insight belongs in the Related Party tab; financial, validation, audit, related-document, GL, tax, and system details belong in their dedicated tabs. Do not duplicate them in sidebar cards or oversized header cards.
 
 ## 4. Standard Tab Set
 
 | Tab | Content | Applies to | Notes |
 | --- | --- | --- | --- |
 | Lines | The line grid (section 5) | All | Primary tab; for OR/PV this is the application grid (invoices/bills applied). |
-| Financial Summary | Per-type totals (section 8) | All | Rendered as the right-rail panel on wide screens; tab on narrow. |
+| Financial Summary | Per-type totals (section 8) | All | Dedicated tab; the header contains only the three primary metrics and does not replace the accounting breakdown. |
 | GL Impact | Draft preview + posted JE + drill (section 9) | All posting docs | JE page itself omits it (the document IS the JE); non-posting docs (quotation, SO) show "No GL impact until …" explainer instead of hiding the tab. |
 | Tax Impact | VAT/EWT/ATC/2307/SAWT/QAP linkage (section 10) | SI, OR, VB, PV, CM, DM, VC, Cash Sale, Cash Purchase, CV | Hidden for JE (manual JEs post no tax rows by design — matrix), fund transfers, and inventory docs; shown-empty with explainer for tax-registered docs with zero tax. |
 | Posting Validation | Readiness checklist (section 11) | All posting docs | Always visible near the Post action, not only as a tab. |
@@ -83,6 +87,7 @@ Rules:
 | Audit Trail | Created/updated/approved/posted/voided by+at, void reason, lock status, then `sys_audit_logs` entries (AuditTrailSection) | All | Data complete server-side today; finding PXL-AUD-050. |
 | Activity Timeline | Semantic lifecycle story (created → approved → posted → …) | All | Depends on PXL-DA-016 `transaction_events`; until then the Audit Trail tab serves both purposes. Do NOT build two tabs before DA-016 lands — merge. |
 | Related Documents | Document chain, both directions (section 12) | All | Includes JE ↔ source doc links, application links (OR↔SI, PV↔VB, VC↔VB, CM↔SI), certificates (PV→2307), returns/exports containing this doc. |
+| Related Party | Embedded customer/vendor profile for the transaction | Sales and purchasing docs | Identity, contacts, addresses, tax profile, credit profile, outstanding AR/AP, recent transactions, aging summary, payment information, and sales/purchasing information. This replaces the old permanent customer/vendor snapshot in the header/right rail. |
 | Workflow | Status-flow visualization with allowed next transitions | All | Until a workflow engine exists this is the status strip in the header, not a separate tab. |
 | Attachments | Supporting files (supplier invoice scan, OR image, contract) | All | No storage integration exists today anywhere except the CAS attachment register; Phase 2+. BIR substantiation makes this High value for VB/PV/CV. |
 | Notes | Internal remarks thread | All | Today a single `remarks`/`memo` field exists; keep the field, add threaded notes only when requested. |

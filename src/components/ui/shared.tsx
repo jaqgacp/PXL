@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 // ── StatusBadge ──────────────────────────────────────────────
 const STATUS_STYLES: Record<string, string> = {
@@ -208,23 +208,40 @@ export function LookupDialog({ open, onClose, onSelect, title, columns, data, se
 }
 
 // ── AuditTrailSection ─────────────────────────────────────────
-export function AuditTrailSection({ tableName, recordId }: { tableName: string; recordId: string }) {
-  const [logs, setLogs] = useState<Array<{ id: string; action: string; changed_by: string | null; changed_at: string; old_data: unknown; new_data: unknown }>>([])
-  const [expanded, setExpanded] = useState(false)
+export function AuditTrailSection({ tableName, recordId, initiallyExpanded = false }: { tableName: string; recordId: string; initiallyExpanded?: boolean }) {
+  const [logs, setLogs] = useState<Array<{
+    id: string; action: string; changed_by: string | null; changed_at: string
+    ip_address: string | null; user_agent: string | null; old_data: unknown; new_data: unknown
+  }>>([])
+  const [expanded, setExpanded] = useState(initiallyExpanded)
   const [loaded, setLoaded] = useState(false)
 
   const load = async () => {
     const { supabase } = await import('@/lib/supabase')
     const { data } = await supabase
       .from('sys_audit_logs')
-      .select('id,action,changed_by,changed_at,old_data,new_data')
+      .select('id,action,changed_by,changed_at,ip_address,user_agent,old_data,new_data')
       .eq('table_name', tableName)
       .eq('record_id', recordId)
-      .order('changed_at', { ascending: false })
+      .order('changed_at', { ascending: true })
       .limit(50)
     setLogs((data || []).map(l => ({ ...l, changed_at: l.changed_at ?? '' })))
     setLoaded(true)
     setExpanded(true)
+  }
+
+  useEffect(() => {
+    if (initiallyExpanded && !loaded) void load()
+    // Load once for the selected record; explicit refresh is handled by remounting the tab.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initiallyExpanded, recordId, tableName])
+
+  const changedFields = (oldData: unknown, newData: unknown) => {
+    if (!oldData || !newData || typeof oldData !== 'object' || typeof newData !== 'object') return '—'
+    const oldRow = oldData as Record<string, unknown>
+    const newRow = newData as Record<string, unknown>
+    const keys = Object.keys(newRow).filter(key => JSON.stringify(oldRow[key]) !== JSON.stringify(newRow[key]))
+    return keys.length > 0 ? keys.join(', ') : '—'
   }
 
   return (
@@ -243,14 +260,20 @@ export function AuditTrailSection({ tableName, recordId }: { tableName: string; 
               <table className="w-full text-xs">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-200">
-                    <th className="text-left px-4 py-2 font-semibold text-gray-500">Action</th>
-                    <th className="text-left px-4 py-2 font-semibold text-gray-500">Changed By</th>
                     <th className="text-left px-4 py-2 font-semibold text-gray-500">Timestamp</th>
+                    <th className="text-left px-4 py-2 font-semibold text-gray-500">Event</th>
+                    <th className="text-left px-4 py-2 font-semibold text-gray-500">User</th>
+                    <th className="text-left px-4 py-2 font-semibold text-gray-500">IP</th>
+                    <th className="text-left px-4 py-2 font-semibold text-gray-500">Device</th>
+                    <th className="text-left px-4 py-2 font-semibold text-gray-500">Changes</th>
                   </tr>
                 </thead>
                 <tbody>
                   {logs.map(log => (
                     <tr key={log.id} className="border-b border-gray-100">
+                      <td className="px-4 py-2 text-gray-500 whitespace-nowrap">
+                        {new Date(log.changed_at).toLocaleString('en-PH')}
+                      </td>
                       <td className="px-4 py-2">
                         <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${
                           log.action === 'INSERT' ? 'bg-green-50 text-green-700' :
@@ -259,10 +282,10 @@ export function AuditTrailSection({ tableName, recordId }: { tableName: string; 
                           {log.action}
                         </span>
                       </td>
-                      <td className="px-4 py-2 text-gray-600">{log.changed_by || '—'}</td>
-                      <td className="px-4 py-2 text-gray-500">
-                        {new Date(log.changed_at).toLocaleString('en-PH')}
-                      </td>
+                      <td className="px-4 py-2 text-gray-600 font-mono">{log.changed_by || '—'}</td>
+                      <td className="px-4 py-2 text-gray-500 font-mono">{log.ip_address || '—'}</td>
+                      <td className="px-4 py-2 text-gray-500 max-w-48 truncate" title={log.user_agent || ''}>{log.user_agent || '—'}</td>
+                      <td className="px-4 py-2 text-gray-500 max-w-64 truncate" title={changedFields(log.old_data, log.new_data)}>{changedFields(log.old_data, log.new_data)}</td>
                     </tr>
                   ))}
                 </tbody>

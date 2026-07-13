@@ -25,6 +25,7 @@ type Company = {
   email: string
   signatory_name: string
   signatory_position: string
+  workspace_accent_color: string
   ref_rdo_codes?: { rdo_code: string; rdo_name: string }
 }
 type ImportRow = {
@@ -63,7 +64,7 @@ const EMPTY_FORM = {
   cas_date_issued: '', address_line_1: '', address_line_2: '',
   city: '', province: '', zip_code: '', email: '',
   phone_number: '', mobile_number: '', signatory_name: '',
-  signatory_position: '', signatory_tin: '',
+  signatory_position: '', signatory_tin: '', workspace_accent_color: '#14532D',
 }
 type CompanyForm = typeof EMPTY_FORM
 
@@ -73,7 +74,7 @@ const CSV_COLUMNS = [
   'city','province','zip_code','email','phone_number','mobile_number',
   'signatory_name','signatory_position','signatory_tin','accounting_period',
   'registration_number','bir_reg_date','sec_dti_reg_date','lgu_reg_date',
-  'cas_permit_no','cas_date_issued',
+  'cas_permit_no','cas_date_issued','workspace_accent_color',
 ]
 
 const REQUIRED_COLUMNS = [
@@ -116,6 +117,7 @@ const hydrateCompanyForm = (data: Record<string, any>): CompanyForm => ({
   signatory_name: data.signatory_name || '',
   signatory_position: data.signatory_position || '',
   signatory_tin: data.signatory_tin || '',
+  workspace_accent_color: data.workspace_accent_color || '#14532D',
 })
 
 export default function CompanySetupPage() {
@@ -179,6 +181,10 @@ export default function CompanySetupPage() {
       alert('Cannot save company.\nMissing required fields: ' + missingFields.join(', '))
       return
     }
+    if (!/^#[0-9A-Fa-f]{6}$/.test(form.workspace_accent_color)) {
+      alert('Cannot save company.\nWorkspace accent must be a six-digit hexadecimal color, for example #14532D.')
+      return
+    }
 
     setSaving(true)
     const payload = {
@@ -213,7 +219,7 @@ export default function CompanySetupPage() {
       'Makati City','Metro Manila','1226','accounting@abctrading.com.ph',
       '(02) 8888-1234','0917-123-4567','Juan dela Cruz','President','',
       'calendar','CS201800012345','2018-03-15','2018-02-10','2026-01-05',
-      'PTU-2019-00123','2019-06-01',
+      'PTU-2019-00123','2019-06-01','#14532D',
     ]
     const csv = [CSV_COLUMNS.join(','), sampleRow.join(',')].join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
@@ -259,6 +265,8 @@ export default function CompanySetupPage() {
 
           if (record.tin && companies.some(c => c.tin === record.tin))
             errors.push(`TIN "${record.tin}" already exists in the system`)
+          if (record.workspace_accent_color && !/^#[0-9A-Fa-f]{6}$/.test(record.workspace_accent_color))
+            errors.push('workspace_accent_color must be a six-digit hex color such as #14532D')
 
           return {
             row: idx + 2,
@@ -306,6 +314,7 @@ export default function CompanySetupPage() {
         sec_dti_reg_date: row.data.sec_dti_reg_date || null,
         lgu_reg_date: row.data.lgu_reg_date || null,
         cas_date_issued: row.data.cas_date_issued || null,
+        workspace_accent_color: row.data.workspace_accent_color || '#14532D',
         rdo_id: null,
       } as unknown as TablesInsert<'companies'>])
       setImportRows(prev => prev.map(r =>
@@ -634,6 +643,17 @@ export default function CompanySetupPage() {
             </div>
           </div>
         </div>
+
+        <div className={sectionClass}>
+          <h2 className={headingClass}>Section 6 — Transaction Workspace Appearance</h2>
+          <div className="flex items-center gap-3">
+            <span className="h-9 w-14 rounded border border-gray-200" style={{ backgroundColor: viewForm.workspace_accent_color }} />
+            <div>
+              <div className="text-xs font-mono font-medium text-gray-700">{viewForm.workspace_accent_color}</div>
+              <div className="text-[11px] text-gray-400">Header accent and automatic 3% workspace tint</div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -835,6 +855,25 @@ export default function CompanySetupPage() {
               className={inputClass} placeholder="Personal TIN of signatory" />
           </div>
         </div>
+      </div>
+
+      <div className={sectionClass}>
+        <h2 className={headingClass}>Section 6 — Transaction Workspace Appearance</h2>
+        <div className="grid grid-cols-[5rem_1fr] gap-3 items-end max-w-md">
+          <div>
+            <label className={labelClass}>Color</label>
+            <input type="color" value={form.workspace_accent_color}
+              onChange={e => set('workspace_accent_color', e.target.value.toUpperCase())}
+              className="h-10 w-full border border-gray-300 rounded-md bg-white p-1 cursor-pointer" />
+          </div>
+          <div>
+            <label className={labelClass}>Workspace Accent</label>
+            <input value={form.workspace_accent_color}
+              onChange={e => set('workspace_accent_color', e.target.value.toUpperCase())}
+              className={inputClass + ' font-mono uppercase'} placeholder="#14532D" maxLength={7} />
+          </div>
+        </div>
+        <p className="text-xs text-gray-400">Used by all transaction headers. Workspace backgrounds derive a subtle 3% tint; information cards remain white.</p>
       </div>
     </div>
   )

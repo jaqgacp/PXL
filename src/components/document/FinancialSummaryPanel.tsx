@@ -11,7 +11,7 @@ import { AmountCell } from '@/components/ui/shared'
 export type SummaryRow = {
   key: string
   label: string
-  value: number
+  value: React.ReactNode
   /** Visual weight. `total` and `strong` are bold; `muted` is secondary. */
   variant?: 'default' | 'muted' | 'total' | 'strong'
   /** Render the value in parentheses (deductions, e.g. "(1,234.00)"). */
@@ -36,7 +36,9 @@ function Row({ row }: { row: SummaryRow }) {
     <div className={`flex items-center justify-between ${row.divider ? 'pt-2 mt-1 border-t border-gray-100' : ''}`}>
       <span className={`text-xs ${weight}`}>{row.label}</span>
       <span className={`text-xs font-mono tabular-nums ${weight}`}>
-        {row.paren && row.value ? '(' : ''}<AmountCell amount={row.value} />{row.paren && row.value ? ')' : ''}
+        {row.paren && row.value ? '(' : ''}
+        {typeof row.value === 'number' ? <AmountCell amount={row.value} /> : row.value}
+        {row.paren && row.value ? ')' : ''}
       </span>
     </div>
   )

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 
 type Company = { id: string; registered_name: string }
@@ -45,6 +46,7 @@ const sec = 'bg-white border border-gray-200 rounded-lg p-6 space-y-4'
 const hd  = 'text-xs font-semibold text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-100'
 
 export default function CustomersPage() {
+  const [searchParams, setSearchParams] = useSearchParams()
   const [customers, setCustomers] = useState<Customer[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [currencies, setCurrencies] = useState<Currency[]>([])
@@ -63,6 +65,7 @@ export default function CustomersPage() {
   const [form, setForm] = useState({ ...EMPTY })
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const linkedCustomerId = searchParams.get('customerId')
 
   const fetchCustomers = async () => {
     const { data } = await supabase.from('customers')
@@ -111,6 +114,22 @@ export default function CustomersPage() {
   }
 
   const openView = (c: Customer) => { setViewData(c); setShowView(true) }
+  const clearLinkedCustomer = () => {
+    if (!linkedCustomerId) return
+    const next = new URLSearchParams(searchParams)
+    next.delete('customerId')
+    setSearchParams(next, { replace: true })
+  }
+  const closeView = () => { setShowView(false); clearLinkedCustomer() }
+
+  useEffect(() => {
+    if (!linkedCustomerId || customers.length === 0 || showForm) return
+    const linked = customers.find(c => c.id === linkedCustomerId)
+    if (linked && (!showView || viewData?.id !== linked.id)) {
+      setViewData(linked)
+      setShowView(true)
+    }
+  }, [linkedCustomerId, customers, showForm, showView, viewData?.id])
 
   const handleSave = async () => {
     setSaving(true)
@@ -152,13 +171,13 @@ export default function CustomersPage() {
       <div className="max-w-4xl mx-auto space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <button onClick={() => setShowView(false)} className="text-xs text-gray-500 hover:text-gray-900 mb-1">← Back to list</button>
+            <button onClick={closeView} className="text-xs text-gray-500 hover:text-gray-900 mb-1">← Back to list</button>
             <h1 className="text-xl font-semibold text-gray-900">View Customer</h1>
             <p className="text-sm text-gray-500 mt-0.5">{viewData.registered_name}</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => { setShowView(false); openEdit(viewData) }} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Edit</button>
-            <button onClick={() => setShowView(false)} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Close</button>
+            <button onClick={() => { clearLinkedCustomer(); setShowView(false); openEdit(viewData) }} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Edit</button>
+            <button onClick={closeView} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Close</button>
           </div>
         </div>
         <div className={sec}><h2 className={hd}>Section 1 — Basic Information</h2>

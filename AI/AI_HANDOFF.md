@@ -1,6 +1,23 @@
 # AI Handoff
 
-Last updated: 2026-07-12 (session 65 — priority pivot to the Standard Transaction Workspace, DEC-015)
+Last updated: 2026-07-13 (session 69 — compact-header Sales Invoice refinement)
+
+## Active Priority (session 69 — compact Sales Invoice master-template UI)
+
+User refined the Sales Invoice workspace standard: reduce header height, remove duplicated master/audit/system/related fields from the permanent header/cards, and move the full customer/vendor profile into a new Related Party tab. Implemented on top of the session-68 dense-view baseline (uncommitted):
+
+- `DocumentLayout`: shorter company-accent document header with clickable customer name (TIN removed from the colored header), Invoice Total/Collected/Balance Due, inverted status-aware toolbar, tighter one-line Posting/Collection/Lock + workflow strip, 3% accent-derived workspace tint, no right rail, compact footer metadata.
+- `PrimaryInformationPanel`: exactly four independent compact cards — Document Information, Customer Information, Sales Context, Quick Actions. Document card now keeps only Invoice Date, Due Date, Branch, Currency, Payment Terms, and Reference when present. Customer card keeps only clickable Customer, Customer Code, TIN, and VAT Classification. Sales Context keeps only Salesperson, Project, Cost Center, Department. Quick Actions keeps only Create Receipt, Create Credit Memo, Print, Email, and Open Full Accounting Trace.
+- Moved duplicate fields to the correct homes: Source Type + Document Series to System; Official Receipt links to Related Documents; Created/Last Modified By to Audit; full Customer Master / credit / contact / address / payment / sales / aging data to the new Related Party tab.
+- `Related Party` tab added: identity, contacts, addresses, tax profile, credit profile, payment information, sales information, AR aging summary via `fn_ar_aging_asof`, recent invoices, and recent payments.
+- More-menu/deep-link polish: lower-frequency actions moved to More (Debit Memo, Open Customer, Open Journal Entry, View Ledger, View Tax Ledger, Generate E-Invoice); `/customers?customerId=...` opens the Customer master view; `/ar-aging?tab=ledger&customerId=...` preselects the ledger customer; `/sales-tax-review?sourceId=...` filters to the invoice.
+- `TransactionTabsBar`: equal-width one-line tabs including Related Party, no arrows/horizontal scrollbar; labels shrink/truncate safely.
+- `LineGrid`: Operations/Accounting/Audit/All profiles, individual column chooser, 25-column SI pool, inline expandable line detail, and Lines/Quantity/Net/VAT/EWT/Gross/Discount/Grand Total band. SI row detail exposes recognition, serial/lot/allocation, dimensions, tax, audit, source, posting rule, related docs, and item notes with truthful unavailable states.
+- SI tabs: full Financial contract including explicit untracked values; expanded GL table; expanded tax-ledger table (VAT-only correctness boundary retained); explicit validation checklist; multi-row approval table; chronological audit evidence with IP/device/change fields; attachment table empty state; four note categories; expanded System metadata.
+- Master-data governance: migration `20260713000001_company_workspace_appearance.sql` adds checked `companies.workspace_accent_color`; Company Setup maintains/previews it; generated database types updated. App content width is 1600px and dynamic transaction breadcrumbs resolve to the register + workspace.
+- Verification: `npm run build` passes; `npm run lint` passes; `git diff --check` clean. Vite remains available on port 5173. The user-owned held-out `20260710000004`, `20260710000005`, and test `027` were not touched.
+
+**Remaining before declaring the entire final brief complete:** (1) relocate draft create/edit + `/sales-invoices/new` into this same routed shell and retire the register form; (2) expand the register actions/columns; (3) create and link the missing governed master-data entities/FKs/UI (Salesperson, Price Level, Territory, Industry, Project, Delivery Terms, Campaign, Opportunity, SI header/line dimensions); (4) attachment/OCR, semantic activity, categorized note storage, document hash/version fields, and e-invoice integration. Do these as schema-backed capabilities, never static selectors. Then use this workspace as the base for Vendor Bill and every other transaction.
 
 ## Active Priority (session 67 — SI complete reference workspace)
 

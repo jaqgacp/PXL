@@ -13,7 +13,6 @@ const CSP_DEV = [
   "object-src 'none'",
   "base-uri 'self'",
   "form-action 'self'",
-  "frame-ancestors 'none'",
 ].join('; ')
 
 export default defineConfig({
@@ -24,12 +23,22 @@ export default defineConfig({
     },
   },
   server: {
-    // GitHub Codespaces port forwarding proxies requests with an
-    // *.app.github.dev Host header, which Vite blocks by default.
-    allowedHosts: ['.app.github.dev'],
+    // Remote workspace port previews need the dev server to listen outside
+    // localhost, and their forwarded Host headers vary by environment.
+    host: '0.0.0.0',
+    allowedHosts: true,
     headers: {
       'X-Content-Type-Options': 'nosniff',
-      'X-Frame-Options': 'DENY',
+      'Referrer-Policy': 'strict-origin-when-cross-origin',
+      'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+      'Content-Security-Policy': CSP_DEV,
+    },
+  },
+  preview: {
+    host: '0.0.0.0',
+    allowedHosts: true,
+    headers: {
+      'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'strict-origin-when-cross-origin',
       'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
       'Content-Security-Policy': CSP_DEV,

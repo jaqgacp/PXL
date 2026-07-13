@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
@@ -6,11 +6,10 @@ import { DocumentLayout, type DocumentTab, type ToolbarAction } from '@/componen
 import { PrimaryInformationPanel, type InfoGroup } from '@/components/document/PrimaryInformationPanel'
 import { FinancialSummaryPanel, type SummaryGroup } from '@/components/document/FinancialSummaryPanel'
 import { PostingValidationPanel, readinessToChecks, type ValidationCheck } from '@/components/document/PostingValidationPanel'
-import { LineGrid, type LineColumn } from '@/components/document/LineGrid'
+import { LineGrid, type LineColumn, type LineColumnProfile } from '@/components/document/LineGrid'
 import { LineDetailPanel, type DetailSection } from '@/components/document/LineDetailPanel'
 import { TaxImpactPanel } from '@/components/document/TaxImpactPanel'
 import { RelatedDocumentsTab, type RelatedDocRow } from '@/components/document/RelatedDocumentsTab'
-import { SidebarCard, CardRow } from '@/components/document/SidebarCard'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { AuditTrailSection, StatusBadge, AmountCell, DateCell, EmptyState } from '@/components/ui/shared'
@@ -39,6 +38,9 @@ type SIRow = {
   total_exempt_amount: number; total_vat_amount: number
   total_amount: number; status: SIStatus
   cwt_amount_expected: number | null
+  fiscal_period_id: string | null; journal_entry_id: string | null
+  created_by: string | null; updated_by: string | null
+  approved_by: string | null; posted_by: string | null
   approved_at: string | null; posted_at: string | null
   created_at: string; updated_at: string
 }
@@ -49,6 +51,8 @@ type LineRow = {
   discount_percent: number; discount_amount: number
   net_amount: number; vat_code_id: string | null; vat_amount: number; total_amount: number
   revenue_account_id: string | null
+  created_by: string | null; updated_by: string | null
+  created_at: string; updated_at: string
 }
 
 type CustomerMaster = {
@@ -57,12 +61,34 @@ type CustomerMaster = {
   contact_person: string | null; email: string | null; phone_number: string | null
   default_tax_type: string; is_withholding_agent: boolean
   default_terms_id: string | null; credit_limit: number | null
+  customer_code: string; customer_group: string | null; business_style: string | null
+  trade_name: string | null; created_at: string | null; is_active: boolean | null
 }
 
 type AccountRef = { code: string; name: string }
+type ItemRef = { code: string; description: string; notes: string | null }
+type UomRef = { code: string; description: string }
+type VatRef = { code: string; classification: string; rate: number }
 type VoidReason = { id: string; code: string; description: string }
 type Collection = { paid: number; cwt: number; balance: number; receiptCount: number; status: string | null }
-type ApprovalRow = { id: string; status: string; required_approver_type?: string; actual_approver_id?: string | null; source_document_no?: string; created_at?: string; approved_at?: string | null; decision_comments?: string | null }
+type ApprovalRow = {
+  id: string; status: string; required_approver_type: string
+  required_approver_id: string | null; actual_approver_id: string | null
+  step_sequence: number; submitted_at: string; acted_at: string | null
+  remarks: string | null
+}
+type RecentInvoice = {
+  id: string; si_number: string; date: string; due_date: string | null
+  total_amount: number; status: string
+}
+type RecentPayment = {
+  id: string; receipt_number: string; receipt_date: string
+  total_amount: number; total_cwt: number; status: string
+}
+type AgingBalance = {
+  invoice_id: string; si_number: string; invoice_date: string; due_date: string | null
+  original_amount: number; balance_due: number; days_overdue: number
+}
 
 const statusToShared: Record<SIStatus, string> = {
   draft: 'draft', approved: 'approved', posted: 'posted', cancelled: 'error',
@@ -81,11 +107,21 @@ export default function SalesInvoiceDocumentPage() {
   const [si, setSi] = useState<SIRow | null>(null)
   const [lines, setLines] = useState<LineRow[]>([])
   const [accounts, setAccounts] = useState<Record<string, AccountRef>>({})
+  const [items, setItems] = useState<Record<string, ItemRef>>({})
+  const [uoms, setUoms] = useState<Record<string, UomRef>>({})
+  const [vatCodes, setVatCodes] = useState<Record<string, VatRef>>({})
   const [branchName, setBranchName] = useState('')
+  const [seriesName, setSeriesName] = useState('')
+  const [accentColor, setAccentColor] = useState('#14532d')
   const [termsName, setTermsName] = useState<Record<string, string>>({})
   const [customer, setCustomer] = useState<CustomerMaster | null>(null)
+  const [customerOutstanding, setCustomerOutstanding] = useState<number | null>(null)
+  const [lastPayment, setLastPayment] = useState<{ date: string; amount: number } | null>(null)
+  const [recentInvoices, setRecentInvoices] = useState<RecentInvoice[]>([])
+  const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([])
+  const [agingBalances, setAgingBalances] = useState<AgingBalance[]>([])
   const [collection, setCollection] = useState<Collection>({ paid: 0, cwt: 0, balance: 0, receiptCount: 0, status: null })
-  const [approval, setApproval] = useState<ApprovalRow | null>(null)
+  const [approvals, setApprovals] = useState<ApprovalRow[]>([])
   const [relatedRows, setRelatedRows] = useState<RelatedDocRow[]>([])
   const [voidReasons, setVoidReasons] = useState<VoidReason[]>([])
   const [selectedLineId, setSelectedLineId] = useState<string | null>(null)
@@ -107,9 +143,13 @@ export default function SalesInvoiceDocumentPage() {
     const inv = head as unknown as SIRow
     setSi(inv)
 
-    const [lineRes, accRes, brRes, termRes, custRes, jeRes, rlRes, reasonRes, apprRes] = await Promise.all([
+    const todayIso = new Date().toISOString().slice(0, 10)
+    const [lineRes, accRes, itemRes, uomRes, vatRes, brRes, termRes, custRes, jeRes, rlRes, reasonRes, apprRes, seriesRes, companyRes, customerInvoiceRes, customerReceiptRes, agingRes] = await Promise.all([
       supabase.from('sales_invoice_lines').select('*').eq('sales_invoice_id', id).order('line_number'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', inv.company_id),
+      supabase.from('items').select('id,item_code,description,description_long').eq('company_id', inv.company_id),
+      supabase.from('units_of_measure').select('id,uom_code,description').eq('company_id', inv.company_id),
+      supabase.from('vat_codes').select('id,vat_code,vat_classification,tax_codes(rate)'),
       supabase.from('branches').select('id,branch_name').eq('id', inv.branch_id).maybeSingle(),
       supabase.from('payment_terms').select('id,term_name').eq('company_id', inv.company_id),
       inv.customer_id ? supabase.from('customers').select('*').eq('id', inv.customer_id).maybeSingle() : Promise.resolve({ data: null }),
@@ -117,20 +157,62 @@ export default function SalesInvoiceDocumentPage() {
         .eq('company_id', inv.company_id).eq('reference_doc_type', 'SI').eq('reference_doc_id', inv.id).order('je_date'),
       supabase.from('receipt_lines').select('receipt_id,payment_amount,cwt_amount').eq('invoice_id', inv.id),
       supabase.from('void_reason_codes').select('id,code,description').eq('is_active', true).order('code'),
-      supabase.from('approval_instances').select('*').eq('source_document_id', inv.id).order('created_at', { ascending: false }).limit(1).maybeSingle(),
+      supabase.from('approval_instances').select('*').eq('source_document_id', inv.id).order('step_sequence'),
+      supabase.from('number_series').select('prefix,number_length,reset_frequency').eq('company_id', inv.company_id).eq('branch_id', inv.branch_id).eq('document_code', 'SI').eq('is_active', true).limit(1).maybeSingle(),
+      supabase.from('companies').select('*').eq('id', inv.company_id).maybeSingle(),
+      supabase.from('sales_invoices').select('id,si_number,date,due_date,total_amount,status').eq('company_id', inv.company_id).eq('customer_id', inv.customer_id).order('date', { ascending: false }),
+      supabase.from('receipts').select('id,receipt_number,receipt_date,total_amount,total_cwt,status').eq('company_id', inv.company_id).eq('customer_id', inv.customer_id).eq('status', 'posted').order('receipt_date', { ascending: false }),
+      supabase.rpc('fn_ar_aging_asof', { p_company_id: inv.company_id, p_as_of: todayIso, p_customer_id: inv.customer_id }),
     ])
 
     setLines((lineRes.data ?? []) as unknown as LineRow[])
     const map: Record<string, AccountRef> = {}
     for (const a of accRes.data ?? []) map[a.id] = { code: a.account_code, name: a.account_name }
     setAccounts(map)
+    const itemMap: Record<string, ItemRef> = {}
+    for (const item of itemRes.data ?? []) itemMap[item.id] = { code: item.item_code, description: item.description, notes: item.description_long }
+    setItems(itemMap)
+    const uomMap: Record<string, UomRef> = {}
+    for (const uom of uomRes.data ?? []) uomMap[uom.id] = { code: uom.uom_code, description: uom.description }
+    setUoms(uomMap)
+    const vatMap: Record<string, VatRef> = {}
+    for (const vat of vatRes.data ?? []) {
+      const tax = Array.isArray(vat.tax_codes) ? vat.tax_codes[0] : vat.tax_codes
+      vatMap[vat.id] = { code: vat.vat_code, classification: vat.vat_classification, rate: Number(tax?.rate ?? 0) }
+    }
+    setVatCodes(vatMap)
     setBranchName((brRes.data as { branch_name?: string } | null)?.branch_name ?? '')
+    const series = seriesRes.data as { prefix?: string | null; number_length?: number; reset_frequency?: string } | null
+    setSeriesName(series ? `${series.prefix || 'SI'} · ${series.number_length ?? 6} digits · ${series.reset_frequency ?? 'never'} reset` : '')
+    const company = companyRes.data as Record<string, unknown> | null
+    setAccentColor(typeof company?.workspace_accent_color === 'string' ? company.workspace_accent_color : '#14532d')
     const tmap: Record<string, string> = {}
     for (const t of termRes.data ?? []) tmap[t.id] = t.term_name
     setTermsName(tmap)
     setCustomer((custRes.data as CustomerMaster | null) ?? null)
     setVoidReasons((reasonRes.data ?? []) as VoidReason[])
-    setApproval((apprRes.data as ApprovalRow | null) ?? null)
+    setApprovals((apprRes.data ?? []) as ApprovalRow[])
+
+    const invoiceRows = ((customerInvoiceRes.data ?? []) as RecentInvoice[])
+    setRecentInvoices(invoiceRows.slice(0, 5))
+    const postedCustomerReceipts = ((customerReceiptRes.data ?? []) as RecentPayment[]).filter(row => row.status === 'posted')
+    setRecentPayments(postedCustomerReceipts.slice(0, 5))
+    const customerAgingRows = ((agingRes.data ?? []) as Array<Record<string, unknown>>).map(row => ({
+      invoice_id: String(row.invoice_id),
+      si_number: String(row.si_number),
+      invoice_date: String(row.invoice_date),
+      due_date: row.due_date ? String(row.due_date) : null,
+      original_amount: num(row.original_amount),
+      balance_due: num(row.balance_due),
+      days_overdue: num(row.days_overdue),
+    }))
+    setAgingBalances(customerAgingRows)
+    const customerReceiptTotal = postedCustomerReceipts.reduce((sum, row) => sum + num(row.total_amount) + num(row.total_cwt), 0)
+    const customerInvoiceTotal = invoiceRows.filter(row => row.status === 'posted').reduce((sum, row) => sum + num(row.total_amount), 0)
+    const outstandingFromAging = customerAgingRows.reduce((sum, row) => sum + num(row.balance_due), 0)
+    setCustomerOutstanding(agingRes.error ? Math.max(0, customerInvoiceTotal - customerReceiptTotal) : outstandingFromAging)
+    const latestReceipt = postedCustomerReceipts[0]
+    setLastPayment(latestReceipt ? { date: latestReceipt.receipt_date, amount: num(latestReceipt.total_amount) + num(latestReceipt.total_cwt) } : null)
 
     // Collection: sum posted-receipt applications against this invoice.
     const rls = (rlRes.data ?? []) as Array<{ receipt_id: string; payment_amount: number; cwt_amount: number }>
@@ -217,7 +299,6 @@ export default function SalesInvoiceDocumentPage() {
   const discounts = lines.reduce((s, l) => s + num(l.discount_amount), 0)
   const subtotal = netOfVat + discounts
   const cwt = num(si.cwt_amount_expected)
-  const expectedNet = num(si.total_amount) - cwt
   const lockLabel = si.status === 'draft' ? 'Editable' : 'Frozen'
   const postingLabel = si.status === 'posted' ? 'Posted' : si.status === 'cancelled' ? 'Voided' : 'Unposted'
 
@@ -236,10 +317,10 @@ export default function SalesInvoiceDocumentPage() {
   const actions: ToolbarAction[] = []
   if (si.status === 'draft') {
     actions.push({ key: 'edit', label: 'Edit', variant: 'primary', onClick: backToList, disabled: busy, title: 'Draft editing opens in the register editor (form relocation pending)' })
-    actions.push({ key: 'approve', label: 'Submit for Approval', onClick: () => runAction('fn_approve_sales_invoice', 'Approve'), disabled: busy })
+    actions.push({ key: 'approve', label: 'Submit', onClick: () => runAction('fn_approve_sales_invoice', 'Approve'), disabled: busy })
   }
   if (si.status === 'approved') {
-    actions.push({ key: 'post', label: 'Post Invoice', variant: 'primary', onClick: () => runAction('fn_post_sales_invoice', 'Post'), disabled: busy })
+    actions.push({ key: 'post', label: 'Post', variant: 'primary', onClick: () => runAction('fn_post_sales_invoice', 'Post'), disabled: busy })
     actions.push({ key: 'revert', label: 'Return to Draft', group: 'more', onClick: () => runAction('fn_revert_si_to_draft', 'Return to draft'), disabled: busy })
   }
   if (si.status === 'posted') {
@@ -247,46 +328,78 @@ export default function SalesInvoiceDocumentPage() {
     actions.push({ key: 'cm', label: 'Create Credit Memo', group: 'more', onClick: () => navigate('/credit-memos') })
     actions.push({ key: 'void', label: 'Void', group: 'more', variant: 'danger', onClick: () => setShowVoid(true), disabled: busy })
   }
-  actions.push({ key: 'print', label: 'Print', group: 'more', onClick: () => window.print() })
+  actions.push({ key: 'print', label: 'Print', onClick: () => window.print() })
+  actions.push({
+    key: 'email', label: 'Email', onClick: () => {
+      const subject = encodeURIComponent(`Sales Invoice ${si.si_number}`)
+      const body = encodeURIComponent(`Sales Invoice ${si.si_number}\nAmount: ${si.currency_code} ${num(si.total_amount).toFixed(2)}`)
+      window.location.href = `mailto:${customer?.email || ''}?subject=${subject}&body=${body}`
+    },
+  })
+  actions.push({ key: 'dm', label: 'Create Debit Memo', group: 'more', onClick: () => navigate('/debit-memos'), disabled: si.status !== 'posted' })
+  actions.push({ key: 'customer', label: 'Open Customer', group: 'more', onClick: () => navigate(`/customers?customerId=${si.customer_id}`) })
+  actions.push({ key: 'ledger', label: 'View Ledger', group: 'more', onClick: () => navigate(`/ar-aging?tab=ledger&customerId=${si.customer_id}`) })
+  actions.push({ key: 'tax-ledger', label: 'View Tax Ledger', group: 'more', onClick: () => {
+    const date = new Date(`${si.date}T00:00:00`)
+    navigate(`/sales-tax-review?sourceId=${si.id}&month=${date.getMonth() + 1}&year=${date.getFullYear()}`)
+  } })
+  actions.push({ key: 'einvoice', label: 'Generate E-Invoice', group: 'more', onClick: () => {}, disabled: true, title: 'E-invoice provider and credentials are not configured.' })
+  actions.push({ key: 'duplicate', label: 'Duplicate', group: 'more', onClick: () => {}, disabled: true, title: 'Document duplication is not configured yet.' })
   actions.push({ key: 'je', label: 'Open Journal Entry', group: 'more', onClick: () => navigate(`/accounting-trace?sourceType=SI&sourceId=${si.id}`) })
   actions.push({ key: 'refresh', label: 'Refresh', group: 'more', onClick: load, disabled: busy })
 
   // ── Primary Information (§5) ─────────────────────────────────
   const termLabel = (tid: string | null) => (tid && termsName[tid]) || '—'
+  const availableCredit = customer?.credit_limit != null && customerOutstanding != null
+    ? num(customer.credit_limit) - customerOutstanding
+    : null
+  const notAssigned = (provenance: string) => ({ value: <span className="text-gray-400">Not assigned</span>, provenance })
+  const openCustomer = () => navigate(`/customers?customerId=${si.customer_id}`)
+  const openTrace = () => navigate(`/accounting-trace?sourceType=SI&sourceId=${si.id}`)
+  const customerLink = (
+    <button onClick={openCustomer} className="text-blue-700 hover:underline text-left">
+      {si.customer_name_snapshot || customer?.registered_name || '—'}
+    </button>
+  )
+  const quickButton = 'w-full px-2 py-1 rounded border border-gray-200 bg-gray-50 text-left text-[10px] font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900 disabled:text-gray-300 disabled:bg-white disabled:cursor-not-allowed'
+  const documentFields: NonNullable<InfoGroup['fields']> = [
+    { label: 'Invoice Date', value: <DateCell date={si.date} /> },
+    { label: 'Due Date', value: si.due_date ? <DateCell date={si.due_date} /> : '—' },
+    { label: 'Branch', value: branchName || '—' },
+    { label: 'Currency', value: si.currency_code },
+    { label: 'Payment Terms', value: termLabel(si.payment_terms_id), provenance: 'from Customer / document' },
+    ...(si.reference ? [{ label: 'Reference', value: si.reference }] : []),
+  ]
   const primaryGroups: InfoGroup[] = [
     {
-      key: 'doc', title: 'Document Information',
-      fields: [
-        { label: 'Invoice No.', value: si.si_number },
-        { label: 'Invoice Date', value: <DateCell date={si.date} /> },
-        { label: 'Due Date', value: si.due_date ? <DateCell date={si.due_date} /> : '—' },
-        { label: 'Branch', value: branchName || '—' },
-        { label: 'Currency', value: si.currency_code },
-        { label: 'Payment Terms', value: termLabel(si.payment_terms_id), provenance: 'from Customer / document' },
-        { label: 'Reference', value: si.reference || '—' },
-        { label: 'Source Type', value: 'SI (manual)' },
+      key: 'doc', title: 'Document Information', fields: documentFields,
+    },
+    {
+      key: 'cust', title: 'Customer Information', fields: [
+        { label: 'Customer', value: customerLink, wide: true, provenance: 'opens Customer master' },
+        { label: 'Customer Code', value: customer?.customer_code || '—', provenance: 'from Customer master' },
+        { label: 'TIN', value: si.customer_tin_snapshot || customer?.tin || '—', provenance: 'snapshot / Customer master' },
+        { label: 'VAT Classification', value: customer ? (TAX_TYPE_LABEL[customer.default_tax_type] ?? customer.default_tax_type) : '—', provenance: 'from Customer master' },
       ],
     },
     {
-      key: 'cust', title: 'Customer Information',
-      fields: [
-        { label: 'Customer', value: si.customer_name_snapshot, provenance: 'snapshot at save' },
-        { label: 'TIN', value: si.customer_tin_snapshot || '—', provenance: 'snapshot at save' },
-        { label: 'Tax Profile', value: customer ? (TAX_TYPE_LABEL[customer.default_tax_type] ?? customer.default_tax_type) : '—', provenance: 'from Customer master' },
-        { label: 'Withholding', value: customer ? (customer.is_withholding_agent ? 'Withholding agent' : 'Not a withholding agent') : '—', provenance: 'from Customer master' },
-        { label: 'Contact', value: customer?.contact_person || '—', provenance: 'from Customer master' },
-        { label: 'Email / Phone', value: [customer?.email, customer?.phone_number].filter(Boolean).join(' · ') || '—', provenance: 'from Customer master' },
-        { label: 'Registered Address', value: si.customer_address_snapshot || customer?.registered_address || '—', wide: true, provenance: 'snapshot at save' },
+      key: 'ctx', title: 'Sales Context', fields: [
+        { label: 'Salesperson', ...notAssigned('Salesperson is not yet stored on Sales Invoice') },
+        { label: 'Project', ...notAssigned('Project is not yet stored on Sales Invoice') },
+        { label: 'Cost Center', ...notAssigned('Cost Center master exists but is not yet linked') },
+        { label: 'Department', ...notAssigned('Department master exists but is not yet linked') },
       ],
     },
     {
-      key: 'ctx', title: 'Sales Context',
-      fields: [
-        { label: 'Salesperson', value: '—', provenance: 'Master Data gap — see docs' },
-        { label: 'Price List', value: '—', provenance: 'Master Data gap — see docs' },
-        { label: 'Project / Cost Center', value: '—', provenance: 'Dimensions — Phase 2 (PXL-DA-017)' },
-        { label: 'Source Sales Order', value: '—', provenance: 'Conversion flow not yet linked' },
-      ],
+      key: 'quick', title: 'Quick Actions', content: (
+        <div className="grid grid-cols-2 gap-2">
+          <button disabled={si.status !== 'posted'} onClick={() => navigate('/receipts')} className={quickButton}>Create Receipt</button>
+          <button disabled={si.status !== 'posted'} onClick={() => navigate('/credit-memos')} className={quickButton}>Create Credit Memo</button>
+          <button onClick={() => window.print()} className={quickButton}>Print</button>
+          <button onClick={() => actions.find(action => action.key === 'email')?.onClick()} className={quickButton}>Email</button>
+          <button onClick={openTrace} className={`${quickButton} col-span-2`}>Open Full Accounting Trace</button>
+        </div>
+      ),
     },
   ]
   const primaryInfo = <PrimaryInformationPanel groups={primaryGroups} />
@@ -297,66 +410,117 @@ export default function SalesInvoiceDocumentPage() {
     const a = accounts[accId]
     return a ? <span title={a.name}>{a.code}</span> : <span className="text-gray-400">—</span>
   }
+  const emptyLineValue = <span className="text-gray-300">—</span>
   const lineColumns: LineColumn<LineRow>[] = [
-    { key: 'no', header: '#', group: 'system', render: l => <span className="text-gray-400">{l.line_number}</span> },
-    { key: 'desc', header: 'Description', group: 'business', render: l => <span className="text-gray-900">{l.description}</span>, footer: 'Totals' },
-    { key: 'qty', header: 'Qty', group: 'business', align: 'right', render: l => <span className="font-mono tabular-nums text-gray-700">{num(l.quantity)}</span> },
-    { key: 'price', header: 'Unit Price', group: 'business', align: 'right', render: l => <AmountCell amount={num(l.unit_price)} /> },
-    { key: 'disc', header: 'Discount', group: 'business', align: 'right', render: l => <AmountCell amount={num(l.discount_amount)} /> },
-    { key: 'net', header: 'Net of VAT', group: 'business', align: 'right', render: l => <AmountCell amount={num(l.net_amount)} />, footer: <AmountCell amount={netOfVat} /> },
-    { key: 'vat', header: 'VAT', group: 'business', align: 'right', render: l => <AmountCell amount={num(l.vat_amount)} />, footer: <AmountCell amount={num(si.total_vat_amount)} /> },
-    { key: 'total', header: 'Total', group: 'business', align: 'right', render: l => <span className="font-semibold"><AmountCell amount={num(l.total_amount)} /></span>, footer: <AmountCell amount={num(si.total_amount)} /> },
-    { key: 'acct', header: 'Revenue Acct', group: 'accounting', render: l => <span className="font-mono text-gray-600">{accountLabel(l.revenue_account_id)}</span> },
+    { key: 'no', header: '#', group: 'system', render: line => <span className="text-gray-400">{line.line_number}</span> },
+    { key: 'item_code', header: 'Item Code', group: 'business', render: line => line.item_id ? <span className="font-mono font-medium">{items[line.item_id]?.code ?? '—'}</span> : emptyLineValue },
+    { key: 'item_desc', header: 'Item Description', group: 'business', minWidth: '150px', render: line => line.item_id ? (items[line.item_id]?.description ?? '—') : emptyLineValue },
+    { key: 'desc', header: 'Description', group: 'business', minWidth: '180px', render: line => <span className="text-gray-900">{line.description}</span> },
+    { key: 'qty', header: 'Qty', group: 'business', align: 'right', render: line => <span className="font-mono tabular-nums text-gray-700">{num(line.quantity)}</span> },
+    { key: 'uom', header: 'UOM', group: 'business', render: line => line.uom_id ? <span title={uoms[line.uom_id]?.description}>{uoms[line.uom_id]?.code ?? '—'}</span> : emptyLineValue },
+    { key: 'price', header: 'Unit Price', group: 'business', align: 'right', render: line => <AmountCell amount={num(line.unit_price)} /> },
+    { key: 'disc_pct', header: 'Discount %', group: 'business', align: 'right', render: line => <span className="font-mono">{num(line.discount_percent)}%</span> },
+    { key: 'disc_amt', header: 'Discount Amount', group: 'business', align: 'right', render: line => <AmountCell amount={num(line.discount_amount)} /> },
+    { key: 'net', header: 'Net', group: 'business', align: 'right', render: line => <AmountCell amount={num(line.net_amount)} /> },
+    { key: 'vat_code', header: 'VAT Code', group: 'accounting', render: line => line.vat_code_id ? <span className="font-mono">{vatCodes[line.vat_code_id]?.code ?? '—'}</span> : emptyLineValue },
+    { key: 'vat_pct', header: 'VAT %', group: 'accounting', align: 'right', render: line => line.vat_code_id ? <span className="font-mono">{num(vatCodes[line.vat_code_id]?.rate)}%</span> : emptyLineValue },
+    { key: 'vat_amt', header: 'VAT Amount', group: 'accounting', align: 'right', render: line => <AmountCell amount={num(line.vat_amount)} /> },
+    { key: 'ewt_code', header: 'EWT Code', group: 'withholding', render: () => emptyLineValue },
+    { key: 'ewt_amt', header: 'EWT Amount', group: 'withholding', align: 'right', render: () => emptyLineValue },
+    { key: 'total', header: 'Line Total', group: 'business', align: 'right', render: line => <span className="font-semibold"><AmountCell amount={num(line.total_amount)} /></span> },
+    { key: 'acct', header: 'Revenue Account', group: 'accounting', render: line => <span className="font-mono text-gray-600">{accountLabel(line.revenue_account_id)}</span> },
+    { key: 'department', header: 'Department', group: 'dimensions', render: () => emptyLineValue },
+    { key: 'cost_center', header: 'Cost Center', group: 'dimensions', render: () => emptyLineValue },
+    { key: 'project', header: 'Project', group: 'dimensions', render: () => emptyLineValue },
+    { key: 'warehouse', header: 'Warehouse', group: 'dimensions', render: () => emptyLineValue },
+    { key: 'branch', header: 'Branch', group: 'dimensions', render: () => branchName || '—' },
+    { key: 'location', header: 'Location', group: 'dimensions', render: () => emptyLineValue },
+    { key: 'remarks', header: 'Remarks', group: 'reference', render: () => emptyLineValue },
+    { key: 'reference', header: 'Reference', group: 'reference', render: () => si.reference || emptyLineValue },
   ]
-  const selectedLine = lines.find(l => l.id === selectedLineId) ?? null
+  const lineProfiles: LineColumnProfile[] = [
+    { key: 'operations', label: 'Operations', columnKeys: ['no', 'item_code', 'item_desc', 'desc', 'qty', 'uom', 'price', 'disc_pct', 'net', 'vat_code', 'total', 'warehouse'] },
+    { key: 'accounting', label: 'Accounting', columnKeys: ['no', 'item_code', 'desc', 'qty', 'uom', 'price', 'disc_amt', 'net', 'vat_code', 'vat_pct', 'vat_amt', 'ewt_code', 'ewt_amt', 'total', 'acct'] },
+    { key: 'audit', label: 'Audit', columnKeys: ['no', 'item_code', 'item_desc', 'desc', 'net', 'vat_code', 'vat_amt', 'total', 'acct', 'department', 'cost_center', 'project', 'branch', 'reference'] },
+    { key: 'all', label: 'All', columnKeys: lineColumns.map(column => column.key) },
+  ]
+  const selectedLine = lines.find(line => line.id === selectedLineId) ?? null
   const lineDetailSections: DetailSection[] = selectedLine ? [
-    { key: 'gen', title: 'General', fields: [
-      { label: 'Line', value: selectedLine.line_number },
-      { label: 'Description', value: selectedLine.description, wide: true },
-      { label: 'Quantity', value: num(selectedLine.quantity) },
+    { key: 'revrec', title: 'Revenue Recognition', fields: [
+      { label: 'Schedule', value: 'Not linked' }, { label: 'Revenue Account', value: accountLabel(selectedLine.revenue_account_id) },
     ] },
-    { key: 'price', title: 'Pricing', fields: [
-      { label: 'Unit Price', value: <AmountCell amount={num(selectedLine.unit_price)} /> },
-      { label: 'Discount %', value: `${num(selectedLine.discount_percent)}%` },
-      { label: 'Discount Amount', value: <AmountCell amount={num(selectedLine.discount_amount)} /> },
-      { label: 'Net of VAT', value: <AmountCell amount={num(selectedLine.net_amount)} /> },
+    { key: 'serial', title: 'Serial Numbers', fields: [{ label: 'Serials', value: 'Not recorded' }] },
+    { key: 'lots', title: 'Lots', fields: [{ label: 'Lots', value: 'Not recorded' }] },
+    { key: 'allocation', title: 'Inventory Allocation', fields: [
+      { label: 'Warehouse', value: 'Not assigned' }, { label: 'Allocation', value: 'Not recorded' },
     ] },
-    { key: 'tax', title: 'Tax & Account', fields: [
+    { key: 'dimensions', title: 'Dimensions', fields: [
+      { label: 'Branch', value: branchName || '—' }, { label: 'Department', value: 'Not assigned' },
+      { label: 'Cost Center', value: 'Not assigned' }, { label: 'Project', value: 'Not assigned' },
+    ] },
+    { key: 'tax', title: 'Tax Breakdown', fields: [
+      { label: 'VAT Code', value: selectedLine.vat_code_id ? vatCodes[selectedLine.vat_code_id]?.code ?? '—' : '—' },
+      { label: 'VAT Base', value: <AmountCell amount={num(selectedLine.net_amount)} /> },
+      { label: 'VAT Rate', value: `${num(selectedLine.vat_code_id ? vatCodes[selectedLine.vat_code_id]?.rate : 0)}%` },
       { label: 'VAT Amount', value: <AmountCell amount={num(selectedLine.vat_amount)} /> },
-      { label: 'Line Total', value: <AmountCell amount={num(selectedLine.total_amount)} /> },
-      { label: 'Revenue Account', value: accountLabel(selectedLine.revenue_account_id) },
     ] },
+    { key: 'audit', title: 'Audit Information', fields: [
+      { label: 'Created', value: formatDateTime(selectedLine.created_at) },
+      { label: 'Last Modified', value: formatDateTime(selectedLine.updated_at) },
+      { label: 'Created By', value: selectedLine.created_by || '—' },
+    ] },
+    { key: 'source', title: 'Source References', fields: [{ label: 'Source Document', value: 'Not linked' }, { label: 'Reference', value: si.reference || '—' }] },
+    { key: 'rule', title: 'Posting Rule Used', fields: [
+      { label: 'Account Source', value: selectedLine.revenue_account_id ? 'Item / document line account' : 'Unmapped' },
+      { label: 'Account', value: accountLabel(selectedLine.revenue_account_id) },
+    ] },
+    { key: 'related', title: 'Related Documents', fields: [{ label: 'Line-level Links', value: 'Not linked' }] },
+    { key: 'notes', title: 'Item Notes', fields: [{ label: 'Notes', value: selectedLine.item_id ? items[selectedLine.item_id]?.notes || 'No item notes' : 'No item selected' }] },
   ] : []
   const linesTab = (
     <div>
-      <LineGrid columns={lineColumns} rows={lines} getRowKey={l => l.id} emptyLabel="No lines on this invoice."
-        onRowClick={l => setSelectedLineId(prev => prev === l.id ? null : l.id)} selectedKey={selectedLineId ?? undefined} />
-      {selectedLine && (
-        <LineDetailPanel title={`Line ${selectedLine.line_number} — ${selectedLine.description}`} sections={lineDetailSections} onClose={() => setSelectedLineId(null)} />
-      )}
-      <p className="text-[11px] text-gray-400 mt-2">{lines.length} line{lines.length !== 1 ? 's' : ''} · click a row for detail. Accountant/auditor column profiles (ATC, dimensions, source refs) arrive with the editable grid.</p>
+      <LineGrid columns={lineColumns} rows={lines} getRowKey={line => line.id} emptyLabel="No lines on this invoice."
+        profiles={lineProfiles} initialProfileKey="accounting"
+        onRowClick={line => setSelectedLineId(previous => previous === line.id ? null : line.id)} selectedKey={selectedLineId ?? undefined}
+        renderExpandedRow={() => selectedLine
+          ? <LineDetailPanel title={`Line ${selectedLine.line_number} — ${selectedLine.description}`} sections={lineDetailSections} onClose={() => setSelectedLineId(null)} />
+          : null}
+        summary={[
+          { key: 'lines', label: 'Lines', value: lines.length },
+          { key: 'qty', label: 'Quantity', value: lines.reduce((sum, line) => sum + num(line.quantity), 0) },
+          { key: 'net', label: 'Net Sales', value: <AmountCell amount={netOfVat} /> },
+          { key: 'vat', label: 'VAT', value: <AmountCell amount={num(si.total_vat_amount)} /> },
+          { key: 'ewt', label: 'EWT', value: <AmountCell amount={cwt} /> },
+          { key: 'gross', label: 'Gross', value: <AmountCell amount={subtotal} /> },
+          { key: 'discount', label: 'Discount', value: <AmountCell amount={discounts} /> },
+          { key: 'grand', label: 'Grand Total', value: <AmountCell amount={num(si.total_amount)} />, emphasis: true },
+        ]} />
+      <p className="text-[10px] text-gray-400 mt-1.5">Click any row to inspect recognition, inventory, dimensions, tax, audit, source, posting rule, links, and item notes.</p>
     </div>
   )
 
   // ── Financial Summary (full, §10) ───────────────────────────
   const summaryFull: SummaryGroup[] = [
     { key: 'main', rows: [
-      { key: 'sub', label: 'Subtotal before discount', value: subtotal },
-      ...(discounts > 0 ? [{ key: 'disc', label: 'Less: line discounts', value: discounts, variant: 'muted' as const, paren: true }] : []),
-      { key: 'net', label: 'Net of VAT / VAT base', value: netOfVat },
-      ...(num(si.total_zero_rated_amount) > 0 ? [{ key: 'zero', label: 'Zero-rated', value: num(si.total_zero_rated_amount), variant: 'muted' as const }] : []),
-      ...(num(si.total_exempt_amount) > 0 ? [{ key: 'exempt', label: 'Exempt', value: num(si.total_exempt_amount), variant: 'muted' as const }] : []),
-      { key: 'vat', label: 'Output VAT', value: num(si.total_vat_amount) },
-      { key: 'gross', label: 'Gross invoice amount', value: num(si.total_amount), variant: 'total' as const, divider: true },
+      { key: 'gross-sales', label: 'Gross Sales', value: subtotal },
+      { key: 'discounts', label: 'Discounts', value: discounts, variant: 'muted', paren: true },
+      { key: 'net-sales', label: 'Net Sales', value: netOfVat, variant: 'strong', divider: true },
+      { key: 'vat', label: 'VAT', value: num(si.total_vat_amount) },
+      { key: 'zero', label: 'Zero Rated', value: num(si.total_zero_rated_amount), variant: 'muted' },
+      { key: 'exempt', label: 'Exempt', value: num(si.total_exempt_amount), variant: 'muted' },
+      { key: 'ewt', label: 'EWT / Expected CWT', value: cwt, variant: 'muted', paren: cwt > 0 },
+      { key: 'invoice-total', label: 'Invoice Total', value: num(si.total_amount), variant: 'total', divider: true },
     ] },
-    ...(cwt > 0 ? [{ key: 'cwt', tone: 'info' as const, rows: [
-      { key: 'less-cwt', label: 'Less: expected customer CWT', value: cwt, variant: 'muted' as const, paren: true },
-      { key: 'netcoll', label: 'Net amount collectible', value: expectedNet, variant: 'total' as const },
-    ], note: 'CWT is informational — not a discount. Settled when the customer remits BIR Form 2307 against the Official Receipt.' }] : []),
-    ...(si.status === 'posted' ? [{ key: 'coll', rows: [
-      { key: 'paid', label: 'Amount collected (cash + CWT)', value: collection.paid + collection.cwt, variant: 'muted' as const },
-      { key: 'bal', label: 'Balance due', value: collection.balance, variant: 'total' as const, divider: true },
-    ] }] : []),
+    { key: 'collections', rows: [
+      { key: 'collected', label: 'Collections', value: collection.paid + collection.cwt },
+      { key: 'remaining', label: 'Remaining Balance', value: collection.balance, variant: 'total', divider: true },
+    ] },
+    { key: 'recognition', rows: [
+      { key: 'realized', label: 'Realized Revenue', value: <span className="text-gray-400">Not tracked</span>, variant: 'muted' },
+      { key: 'deferred', label: 'Deferred Revenue', value: <span className="text-gray-400">Not tracked</span>, variant: 'muted' },
+      { key: 'rounding', label: 'Rounding', value: <span className="text-gray-400">Not stored</span>, variant: 'muted' },
+      { key: 'currency-difference', label: 'Currency Difference', value: <span className="text-gray-400">Not stored</span>, variant: 'muted' },
+    ], note: cwt > 0 ? 'Expected CWT is informational and settles through the customer’s BIR Form 2307; it does not reduce invoice revenue.' : undefined },
   ]
   const financialTab = <FinancialSummaryPanel title="Financial Summary" groups={summaryFull} />
 
@@ -366,10 +530,22 @@ export default function SalesInvoiceDocumentPage() {
 
   // ── Posting Validation ──────────────────────────────────────
   const postable = si.status === 'draft' || si.status === 'approved'
+  const readinessState = (pattern: RegExp): ValidationCheck['state'] =>
+    readiness.loading ? 'pending' : readiness.blockers.some(blocker => pattern.test(blocker)) ? 'blocked' : 'ok'
+  const arithmeticBalanced = Math.abs(netOfVat + num(si.total_vat_amount) - num(si.total_amount)) <= 0.01
   const docChecks: ValidationCheck[] = [
-    { key: 'number', label: 'Document number assigned', state: si.si_number ? 'ok' : 'blocked' },
+    { key: 'balanced', label: 'Balanced', state: arithmeticBalanced ? 'ok' : 'blocked', detail: 'Net sales plus VAT agrees to the invoice total.' },
+    { key: 'period', label: 'Period Open', state: readinessState(/period|fiscal/i) },
+    { key: 'branch', label: 'Branch Active', state: branchName ? readinessState(/branch/i) : 'blocked' },
+    { key: 'series', label: 'Series Valid', state: si.si_number && seriesName ? readinessState(/series|number/i) : 'blocked' },
+    { key: 'tax', label: 'Tax Valid', state: lines.every(line => line.vat_code_id || num(line.vat_amount) === 0) ? 'ok' : 'blocked' },
+    { key: 'inventory', label: 'Inventory Posted', state: 'info', detail: 'No inventory posting reference is stored on Sales Invoice lines.' },
+    { key: 'cost', label: 'Cost Posted', state: 'info', detail: 'No cost posting reference is stored on Sales Invoice lines.' },
+    { key: 'approval', label: 'Approval Passed', state: si.status === 'draft' ? 'pending' : si.status === 'approved' || si.status === 'posted' ? 'ok' : 'info' },
+    { key: 'engine', label: 'Posting Engine Version', state: 'info', detail: 'The runtime version is not exposed by the current posting RPC.' },
+    { key: 'hash', label: 'Document Hash', state: 'info', detail: 'A persisted document hash is not available in the current schema.' },
     { key: 'lines', label: 'At least one line item', state: lines.length > 0 ? 'ok' : 'blocked' },
-    { key: 'cust', label: 'Customer active with tax profile', state: customer ? 'ok' : 'info' },
+    { key: 'cust', label: 'Customer active with tax profile', state: customer?.is_active ? 'ok' : customer ? 'blocked' : 'info' },
   ]
   if (si.status === 'posted') {
     docChecks.push({ key: 'posted', label: 'Posted to the general ledger', state: 'ok' })
@@ -387,19 +563,27 @@ export default function SalesInvoiceDocumentPage() {
   )
 
   // ── Approval tab ────────────────────────────────────────────
-  const approvalTab = approval ? (
+  const approvalTab = approvals.length > 0 ? (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
+        <thead className="bg-gray-50 border-b border-gray-200">
+          <tr>
+            {['Level', 'Approver', 'Role', 'Action', 'Remarks', 'Date', 'Electronic Signature'].map(label => (
+              <th key={label} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">{label}</th>
+            ))}
+          </tr>
+        </thead>
         <tbody className="divide-y divide-gray-100">
-          {[
-            ['Status', <StatusBadge key="s" status={approval.status === 'approved' ? 'approved' : approval.status === 'rejected' ? 'error' : 'pending'} label={approval.status} />],
-            ['Required approver', approval.required_approver_type ?? '—'],
-            ['Decided by', approval.actual_approver_id ?? 'Pending'],
-            ['Submitted', formatDateTime(approval.created_at)],
-            ['Approved', formatDateTime(approval.approved_at)],
-            ['Comments', approval.decision_comments ?? '—'],
-          ].map(([k, v], i) => (
-            <tr key={i}><td className="px-3 py-2 text-xs text-gray-400 w-48">{k}</td><td className="px-3 py-2 text-xs text-gray-800">{v}</td></tr>
+          {approvals.map(row => (
+            <tr key={row.id}>
+              <td className="px-3 py-2 text-xs text-gray-700">{row.step_sequence}</td>
+              <td className="px-3 py-2 text-xs font-mono text-gray-600">{row.actual_approver_id || row.required_approver_id || 'Pending'}</td>
+              <td className="px-3 py-2 text-xs text-gray-600">{row.required_approver_type}</td>
+              <td className="px-3 py-2 text-xs"><StatusBadge status={row.status === 'approved' ? 'approved' : row.status === 'rejected' ? 'error' : 'pending'} label={row.status} /></td>
+              <td className="px-3 py-2 text-xs text-gray-600">{row.remarks || '—'}</td>
+              <td className="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{formatDateTime(row.acted_at || row.submitted_at)}</td>
+              <td className="px-3 py-2 text-xs text-gray-400">Not recorded</td>
+            </tr>
           ))}
         </tbody>
       </table>
@@ -413,18 +597,20 @@ export default function SalesInvoiceDocumentPage() {
   const auditFacts = [
     { label: 'Created', value: formatDateTime(si.created_at) },
     { label: 'Last edited', value: formatDateTime(si.updated_at) },
+    { label: 'Created by', value: si.created_by ? <span className="font-mono" title={si.created_by}>{si.created_by}</span> : '—' },
+    { label: 'Last modified by', value: si.updated_by ? <span className="font-mono" title={si.updated_by}>{si.updated_by}</span> : '—' },
     { label: 'Approved', value: formatDateTime(si.approved_at) },
     { label: 'Posted', value: formatDateTime(si.posted_at) },
     { label: 'Lock status', value: lockLabel },
   ]
   const auditTab = (
     <div className="space-y-3">
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
         {auditFacts.map(f => (
           <div key={f.label}><div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{f.label}</div><div className="text-xs font-medium text-gray-700">{f.value}</div></div>
         ))}
       </div>
-      <AuditTrailSection tableName="sales_invoices" recordId={si.id} />
+      <AuditTrailSection tableName="sales_invoices" recordId={si.id} initiallyExpanded />
     </div>
   )
 
@@ -451,29 +637,218 @@ export default function SalesInvoiceDocumentPage() {
 
   // ── Notes ───────────────────────────────────────────────────
   const notesTab = (
-    <div className="space-y-3 text-sm">
-      <div>
-        <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Customer-visible Memo</div>
-        <div className="text-gray-700 whitespace-pre-wrap">{si.memo || <span className="text-gray-400">No memo.</span>}</div>
-      </div>
-      <p className="text-[11px] text-gray-400 pt-2 border-t border-gray-100">Internal / reviewer / posting note threads are not stored yet — a single memo field exists today. Threaded notes are a Phase-2 enhancement.</p>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+      {[
+        ['Internal Notes', null],
+        ['Customer Notes', si.memo],
+        ['Accounting Notes', null],
+        ['Collection Notes', null],
+      ].map(([label, value]) => (
+        <section key={label} className="border border-gray-200 rounded-md p-3 min-h-24">
+          <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">{label}</div>
+          <div className="text-xs text-gray-700 whitespace-pre-wrap">{value || <span className="text-gray-400">No notes recorded.</span>}</div>
+        </section>
+      ))}
     </div>
   )
 
   // ── Attachments (no storage integration yet) ────────────────
   const attachmentsTab = (
-    <EmptyState title="No attachments"
-      description="Document attachment storage is not yet integrated for Sales Invoices (only the CAS attachment register exists today). Supplier-invoice scans / supporting files are a Phase-2 capability." />
+    <div className="overflow-x-auto">
+      <table className="w-full text-xs">
+        <thead className="bg-gray-50 border-b border-gray-200"><tr>
+          {['File', 'Type', 'Uploaded By', 'Date', 'Preview', 'Download', 'OCR Status'].map(label => (
+            <th key={label} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">{label}</th>
+          ))}
+        </tr></thead>
+        <tbody><tr><td colSpan={7} className="px-3 py-8 text-center text-gray-400">No attachments linked to this invoice.</td></tr></tbody>
+      </table>
+      <p className="text-[10px] text-gray-400 mt-2">Sales Invoice attachment storage and OCR are not configured; the CAS attachment register remains the system-of-record register.</p>
+    </div>
+  )
+
+  // ── Related Party — embedded customer profile, not permanent header content ──
+  const relatedPartyField = (label: string, value: ReactNode, wide = false) => (
+    <div className={wide ? 'sm:col-span-2' : ''} key={label}>
+      <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-0.5">{label}</div>
+      <div className="text-xs font-medium text-gray-700 break-words">{value ?? '—'}</div>
+    </div>
+  )
+  const relatedPartySection = (title: string, fields: ReactNode, className = '') => (
+    <section className={`border border-gray-200 rounded-md p-3 min-w-0 ${className}`}>
+      <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-2">{title}</div>
+      {fields}
+    </section>
+  )
+  const relatedPartyGrid = (fields: Array<[string, ReactNode, boolean?]>) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+      {fields.map(([label, value, wide]) => relatedPartyField(label, value, wide))}
+    </div>
+  )
+  const customerTaxLabel = customer ? (TAX_TYPE_LABEL[customer.default_tax_type] ?? customer.default_tax_type) : '—'
+  const customerSince = customer?.created_at ? new Date(customer.created_at).toLocaleDateString('en-PH') : '—'
+  const mutedValue = (value: string) => <span className="text-gray-400">{value}</span>
+  const customerStatusBadge = customer
+    ? <StatusBadge status={customer.is_active ? 'active' : 'inactive'} label={customer.is_active ? 'Active' : 'Inactive'} />
+    : '—'
+  const creditLimitValue = customer?.credit_limit != null ? <AmountCell amount={num(customer.credit_limit)} /> : '—'
+  const outstandingValue = customerOutstanding != null ? <AmountCell amount={customerOutstanding} /> : '—'
+  const availableCreditValue = availableCredit != null ? <AmountCell amount={availableCredit} /> : '—'
+  const lastPaymentValue = lastPayment
+    ? <span><DateCell date={lastPayment.date} /> · <AmountCell amount={lastPayment.amount} /></span>
+    : '—'
+  const agingBuckets = agingBalances.reduce((acc, row) => {
+    const amount = num(row.balance_due)
+    const days = num(row.days_overdue)
+    if (days <= 0) acc.current += amount
+    else if (days <= 30) acc.days_1_30 += amount
+    else if (days <= 60) acc.days_31_60 += amount
+    else if (days <= 90) acc.days_61_90 += amount
+    else acc.over_90 += amount
+    acc.total += amount
+    return acc
+  }, { current: 0, days_1_30: 0, days_31_60: 0, days_61_90: 0, over_90: 0, total: 0 })
+  const relatedPartyTab = !customer ? (
+    <EmptyState title="Customer master record unavailable" description="The invoice keeps the saved customer snapshot, but the linked Customer master record was not returned." />
+  ) : (
+    <div className="space-y-3">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        {relatedPartySection('Identity', relatedPartyGrid([
+          ['Customer', customerLink, true],
+          ['Customer Code', customer.customer_code],
+          ['Status', customerStatusBadge],
+          ['Registered Name', customer.registered_name, true],
+          ['Trade Name', customer.trade_name || '—'],
+          ['Business Style', customer.business_style || '—'],
+          ['Customer Group', customer.customer_group || '—'],
+          ['Customer Since', customerSince],
+        ]))}
+        {relatedPartySection('Tax Profile', relatedPartyGrid([
+          ['TIN', si.customer_tin_snapshot || customer.tin || '—'],
+          ['TIN Branch', customer.tin_branch_code || '—'],
+          ['VAT Classification', customerTaxLabel],
+          ['Withholding Status', customer.is_withholding_agent ? 'Withholding agent' : 'Not a withholding agent'],
+        ]))}
+        {relatedPartySection('Credit Profile', relatedPartyGrid([
+          ['Credit Limit', creditLimitValue],
+          ['Outstanding AR', outstandingValue],
+          ['Available Credit', availableCreditValue],
+          ['Last Payment', lastPaymentValue],
+        ]))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+        {relatedPartySection('Contacts', relatedPartyGrid([
+          ['Contact', customer.contact_person || '—'],
+          ['Email', customer.email || '—'],
+          ['Phone', customer.phone_number || '—'],
+        ]))}
+        {relatedPartySection('Addresses', relatedPartyGrid([
+          ['Registered Address', si.customer_address_snapshot || customer.registered_address || '—', true],
+          ['Delivery Address', customer.delivery_address || '—', true],
+        ]))}
+        {relatedPartySection('Payment Information', relatedPartyGrid([
+          ['Default Terms', termLabel(customer.default_terms_id || si.payment_terms_id)],
+          ['Payment Method', mutedValue('Selected at receipt')],
+          ['Price List', mutedValue('Not assigned')],
+          ['Delivery Terms', mutedValue('Not assigned')],
+        ]))}
+        {relatedPartySection('Sales Information', relatedPartyGrid([
+          ['Sales Territory', mutedValue('Not assigned')],
+          ['Industry', mutedValue('Not assigned')],
+          ['Price Level', mutedValue('Not assigned')],
+          ['Customer Group', customer.customer_group || '—'],
+        ]))}
+      </div>
+
+      {relatedPartySection('Aging Summary', (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
+          {[
+            ['Current', agingBuckets.current],
+            ['1-30 Days', agingBuckets.days_1_30],
+            ['31-60 Days', agingBuckets.days_31_60],
+            ['61-90 Days', agingBuckets.days_61_90],
+            ['Over 90', agingBuckets.over_90],
+            ['Total AR', agingBuckets.total],
+          ].map(([label, amount]) => (
+            <div key={String(label)} className="bg-gray-50 border border-gray-100 rounded px-2.5 py-2">
+              <div className="text-[10px] uppercase tracking-wide text-gray-400">{label}</div>
+              <div className="text-xs font-semibold text-gray-800"><AmountCell amount={num(amount)} /></div>
+            </div>
+          ))}
+        </div>
+      ))}
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+        {relatedPartySection('Recent Invoices', (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 border-b border-gray-200"><tr>
+                {['Date', 'Invoice', 'Due Date', 'Status', 'Amount'].map(label => (
+                  <th key={label} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">{label}</th>
+                ))}
+              </tr></thead>
+              <tbody className="divide-y divide-gray-100">
+                {recentInvoices.length === 0 ? (
+                  <tr><td colSpan={5} className="px-3 py-5 text-center text-gray-400">No recent invoices found.</td></tr>
+                ) : recentInvoices.map(row => (
+                  <tr key={row.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2"><DateCell date={row.date} /></td>
+                    <td className="px-3 py-2">
+                      <button onClick={() => navigate(`/sales-invoices/${row.id}`)} className="font-mono text-blue-700 hover:underline">{row.si_number}</button>
+                    </td>
+                    <td className="px-3 py-2"><DateCell date={row.due_date} /></td>
+                    <td className="px-3 py-2"><StatusBadge status={statusToShared[row.status as SIStatus] ?? row.status} label={row.status} /></td>
+                    <td className="px-3 py-2 text-right"><AmountCell amount={num(row.total_amount)} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+        {relatedPartySection('Recent Payments', (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="bg-gray-50 border-b border-gray-200"><tr>
+                {['Date', 'Receipt', 'Status', 'Amount', 'CWT'].map(label => (
+                  <th key={label} className="px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-500">{label}</th>
+                ))}
+              </tr></thead>
+              <tbody className="divide-y divide-gray-100">
+                {recentPayments.length === 0 ? (
+                  <tr><td colSpan={5} className="px-3 py-5 text-center text-gray-400">No recent payments found.</td></tr>
+                ) : recentPayments.map(row => (
+                  <tr key={row.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2"><DateCell date={row.receipt_date} /></td>
+                    <td className="px-3 py-2">
+                      <button onClick={() => navigate('/receipts')} className="font-mono text-blue-700 hover:underline">{row.receipt_number}</button>
+                    </td>
+                    <td className="px-3 py-2"><StatusBadge status="posted" label={row.status} /></td>
+                    <td className="px-3 py-2 text-right"><AmountCell amount={num(row.total_amount)} /></td>
+                    <td className="px-3 py-2 text-right"><AmountCell amount={num(row.total_cwt)} /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
+      </div>
+    </div>
   )
 
   // ── System ──────────────────────────────────────────────────
   const systemTab = (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs">
       {[
-        ['Record ID', si.id], ['Company ID', si.company_id], ['Branch ID', si.branch_id],
-        ['Customer ID', si.customer_id], ['Source Type', 'SI'], ['Created Source', 'Manual'],
+        ['Record ID', si.id], ['Database ID', si.id], ['Company ID', si.company_id], ['Branch ID', si.branch_id],
+        ['Customer ID', si.customer_id], ['Fiscal Period ID', si.fiscal_period_id || '—'],
+        ['Journal Entry ID', si.journal_entry_id || '—'], ['Source Module', 'Sales'], ['Source Type', 'SI'],
+        ['Document Series', seriesName || '—'],
         ['Posting RPC', 'fn_post_sales_invoice'], ['Void RPC', 'fn_void_sales_invoice'],
+        ['Posting Engine Version', 'Not exposed'], ['Tax Engine Version', 'Not exposed'],
+        ['Document Hash', 'Not available'], ['Migration Version', 'Not exposed'],
         ['Tax Ledger', 'tax_detail_entries (source_doc_type=SI)'], ['Lock State', lockLabel],
+        ['Created Timestamp', si.created_at], ['Updated Timestamp', si.updated_at],
       ].map(([k, v]) => (
         <div key={k} className="flex justify-between gap-4 py-1 border-b border-gray-50">
           <span className="text-gray-400">{k}</span><span className="font-mono text-gray-600 truncate" title={String(v)}>{v}</span>
@@ -484,79 +859,21 @@ export default function SalesInvoiceDocumentPage() {
 
   const tabs: DocumentTab[] = [
     { key: 'lines', label: 'Lines', badge: lines.length || undefined, content: linesTab },
-    { key: 'financial', label: 'Financial Summary', content: financialTab },
+    { key: 'financial', label: 'Financial', content: financialTab },
     { key: 'gl', label: 'GL Impact', content: glTab },
     { key: 'tax', label: 'Tax Impact', content: taxTab },
-    { key: 'validation', label: 'Posting Validation', content: validationTab },
+    { key: 'validation', label: 'Validation', content: validationTab },
     { key: 'approval', label: 'Approval', content: approvalTab },
-    { key: 'audit', label: 'Audit Trail', content: auditTab },
-    { key: 'related', label: 'Related Documents', content: <RelatedDocumentsTab rows={relatedRows} /> },
+    { key: 'audit', label: 'Audit', content: auditTab },
+    { key: 'related', label: 'Related Docs', content: <RelatedDocumentsTab rows={relatedRows} /> },
+    { key: 'party', label: 'Related Party', content: relatedPartyTab },
     { key: 'attachments', label: 'Attachments', content: attachmentsTab },
-    { key: 'timeline', label: 'Activity Timeline', content: timelineTab },
+    { key: 'timeline', label: 'Activity', content: timelineTab },
     { key: 'notes', label: 'Notes', content: notesTab },
     { key: 'system', label: 'System', content: systemTab },
   ]
 
   // ── Right sidebar (§21) ─────────────────────────────────────
-  const availableCredit = customer?.credit_limit != null ? num(customer.credit_limit) - collection.balance : null
-  const rightRail = (
-    <>
-      <SidebarCard title="Financial Summary">
-        <CardRow label="Net of VAT" value={<AmountCell amount={netOfVat} />} />
-        <CardRow label="Output VAT" value={<AmountCell amount={num(si.total_vat_amount)} />} />
-        <CardRow label="Gross Invoice" value={<AmountCell amount={num(si.total_amount)} />} strong />
-        {cwt > 0 && <CardRow label="Expected CWT" value={<AmountCell amount={cwt} />} muted paren />}
-        {cwt > 0 && <CardRow label="Net Collectible" value={<AmountCell amount={expectedNet} />} />}
-        {si.status === 'posted' && <CardRow label="Collected" value={<AmountCell amount={collection.paid + collection.cwt} />} muted />}
-        {si.status === 'posted' && <CardRow label="Balance Due" value={<AmountCell amount={collection.balance} />} strong />}
-      </SidebarCard>
-
-      <SidebarCard title="Customer Snapshot">
-        <div className="text-sm font-medium text-gray-900">{si.customer_name_snapshot}</div>
-        <div className="text-xs font-mono text-gray-500 mb-2">TIN {si.customer_tin_snapshot || '—'}</div>
-        <CardRow label="VAT Classification" value={customer ? (TAX_TYPE_LABEL[customer.default_tax_type] ?? customer.default_tax_type) : '—'} muted />
-        <CardRow label="Withholding" value={customer?.is_withholding_agent ? 'Agent' : 'No'} muted />
-        <CardRow label="Payment Terms" value={customer ? termLabel(customer.default_terms_id) : termLabel(si.payment_terms_id)} muted />
-        <CardRow label="Credit Limit" value={customer?.credit_limit != null ? <AmountCell amount={num(customer.credit_limit)} /> : '—'} muted />
-        {si.status === 'posted' && <CardRow label="Available Credit" value={availableCredit != null ? <AmountCell amount={availableCredit} /> : '—'} muted />}
-        {customer?.contact_person && <div className="text-[11px] text-gray-400 mt-1">Contact: {customer.contact_person}</div>}
-      </SidebarCard>
-
-      {cwt > 0 && (
-        <SidebarCard title="Tax Summary">
-          <CardRow label="Output VAT" value={<AmountCell amount={num(si.total_vat_amount)} />} />
-          <CardRow label="Expected CWT" value={<AmountCell amount={cwt} />} muted />
-          <p className="text-[10px] text-gray-400 mt-1">VAT-only in Tax Impact; EWT/CWT base pending PXL-AUD-031/032/033.</p>
-        </SidebarCard>
-      )}
-
-      <SidebarCard title="Posting Validation">
-        {si.status === 'posted'
-          ? <div className="text-xs text-blue-700">Posted Successfully · Frozen</div>
-          : readiness.loading
-            ? <div className="text-xs text-gray-400">Checking…</div>
-            : readiness.blockers.length === 0
-              ? <div className="text-xs text-green-700">Ready to post</div>
-              : <div className="text-xs text-red-700">{readiness.blockers.length} blocker{readiness.blockers.length !== 1 ? 's' : ''}</div>}
-      </SidebarCard>
-
-      <SidebarCard title="Quick Actions">
-        <div className="flex flex-col gap-1.5">
-          {si.status === 'posted' && <button onClick={() => navigate('/receipts')} className="text-left text-xs text-gray-700 hover:text-gray-900 hover:underline">→ Create Receipt</button>}
-          {si.status === 'posted' && <button onClick={() => navigate('/credit-memos')} className="text-left text-xs text-gray-700 hover:text-gray-900 hover:underline">→ Create Credit Memo</button>}
-          <button onClick={() => window.print()} className="text-left text-xs text-gray-700 hover:text-gray-900 hover:underline">→ Print</button>
-          <button onClick={() => navigate(`/accounting-trace?sourceType=SI&sourceId=${si.id}`)} className="text-left text-xs text-gray-700 hover:text-gray-900 hover:underline">→ Open Full Accounting Trace</button>
-        </div>
-      </SidebarCard>
-
-      <SidebarCard title="Audit Summary">
-        <CardRow label="Created" value={<span className="text-[11px]">{si.created_at ? new Date(si.created_at).toLocaleDateString('en-PH') : '—'}</span>} muted />
-        <CardRow label="Posted" value={<span className="text-[11px]">{si.posted_at ? new Date(si.posted_at).toLocaleDateString('en-PH') : '—'}</span>} muted />
-        <CardRow label="Lock" value={lockLabel} muted />
-      </SidebarCard>
-    </>
-  )
-
   return (
     <>
       {actionError && <div className="mb-3 border border-red-200 bg-red-50 rounded-md px-4 py-2 text-sm text-red-700">{actionError}</div>}
@@ -565,19 +882,34 @@ export default function SalesInvoiceDocumentPage() {
         documentNo={si.si_number}
         status={statusToShared[si.status]}
         statusLabel={si.status.charAt(0).toUpperCase() + si.status.slice(1)}
+        identity={{
+          name: (
+            <button onClick={openCustomer} className="text-white hover:underline text-left truncate">
+              {si.customer_name_snapshot || customer?.registered_name || '—'}
+            </button>
+          ),
+        }}
+        metrics={[
+          { label: 'Invoice Total', value: <AmountCell amount={num(si.total_amount)} />, emphasis: true },
+          { label: 'Collected', value: <AmountCell amount={collection.paid + collection.cwt} /> },
+          { label: 'Balance Due', value: <AmountCell amount={collection.balance} />, emphasis: collection.balance > 0.005 },
+        ]}
         meta={[
-          { label: 'Date', value: <DateCell date={si.date} /> },
-          { label: 'Branch', value: branchName || '—' },
-          { label: 'Currency', value: si.currency_code },
           { label: 'Posting', value: <StatusBadge status={si.status === 'posted' ? 'posted' : si.status === 'cancelled' ? 'error' : 'draft'} label={postingLabel} /> },
-          ...(collection.status ? [{ label: 'Collection', value: <StatusBadge status={collection.status === 'Paid' ? 'success' : collection.status === 'Partially Paid' ? 'pending' : 'open'} label={collection.status} /> }] : []),
+          { label: 'Collection', value: <StatusBadge status={collection.status === 'Paid' ? 'success' : collection.status === 'Partially Paid' ? 'pending' : 'open'} label={collection.status || 'Not posted'} /> },
           { label: 'Lock', value: <StatusBadge status={si.status === 'draft' ? 'draft' : 'locked'} label={lockLabel} /> },
         ]}
         workflow={workflow}
         actions={actions}
         primary={primaryInfo}
         tabs={tabs}
-        rightRail={rightRail}
+        accentColor={accentColor}
+        footer={
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <span>Created {formatDateTime(si.created_at)} · Updated {formatDateTime(si.updated_at)}</span>
+            <span className="font-mono">UUID {si.id}</span>
+          </div>
+        }
         onBack={backToList}
       />
 

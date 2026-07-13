@@ -2366,6 +2366,7 @@ export type Database = {
           trade_name: string | null
           updated_at: string | null
           updated_by: string | null
+          workspace_accent_color: string
           zip_code: string
         }
         Insert: {
@@ -2403,6 +2404,7 @@ export type Database = {
           trade_name?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          workspace_accent_color?: string
           zip_code: string
         }
         Update: {
@@ -2440,6 +2442,7 @@ export type Database = {
           trade_name?: string | null
           updated_at?: string | null
           updated_by?: string | null
+          workspace_accent_color?: string
           zip_code?: string
         }
         Relationships: [
@@ -13715,4 +13718,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
