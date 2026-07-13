@@ -768,3 +768,16 @@ Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/034_settlem
 | 6 | Save an OR with a bogus header `total_amount` (77,777) and `total_cwt` (55,555); the line collects 11,000 cash and 200 CWT (2% of the explicit 10,000 base) | The server stores `total_amount = 11,000` (the line payment sum). |
 | 7 | Post the OR | Posts from the line-derived header. |
 | 8 | Inspect the posted OR JE cash line | Debits Cash by the line-sum 11,000, not the client header value. |
+
+## CM-VC-OVERAPPLY-001 - Over-Apply Guards Net Applied Credit Memos / Vendor Credits
+
+Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/035_cm_vc_aware_overapply_test.sql`, 6 assertions. Related findings: PXL-AUD-039.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Post an 11,200 SI and apply a 2,000 credit memo (`status = applied`) against it | The invoice's collectible balance is now 9,200 (SI total less applied CM), mirroring `fn_ar_aging_asof`. |
+| 2 | Save a receipt collecting the full 11,200 | Rejected — `Payment ... exceeds outstanding balance` — because the applied CM leaves only 9,200 collectible (previously accepted, driving AR negative and inflating the CWT base). |
+| 3 | Save a receipt collecting the net 9,200 | Accepted. |
+| 4 | Post an 11,200 VB and apply a 2,000 vendor credit against it via `fn_apply_vendor_credit` | The bill's payable balance is now 9,200 (VB total less non-reversed VC application on an open/applied vendor credit), mirroring `fn_ap_aging_asof`. |
+| 5 | Save a PV paying the full 11,200 | Rejected — `Payment ... exceeds outstanding AP balance` — because the applied VC leaves only 9,200 payable. |
+| 6 | Save a PV paying the net 9,200 | Accepted. |

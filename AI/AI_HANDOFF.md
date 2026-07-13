@@ -1,12 +1,16 @@
 # AI Handoff
 
-Last updated: 2026-07-13 (session 77 — ATC versioning + settlement-total line authority; AUD-035/036/038/048 closed)
+Last updated: 2026-07-13 (session 77 — ATC versioning + settlement-total authority + CM/VC over-apply guards; AUD-035/036/038/048/039 closed)
 
 ## Active Priority (session 77 — accounting-core implementation lane)
 
-Under **PXL Accounting Core Ready** (DEC-017), session 77 delivered two accounting-core fixes: safe ATC document-date validation + rate versioning (**AUD-035/036**) and PV/OR settlement-total line authority (**AUD-038/048**).
+Under **PXL Accounting Core Ready** (DEC-017), session 77 delivered three accounting-core fixes on the shared PV/OR posting path: ATC document-date validation + rate versioning (**AUD-035/036**), PV/OR settlement-total line authority (**AUD-038/048**), and CM/VC-aware over-apply guards (**AUD-039**). Each migration builds on the previous one's `fn_save_*` bodies, preserving all prior behavior.
 
-Second fix — `supabase/migrations/20260713000003_settlement_total_line_authority.sql` + `supabase/tests/034_settlement_total_line_authority_test.sql` (SETTLEMENT-TOTAL-AUTHORITY-001, 8 assertions): `fn_save_payment_voucher`/`fn_save_receipt` derive header `total_amount`/`total_ewt`/`total_cwt` from the persisted lines (client header ignored); the ready validators reject any header cash total diverging from `SUM(line payment_amount)` before posting; header withholding totals now equal line sums exactly (closes the 0.02 export-blocking drift). Built on the `20260713000002` bodies. Cash sales unaffected. **Next fix: AUD-039** (CM/VC-aware over-apply guards) in the same two save-guards — reuse the AR/AP aging formula.
+Third fix — `supabase/migrations/20260713000004_cm_vc_aware_overapply_guards.sql` + `supabase/tests/035_cm_vc_aware_overapply_test.sql` (CM-VC-OVERAPPLY-001, 6 assertions): the `fn_save_receipt`/`fn_save_payment_voucher` over-apply guards now net applied credit memos (AR) and non-reversed vendor-credit applications on open/applied vendor credits (AP) from the invoice/bill outstanding, mirroring `fn_ar_aging_asof`/`fn_ap_aging_asof` (scalar subqueries so the two credit sources don't fan out). Test 004 stays green.
+
+**Next fix:** AUD-041 (controlled EWT remittance / CWT application flow — Large; unblocks SAWT/QAP exports and the Critical DA-009), then AUD-037 (withholding basis policy — needs a DEC).
+
+Second fix — `20260713000003_settlement_total_line_authority.sql` + test 034 (8 assertions): `fn_save_payment_voucher`/`fn_save_receipt` derive header `total_amount`/`total_ewt`/`total_cwt` from the persisted lines (client header ignored); the ready validators reject any header cash total diverging from `SUM(line payment_amount)` before posting; header withholding totals now equal line sums exactly (closes the 0.02 export-blocking drift). Cash sales unaffected.
 
 First fix (below) — ATC document-date validation and rate versioning, closing **PXL-AUD-035** and **PXL-AUD-036**.
 

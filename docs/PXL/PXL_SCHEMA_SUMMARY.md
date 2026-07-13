@@ -4,7 +4,7 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-13. Migrations scanned: 88. Tests present: 33.
+Generated: 2026-07-13. Migrations scanned: 89. Tests present: 34.
 
 ## Functions (199)
 
@@ -162,10 +162,10 @@ Generated: 2026-07-13. Migrations scanned: 88. Tests present: 33.
 | `fn_save_cash_sale` | `20260704000003_receipt_cwt_explicit_base.sql` | 5 |
 | `fn_save_credit_memo` | `20260630000022_tax_ledger_completeness.sql` | 4 |
 | `fn_save_debit_memo` | `20260630000022_tax_ledger_completeness.sql` | 4 |
-| `fn_save_payment_voucher` | `20260713000003_settlement_total_line_authority.sql` | 5 |
+| `fn_save_payment_voucher` | `20260713000004_cm_vc_aware_overapply_guards.sql` | 6 |
 | `fn_save_purchase_order` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_save_purchase_return` | `20260630000021_gap_fill.sql` | 2 |
-| `fn_save_receipt` | `20260713000003_settlement_total_line_authority.sql` | 7 |
+| `fn_save_receipt` | `20260713000004_cm_vc_aware_overapply_guards.sql` | 8 |
 | `fn_save_receiving_report` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_save_sales_invoice` | `20260630000021_gap_fill.sql` | 3 |
 | `fn_save_supplier_debit_memo` | `20260630000021_gap_fill.sql` | 2 |

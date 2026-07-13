@@ -414,7 +414,7 @@ Do not build these transactions now. This section records accounting requirement
 | High | Withholding profile/configuration incomplete. | Tax/Master Data | Tax computation depends on incomplete profile data. | PXL-AUD-008, PXL-AUD-042 |
 | High | Remittance/application flow missing. | Tax Engine | Filed EWT/CWT workflows and reconciliations remain blocked. | PXL-AUD-041 |
 | ~~High~~ PV/OR done (session 77) | Settlement header totals are client-driven. | Accounting/Tax | GL can diverge from line/subledger/tax rows. | PXL-AUD-038, PXL-AUD-048 (done for PV/OR, `20260713000003`) |
-| High | CM/VC-aware over-apply guards incomplete. | Subledger | AR/AP balances and withholding can be overstated. | PXL-AUD-039 |
+| ~~High~~ Done (session 77) | CM/VC-aware over-apply guards incomplete. | Subledger | AR/AP balances and withholding can be overstated. | PXL-AUD-039 (done, `20260713000004`) |
 | High | Universal number-series preflight incomplete. | Posting/Compliance | Users can reach late numbering errors; CAS evidence gaps possible. | PXL-AUD-016 |
 | High | Semantic lifecycle event log incomplete. | Audit | Audit timeline is not a single governed lifecycle stream. | PXL-DA-016 |
 | Medium | Heavy reports need server-side computation/pagination/materialization. | Reporting Core | Large reports may be slow or unsafe. | PXL-DA-018 |
