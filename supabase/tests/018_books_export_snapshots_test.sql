@@ -5,15 +5,15 @@
 -- disbursements book, general journal, cash sales/purchases journals) must
 -- build their payloads server-side, freeze them in versioned exported report
 -- snapshots with SHA-256 hashes, write server-attested cas_export_log rows,
--- gate the general journal on debit=credit balance, and return exactly the
--- frozen rows to the caller.
+-- reconcile source rows through linked balanced journal entries, feed the CAS
+-- audit support package, and return exactly the frozen rows to the caller.
 -- Exercises 20260703000009_report_snapshots_books_exports.sql.
 -- Follows the suite convention: FY2026 periods with CURRENT_DATE inside them.
 -- ══════════════════════════════════════════════════════════════════════════════
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(13);
+SELECT plan(22);
 
 -- ── Identity ───────────────────────────────────────────────────────────────────
 INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password,
@@ -239,6 +239,40 @@ SELECT results_eq(
   $$VALUES ('csv_export'::text, 'Sales Journal'::text, 1, '2026-02-01..2026-02-28'::text, true)$$,
   'the RPC writes the cas_export_log evidence row with the exported range');
 
+SELECT is(
+  (SELECT val ->> 'export_text' FROM t_res WHERE key='sj1'),
+  (SELECT source_payload ->> 'export_file_text' FROM report_snapshots
+   WHERE id = ((SELECT val FROM t_res WHERE key='sj1') ->> 'snapshot_id')::uuid),
+  'the export text returned to the caller is exactly the frozen snapshot file text');
+
+SELECT is(
+  (SELECT source_payload ->> 'export_file_sha256' FROM report_snapshots
+   WHERE id = ((SELECT val FROM t_res WHERE key='sj1') ->> 'snapshot_id')::uuid),
+  (SELECT encode(extensions.digest(convert_to(source_payload ->> 'export_file_text', 'UTF8'), 'sha256'), 'hex')
+   FROM report_snapshots
+   WHERE id = ((SELECT val FROM t_res WHERE key='sj1') ->> 'snapshot_id')::uuid),
+  'the snapshot stores the SHA-256 of the exact exported file text');
+
+SELECT results_eq(
+  $q$SELECT
+        cel.file_sha256 = rs.source_payload ->> 'export_file_sha256',
+        cel.file_size_bytes = octet_length(convert_to(rs.source_payload ->> 'export_file_text', 'UTF8'))
+      FROM cas_export_log cel
+      JOIN report_snapshots rs ON rs.id = cel.snapshot_id
+      WHERE cel.company_id = '22222222-2222-2222-2222-222222222280'
+        AND cel.file_name = 'sales-journal-2026-02-01-to-2026-02-28.csv'$q$,
+  $$VALUES (true, true)$$,
+  'cas_export_log mirrors the frozen book file hash and byte size');
+
+SELECT results_eq(
+  $q$SELECT
+        source_payload -> 'reconciliation' @> '[{"check":"books_source_to_export","book_type":"sales_journal","export_row_count":1,"source_row_count":1,"export_total":11200,"source_total":11200,"linked_journal_entries":1,"missing_journal_entries":0,"is_reconciled":true}]'::jsonb,
+        source_payload -> 'reconciliation' @> '[{"check":"books_linked_gl_balance","book_type":"sales_journal","is_reconciled":true}]'::jsonb
+     FROM report_snapshots
+     WHERE id = ((SELECT val FROM t_res WHERE key='sj1') ->> 'snapshot_id')::uuid$q$,
+  $$VALUES (true, true)$$,
+  'sales journal stores source-to-export and linked-GL reconciliation evidence');
+
 -- ── 4-6. Purchase journal, cash receipts, cash disbursements ───────────────────
 INSERT INTO t_res
 SELECT 'pj1', fn_snapshot_books_export('22222222-2222-2222-2222-222222222280',
@@ -278,6 +312,39 @@ SELECT results_eq(
   $$VALUES (1, 'PV'::text, 5400.00::numeric)$$,
   'cash disbursements book freezes the PV payment net of EWT');
 
+SELECT results_eq(
+  $q$WITH snapshots AS (
+        SELECT rs.report_type, rs.source_payload
+        FROM report_snapshots rs
+        WHERE rs.id IN (
+          ((SELECT val FROM t_res WHERE key='pj1') ->> 'snapshot_id')::uuid,
+          ((SELECT val FROM t_res WHERE key='crb1') ->> 'snapshot_id')::uuid,
+          ((SELECT val FROM t_res WHERE key='cdb1') ->> 'snapshot_id')::uuid
+        )
+      )
+      SELECT report_type,
+             EXISTS (
+               SELECT 1
+               FROM jsonb_array_elements(source_payload -> 'reconciliation') AS r(value)
+               WHERE r.value ->> 'check' = 'books_source_to_export'
+                 AND (r.value ->> 'is_reconciled')::boolean
+                 AND (r.value ->> 'source_row_count')::integer = 1
+                 AND (r.value ->> 'missing_journal_entries')::integer = 0
+             ) AS source_reconciled,
+             EXISTS (
+               SELECT 1
+               FROM jsonb_array_elements(source_payload -> 'reconciliation') AS r(value)
+               WHERE r.value ->> 'check' = 'books_linked_gl_balance'
+                 AND (r.value ->> 'is_reconciled')::boolean
+             ) AS linked_gl_reconciled
+      FROM snapshots
+      ORDER BY report_type$q$,
+  $$VALUES
+    ('BOOKS_CASH_DISBURSEMENTS'::text, true, true),
+    ('BOOKS_CASH_RECEIPTS'::text, true, true),
+    ('BOOKS_PURCHASE_JOURNAL'::text, true, true)$$,
+  'source books store reconciled source rows and linked balanced GL evidence');
+
 -- ── 7-8. General journal: complete and balance-stamped ─────────────────────────
 INSERT INTO t_res
 SELECT 'gj1', fn_snapshot_books_export('22222222-2222-2222-2222-222222222280',
@@ -310,6 +377,15 @@ SELECT results_eq(
   $$VALUES (0, 0, 64)$$,
   'an empty cash sales journal still produces hashed snapshot evidence');
 
+SELECT results_eq(
+  $q$SELECT
+        source_payload -> 'reconciliation' @> '[{"check":"books_source_to_export","export_row_count":0,"source_row_count":0,"linked_journal_entries":0,"missing_journal_entries":0,"is_reconciled":true}]'::jsonb,
+        source_payload -> 'reconciliation' @> '[{"check":"books_linked_gl_balance","linked_gl_line_count":0,"is_reconciled":true}]'::jsonb
+     FROM report_snapshots
+     WHERE id = ((SELECT val FROM t_res WHERE key='csj1') ->> 'snapshot_id')::uuid$q$,
+  $$VALUES (true, true)$$,
+  'an empty book still stores passing reconciliation evidence');
+
 -- ── 10. Re-export versions the same logical source ─────────────────────────────
 INSERT INTO t_res
 SELECT 'sj2', fn_snapshot_books_export('22222222-2222-2222-2222-222222222280',
@@ -323,7 +399,40 @@ SELECT results_eq(
   $$VALUES (2, true)$$,
   're-exporting the same book and range creates v2 on the same logical source');
 
--- ── 11-13. Input validation ────────────────────────────────────────────────────
+-- ── 11-13. CAS audit support package ──────────────────────────────────────────
+INSERT INTO t_res
+SELECT 'audit_package1', fn_snapshot_cas_audit_package(
+  '22222222-2222-2222-2222-222222222280',
+  '2026-02-01', '2026-02-28', 'cas-audit-package-2026-02.json');
+
+SELECT results_eq(
+  $q$SELECT report_type, source_row_count > 0, length(source_hash),
+            source_payload -> 'checks' @> '[{"check":"gl_balance","is_reconciled":true},{"check":"books_reconciliation","snapshot_count":7,"is_reconciled":true},{"check":"export_hash_evidence","export_count":7,"missing_hashes":0,"missing_dat_artifacts":0,"is_reconciled":true}]'::jsonb,
+            jsonb_array_length(source_payload -> 'books_reconciliation'),
+            jsonb_array_length(source_payload -> 'exports')
+     FROM report_snapshots
+     WHERE id = ((SELECT val FROM t_res WHERE key='audit_package1') ->> 'snapshot_id')::uuid$q$,
+  $$VALUES ('CAS_AUDIT_PACKAGE'::text, true, 64, true, 7, 7)$$,
+  'CAS audit package snapshots reconciled books and export hash evidence for the range');
+
+SELECT results_eq(
+  $q$SELECT cel.export_type, cel.report_name,
+            cel.file_sha256 = rs.source_hash,
+            cel.file_size_bytes = octet_length(convert_to(rs.source_payload::text, 'UTF8')),
+            cel.row_count = rs.source_row_count
+      FROM cas_export_log cel
+      JOIN report_snapshots rs ON rs.id = cel.snapshot_id
+      WHERE rs.id = ((SELECT val FROM t_res WHERE key='audit_package1') ->> 'snapshot_id')::uuid$q$,
+  $$VALUES ('audit_package'::text, 'CAS Audit Support Package'::text, true, true, true)$$,
+  'CAS audit package writes a server-attested export log with the snapshot hash and byte size');
+
+SELECT throws_like(
+  $q$SELECT fn_snapshot_cas_audit_package('22222222-2222-2222-2222-222222222280',
+       '2026-01-01', '2026-01-31', 'jan-audit-package.json')$q$,
+  '%books_reconciliation%',
+  'CAS audit package blocks periods without reconciled books snapshots');
+
+-- ── 14-16. Input validation ───────────────────────────────────────────────────
 SELECT throws_like(
   $q$SELECT fn_snapshot_books_export('22222222-2222-2222-2222-222222222280',
        'ledger_of_secrets', '2026-02-01', '2026-02-28', 'x.csv')$q$,

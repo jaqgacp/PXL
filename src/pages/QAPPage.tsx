@@ -3,8 +3,38 @@ import { ReportTraceLink } from '@/components/AccountingTraceLink'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
-type Row = { supplier_id: string; supplier_name: string | null; supplier_tin: string | null; atc_code: string | null; tax_base: number; tax_withheld: number }
-type Agg = { supplier_id: string; supplier_name: string; supplier_tin: string; atc_codes: Set<string>; tax_base: number; tax_withheld: number }
+type Row = {
+  supplier_id: string | null
+  supplier_name: string | null
+  supplier_tin: string | null
+  atc_code: string | null
+  nature_of_payment: string | null
+  tax_rate: number | null
+  tax_base: number
+  tax_withheld: number
+}
+type Agg = {
+  key: string
+  supplier_id: string | null
+  supplier_name: string
+  supplier_tin: string
+  atc_code: string
+  nature_of_payment: string
+  tax_rate: number
+  tax_base: number
+  tax_withheld: number
+}
+type QapPayloadRow = Partial<Agg> & {
+  supplier_id?: string | null
+  supplier_name?: string | null
+  supplier_tin?: string | null
+  atc_code?: string | null
+  nature_of_payment?: string | null
+  tax_rate?: number | string | null
+  tax_base?: number | string | null
+  tax_withheld?: number | string | null
+}
+type QapSnapshotPayload = { payee_summary_rows?: QapPayloadRow[] }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const QUARTERS: Record<number, number[]> = { 1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12] }
@@ -30,18 +60,36 @@ export default function QAPPage() {
     if (!companyId) return
     setLoading(true)
 
-    const { data } = await supabase.from('vw_ewt_summary_ap').select('supplier_id,supplier_name,supplier_tin,atc_code,tax_base,tax_withheld')
+    const { data } = await supabase.from('vw_ewt_summary_ap').select('supplier_id,supplier_name,supplier_tin,atc_code,nature_of_payment,tax_rate,tax_base,tax_withheld')
       .eq('company_id', companyId).gte('invoice_date', dateFrom).lte('invoice_date', dateTo)
 
-    const bySupplier: Record<string, Agg> = {}
+    const bySupplierAtc: Record<string, Agg> = {}
     for (const r of (data || []) as Row[]) {
-      const key = r.supplier_id
-      if (!bySupplier[key]) bySupplier[key] = { supplier_id: key, supplier_name: r.supplier_name || 'Unknown', supplier_tin: r.supplier_tin || '', atc_codes: new Set(), tax_base: 0, tax_withheld: 0 }
-      bySupplier[key].tax_base += Number(r.tax_base)
-      bySupplier[key].tax_withheld += Number(r.tax_withheld)
-      if (r.atc_code) bySupplier[key].atc_codes.add(r.atc_code)
+      const atc = r.atc_code || ''
+      const nature = r.nature_of_payment || ''
+      const rate = Number(r.tax_rate || 0)
+      const key = [r.supplier_id || r.supplier_tin || 'unknown', atc, nature, rate.toFixed(2)].join('|')
+      if (!bySupplierAtc[key]) {
+        bySupplierAtc[key] = {
+          key,
+          supplier_id: r.supplier_id,
+          supplier_name: r.supplier_name || 'Unknown',
+          supplier_tin: r.supplier_tin || '',
+          atc_code: atc,
+          nature_of_payment: nature,
+          tax_rate: rate,
+          tax_base: 0,
+          tax_withheld: 0,
+        }
+      }
+      bySupplierAtc[key].tax_base += Number(r.tax_base)
+      bySupplierAtc[key].tax_withheld += Number(r.tax_withheld)
     }
-    setRows(Object.values(bySupplier).sort((a, b) => a.supplier_name.localeCompare(b.supplier_name)))
+    setRows(Object.values(bySupplierAtc).sort((a, b) =>
+      a.supplier_name.localeCompare(b.supplier_name) ||
+      a.atc_code.localeCompare(b.atc_code) ||
+      a.nature_of_payment.localeCompare(b.nature_of_payment)
+    ))
     setLoading(false)
   }, [companyId, dateFrom, dateTo])
 
@@ -54,19 +102,39 @@ export default function QAPPage() {
   const exportCSV = async () => {
     if (!companyId) return
     setExporting(true)
-    const { error } = await supabase.rpc('fn_snapshot_wht_export', {
+    const { data: snapshotId, error } = await supabase.rpc('fn_snapshot_wht_export', {
       p_company_id: companyId,
       p_report_type: 'QAP',
       p_year: year,
       p_quarter: quarter,
     })
-    setExporting(false)
     if (error) {
+      setExporting(false)
       alert(error.message)
       return
     }
-    const header = ['TIN', 'Registered Name', 'ATC Codes', 'Income Payments', 'Tax Withheld']
-    const csvRows = rows.map(r => [r.supplier_tin, r.supplier_name, Array.from(r.atc_codes).join('; '), r.tax_base.toFixed(2), r.tax_withheld.toFixed(2)])
+    const { data: snapshot, error: snapshotError } = await supabase
+      .from('report_snapshots')
+      .select('source_payload')
+      .eq('id', snapshotId)
+      .single()
+    setExporting(false)
+    if (snapshotError) {
+      alert(snapshotError.message)
+      return
+    }
+    const payload = snapshot?.source_payload as QapSnapshotPayload | null
+    const exportRows = (payload?.payee_summary_rows || rows).map(r => ({
+      supplier_tin: r.supplier_tin || '',
+      supplier_name: r.supplier_name || 'Unknown',
+      atc_code: r.atc_code || '',
+      nature_of_payment: r.nature_of_payment || '',
+      tax_rate: Number(r.tax_rate || 0),
+      tax_base: Number(r.tax_base || 0),
+      tax_withheld: Number(r.tax_withheld || 0),
+    }))
+    const header = ['TIN', 'Registered Name', 'ATC', 'Nature of Payment', 'Rate', 'Income Payments', 'Tax Withheld']
+    const csvRows = exportRows.map(r => [r.supplier_tin, r.supplier_name, r.atc_code, r.nature_of_payment, r.tax_rate.toFixed(2), r.tax_base.toFixed(2), r.tax_withheld.toFixed(2)])
     const csv = [header, ...csvRows].map(row => row.map(c => `"${c}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)
@@ -99,28 +167,34 @@ export default function QAPPage() {
               <tr className="bg-gray-50 border-b border-gray-200">
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">TIN</th>
                 <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Registered Name</th>
-                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">ATC Codes</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">ATC</th>
+                <th className="text-left px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Nature</th>
+                <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rate</th>
                 <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Income Payments</th>
                 <th className="text-right px-4 py-2.5 text-xs font-semibold text-gray-500 uppercase tracking-wide">Tax Withheld</th>
               </tr>
             </thead>
             <tbody>
               {rows.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-16 text-gray-400">{!companyId ? 'Select a company from the context bar above.' : 'No EWT payees in this period.'}</td></tr>
+                <tr><td colSpan={7} className="text-center py-16 text-gray-400">{!companyId ? 'Select a company from the context bar above.' : 'No EWT payees in this period.'}</td></tr>
               ) : rows.map(r => (
-                <tr key={r.supplier_id} className="border-b border-gray-100 hover:bg-gray-50">
+                <tr key={r.key} className="border-b border-gray-100 hover:bg-gray-50">
                   <td className="px-4 py-2.5 text-gray-700">{r.supplier_tin || '—'}</td>
                   <td className="px-4 py-2.5 text-gray-700">
-                    <ReportTraceLink
-                      companyId={companyId}
-                      reportFamily="tax"
-                      filters={{ tax_kind: 'ewt_payable', counterparty_id: r.supplier_id, date_from: dateFrom, date_to: dateTo }}
-                      title="Open the accounting sources included for this payee"
-                    >
-                      {r.supplier_name}
-                    </ReportTraceLink>
+                    {r.supplier_id ? (
+                      <ReportTraceLink
+                        companyId={companyId}
+                        reportFamily="tax"
+                        filters={{ tax_kind: 'ewt_payable', counterparty_id: r.supplier_id, date_from: dateFrom, date_to: dateTo }}
+                        title="Open the accounting sources included for this payee"
+                      >
+                        {r.supplier_name}
+                      </ReportTraceLink>
+                    ) : r.supplier_name}
                   </td>
-                  <td className="px-4 py-2.5 text-gray-500">{Array.from(r.atc_codes).join(', ') || '—'}</td>
+                  <td className="px-4 py-2.5 text-gray-500 font-mono">{r.atc_code || '—'}</td>
+                  <td className="px-4 py-2.5 text-gray-500">{r.nature_of_payment || '—'}</td>
+                  <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700">{fmt(r.tax_rate)}%</td>
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700">{fmt(r.tax_base)}</td>
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-900 font-semibold">{fmt(r.tax_withheld)}</td>
                 </tr>
@@ -128,7 +202,7 @@ export default function QAPPage() {
             </tbody>
             {rows.length > 0 && (
               <tfoot className="border-t-2 border-gray-300 bg-gray-50">
-                <tr><td colSpan={3} className="px-4 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Total — {rows.length} payee{rows.length !== 1 ? 's' : ''}</td><td className="px-4 py-2.5 text-right font-mono text-sm font-bold tabular-nums text-gray-900">{fmt(totalBase)}</td><td className="px-4 py-2.5 text-right font-mono text-sm font-bold tabular-nums text-gray-900">{fmt(totalWithheld)}</td></tr>
+                <tr><td colSpan={5} className="px-4 py-2.5 text-xs font-semibold text-gray-600 uppercase tracking-wide">Total — {rows.length} payee/ATC row{rows.length !== 1 ? 's' : ''}</td><td className="px-4 py-2.5 text-right font-mono text-sm font-bold tabular-nums text-gray-900">{fmt(totalBase)}</td><td className="px-4 py-2.5 text-right font-mono text-sm font-bold tabular-nums text-gray-900">{fmt(totalWithheld)}</td></tr>
               </tfoot>
             )}
           </table>

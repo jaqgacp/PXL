@@ -5,6 +5,8 @@ import { useAppCtx } from '@/lib/context'
 
 type Row = { customer_id: string | null; customer_tin: string | null; customer_name: string | null; income_payment: number; cwt_withheld: number }
 type Agg = { customer_key: string; customer_id: string | null; customer_name: string; customer_tin: string; payments: number; cwt: number }
+type SawtPayloadRow = { customer_tin?: string | null; customer_name?: string | null; income_payments?: number | string | null; cwt_withheld?: number | string | null }
+type SawtSnapshotPayload = { payer_summary_rows?: SawtPayloadRow[] }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const QUARTERS: Record<number, number[]> = { 1: [1, 2, 3], 2: [4, 5, 6], 3: [7, 8, 9], 4: [10, 11, 12] }
@@ -56,19 +58,43 @@ export default function SAWTPage() {
   const exportCSV = async () => {
     if (!companyId) return
     setExporting(true)
-    const { error } = await supabase.rpc('fn_snapshot_wht_export', {
+    const { data: snapshotId, error } = await supabase.rpc('fn_snapshot_wht_export', {
       p_company_id: companyId,
       p_report_type: 'SAWT',
       p_year: year,
       p_quarter: quarter,
     })
-    setExporting(false)
     if (error) {
+      setExporting(false)
       alert(error.message)
       return
     }
+    const { data: snapshot, error: snapshotError } = await supabase
+      .from('report_snapshots')
+      .select('source_payload')
+      .eq('id', snapshotId)
+      .single()
+    setExporting(false)
+    if (snapshotError) {
+      alert(snapshotError.message)
+      return
+    }
+    const payload = snapshot?.source_payload as SawtSnapshotPayload | null
+    const exportRows = payload?.payer_summary_rows
+      ? payload.payer_summary_rows.map(r => ({
+          customer_tin: r.customer_tin || '',
+          customer_name: r.customer_name || 'Unknown',
+          payments: Number(r.income_payments || 0),
+          cwt: Number(r.cwt_withheld || 0),
+        }))
+      : rows.map(r => ({
+          customer_tin: r.customer_tin,
+          customer_name: r.customer_name,
+          payments: r.payments,
+          cwt: r.cwt,
+        }))
     const header = ['Customer TIN', 'Customer Name', 'Income Payments', 'CWT Withheld']
-    const csvRows = rows.map(r => [r.customer_tin, r.customer_name, r.payments.toFixed(2), r.cwt.toFixed(2)])
+    const csvRows = exportRows.map(r => [r.customer_tin, r.customer_name, r.payments.toFixed(2), r.cwt.toFixed(2)])
     const csv = [header, ...csvRows].map(row => row.map(c => `"${c}"`).join(',')).join('\n')
     const blob = new Blob([csv], { type: 'text/csv' })
     const url = URL.createObjectURL(blob)

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { downloadCsvText, getSnapshotExportText } from '@/lib/exportDownload'
 
 type Row = { id: string; date: string; si_number: string; customer_name_snapshot: string; customer_tin_snapshot: string | null; total_amount: number; total_vat_amount: number }
 
@@ -36,8 +37,8 @@ export default function BooksSalesJournalPage() {
     if (!companyId) return
     setExporting(true)
     const fileName = `sales-journal-${dateFrom}-to-${dateTo}.csv`
-    // Server-side snapshot: freezes the book payload with a SHA-256 hash and
-    // returns the frozen rows, so the file is provably the hashed payload.
+    // Server-side snapshot: freezes the exact export text with a SHA-256 hash
+    // and returns that same text for download.
     const { data, error } = await supabase.rpc('fn_snapshot_books_export', {
       p_company_id: companyId,
       p_book_type: 'sales_journal',
@@ -50,17 +51,12 @@ export default function BooksSalesJournalPage() {
       alert(error.message)
       return
     }
-    const frozen = ((data as { rows: Record<string, string | number | null>[] }).rows) || []
-    const num = (v: string | number | null) => Number(v ?? 0).toFixed(2)
-    const str = (v: string | number | null) => (v ?? '') as string
-    const header = ['Date', 'SI No.', 'Customer', 'TIN', 'VAT', 'Total Amount']
-    const csvRows = frozen.map(r => [str(r.date), str(r.si_number), str(r.customer_name), str(r.customer_tin), num(r.total_vat_amount), num(r.total_amount)])
-    const csv = [header, ...csvRows].map(row => row.map(c => `"${c}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = fileName; a.click()
-    URL.revokeObjectURL(url)
+    const exportText = getSnapshotExportText(data)
+    if (!exportText) {
+      alert('Books export did not return a file payload.')
+      return
+    }
+    downloadCsvText(exportText, fileName)
   }
 
   return (

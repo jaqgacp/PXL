@@ -28,12 +28,12 @@ SELECT set_config('request.jwt.claims',
 
 -- ── VAT company + setup ────────────────────────────────────────────────────────
 INSERT INTO companies (id, entity_type, registered_name, line_of_business, tin,
-                       tax_registration, accounting_period,
+                       tax_registration, accounting_period, ap_ewt_recognition_policy,
                        address_line_1, address_line_2, city, province, zip_code,
                        email, signatory_name, signatory_position, created_by, updated_by)
 VALUES ('22222222-2222-2222-2222-222222222227', 'corporation',
         'EWT Partial Test Corp', 'Software Services', '111-222-333-005',
-        'vat', 'calendar',
+        'vat', 'calendar', 'payment',
         'Unit 1', 'Test Bldg', 'Makati', 'Metro Manila', '1200',
         'harness-ewt@test.local', 'Juan Dela Cruz', 'President',
         auth.uid(), auth.uid());

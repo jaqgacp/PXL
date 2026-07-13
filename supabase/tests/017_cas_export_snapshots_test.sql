@@ -1,19 +1,19 @@
 -- ══════════════════════════════════════════════════════════════════════════════
 -- CAS-EXPORT-SNAP-001 - CAS DAT Export Snapshots (PXL-DA-015)
 --
--- CAS DAT file generation must build its payload server-side, gate on the
+-- CAS DAT file generation must build its DAT payload server-side, gate on the
 -- relevant reconciliation (VAT for SLSP/RELIEF, EWT payable for the alphalist,
 -- debit=credit for the GL extract), create a versioned exported report
--- snapshot with a SHA-256 hash, and write the cas_export_log evidence row
--- itself — direct client inserts into the log are blocked, and the rows the
--- caller receives are exactly the frozen snapshot rows.
+-- snapshot with a SHA-256 hash, and write the cas_export_log/artifact evidence
+-- itself — direct client inserts into the log are blocked, and the rows/file
+-- text the caller receives are exactly the frozen snapshot payload.
 -- Exercises 20260703000008_report_snapshots_cas_exports.sql.
 -- Follows the suite convention: FY2026 periods with CURRENT_DATE inside them.
 -- ══════════════════════════════════════════════════════════════════════════════
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(15);
+SELECT plan(29);
 
 -- ── Identity ───────────────────────────────────────────────────────────────────
 INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password,
@@ -217,25 +217,29 @@ SELECT fn_post_payment_voucher((SELECT id FROM t_ctx WHERE key='pv1'));
 -- ── 1-3. SLSP DAT export: snapshot + server-attested log row ───────────────────
 INSERT INTO t_res
 SELECT 'slsp1', fn_snapshot_cas_export('22222222-2222-2222-2222-222222222270',
-  'slsp', 2026, 2, 'slsp-February-2026.csv');
+  'slsp', 2026, 2, 'slsp-February-2026.dat');
 
 SELECT results_eq(
   $q$SELECT snapshot_status, report_type, snapshot_version, period_start, period_end,
             source_row_count, length(source_hash)
      FROM report_snapshots
      WHERE id = ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid$q$,
-  $$VALUES ('exported'::text, 'CAS_SLSP'::text, 1, '2026-02-01'::date, '2026-02-28'::date, 1, 64)$$,
+  $$VALUES ('exported'::text, 'CAS_SLSP'::text, 1, '2026-02-01'::date, '2026-02-28'::date, 2, 64)$$,
   'SLSP DAT export creates an exported v1 snapshot with a SHA-256 hash');
 
 SELECT results_eq(
   $q$SELECT export_type, report_name, period_year, period_month, row_count,
             (generated_by IS NOT NULL),
-            (snapshot_id = ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid)
+            (snapshot_id = ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid),
+            (artifact_id IS NOT NULL),
+            (file_sha256 = file_hash),
+            layout_version
      FROM cas_export_log
      WHERE company_id = '22222222-2222-2222-2222-222222222270'
-       AND file_name = 'slsp-February-2026.csv'$q$,
-  $$VALUES ('dat_file'::text, 'SLSP (Sales & Purchases)'::text, 2026, 2, 1, true, true)$$,
-  'the RPC writes the cas_export_log evidence row linked to the snapshot');
+       AND file_name = 'slsp-February-2026.dat'$q$,
+  $$VALUES ('dat_file'::text, 'SLSP (Sales & Purchases)'::text, 2026, 2, 2,
+            true, true, true, true, 'PXL-CAS-DAT-1.0'::text)$$,
+  'the RPC writes the cas_export_log evidence row linked to the snapshot and artifact');
 
 SELECT is(
   (SELECT val -> 'rows' FROM t_res WHERE key='slsp1'),
@@ -243,22 +247,119 @@ SELECT is(
    WHERE id = ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid),
   'the rows returned to the caller are exactly the frozen snapshot rows');
 
+SELECT is(
+  (SELECT val ->> 'export_text' FROM t_res WHERE key='slsp1'),
+  (SELECT source_payload ->> 'export_file_text' FROM report_snapshots
+   WHERE id = ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid),
+  'the export text returned to the caller is exactly the frozen snapshot file text');
+
+SELECT is(
+  (SELECT source_payload ->> 'export_file_sha256' FROM report_snapshots
+   WHERE id = ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid),
+  (SELECT encode(extensions.digest(convert_to(source_payload ->> 'export_file_text', 'UTF8'), 'sha256'), 'hex')
+   FROM report_snapshots
+   WHERE id = ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid),
+  'the snapshot stores the SHA-256 of the exact exported file text');
+
+SELECT results_eq(
+  $q$SELECT
+        cel.file_sha256 = rs.source_payload ->> 'export_file_sha256',
+        cel.file_size_bytes = octet_length(convert_to(rs.source_payload ->> 'export_file_text', 'UTF8'))
+      FROM cas_export_log cel
+      JOIN report_snapshots rs ON rs.id = cel.snapshot_id
+      WHERE cel.company_id = '22222222-2222-2222-2222-222222222270'
+        AND cel.file_name = 'slsp-February-2026.dat'$q$,
+  $$VALUES (true, true)$$,
+  'cas_export_log mirrors the frozen file hash and byte size');
+
+SELECT ok(
+  (SELECT val ->> 'export_text' FROM t_res WHERE key='slsp1')
+    LIKE 'H|PXL-CAS-DAT-1.0|CAS_SLSP|111222333017|2026-02-01|2026-02-28|1%',
+  'SLSP DAT bytes start with the versioned header record');
+
+SELECT ok(
+  position(E'\r\n' in (SELECT val ->> 'export_text' FROM t_res WHERE key='slsp1')) > 0,
+  'CAS DAT records use CRLF newlines');
+
+SELECT ok(
+  (SELECT val ->> 'export_text' FROM t_res WHERE key='slsp1')
+    LIKE '%D|S|2026-02-10|SI-%|444555666017|CAS Snap Customer Inc|10000.00|1200.00|Customer HQ, Taguig|T%',
+  'SLSP DAT bytes contain the statutory sales detail fields');
+
+SELECT ok(
+  (SELECT val ->> 'export_text' FROM t_res WHERE key='slsp1')
+    LIKE '%D|P|2026-02-12|SUP-INV-0171|777888999017|CAS Snap Supplier Corp|5000.00|600.00|Supplier HQ, Pasig|T%',
+  'SLSP DAT bytes contain the statutory purchases detail fields');
+
+SELECT ok(
+  (SELECT val ->> 'export_text' FROM t_res WHERE key='slsp1')
+    LIKE '%' || E'\r\n' || 'T|2|15000.00|1800.00' || E'\r\n',
+  'SLSP DAT bytes end with the row-count and amount trailer');
+
+SELECT results_eq(
+  $q$SELECT source_payload ->> 'export_layout',
+            source_payload ->> 'newline_style',
+            report_payload ->> 'file_name'
+     FROM report_snapshots
+     WHERE id = ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid$q$,
+  $$VALUES ('PXL-CAS-DAT-1.0'::text, 'CRLF'::text, 'slsp-February-2026.dat'::text)$$,
+  'the snapshot stamps the DAT layout version, newline convention, and normalized filename');
+
+INSERT INTO t_res
+SELECT 'slsp_artifact1', fn_render_cas_dat(
+  ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid
+);
+
+SELECT is(
+  (SELECT val ->> 'content' FROM t_res WHERE key='slsp_artifact1'),
+  (SELECT val ->> 'export_text' FROM t_res WHERE key='slsp1'),
+  'fn_render_cas_dat returns the same immutable DAT bytes as the snapshot RPC');
+
+SELECT is(
+  (SELECT val ->> 'file_hash' FROM t_res WHERE key='slsp_artifact1'),
+  (SELECT val ->> 'export_sha256' FROM t_res WHERE key='slsp1'),
+  'fn_render_cas_dat returns the same byte hash as the snapshot RPC');
+
+SELECT results_eq(
+  $q$SELECT
+        cel.artifact_id = ((SELECT val FROM t_res WHERE key='slsp_artifact1') ->> 'artifact_id')::uuid,
+        cel.file_hash = ((SELECT val FROM t_res WHERE key='slsp_artifact1') ->> 'file_hash'),
+        cel.layout_version
+      FROM cas_export_log cel
+      WHERE cel.snapshot_id = ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid$q$,
+  $$VALUES (true, true, 'PXL-CAS-DAT-1.0'::text)$$,
+  'the export log points at the immutable DAT artifact');
+
+SELECT is(
+  (fn_render_cas_dat(
+    ((SELECT val FROM t_res WHERE key='slsp1') ->> 'snapshot_id')::uuid
+  ) ->> 'artifact_id')::uuid,
+  ((SELECT val FROM t_res WHERE key='slsp_artifact1') ->> 'artifact_id')::uuid,
+  're-rendering a CAS DAT snapshot returns the same artifact');
+
 -- ── 4-5. RELIEF and alphalist exports ──────────────────────────────────────────
 INSERT INTO t_res
 SELECT 'relief1', fn_snapshot_cas_export('22222222-2222-2222-2222-222222222270',
-  'relief', 2026, 2, 'relief-February-2026.csv');
+  'relief', 2026, 2, 'relief-February-2026.dat');
 
 SELECT results_eq(
   $q$SELECT report_type, source_row_count,
-            (source_payload -> 'export_rows' -> 0 ->> 'input_vat')::numeric
+            source_payload ->> 'export_layout',
+            (source_payload -> 'export_rows' @> '[{"transaction_type":"S"}]'::jsonb),
+            (source_payload -> 'export_rows' @> '[{"transaction_type":"P"}]'::jsonb)
      FROM report_snapshots
      WHERE id = ((SELECT val FROM t_res WHERE key='relief1') ->> 'snapshot_id')::uuid$q$,
-  $$VALUES ('CAS_RELIEF'::text, 1, 600.00::numeric)$$,
-  'RELIEF DAT export freezes the vendor bill input VAT row');
+  $$VALUES ('CAS_RELIEF'::text, 2, 'PXL-CAS-DAT-1.0'::text, true, true)$$,
+  'RELIEF DAT export freezes both sales and purchases rows');
+
+SELECT ok(
+  (SELECT val ->> 'export_text' FROM t_res WHERE key='relief1')
+    LIKE '%D|R|111222333017|P|777888999017|CAS Snap Supplier Corp|Supplier HQ, Pasig|SUP-INV-0171|2026-02-12|5000.00|0.00|0.00|5000.00|600.00|AT%',
+  'RELIEF DAT bytes include the BIR counterparty and VAT classification fields');
 
 INSERT INTO t_res
 SELECT 'qap1', fn_snapshot_cas_export('22222222-2222-2222-2222-222222222270',
-  'alphalist_payees', 2026, 2, 'alphalist_payees-February-2026.csv');
+  'alphalist_payees', 2026, 2, 'alphalist_payees-February-2026.dat');
 
 SELECT results_eq(
   $q$SELECT report_type, source_row_count,
@@ -271,7 +372,7 @@ SELECT results_eq(
 -- ── 6-8. GL extract: complete, balanced, and reconciliation-stamped ────────────
 INSERT INTO t_res
 SELECT 'gl1', fn_snapshot_cas_export('22222222-2222-2222-2222-222222222270',
-  'general_ledger', 2026, 2, 'general_ledger-February-2026.csv');
+  'general_ledger', 2026, 2, 'general_ledger-February-2026.dat');
 
 SELECT is(
   (SELECT source_row_count FROM report_snapshots
@@ -295,7 +396,7 @@ SELECT is(
 -- ── 9. Re-export versions the same logical source ──────────────────────────────
 INSERT INTO t_res
 SELECT 'slsp2', fn_snapshot_cas_export('22222222-2222-2222-2222-222222222270',
-  'slsp', 2026, 2, 'slsp-February-2026.csv');
+  'slsp', 2026, 2, 'slsp-February-2026.dat');
 
 SELECT results_eq(
   $q$SELECT s2.snapshot_version, (s2.source_id = s1.source_id)
@@ -311,7 +412,7 @@ SELECT throws_ok(
   $q$INSERT INTO cas_export_log (company_id, export_type, report_name,
        period_year, period_month, file_name, row_count)
      VALUES ('22222222-2222-2222-2222-222222222270', 'dat_file', 'Forged Log',
-       2026, 2, 'forged.csv', 999)$q$,
+       2026, 2, 'forged.dat', 999)$q$,
   '42501', NULL,
   'authenticated users cannot insert cas_export_log rows directly');
 RESET ROLE;
@@ -319,7 +420,7 @@ RESET ROLE;
 -- ── 11-12. Input validation ────────────────────────────────────────────────────
 SELECT throws_like(
   $q$SELECT fn_snapshot_cas_export('22222222-2222-2222-2222-222222222270',
-       'balance_sheet', 2026, 2, 'x.csv')$q$,
+       'balance_sheet', 2026, 2, 'x.dat')$q$,
   '%Unsupported CAS export report type%',
   'unknown CAS report types are rejected');
 
@@ -340,18 +441,18 @@ SELECT fn_post_manual_je('22222222-2222-2222-2222-222222222270',
 
 SELECT throws_like(
   $q$SELECT fn_snapshot_cas_export('22222222-2222-2222-2222-222222222270',
-       'slsp', 2026, 2, 'slsp-February-2026.csv')$q$,
+       'slsp', 2026, 2, 'slsp-February-2026.dat')$q$,
   '%does not reconcile%',
   'SLSP DAT export is blocked while VAT does not reconcile to the GL');
 
 SELECT lives_ok(
   $q$SELECT fn_snapshot_cas_export('22222222-2222-2222-2222-222222222270',
-       'alphalist_payees', 2026, 2, 'alphalist_payees-February-2026.csv')$q$,
+       'alphalist_payees', 2026, 2, 'alphalist_payees-February-2026.dat')$q$,
   'alphalist DAT export still succeeds: EWT payable is unaffected by the VAT variance');
 
 SELECT lives_ok(
   $q$SELECT fn_snapshot_cas_export('22222222-2222-2222-2222-222222222270',
-       'general_ledger', 2026, 2, 'general_ledger-February-2026.csv')$q$,
+       'general_ledger', 2026, 2, 'general_ledger-February-2026.dat')$q$,
   'GL DAT export still succeeds: the manual JE is balanced');
 
 SELECT * FROM finish();

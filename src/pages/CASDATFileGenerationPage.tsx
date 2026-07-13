@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { downloadTextFile, getSnapshotExportText } from '@/lib/exportDownload'
 
 type ReportType = 'slsp' | 'relief' | 'general_ledger' | 'alphalist_payees'
 type LogRow = { id: string; report_name: string; period_year: number; period_month: number | null; file_name: string; row_count: number; generated_at: string }
@@ -29,23 +30,13 @@ export default function CASDATFileGenerationPage() {
 
   useEffect(() => { if (companyId) loadLogs() }, [loadLogs, companyId])
 
-  const downloadCSV = (rows: (string | number)[][], filename: string) => {
-    const csv = rows.map(row => row.map(c => `"${c}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = filename; a.click()
-    URL.revokeObjectURL(url)
-  }
-
   const generate = async () => {
     if (!companyId) return
     setGenerating(true)
-    const fileName = `${reportType}-${MONTHS[month]}-${year}.csv`
+    const fileName = `${reportType}-${MONTHS[month]}-${year}.dat`
 
-    // The RPC builds the payload server-side, gates on reconciliation, creates
-    // the immutable report snapshot + cas_export_log row, and returns the
-    // frozen rows — so the downloaded file is provably the hashed payload.
+    // The RPC builds the DAT file server-side, gates on reconciliation,
+    // snapshots the exact bytes + hash, and returns that same text for download.
     const { data, error } = await supabase.rpc('fn_snapshot_cas_export', {
       p_company_id: companyId,
       p_report_type: reportType,
@@ -59,24 +50,13 @@ export default function CASDATFileGenerationPage() {
       return
     }
 
-    const payload = data as { rows: Record<string, string | number | null>[] }
-    const rows = payload.rows || []
-    const num = (v: string | number | null) => Number(v ?? 0).toFixed(2)
-    const str = (v: string | number | null) => (v ?? '') as string
-
-    if (reportType === 'slsp') {
-      downloadCSV([['Date', 'Doc No.', 'TIN', 'Name', 'Taxable Base', 'VAT'],
-        ...rows.map(r => [str(r.invoice_date), str(r.system_no), str(r.customer_tin), str(r.customer_name), num(r.taxable_base), num(r.output_vat)])], fileName)
-    } else if (reportType === 'relief') {
-      downloadCSV([['Date', 'Doc No.', 'TIN', 'Name', 'Taxable Base', 'VAT'],
-        ...rows.map(r => [str(r.invoice_date), str(r.system_no), str(r.supplier_tin), str(r.supplier_name), num(r.taxable_base), num(r.input_vat)])], fileName)
-    } else if (reportType === 'general_ledger') {
-      downloadCSV([['Date', 'JE No.', 'Account Code', 'Account Name', 'Debit', 'Credit'],
-        ...rows.map(r => [str(r.je_date), str(r.je_number), str(r.account_code), str(r.account_name), num(r.debit_amount), num(r.credit_amount)])], fileName)
-    } else {
-      downloadCSV([['Date', 'TIN', 'Name', 'ATC', 'Tax Base', 'Tax Withheld'],
-        ...rows.map(r => [str(r.invoice_date), str(r.supplier_tin), str(r.supplier_name), str(r.atc_code), num(r.tax_base), num(r.tax_withheld)])], fileName)
+    const exportText = getSnapshotExportText(data)
+    if (!exportText) {
+      setGenerating(false)
+      alert('CAS export did not return a file payload.')
+      return
     }
+    downloadTextFile(exportText, fileName)
 
     setGenerating(false)
     loadLogs()
@@ -97,7 +77,7 @@ export default function CASDATFileGenerationPage() {
         </select>
         <select value={month} onChange={e => setMonth(Number(e.target.value))} className="border border-gray-300 rounded-md px-3 py-1.5 text-sm">{MONTHS.map((m, i) => <option key={m} value={i}>{m}</option>)}</select>
         <select value={year} onChange={e => setYear(Number(e.target.value))} className="border border-gray-300 rounded-md px-3 py-1.5 text-sm">{years.map(y => <option key={y} value={y}>{y}</option>)}</select>
-        <button onClick={generate} disabled={generating || !companyId} className="bg-gray-900 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{generating ? 'Generating...' : '⚡ Generate & Download'}</button>
+        <button onClick={generate} disabled={generating || !companyId} className="bg-gray-900 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{generating ? 'Generating...' : 'Generate & Download'}</button>
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">

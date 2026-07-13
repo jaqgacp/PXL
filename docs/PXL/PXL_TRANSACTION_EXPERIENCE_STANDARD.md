@@ -153,7 +153,7 @@ The rule: **the user enters a fact once; everything derivable is derived — vis
 | SO / PO / DR | full line copy-down on conversion | Conversion flows partial (matrix: quotation/SO/DR rows) |
 | Accounting configuration | control accounts (AR/AP/VAT/EWT/cash), never user-picked | Done |
 | Number series | document number at save | Done (`fn_next_document_number`) |
-| Compliance profile | which tax fields/tabs exist at all (VAT vs non-VAT done; EWT gating missing — PXL-AUD-042) | Partial |
+| Compliance profile | which tax fields/tabs exist at all (VAT vs non-VAT done; EWT server gates done under PXL-AUD-042; UI visibility rollout remains Phase 2 polish) | Partial |
 
 Every field NOT in this table that a user must type is a candidate defect in a future capture-efficiency review.
 
@@ -221,7 +221,7 @@ Every document view exposes Prepared/Created by+at · Last edited by+at · Appro
 
 ## 14. Configurable Experience
 
-Phase-2+ configuration surface, in priority order: (1) column picker per grid with hidden-by-default groups (section 5) and per-user persistence (`pxl.ctx.*` pattern); (2) saved list views (filters + columns + sort); (3) role presets — Encoder (business columns), Accountant (+ accounting/dimensions), Auditor (read-only + all evidence tabs expanded); (4) compact/comfortable density toggle; (5) per-company tab visibility driven by `sys_feature_enablement` and the compliance profile (a non-VAT company never sees VAT columns — enforcement layer already exists for VAT; EWT pending PXL-AUD-042). Tab/column configuration is display-only and must never gate server-side validation.
+Phase-2+ configuration surface, in priority order: (1) column picker per grid with hidden-by-default groups (section 5) and per-user persistence (`pxl.ctx.*` pattern); (2) saved list views (filters + columns + sort); (3) role presets — Encoder (business columns), Accountant (+ accounting/dimensions), Auditor (read-only + all evidence tabs expanded); (4) compact/comfortable density toggle; (5) per-company tab visibility driven by `sys_feature_enablement` and the compliance profile (a non-VAT company never sees VAT columns; explicit non-EWT profiles are server-gated under PXL-AUD-042, with UI visibility still a display concern). Tab/column configuration is display-only and must never gate server-side validation.
 
 ## 15. Reusable Component Inventory
 

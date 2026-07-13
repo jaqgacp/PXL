@@ -156,11 +156,11 @@ Remaining under the related findings: VAT tax-ledger-to-GL reconciliation and fi
 
 ## PV-EWT-PARTIAL-001 - EWT on Partial Payments with Explicit Basis
 
-Status: Executed Passing (2026-07-02) in `supabase/tests/006_pv_ewt_partial_payment_test.sql`.
+Status: Executed Passing (2026-07-02; re-executed session 83, 2026-07-13) in `supabase/tests/006_pv_ewt_partial_payment_test.sql`.
 
 Related findings: PXL-AUD-007, PXL-DA-009, PXL-DA-010.
 
-Scenario (VAT company; VB 2026-01-10 for 11,200.00 = 10,000.00 net + 1,200.00 input VAT):
+Scenario (VAT company explicitly using the `payment` AP EWT recognition policy; VB 2026-01-10 for 11,200.00 = 10,000.00 net + 1,200.00 input VAT):
 
 | Step | Transaction | Date | Amounts | Expected Behavior |
 | ---- | ----------- | ---- | ------- | ----------------- |
@@ -397,41 +397,44 @@ Notes:
 
 ## WHT-EXPORT-SNAP-001 - SAWT/QAP Export Snapshots and WHT/GL Reconciliation
 
-Status: Executed Passing (2026-07-03) in `supabase/tests/016_wht_export_snapshots_test.sql`.
+Status: Executed Passing (updated 2026-07-13) in `supabase/tests/016_wht_export_snapshots_test.sql` (19 assertions).
 
-Related findings: PXL-DA-015 (report provenance, fourth slice).
+Related findings: PXL-DA-009, PXL-DA-015 (report provenance, fourth slice).
 
-Scenario (VAT company; WC140 2% ATC; Q1 2026 books: OR with 224.00 CWT on an 11,200.00 gross collection, PV with 100.00 EWT on a 5,000.00 basis):
+Scenario (VAT company; WC140 2% and WC010 10% ATCs; Q1 2026 books: OR with CWT, PV EWT, and a same-supplier second PV under a different ATC):
 
 | Step | Action | Expected Behavior |
 | ---- | ------ | ----------------- |
 | 1 | Reconcile Q1 withholding | `fn_wht_gl_reconciliation`: `cwt_receivable` 224.00 = CWT Receivable GL movement, `ewt_payable` 100.00 = EWT Payable GL movement, variance 0 for both. |
 | 2 | Read the SAWT source view | `vw_cwt_summary_ar` is ledger-backed (`tax_kind = 'cwt_receivable'`, reversed pairs excluded) and exposes the gross income payment (11,200.00 = payment + CWT), not the net collection. |
 | 3 | Export SAWT for Q1 | `fn_snapshot_wht_export` creates an `exported` v1 snapshot: period 2026-01-01..2026-03-31, 64-character SHA-256 source hash, frozen per-customer income payments and CWT withheld. |
-| 4 | Export QAP for Q1 | Separate `exported` v1 snapshot with frozen per-supplier tax withheld and detail rows from `vw_ewt_summary_ap`. |
+| 4 | Export QAP for Q1 | Separate `exported` v1 snapshot with frozen detail rows from `vw_ewt_summary_ap`; payee summary rows use supplier + ATC + nature + rate granularity. |
 | 5 | Re-export QAP for the same quarter | v2 on the same deterministic logical source id — export history is versioned, never overwritten. |
-| 6 | Attempt direct snapshot writes as `authenticated` | Direct INSERT rejected (42501); UPDATE/DELETE policies filter every row, so the snapshot survives untouched. |
-| 7 | Request an unknown report type or quarter 5 | Rejected with explicit errors. |
-| 8 | Post a manual JE crediting EWT Payable without tax detail | QAP export is blocked (`does not reconcile to GL account`); SAWT export still succeeds because its own control account (CWT Receivable) still reconciles. |
+| 6 | Add a second PV for the same supplier using WC010 | QAP snapshot keeps two payee rows: WC010 10,000.00 / 1,000.00 and WC140 5,000.00 / 100.00, instead of collapsing the supplier into one mixed-ATC row. |
+| 7 | Generate Form 2307 for the quarter | Issuance lines use the same supplier + ATC grouping as QAP; the QAP snapshot includes `form2307_reconciliation` rows with zero variance and `is_reconciled = true`. |
+| 8 | Attempt direct snapshot writes as `authenticated` | Direct INSERT rejected (42501); UPDATE/DELETE policies filter every row, so the snapshot survives untouched. |
+| 9 | Request an unknown report type or quarter 5 | Rejected with explicit errors. |
+| 10 | Post a manual JE crediting EWT Payable without tax detail | QAP export is blocked (`does not reconcile to GL account`); SAWT export still succeeds because its own control account (CWT Receivable) still reconciles. |
 
 Notes:
 
-- SAWT previously aggregated `receipt_lines` through `sales_invoices` in the browser, so cash-sale CWT rows never reached the alphalist and income payments were net of CWT; the page now reads `vw_cwt_summary_ar` and both pages snapshot via `fn_snapshot_wht_export` before producing a CSV.
+- SAWT previously aggregated `receipt_lines` through `sales_invoices` in the browser, so cash-sale CWT rows never reached the alphalist and income payments were net of CWT; the page now reads `vw_cwt_summary_ar`, and both SAWT/QAP downloads are generated from the immutable snapshot payload returned by `fn_snapshot_wht_export`.
+- QAP snapshots include `form2307_reconciliation`, produced by `fn_qap_2307_reconciliation`, so auditors can compare active non-superseded 2307 issuance lines to QAP rows at supplier + ATC + nature + rate granularity.
 - Same remittance caveat as VAT-RECON-001: legitimate 0619-E/1601EQ remittance JEs on the withholding control accounts surface as variance until a controlled remittance flow exists.
 
 ## CAS-EXPORT-SNAP-001 - CAS DAT Export Snapshots and Server-Attested Export Log
 
-Status: Executed Passing (2026-07-03) in `supabase/tests/017_cas_export_snapshots_test.sql`.
+Status: Executed Passing (updated 2026-07-13) in `supabase/tests/017_cas_export_snapshots_test.sql` (29 assertions).
 
-Related findings: PXL-DA-015 (report provenance, fifth slice); full CAS enforcement remains PXL-DA-019.
+Related findings: PXL-DA-015 (report provenance, fifth slice), PXL-DA-019 (DAT layout/exported-byte evidence slice).
 
 Scenario (VAT company; February 2026 books: SI 10,000 + 1,200 output VAT, OR with 224.00 CWT, VB 5,000 + 600 input VAT, PV with 100.00 EWT):
 
 | Step | Action | Expected Behavior |
 | ---- | ------ | ----------------- |
-| 1 | Generate the SLSP DAT extract | `fn_snapshot_cas_export` creates an `exported` v1 `CAS_SLSP` snapshot (period 2026-02-01..2026-02-28, 64-character SHA-256 hash) and writes the `cas_export_log` row itself: server-attested row count, `generated_by`, and `snapshot_id` link. |
-| 2 | Compare the RPC response to the snapshot | The rows returned to the caller are exactly the frozen `export_rows` in the snapshot payload — the downloaded file is provably the hashed payload. |
-| 3 | Generate RELIEF and alphalist extracts | Separate `CAS_RELIEF` / `CAS_QAP` snapshots freeze the VB input VAT row (600.00) and PV EWT row (100.00). |
+| 1 | Generate the SLSP DAT extract | `fn_snapshot_cas_export` creates an `exported` v1 `CAS_SLSP` snapshot (period 2026-02-01..2026-02-28, 64-character source SHA-256 hash) and writes the `cas_export_log` row itself: server-attested row count, `generated_by`, `snapshot_id`, `artifact_id`, layout version, file SHA-256, and UTF-8 byte size. |
+| 2 | Compare the RPC response to the snapshot and DAT artifact | The rows returned to the caller are exactly the frozen `export_rows`; the CRLF-delimited `PXL-CAS-DAT-1.0` `export_text` returned for download is exactly `source_payload.export_file_text`; `source_payload.export_file_sha256` equals SHA-256 over those exact UTF-8 bytes; `fn_render_cas_dat` returns the same immutable artifact and is idempotent. |
+| 3 | Generate RELIEF and alphalist extracts | Separate `CAS_RELIEF` / `CAS_QAP` snapshots freeze both sales and purchases RELIEF rows, including BIR counterparty/VAT classification fields, and the PV EWT row (100.00). |
 | 4 | Generate the GL extract | `CAS_GL` snapshot freezes every GL line of the period and records the debit=credit balance check in its reconciliation payload; returned `row_count` matches the returned rows. |
 | 5 | Re-generate SLSP for the same month | v2 on the same deterministic logical source — export history is versioned, never overwritten. |
 | 6 | Attempt a direct `cas_export_log` insert as `authenticated` | Rejected (42501): the log is RPC-only evidence. |
@@ -440,32 +443,37 @@ Scenario (VAT company; February 2026 books: SI 10,000 + 1,200 output VAT, OR wit
 
 Notes:
 
-- The page previously assembled CSVs in the browser and inserted its own `cas_export_log` rows (client-computed row counts, no hash). `CASDATFileGenerationPage` now renders the file from the RPC's frozen rows.
-- The extract is still CSV-shaped; the true BIR DAT record layout is PXL-DA-019 scope.
+- The page previously assembled CSVs in the browser and inserted its own `cas_export_log` rows (client-computed row counts, no hash). `CASDATFileGenerationPage` now downloads `.dat` files using the exact CRLF `PXL-CAS-DAT-1.0` text rendered by the RPC, frozen in the snapshot payload, and mirrored into `cas_export_artifacts`.
+- DA-019 is closed for the current CAS evidence scope: DAT byte layout, exact exported bytes, books source/GL reconciliation, and audit-package snapshots are all covered by tests 017/018.
 
 ## BOOKS-EXPORT-SNAP-001 - BIR Books of Accounts Export Snapshots
 
-Status: Executed Passing (2026-07-03) in `supabase/tests/018_books_export_snapshots_test.sql`.
+Status: Executed Passing (updated 2026-07-13) in `supabase/tests/018_books_export_snapshots_test.sql` (22 assertions).
 
-Related findings: PXL-DA-015 (report provenance, sixth slice).
+Related findings: PXL-DA-015 (report provenance, sixth slice), PXL-DA-019 (exported-byte, reconciliation, and audit-package evidence slices).
 
 Scenario (VAT company; February 2026 books: SI 11,200 gross, OR with 224.00 CWT, VB 5,600 gross, PV net 5,400 after 100.00 EWT):
 
 | Step | Action | Expected Behavior |
 | ---- | ------ | ----------------- |
-| 1 | Export the sales journal for Feb 1-28 | `fn_snapshot_books_export` creates an `exported` v1 `BOOKS_SALES_JOURNAL` snapshot (64-character SHA-256 hash) and writes the `cas_export_log` row itself (`csv_export`, server row count, range in remarks, `snapshot_id` link). |
-| 2 | Compare the RPC response to the snapshot | Returned rows are exactly the frozen `export_rows` — the file is provably the hashed payload. |
-| 3 | Export the purchase journal | Freezes the VB with its gross total (5,600.00) in the integrity payload. |
-| 4 | Export the cash receipts book | Freezes the OR collection gross of CWT (11,200.00), doc type `OR`. |
-| 5 | Export the cash disbursements book | Freezes the PV payment net of EWT (5,400.00), doc type `PV`. |
-| 6 | Export the general journal | Freezes every GL line of the range and records the debit=credit balance check; an unbalanced range would be blocked. |
-| 7 | Export the (empty) cash sales journal | Zero rows still produce hashed snapshot evidence. |
-| 8 | Re-export the sales journal for the same range | v2 on the same deterministic logical source. |
-| 9 | Request an unknown book type, inverted range, or blank file name | Rejected with explicit errors. |
+| 1 | Export the sales journal for Feb 1-28 | `fn_snapshot_books_export` creates an `exported` v1 `BOOKS_SALES_JOURNAL` snapshot (64-character source SHA-256 hash) and writes the `cas_export_log` row itself (`csv_export`, server row count, range in remarks, `snapshot_id`, file SHA-256, byte size). |
+| 2 | Compare the RPC response to the snapshot | Returned rows are exactly the frozen `export_rows`; returned `export_text` is exactly `source_payload.export_file_text`, and `source_payload.export_file_sha256` equals SHA-256 over those exact UTF-8 bytes. |
+| 3 | Inspect sales-journal reconciliation | Snapshot stores source-to-export reconciliation and linked balanced GL evidence: exported rows/total match posted SI rows, linked journal entries are complete, and linked GL debits equal credits. |
+| 4 | Export the purchase journal | Freezes the VB with its gross total (5,600.00) in the integrity payload. |
+| 5 | Export the cash receipts book | Freezes the OR collection gross of CWT (11,200.00), doc type `OR`. |
+| 6 | Export the cash disbursements book | Freezes the PV payment net of EWT (5,400.00), doc type `PV`. |
+| 7 | Inspect source-book reconciliation | Purchase, cash receipts, and cash disbursements snapshots each store reconciled posted source rows, zero missing journal entries, and linked balanced GL evidence. |
+| 8 | Export the general journal | Freezes every GL line of the range and records the debit=credit balance check; an unbalanced range would be blocked. |
+| 9 | Export the (empty) cash sales journal | Zero rows still produce hashed snapshot evidence and passing empty-book reconciliation. |
+| 10 | Re-export the sales journal for the same range | v2 on the same deterministic logical source. |
+| 11 | Generate the CAS audit support package | `fn_snapshot_cas_audit_package` creates a `CAS_AUDIT_PACKAGE` snapshot/log row containing GL balance, reconciled books, export hash evidence, numbering/void/export/artifact/audit evidence, and the snapshot hash/byte size. |
+| 12 | Request a package for a period without reconciled books | Rejected (`books_reconciliation`) instead of producing a weak audit package. |
+| 13 | Request an unknown book type, inverted range, or blank file name | Rejected with explicit errors. |
 
 Notes:
 
-- All seven books pages previously assembled CSVs in the browser; they now render the file from the RPC's frozen rows. The print views still render live page data.
+- All seven books pages previously assembled CSVs in the browser; they now download the exact file text rendered by the RPC and frozen in the snapshot payload. The print views still render live page data.
+- Books exports now block on source/GL reconciliation before snapshot/log creation; audit packages block unless the range has reconciled book snapshots and export hash evidence.
 - Cash receipts book = ORs (gross of CWT) plus cash-sale SIs; cash disbursements book = PVs (net of EWT) plus check vouchers (net check amount) plus cash purchases.
 
 ## JE-DIMS-001 - Dimension Propagation to Journal Entry Lines
@@ -580,13 +588,40 @@ Status: Not Yet Implemented. Related finding: PXL-AUD-036.
 
 ## WHT-REMIT-001 - Controlled EWT Remittance Keeps Exports Reconciling
 
-Status: Not Yet Implemented. Related finding: PXL-AUD-041.
+Status: Executed Passing (session 78, 2026-07-13) in `supabase/tests/036_withholding_remittance_flow_test.sql`, 18 assertions. Related finding: PXL-AUD-041.
 
 | Step | Transaction | Expected Behavior |
 | ---- | ----------- | ----------------- |
-| 1 | PV EWT in month 1; remit month-1 EWT on the 10th of month 2 through the controlled remittance flow | Remittance JE debits EWT payable, classified as remittance. |
-| 2 | Quarter-end QAP export | Reconciliation recognizes the remittance and the export snapshot succeeds (today: hard-blocked). |
-| 3 | 1601EQ remitted_prior | Derived from remittance records, not free entry. |
+| 1 | PV EWT in month 1; remit month-1 EWT on the 10th of month 2 through `fn_save_withholding_remittance` / `fn_post_withholding_remittance` | Remittance JE debits EWT payable and is classified as `WHTREM`, with no new tax-detail withholding event. |
+| 2 | Quarter-end QAP export | `fn_wht_gl_reconciliation` excludes the controlled remittance JE from GL-side withholding movement, so the QAP export snapshot succeeds while the original EWT tax ledger still ties to the period's withholding. |
+| 3 | 1601EQ `remitted_prior` | Derived and validated from posted EWT remittance records by `fn_compute_ewt_remitted_prior`, not free entry. |
+| 4 | CWT application and uncontrolled manual remittance | Controlled CWT application reconciles symmetrically; an uncontrolled `MANUAL` remittance JE on the withholding control account still surfaces as variance. |
+
+## WHT-BASIS-001 - AP EWT Source/Accrual Basis Policy
+
+Status: Executed Passing (session 83, 2026-07-13) in `supabase/tests/037_withholding_basis_policy_test.sql`, 16 assertions. Related finding: PXL-AUD-037.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | Source-basis company saves a VAT VB for a supplier with default ATC WC140 | Vendor bill line derives EWT base 10,000.00 and EWT 200.00 from the supplier default; header expected EWT mirrors the line total. |
+| 2 | Post the VB | JE debits expense/input VAT, credits AP for net payable 11,000.00, credits EWT Payable 200.00, and writes one VB-sourced `ewt_payable` tax-detail row. |
+| 3 | AP aging and WHT reconciliation after VB | AP aging shows only the 11,000.00 cash payable; WHT tax detail reconciles to EWT Payable GL. |
+| 4 | Attempt a PV with EWT for the same VB | Rejected: the VB already accrued EWT at source. |
+| 5 | Cash-only PV for 11,000.00 | Posts and clears AP without writing duplicate PV `ewt_payable` tax detail; EWT ledger/GL remain at the original 200.00 VB source amount. |
+
+## WHT-PROFILE-001 - Compliance Profile Gates EWT Payable and TWA Defaults
+
+Status: Executed Passing (session 84, 2026-07-13) in `supabase/tests/038_withholding_profile_gates_test.sql`, 11 assertions. Related finding: PXL-AUD-042.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | Active compliance profile has `ewt_registered = false` | AP-side EWT payable is disabled for that explicit profile. |
+| 2 | Source-basis VB for a supplier with default EWT ATC | Rejected with a non-EWT-registered profile message. |
+| 3 | Non-withheld VB for a non-EWT supplier | Allowed; expected EWT remains 0.00. |
+| 4 | PV manual EWT and CV EWT under the same non-EWT profile | Both rejected before they can persist/post EWT payable. |
+| 5 | Draft 1601EQ/EWT return and QAP snapshot under the non-EWT profile | Both rejected by server-side profile gates. |
+| 6 | Profile updated to `ewt_registered = true`, `is_twa = true`, `twa_auto_ewt_enabled = true` | TWA auto-EWT becomes active as of the document date. |
+| 7 | Supplier-subject source-basis VB has one inventory-item line and one service/expense line with no explicit ATC | Goods line defaults to WC158 at 1% (100.00 on 10,000.00); service line defaults to WC160 at 2% (200.00 on 10,000.00); VB expected EWT syncs to 300.00. |
 
 ## PV-OR-HEADER-TOTALS-001 - Header/Line Cash Total Integrity
 
@@ -694,6 +729,15 @@ Local-harness-only by design: the test opens two extra real database sessions wi
 | 5 | Re-post the same SI sequentially afterward | Idempotent no-op; no additional JE or tax rows. |
 | 6 | Directly insert a second live original JE or a second live VAT tax row for the raced source | Structurally impossible: rejected by `ux_journal_entries_live_source` and `ux_tde_vat_source_code`. |
 | 7 | Delete the committed fixture company | Nothing is left behind; the test is rerunnable. |
+
+## CAS-E2E-DRAFT-027 - Held-Out CAS Draft Scenario
+
+Status: Held Out Draft (not trusted baseline). File present at `supabase/tests/027_cas_end_to_end_controls_test.sql`; see `PXL_ACCOUNTING_CORE_READINESS.md` for the held-out draft list.
+
+Notes:
+
+- This draft belongs to the excluded `20260710000005_cas_numbering_void_dat_controls.sql` CAS lane and is not part of the production-ready baseline.
+- The trusted CAS evidence path is covered by later safe slices: `supabase/tests/030_document_numbering_registry_test.sql`, `supabase/tests/031_posting_runtime_repairs_test.sql`, and `supabase/tests/032_cas_numbering_void_evidence_test.sql`.
 
 ## DOCUMENT-NUMBERING-REGISTRY-001 - Document-Code Registry and Branch-Scoped Numbering
 

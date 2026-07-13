@@ -11,7 +11,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(14);
+SELECT plan(19);
 
 -- ── Identity ───────────────────────────────────────────────────────────────────
 INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password,
@@ -197,6 +197,7 @@ SELECT 'pv1', fn_save_payment_voucher(NULL,
     'branch_id',              '33333333-3333-3333-3333-333333333360',
     'supplier_id',            '66666666-6666-6666-6666-666666666661',
     'supplier_name_snapshot', 'WHT Snap Supplier Corp',
+    'supplier_tin_snapshot',  '777-888-999-016',
     'voucher_date',           '2026-02-25',
     'total_amount',           5500,
     'total_ewt',              100
@@ -280,6 +281,99 @@ SELECT results_eq(
        AND s2.id = (SELECT id FROM t_ctx WHERE key='qap2')$q$,
   $$VALUES (2, true)$$,
   're-exporting QAP for the same quarter creates v2 on the same logical source');
+
+-- ── Same supplier, second ATC: QAP must stay supplier+ATC granular and tie to 2307
+INSERT INTO t_ctx
+SELECT 'vb2', fn_save_vendor_bill(NULL,
+  jsonb_build_object(
+    'company_id',              '22222222-2222-2222-2222-222222222260',
+    'branch_id',               '33333333-3333-3333-3333-333333333360',
+    'supplier_id',             '66666666-6666-6666-6666-666666666661',
+    'supplier_name_snapshot',  'WHT Snap Supplier Corp',
+    'supplier_tin_snapshot',   '777-888-999-016',
+    'supplier_invoice_number', 'SUP-INV-0162',
+    'bill_date',               '2026-03-01'
+  ),
+  jsonb_build_array(jsonb_build_object(
+    'description',        'Professional services',
+    'quantity',           1,
+    'unit_price',         10000,
+    'vat_code_id',        (SELECT id FROM vat_codes WHERE vat_code = 'IVAT-12'),
+    'expense_account_id', 'aaaaaaaa-0000-0000-0000-0000000000b9'
+  )));
+SELECT fn_approve_vendor_bill((SELECT id FROM t_ctx WHERE key='vb2'));
+SELECT fn_post_vendor_bill((SELECT id FROM t_ctx WHERE key='vb2'));
+
+INSERT INTO t_ctx
+SELECT 'pv2', fn_save_payment_voucher(NULL,
+  jsonb_build_object(
+    'company_id',             '22222222-2222-2222-2222-222222222260',
+    'branch_id',              '33333333-3333-3333-3333-333333333360',
+    'supplier_id',            '66666666-6666-6666-6666-666666666661',
+    'supplier_name_snapshot', 'WHT Snap Supplier Corp',
+    'supplier_tin_snapshot',  '777-888-999-016',
+    'voucher_date',           '2026-03-10',
+    'total_amount',           10200,
+    'total_ewt',              1000
+  ),
+  jsonb_build_array(jsonb_build_object(
+    'vendor_bill_id',    (SELECT id FROM t_ctx WHERE key='vb2'),
+    'payment_amount',    10200,
+    'ewt_amount',        1000,
+    'atc_code_id',       (SELECT id FROM atc_codes WHERE code = 'WC010'),
+    'ewt_tax_base',      10000,
+    'ewt_income_nature', 'Professional services'
+  )));
+SELECT fn_post_payment_voucher((SELECT id FROM t_ctx WHERE key='pv2'));
+
+SELECT lives_ok(
+  $$SELECT fn_generate_form_2307_issued('22222222-2222-2222-2222-222222222260', 2026, 1)$$,
+  'Form 2307 generation accepts one supplier with two ATC groups');
+
+INSERT INTO t_ctx
+SELECT 'qap3', fn_snapshot_wht_export('22222222-2222-2222-2222-222222222260', 'QAP', 2026, 1);
+
+SELECT results_eq(
+  $q$SELECT atc_code, tax_rate, tax_base, tax_withheld
+     FROM jsonb_to_recordset((
+       SELECT source_payload -> 'payee_summary_rows'
+       FROM report_snapshots WHERE id = (SELECT id FROM t_ctx WHERE key='qap3')
+     )) AS r(atc_code text, tax_rate numeric, tax_base numeric, tax_withheld numeric)
+     ORDER BY atc_code$q$,
+  $$VALUES ('WC010'::text, 10.00::numeric, 10000.00::numeric, 1000.00::numeric),
+           ('WC140'::text,  2.00::numeric,  5000.00::numeric,  100.00::numeric)$$,
+  'QAP snapshot keeps the same supplier split by ATC/rate instead of collapsing payee totals');
+
+SELECT is(
+  (SELECT source_row_count FROM report_snapshots WHERE id = (SELECT id FROM t_ctx WHERE key='qap3')),
+  2,
+  'QAP snapshot row count reflects the two source withholding rows');
+
+SELECT results_eq(
+  $q$SELECT atc_code, qap_tax_base, qap_tax_withheld, form2307_tax_base,
+            form2307_tax_withheld, withheld_variance, is_reconciled
+     FROM jsonb_to_recordset((
+       SELECT source_payload -> 'form2307_reconciliation'
+       FROM report_snapshots WHERE id = (SELECT id FROM t_ctx WHERE key='qap3')
+     )) AS r(atc_code text, qap_tax_base numeric, qap_tax_withheld numeric,
+             form2307_tax_base numeric, form2307_tax_withheld numeric,
+             withheld_variance numeric, is_reconciled boolean)
+     ORDER BY atc_code$q$,
+  $$VALUES ('WC010'::text, 10000.00::numeric, 1000.00::numeric, 10000.00::numeric, 1000.00::numeric, 0.00::numeric, true),
+           ('WC140'::text,  5000.00::numeric,  100.00::numeric,  5000.00::numeric,  100.00::numeric, 0.00::numeric, true)$$,
+  'QAP snapshot includes a per-ATC Form 2307 reconciliation payload with zero variance');
+
+SELECT results_eq(
+  $q$SELECT atc_code, tax_base, tax_withheld
+     FROM form_2307_issuances f
+     JOIN form_2307_issuance_lines l ON l.issuance_id = f.id
+     WHERE f.company_id = '22222222-2222-2222-2222-222222222260'
+       AND f.tax_year = 2026
+       AND f.tax_quarter = 1
+     ORDER BY atc_code$q$,
+  $$VALUES ('WC010'::text, 10000.00::numeric, 1000.00::numeric),
+           ('WC140'::text,  5000.00::numeric,  100.00::numeric)$$,
+  'Form 2307 issuance lines use the same supplier+ATC grouping as QAP');
 
 -- 9-10. Snapshots are append-only for authenticated users: direct inserts are
 -- rejected, and update/delete policies filter every row (statements no-op).

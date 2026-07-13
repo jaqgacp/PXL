@@ -128,11 +128,11 @@ Not every document needs every state. Non-posting documents may not post. But ev
 | Journal creation | `fn_create_posted_journal_entry` centralizes source assertion and open period check. | Some historical writers still use compatibility wrappers or direct patterns. | High | All new posting must use shared create/add/finalize primitives. |
 | Journal balancing | Deferred balance guards and finalization exist. | Tolerance policy must be standardized across posting, tax, and reports. | High | Define one accounting tolerance policy and test it. |
 | Period locking | Open-period function exists. | Period close process, adjusted/unadjusted/post-closing modes, and closing entries remain open. | High | Complete PXL-DA-014 before financial statement/report rollout. |
-| Numbering | Branch-scoped numbering and CAS evidence exist for governed documents. | Preflight coverage still not universal; held-out CAS drafts remain excluded. | High | Complete PXL-AUD-016 and remaining DA-019 slices. |
+| Numbering | Branch-scoped numbering and CAS evidence exist for governed documents. | Preflight coverage still not universal; held-out CAS drafts remain excluded from trusted replay. | High | Complete PXL-AUD-016. |
 | Source-to-JE trace | Source assertion/link functions and trace RPCs exist. | Every future document must supply route/drill metadata and source line trace. | High | Add trace checklist to transaction readiness. |
 | JE-to-source trace | `fn_get_accounting_trace` and source pages exist. | Some secondary source pages need workspace-level drillback/audit UX later. | Medium | Core engine must expose data before UI rollout. |
 | Reversal | Shared exact reversal exists. | Document-specific cancel/void paths are inconsistent and tax counter-row coverage must be verified. | High | Document each source type's reversal/void/cancel behavior. |
-| Void evidence | CAS void evidence slice exists. | True DAT layout, books reconciliation, and exported-byte hashing remain DA-019. | Critical | Finish DA-019 before CAS production readiness. |
+| Void evidence | CAS void evidence, exact exported-byte hashing, CRLF DAT artifacts, source/GL-reconciled books exports, and audit-package snapshots exist. | Operational/legal CAS certification validation remains outside the code-control finding. | Low | Keep future CAS surfaces on the same snapshot/hash/reconciliation model. |
 | Approval | SI/VB approval readiness exists; SoD exists when workflow configured. | Universal approval semantics and approval invalidation policies need clear per-document contracts. | Medium | Document approval requirements per transaction type. |
 | Immutable posting | Generic status immutability guards exist. | New tables must be added to guards at creation time. | Critical | No new transactional table without immutability classification. |
 | GL account determination | Control accounts are in `company_accounting_config`; line accounts often come from item/user selection. | Full account determination engine is not complete. | High | Define configurable account rules before hiding manual GL choices. |
@@ -148,7 +148,7 @@ Not every document needs every state. Non-posting documents may not post. But ev
 | ACR-001 | Complete posting lifecycle contract for every accounting document. | PXL-AUD-050, PXL-DA-016 | High | Add source-type lifecycle checklist and semantic event requirements. |
 | ACR-002 | Finish financial statement readiness: JE classifications, close, retained earnings, FS mappings. | PXL-AUD-013, PXL-DA-014 | High | Implement closing/TB/FS accounting model before report rollout. |
 | ACR-003 | Standardize reversal, void, cancellation, and tax counter-row behavior across all source types. | PXL-DA-004, PXL-DA-019 | High | Review every posting/cancel/void RPC and document exact behavior. |
-| ACR-004 | Finish universal numbering readiness and CAS evidence. | PXL-AUD-016, PXL-DA-019 | Critical | Complete preflight coverage, books reconciliation, DAT layout, exported-byte hash. |
+| ACR-004 | Finish universal numbering readiness; preserve CAS evidence model. | PXL-AUD-016, PXL-DA-019 | High | Complete preflight coverage; DA-019 CAS evidence package is closed. |
 | ACR-005 | Finish semantic lifecycle event log. | PXL-DA-016 | High | Implement `transaction_events` or equivalent governed event stream. |
 | ACR-006 | Define account determination engine. | Product backlog account-determination row | High | Replace page/manual account choice with governed posting rules where applicable. |
 | ACR-007 | Finish server-side heavy report and reconciliation foundation. | PXL-DA-018, DEC-016 | Medium | Server-side report computation after core posting/tax rules stabilize. |
@@ -284,9 +284,9 @@ Current architectural gaps:
 - ~~ATC validation still needs document-date effective versioning in the trusted baseline.~~ DONE (session 77, `20260713000002`): validators/callers evaluate the ATC window as of the document date.
 - ~~ATC code uniqueness/versioning is not production-ready.~~ DONE (session 77, `20260713000002`): version-aware uniqueness, overlap/successor guard, and `fn_atc_version_asof` resolver.
 - EWT/CWT/FWT/Percentage Tax are not yet one unified configurable tax engine.
-- Company withholding profile flags do not consistently gate transaction surfaces.
-- TWA auto-EWT is not operationally governed.
-- Withholding basis policy is not configurable for payment vs accrual.
+- ~~Company withholding profile flags do not consistently gate transaction surfaces.~~ DONE (session 84, `20260713000011`): active non-EWT profiles gate VB/PV/CV EWT payable, EWT returns, and QAP exports.
+- ~~TWA auto-EWT is not operationally governed.~~ DONE (session 84, `20260713000011`): supplier-subject source-basis VB lines default to WC158 1% goods or WC160 2% services when the TWA profile is active.
+- ~~Withholding basis policy is not configurable for payment vs accrual.~~ DONE (session 83, `20260713000010`): company-level AP EWT recognition policy defaults to source/accrual at VB and keeps explicit payment-basis compatibility.
 - Cash purchases, advances, and down-payments have incomplete withholding support.
 - Percentage Tax exists as compliance/reporting structures but is not fully integrated as a generic posting tax engine.
 - FWT return structures exist, but no broad posted FWT tax-detail flow is production-ready.
@@ -298,7 +298,7 @@ Current architectural gaps:
 | --- | --- | --- | --- | --- |
 | VAT | Strongest tax lane; server-computed/gated for major flows. | Effective-date governance and report rollout still need core stability. | High | Keep VAT as reference implementation for tax engine contracts. |
 | Percentage Tax | Compliance pages/tables exist. | Needs configurable applicability, posting/report source, reconciliation, and filing rules. | High | Define PT tax-rule model before expansion. |
-| EWT | PV/CV validation, 2307 hardening, and document-date ATC versioning (session 77) exist. | Remittance flow, profile gating, cash purchases/advances incomplete. | Critical | ATC as-of-date/versioning DONE (AUD-035/036); complete remaining DA-009 dependencies and PXL-AUD-041/037/038/039/042/043. |
+| EWT | PV/CV validation, 2307 hardening, document-date ATC versioning, controlled remittance flow, QAP multi-ATC reconciliation, AP source-basis EWT policy, and withholding profile gates exist. | Cash purchases/advances, 2307 month layout, duplicate withholding masters, and received-2307 lifecycle remain incomplete. | High | Complete PXL-AUD-043/040/044/047. |
 | CWT | OR CWT detail and customer defaults exist. | 2307 received lifecycle, over-claim guard, stale/reversal handling incomplete. | High | Complete PXL-AUD-047 and customer CWT default-flow tests. |
 | FWT | Tables/returns exist. | No mature posted FWT tax-detail engine. | High | Define FWT tax engine path before enabling FWT filing readiness. |
 | Future BIR changes | Existing tables are partly configurable. | Need versioned tax-rule/rate model, not code edits per rate change. | Critical | Add effective-dated rule resolution by document date. |
@@ -309,12 +309,12 @@ Current architectural gaps:
 | --- | --- | --- | --- | --- |
 | TAX-001 | ATC effective window must use document date, not current date. | PXL-AUD-035 | ~~High~~ Resolved (session 77) | DONE — `20260713000002` threads the document date through the PV/OR/CV EWT-CWT validators and all callers; validators evaluate the ATC window as of the document date. Test 033. |
 | TAX-002 | ATC versions must support rate changes under one official code. | PXL-AUD-036 | ~~High~~ Resolved (session 77) | DONE — `20260713000002` adds version-aware uniqueness `(code, tax_category, effective_from)`, overlap/successor guard, `fn_atc_version_asof` resolver, and effective_from immutability once used. Test 033. |
-| TAX-003 | SAWT/QAP reconciliation and multi-ATC supplier scenarios remain incomplete. | PXL-DA-009 | Critical | Complete reconciliation scenarios after ATC versioning and remittance flow. |
-| TAX-004 | Controlled remittance/application flow is missing. | PXL-AUD-041 | High | Build governed remittance/application documents before filing finalization. |
-| TAX-005 | Withholding basis policy is not configurable. | PXL-AUD-037 | High | Decide and encode payment/accrual policy per company/document/profile. |
-| TAX-006 | PV/OR header totals must be server-recomputed from lines. | PXL-AUD-038, PXL-AUD-048 | High | Replace client-supplied posting totals with server sums. |
-| TAX-007 | Over-apply guards must account for CM/VC applications. | PXL-AUD-039 | High | Reuse aging/subledger balance formulas. |
-| TAX-008 | Withholding profile gating is incomplete. | PXL-AUD-042 | High | Make compliance profile and withholding profiles enforceable. |
+| TAX-003 | SAWT/QAP reconciliation and multi-ATC supplier scenarios remain incomplete. | PXL-DA-009 | ~~Critical~~ Resolved (session 79) | DONE — `20260713000006` adds supplier+ATC+nature+rate QAP rows, Form 2307 tie-out evidence, immutable snapshot-backed downloads, and per-report reconciliation blocking. Test 016. |
+| TAX-004 | Controlled remittance/application flow is missing. | PXL-AUD-041 | ~~High~~ Resolved (session 78) | DONE — `20260713000005` adds governed `withholding_remittances`/WHTREM posting, excludes remittance JEs from WHT reconciliation variance, and derives `remitted_prior`. Test 036. |
+| TAX-005 | Withholding basis policy is not configurable. | PXL-AUD-037 | ~~High~~ Resolved (session 83) | DONE — `20260713000010` adds company-level AP EWT recognition policy, defaults to source/accrual at VB, preserves payment-basis compatibility, and blocks duplicate PV EWT for source-accrued bills. Test 037. |
+| TAX-006 | PV/OR header totals must be server-recomputed from lines. | PXL-AUD-038, PXL-AUD-048 | ~~High~~ Resolved (session 77) | DONE — `20260713000003` derives OR/PV cash and withholding totals from persisted lines and blocks divergent header totals. Test 034. |
+| TAX-007 | Over-apply guards must account for CM/VC applications. | PXL-AUD-039 | ~~High~~ Resolved (session 77) | DONE — `20260713000004` nets AR credit memos and AP vendor-credit applications in over-apply guards. Test 035. |
+| TAX-008 | Withholding profile gating is incomplete. | PXL-AUD-042 | ~~High~~ Resolved (session 84) | DONE — `20260713000011` gates explicit non-EWT profiles across AP-side EWT payable, EWT returns, and QAP exports, and implements TWA goods/services auto-EWT defaults. Test 038. |
 | TAX-009 | Cash purchases and advances/down-payments withholding are incomplete. | PXL-AUD-043 | High | Define document policies before implementation. |
 | TAX-010 | 2307 received claim lifecycle is not governed. | PXL-AUD-047 | Medium | Add validation, over-claim guard, stale/reversal handling. |
 
@@ -387,8 +387,8 @@ Do not build these transactions now. This section records accounting requirement
 | Transaction family | Current readiness | Accounting requirements before rollout | Missing capabilities |
 | --- | --- | --- | --- |
 | Official Receipt | Strong core posting exists. | Lifecycle contract, CWT profile defaults, over-apply guard including CMs, cash total recomputation, reversal/bounce audit. | PXL-AUD-038, PXL-AUD-039, PXL-AUD-045, PXL-AUD-046. |
-| Vendor Bill | Strong core posting exists. | EWT accrual policy decision, supplier withholding profile, RR linkage policy, expense account determination. | PXL-AUD-037, PXL-AUD-008, ACR-006. |
-| Payment Voucher | Strong core posting exists. | EWT profile, line/header total recomputation, VC-aware over-apply, remittance linkage. | PXL-AUD-038, PXL-AUD-039, PXL-AUD-041, PXL-AUD-048. |
+| Vendor Bill | Strong core posting exists, including source/accrual EWT policy and net AP posting when supplier EWT applies. | Supplier withholding profile breadth, RR linkage policy, expense account determination. | PXL-AUD-008, ACR-006. |
+| Payment Voucher | Strong core posting exists, including line-derived totals, VC-aware over-apply, controlled remittance linkage, duplicate-withholding block for source-accrued VBs, and explicit non-EWT profile gates. | Non-VB/down-payment withholding policies. | PXL-AUD-043. |
 | Credit Memo | Posting exists. | CM application trace, OR over-apply interaction, reversal/void semantics, VAT/tax counter-row confirmation. | PXL-AUD-039, ACR-003. |
 | Debit Memo | Posting exists. | Consistent numbering/readiness, application semantics, reversal/void behavior, tax trace. | ACR-003, ACR-004. |
 | Sales Order | Non-posting operational document. | Clear non-posting status lifecycle, downstream source trace to DR/SI, reserved inventory policy. | Source-chain readiness and master-data defaults. |
@@ -404,14 +404,14 @@ Do not build these transactions now. This section records accounting requirement
 
 | Priority | Gap | Area | Why it matters | Existing reference |
 | --- | --- | --- | --- | --- |
-| Critical | SAWT/QAP and multi-ATC withholding reconciliation incomplete. | Tax Engine | Compliance filings can be wrong. | PXL-DA-009 |
-| Critical | CAS DAT layout, books reconciliation, exported-byte hashing incomplete. | Accounting/Compliance | BIR CAS evidence can be rejected. | PXL-DA-019 |
+| ~~Critical~~ Done (session 79) | SAWT/QAP and multi-ATC withholding reconciliation now preserve supplier+ATC+nature+rate rows and 2307 tie-out evidence. | Tax Engine | Compliance filings now have immutable reconciliation-backed export evidence. | PXL-DA-009 |
+| ~~Critical~~ Done (session 82) | CAS evidence now covers exact bytes, DAT artifacts, source/GL-reconciled books exports, and audit-package snapshots. | Accounting/Compliance | BIR CAS evidence now has a server-attested package; legal/operational certification remains a rollout task. | PXL-DA-019 |
 | ~~Critical~~ ATC lane done (session 77) | ATC rate changes now resolve by document date and version (`20260713000002`). A fully generic configurable rule engine across all regimes (PT/FWT) is still future work. | Tax Engine | Rates can be wrong for historical/future documents. | TAX-001, TAX-002 (done); generic engine under TAX-006-style work |
 | Critical | New transaction tables can bypass core controls if not registered/classified. | Accounting Engine | Source trace, immutability, and audit may fail. | ACR-001, ACR-003 |
 | Critical | New posting behavior can diverge without the Accounting Rules Matrix. | Accounting/Posting Engine | Future modules can invent inconsistent posting logic. | `PXL_ACCOUNTING_RULES_MATRIX.md` |
 | High | Financial statement/close model incomplete. | Accounting Engine | TB/FS can be misleading. | PXL-AUD-013, PXL-DA-014 |
 | High | Account determination engine incomplete. | Accounting Engine | Users may pick wrong GL accounts; rollout cannot scale. | ACR-006 |
-| High | Withholding profile/configuration incomplete. | Tax/Master Data | Tax computation depends on incomplete profile data. | PXL-AUD-008, PXL-AUD-042 |
+| High | Withholding profile/configuration incomplete. | Tax/Master Data | Duplicate/legacy withholding master data still needs consolidation. | PXL-AUD-008, PXL-AUD-044 |
 | High | Remittance/application flow missing. | Tax Engine | Filed EWT/CWT workflows and reconciliations remain blocked. | PXL-AUD-041 |
 | ~~High~~ PV/OR done (session 77) | Settlement header totals are client-driven. | Accounting/Tax | GL can diverge from line/subledger/tax rows. | PXL-AUD-038, PXL-AUD-048 (done for PV/OR, `20260713000003`) |
 | ~~High~~ Done (session 77) | CM/VC-aware over-apply guards incomplete. | Subledger | AR/AP balances and withholding can be overstated. | PXL-AUD-039 (done, `20260713000004`) |
@@ -461,12 +461,12 @@ Follow this sequence unless a blocking defect requires escalation:
 Current concrete lane inside this sequence:
 
 1. Maintain `PXL_ACCOUNTING_RULES_MATRIX.md` as the accounting behavior source of truth.
-2. Re-open the critical accounting/tax lane: DA-009 and DA-019.
+2. Continue the remaining high-priority accounting/tax lane: AUD-042/043, then AUD-040, and AUD-044..047/049.
 3. ~~Complete ATC document-date versioning safely, replacing the held-out draft rather than adopting it as-is.~~ DONE (session 77, `20260713000002`, test 033; held-out draft `20260710000004` stays excluded).
-4. Complete controlled EWT remittance/CWT application flow.
-5. Decide and encode withholding basis policy.
-6. Server-recompute OR/PV cash totals from lines.
-7. Add CM/VC-aware over-apply guards.
+4. ~~Complete controlled EWT remittance/CWT application flow.~~ DONE (session 78, `20260713000005`, test 036).
+5. ~~Decide and encode withholding basis policy.~~ DONE (session 83, `20260713000010`, test 037).
+6. ~~Server-recompute OR/PV cash totals from lines.~~ DONE (session 77, `20260713000003`, test 034).
+7. ~~Add CM/VC-aware over-apply guards.~~ DONE (session 77, `20260713000004`, test 035).
 8. Complete financial statement/close readiness.
 9. Complete semantic transaction event log.
 10. Define and implement the configuration-driven tax-rule model.

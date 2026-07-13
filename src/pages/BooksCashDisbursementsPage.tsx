@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { downloadCsvText, getSnapshotExportText } from '@/lib/exportDownload'
 
 type Row = { id: string; date: string; doc_type: 'PV' | 'CV' | 'CP'; doc_number: string; payee: string; amount: number }
 
@@ -50,8 +51,8 @@ export default function BooksCashDisbursementsPage() {
     if (!companyId) return
     setExporting(true)
     const fileName = `cash-disbursements-book-${dateFrom}-to-${dateTo}.csv`
-    // Server-side snapshot: freezes the book payload with a SHA-256 hash and
-    // returns the frozen rows, so the file is provably the hashed payload.
+    // Server-side snapshot: freezes the exact export text with a SHA-256 hash
+    // and returns that same text for download.
     const { data, error } = await supabase.rpc('fn_snapshot_books_export', {
       p_company_id: companyId,
       p_book_type: 'cash_disbursements',
@@ -64,17 +65,12 @@ export default function BooksCashDisbursementsPage() {
       alert(error.message)
       return
     }
-    const frozen = ((data as { rows: Record<string, string | number | null>[] }).rows) || []
-    const num = (v: string | number | null) => Number(v ?? 0).toFixed(2)
-    const str = (v: string | number | null) => (v ?? '') as string
-    const header = ['Date', 'Type', 'Doc No.', 'Payee', 'Amount']
-    const csvRows = frozen.map(r => [str(r.date), DOC_LABEL[str(r.doc_type) as Row['doc_type']], str(r.doc_number), str(r.payee), num(r.amount)])
-    const csv = [header, ...csvRows].map(row => row.map(c => `"${c}"`).join(',')).join('\n')
-    const blob = new Blob([csv], { type: 'text/csv' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url; a.download = fileName; a.click()
-    URL.revokeObjectURL(url)
+    const exportText = getSnapshotExportText(data)
+    if (!exportText) {
+      alert('Books export did not return a file payload.')
+      return
+    }
+    downloadCsvText(exportText, fileName)
   }
 
   return (

@@ -1657,14 +1657,82 @@ export type Database = {
           },
         ]
       }
-      cas_export_log: {
+      cas_export_artifacts: {
         Row: {
+          byte_count: number
           company_id: string
-          export_type: string
+          encoding: string
+          file_content: string
+          file_hash: string
           file_name: string
           generated_at: string
           generated_by: string | null
           id: string
+          layout_version: string
+          mime_type: string
+          newline_style: string
+          snapshot_id: string
+        }
+        Insert: {
+          byte_count: number
+          company_id: string
+          encoding?: string
+          file_content: string
+          file_hash: string
+          file_name: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          layout_version: string
+          mime_type?: string
+          newline_style?: string
+          snapshot_id: string
+        }
+        Update: {
+          byte_count?: number
+          company_id?: string
+          encoding?: string
+          file_content?: string
+          file_hash?: string
+          file_name?: string
+          generated_at?: string
+          generated_by?: string | null
+          id?: string
+          layout_version?: string
+          mime_type?: string
+          newline_style?: string
+          snapshot_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cas_export_artifacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_export_artifacts_snapshot_id_fkey"
+            columns: ["snapshot_id"]
+            isOneToOne: true
+            referencedRelation: "report_snapshots"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cas_export_log: {
+        Row: {
+          artifact_id: string | null
+          company_id: string
+          export_type: string
+          file_hash: string | null
+          file_name: string
+          file_sha256: string | null
+          file_size_bytes: number | null
+          generated_at: string
+          generated_by: string | null
+          id: string
+          layout_version: string | null
           period_month: number | null
           period_quarter: number | null
           period_year: number | null
@@ -1674,12 +1742,17 @@ export type Database = {
           snapshot_id: string | null
         }
         Insert: {
+          artifact_id?: string | null
           company_id: string
           export_type: string
+          file_hash?: string | null
           file_name: string
+          file_sha256?: string | null
+          file_size_bytes?: number | null
           generated_at?: string
           generated_by?: string | null
           id?: string
+          layout_version?: string | null
           period_month?: number | null
           period_quarter?: number | null
           period_year?: number | null
@@ -1689,12 +1762,17 @@ export type Database = {
           snapshot_id?: string | null
         }
         Update: {
+          artifact_id?: string | null
           company_id?: string
           export_type?: string
+          file_hash?: string | null
           file_name?: string
+          file_sha256?: string | null
+          file_size_bytes?: number | null
           generated_at?: string
           generated_by?: string | null
           id?: string
+          layout_version?: string | null
           period_month?: number | null
           period_quarter?: number | null
           period_year?: number | null
@@ -1704,6 +1782,13 @@ export type Database = {
           snapshot_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "cas_export_log_artifact_id_fkey"
+            columns: ["artifact_id"]
+            isOneToOne: false
+            referencedRelation: "cas_export_artifacts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "cas_export_log_company_id_fkey"
             columns: ["company_id"]
@@ -2335,6 +2420,7 @@ export type Database = {
           accounting_period: string
           address_line_1: string
           address_line_2: string
+          ap_ewt_recognition_policy: string
           bir_reg_date: string | null
           cas_date_issued: string | null
           cas_permit_no: string | null
@@ -2373,6 +2459,7 @@ export type Database = {
           accounting_period: string
           address_line_1: string
           address_line_2: string
+          ap_ewt_recognition_policy?: string
           bir_reg_date?: string | null
           cas_date_issued?: string | null
           cas_permit_no?: string | null
@@ -2411,6 +2498,7 @@ export type Database = {
           accounting_period?: string
           address_line_1?: string
           address_line_2?: string
+          ap_ewt_recognition_policy?: string
           bir_reg_date?: string | null
           cas_date_issued?: string | null
           cas_permit_no?: string | null
@@ -10927,6 +11015,11 @@ export type Database = {
           description: string
           discount_amount: number
           discount_percent: number
+          ewt_amount: number
+          ewt_atc_code_id: string | null
+          ewt_income_nature: string | null
+          ewt_tax_base: number | null
+          ewt_variance_reason: string | null
           expense_account_id: string | null
           id: string
           input_vat_amount: number
@@ -10949,6 +11042,11 @@ export type Database = {
           description: string
           discount_amount?: number
           discount_percent?: number
+          ewt_amount?: number
+          ewt_atc_code_id?: string | null
+          ewt_income_nature?: string | null
+          ewt_tax_base?: number | null
+          ewt_variance_reason?: string | null
           expense_account_id?: string | null
           id?: string
           input_vat_amount?: number
@@ -10971,6 +11069,11 @@ export type Database = {
           description?: string
           discount_amount?: number
           discount_percent?: number
+          ewt_amount?: number
+          ewt_atc_code_id?: string | null
+          ewt_income_nature?: string | null
+          ewt_tax_base?: number | null
+          ewt_variance_reason?: string | null
           expense_account_id?: string | null
           id?: string
           input_vat_amount?: number
@@ -10992,6 +11095,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_bill_lines_ewt_atc_code_id_fkey"
+            columns: ["ewt_atc_code_id"]
+            isOneToOne: false
+            referencedRelation: "atc_codes"
             referencedColumns: ["id"]
           },
           {
@@ -11754,6 +11864,129 @@ export type Database = {
           {
             foreignKeyName: "warehouses_gl_variance_account_id_fkey"
             columns: ["gl_variance_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withholding_remittances: {
+        Row: {
+          amount: number
+          branch_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          fiscal_period_id: string | null
+          form_type: string | null
+          id: string
+          journal_entry_id: string | null
+          particulars: string | null
+          period_month: number | null
+          period_quarter: number | null
+          period_year: number
+          posted_at: string | null
+          posted_by: string | null
+          reference_no: string | null
+          remittance_date: string
+          remittance_kind: string
+          remittance_number: string
+          settlement_account_id: string
+          status: string
+          updated_at: string
+          updated_by: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount: number
+          branch_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          fiscal_period_id?: string | null
+          form_type?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          particulars?: string | null
+          period_month?: number | null
+          period_quarter?: number | null
+          period_year: number
+          posted_at?: string | null
+          posted_by?: string | null
+          reference_no?: string | null
+          remittance_date: string
+          remittance_kind: string
+          remittance_number: string
+          settlement_account_id: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount?: number
+          branch_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          fiscal_period_id?: string | null
+          form_type?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          particulars?: string | null
+          period_month?: number | null
+          period_quarter?: number | null
+          period_year?: number
+          posted_at?: string | null
+          posted_by?: string | null
+          reference_no?: string | null
+          remittance_date?: string
+          remittance_kind?: string
+          remittance_number?: string
+          settlement_account_id?: string
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          void_reason?: string | null
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "withholding_remittances_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withholding_remittances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withholding_remittances_fiscal_period_id_fkey"
+            columns: ["fiscal_period_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withholding_remittances_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "withholding_remittances_settlement_account_id_fkey"
+            columns: ["settlement_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
             referencedColumns: ["id"]
@@ -12772,6 +13005,16 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_books_export_reconciliation: {
+        Args: {
+          p_book_type: string
+          p_company_id: string
+          p_date_from: string
+          p_date_to: string
+          p_rows: Json
+        }
+        Returns: Json
+      }
       fn_bounce_receipt: { Args: { p_receipt_id: string }; Returns: undefined }
       fn_bt_reverse_je: {
         Args: {
@@ -12829,6 +13072,18 @@ export type Database = {
         Args: { p_schedule_id: string }
         Returns: undefined
       }
+      fn_company_ap_ewt_policy: {
+        Args: { p_company_id: string }
+        Returns: string
+      }
+      fn_company_ewt_payable_enabled: {
+        Args: { p_company_id: string }
+        Returns: boolean
+      }
+      fn_company_twa_auto_ewt_enabled: {
+        Args: { p_company_id: string; p_document_date?: string }
+        Returns: boolean
+      }
       fn_complete_purchase_return: {
         Args: { p_return_id: string }
         Returns: undefined
@@ -12860,6 +13115,10 @@ export type Database = {
           net_book_value_after: number
           period_number: number
         }[]
+      }
+      fn_compute_ewt_remitted_prior: {
+        Args: { p_company_id: string; p_quarter: number; p_year: number }
+        Returns: number
       }
       fn_compute_ewt_return: {
         Args: { p_company_id: string; p_quarter: number; p_year: number }
@@ -12962,6 +13221,15 @@ export type Database = {
         Args: { p_je_date: string; p_template_id: string }
         Returns: string
       }
+      fn_export_csv_line: { Args: { p_cells: string[] }; Returns: string }
+      fn_export_dat_cell: { Args: { p_value: string }; Returns: string }
+      fn_export_dat_file_name: {
+        Args: { p_file_name: string }
+        Returns: string
+      }
+      fn_export_dat_numeric: { Args: { p_value: string }; Returns: number }
+      fn_export_dat_tin: { Args: { p_value: string }; Returns: string }
+      fn_export_decimal: { Args: { p_value: number }; Returns: string }
       fn_finalize_journal_entry: {
         Args: { p_je_id: string }
         Returns: undefined
@@ -13186,6 +13454,10 @@ export type Database = {
         Args: { p_vc_id: string }
         Returns: undefined
       }
+      fn_post_withholding_remittance: {
+        Args: { p_id: string }
+        Returns: string
+      }
       fn_preview_gl_impact: {
         Args: {
           p_posting_date?: string
@@ -13193,6 +13465,31 @@ export type Database = {
           p_source_doc_type: string
         }
         Returns: Json
+      }
+      fn_qap_2307_reconciliation: {
+        Args: {
+          p_company_id: string
+          p_tax_quarter: number
+          p_tax_year: number
+        }
+        Returns: {
+          atc_code: string
+          atc_code_id: string
+          base_variance: number
+          form2307_status: string
+          form2307_tax_base: number
+          form2307_tax_withheld: number
+          form2307_version: number
+          is_reconciled: boolean
+          nature_of_payment: string
+          qap_tax_base: number
+          qap_tax_withheld: number
+          supplier_id: string
+          supplier_name: string
+          supplier_tin: string
+          tax_rate: number
+          withheld_variance: number
+        }[]
       }
       fn_rebuild_document_vat_details: {
         Args: { p_source_doc_id: string; p_source_doc_type: string }
@@ -13212,7 +13509,23 @@ export type Database = {
         Returns: string
       }
       fn_register_fixed_asset: { Args: { p_data: Json }; Returns: string }
+      fn_render_cas_dat: { Args: { p_snapshot_id: string }; Returns: Json }
+      fn_render_cas_dat_text: {
+        Args: {
+          p_company_tin: string
+          p_period_end: string
+          p_period_start: string
+          p_report_type: string
+          p_rows: Json
+          p_snapshot_version: number
+        }
+        Returns: string
+      }
       fn_report_snapshot_key_uuid: { Args: { p_key: string }; Returns: string }
+      fn_require_company_ewt_payable_enabled: {
+        Args: { p_company_id: string; p_context?: string }
+        Returns: undefined
+      }
       fn_require_open_fiscal_period: {
         Args: { p_company_id: string; p_lock?: boolean; p_posting_date: string }
         Returns: string
@@ -13344,6 +13657,25 @@ export type Database = {
         Args: { p_header: Json; p_lines: Json; p_vc_id: string }
         Returns: string
       }
+      fn_save_withholding_remittance: {
+        Args: {
+          p_amount: number
+          p_branch_id: string
+          p_company_id: string
+          p_form_type: string
+          p_id: string
+          p_particulars: string
+          p_period_month: number
+          p_period_quarter: number
+          p_period_year: number
+          p_reference_no: string
+          p_remittance_date: string
+          p_remittance_kind: string
+          p_remittance_number: string
+          p_settlement_account_id: string
+        }
+        Returns: string
+      }
       fn_send_supplier_debit_memo: {
         Args: { p_sdm_id: string }
         Returns: undefined
@@ -13355,6 +13687,15 @@ export type Database = {
       fn_snapshot_books_export: {
         Args: {
           p_book_type: string
+          p_company_id: string
+          p_date_from: string
+          p_date_to: string
+          p_file_name: string
+        }
+        Returns: Json
+      }
+      fn_snapshot_cas_audit_package: {
+        Args: {
           p_company_id: string
           p_date_from: string
           p_date_to: string
@@ -13416,6 +13757,10 @@ export type Database = {
         Returns: string
       }
       fn_transfer_fixed_asset: { Args: { p_data: Json }; Returns: string }
+      fn_twa_ewt_atc_asof: {
+        Args: { p_document_date?: string; p_line_kind: string }
+        Returns: string
+      }
       fn_update_form_2307_issued_status: {
         Args: {
           p_action_date?: string
@@ -13551,6 +13896,14 @@ export type Database = {
         Args: { p_return: Database["public"]["Tables"]["vat_returns"]["Row"] }
         Returns: Json
       }
+      fn_vendor_bill_accrued_ewt_amount: {
+        Args: { p_bill_id: string }
+        Returns: number
+      }
+      fn_vendor_bill_has_accrued_ewt: {
+        Args: { p_bill_id: string }
+        Returns: boolean
+      }
       fn_void_sales_invoice: {
         Args: {
           p_invoice_id: string
@@ -13562,6 +13915,10 @@ export type Database = {
       fn_void_vendor_bill: {
         Args: { p_bill_id: string; p_memo?: string; p_void_reason_id: string }
         Returns: undefined
+      }
+      fn_void_withholding_remittance: {
+        Args: { p_id: string; p_reason: string }
+        Returns: string
       }
       fn_wht_gl_reconciliation: {
         Args: { p_company_id: string; p_date_from: string; p_date_to: string }
