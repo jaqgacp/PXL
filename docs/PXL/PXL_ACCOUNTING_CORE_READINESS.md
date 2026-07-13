@@ -182,7 +182,7 @@ Posting Engine gaps:
 | --- | --- | --- | --- |
 | POST-001 | Not every source type has a documented Accounting Rules Matrix row with lifecycle, accounts, taxes, reversal, void, cancel, and test requirements. | Critical | Maintain `PXL_ACCOUNTING_RULES_MATRIX.md` before rollout. |
 | POST-002 | Compatibility-wrapped secondary posters need verification against the shared create/add/finalize protocol. | High | Review each wrapper before expanding UI. |
-| POST-003 | Settlement totals can still be client/header-driven in some flows. | High | Server-recompute totals from source lines before posting. |
+| POST-003 | Settlement totals can still be client/header-driven in some flows. | ~~High~~ PV/OR done (session 77) | DONE for PV/OR — `20260713000003` derives header `total_amount`/`total_ewt`/`total_cwt` from lines and rejects divergence at posting (AUD-038/048, test 034). Apply the same pattern to any future settlement flow. |
 | POST-004 | Posting tolerance policy is not fully standardized across GL, tax, and reports. | High | Define one tolerance policy and test it. |
 
 ## 6. Account Determination Engine design
@@ -413,7 +413,7 @@ Do not build these transactions now. This section records accounting requirement
 | High | Account determination engine incomplete. | Accounting Engine | Users may pick wrong GL accounts; rollout cannot scale. | ACR-006 |
 | High | Withholding profile/configuration incomplete. | Tax/Master Data | Tax computation depends on incomplete profile data. | PXL-AUD-008, PXL-AUD-042 |
 | High | Remittance/application flow missing. | Tax Engine | Filed EWT/CWT workflows and reconciliations remain blocked. | PXL-AUD-041 |
-| High | Settlement header totals are client-driven. | Accounting/Tax | GL can diverge from line/subledger/tax rows. | PXL-AUD-038, PXL-AUD-048 |
+| ~~High~~ PV/OR done (session 77) | Settlement header totals are client-driven. | Accounting/Tax | GL can diverge from line/subledger/tax rows. | PXL-AUD-038, PXL-AUD-048 (done for PV/OR, `20260713000003`) |
 | High | CM/VC-aware over-apply guards incomplete. | Subledger | AR/AP balances and withholding can be overstated. | PXL-AUD-039 |
 | High | Universal number-series preflight incomplete. | Posting/Compliance | Users can reach late numbering errors; CAS evidence gaps possible. | PXL-AUD-016 |
 | High | Semantic lifecycle event log incomplete. | Audit | Audit timeline is not a single governed lifecycle stream. | PXL-DA-016 |

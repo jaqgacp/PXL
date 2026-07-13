@@ -1,10 +1,14 @@
 # AI Handoff
 
-Last updated: 2026-07-13 (session 77 — ATC document-date validation + rate versioning; AUD-035/036 closed)
+Last updated: 2026-07-13 (session 77 — ATC versioning + settlement-total line authority; AUD-035/036/038/048 closed)
 
-## Active Priority (session 77 — ATC document-date validation + rate versioning)
+## Active Priority (session 77 — accounting-core implementation lane)
 
-Under **PXL Accounting Core Ready** (DEC-017), session 77 delivered the first accounting-core implementation lane after the documentation passes: safe ATC document-date validation and rate versioning, closing **PXL-AUD-035** and **PXL-AUD-036**.
+Under **PXL Accounting Core Ready** (DEC-017), session 77 delivered two accounting-core fixes: safe ATC document-date validation + rate versioning (**AUD-035/036**) and PV/OR settlement-total line authority (**AUD-038/048**).
+
+Second fix — `supabase/migrations/20260713000003_settlement_total_line_authority.sql` + `supabase/tests/034_settlement_total_line_authority_test.sql` (SETTLEMENT-TOTAL-AUTHORITY-001, 8 assertions): `fn_save_payment_voucher`/`fn_save_receipt` derive header `total_amount`/`total_ewt`/`total_cwt` from the persisted lines (client header ignored); the ready validators reject any header cash total diverging from `SUM(line payment_amount)` before posting; header withholding totals now equal line sums exactly (closes the 0.02 export-blocking drift). Built on the `20260713000002` bodies. Cash sales unaffected. **Next fix: AUD-039** (CM/VC-aware over-apply guards) in the same two save-guards — reuse the AR/AP aging formula.
+
+First fix (below) — ATC document-date validation and rate versioning, closing **PXL-AUD-035** and **PXL-AUD-036**.
 
 Shipped locally (verified, uncommitted, hosted push pending):
 

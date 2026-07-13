@@ -753,3 +753,18 @@ Scenario: official ATC `WI777` withholds 1% through 2026-06-30 and 2% from 2026-
 | 8 | Insert a third active version overlapping the open 2% window | Rejected by the version-integrity guard — the prior version's `effective_to` must be closed before a successor starts. |
 | 9 | Insert a successor pointing at a predecessor with a different official code | Rejected — a successor must keep the same official code and tax category (alphalists must carry the official ATC). |
 | 10 | After the 1% version is used, attempt to move its `effective_from`, close its `effective_to`, or change its `rate` | `effective_from` and `rate` are immutable once used; `effective_to` can still be closed to end the window. |
+
+## SETTLEMENT-TOTAL-AUTHORITY-001 - PV/OR Header Totals Derived From Lines
+
+Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/034_settlement_total_line_authority_test.sql`, 8 assertions. Related findings: PXL-AUD-038 (header/line divergence), PXL-AUD-048 (tolerance alignment).
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Save a PV with a bogus header `total_amount` (99,999) and `total_ewt` (88,888); the single line pays 5,000 and withholds 100 (2% of the explicit 5,000 base) | The server ignores the client header and stores `total_amount = 5,000` (the line payment sum). |
+| 2 | Inspect the stored header EWT | `total_ewt = 100`, exactly the line EWT sum — the GL figure equals the tax-ledger figure with no 0.02 drift (PXL-AUD-048). |
+| 3 | Post the PV | Posts from the line-derived header. |
+| 4 | Inspect the posted PV JE cash line | Credits Cash by the line-sum 5,000, not the client header value. |
+| 5 | Tamper a saved draft PV header (`total_amount` set to diverge from the lines), then post | Rejected — the readiness validator requires the header cash total to equal the line payment sum before a JE is written. |
+| 6 | Save an OR with a bogus header `total_amount` (77,777) and `total_cwt` (55,555); the line collects 11,000 cash and 200 CWT (2% of the explicit 10,000 base) | The server stores `total_amount = 11,000` (the line payment sum). |
+| 7 | Post the OR | Posts from the line-derived header. |
+| 8 | Inspect the posted OR JE cash line | Debits Cash by the line-sum 11,000, not the client header value. |
