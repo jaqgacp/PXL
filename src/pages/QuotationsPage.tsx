@@ -1,7 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
 
 // ── Types ─────────────────────────────────────────────────────
 type QStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'expired'
@@ -155,7 +157,20 @@ export default function QuotationsPage() {
 
   const totalAmt = lines.reduce((s, l) => s + l.net_amount, 0)
 
+  const requiredConfig = useMemo<ConfigField[]>(() => [], [])
+  // Quotations allocate a number series but do not post to the GL — no open-period gate.
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: fBranch || branchId,
+    documentCode: 'QT',
+    postingDate: fDate,
+    requiredConfig,
+    requireOpenPeriod: false,
+  })
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+
   const save = async (nextStatus: QStatus) => {
+    if (setupBlocked) { setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0]); return }
     if (!companyId || !fCustomer) { setError('Customer is required.'); return }
     if (lines.every(l => !l.description.trim())) { setError('At least one line item is required.'); return }
     setSaving(true); setError('')
@@ -294,6 +309,12 @@ export default function QuotationsPage() {
           <button onClick={() => save('approved')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Approve</button>
         </>}
       </div>
+
+      {canEdit && (
+        <div className="px-5 pt-4">
+          <SetupReadinessBanner readiness={readiness} />
+        </div>
+      )}
 
       <div className="divide-y divide-gray-200">
         <div className="bg-white px-5 py-4">

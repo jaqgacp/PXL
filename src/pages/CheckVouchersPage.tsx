@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
 
 type BankRef = { id: string; bank_name: string; account_number: string }
 type COARef = { id: string; account_code: string; account_name: string }
@@ -109,8 +111,19 @@ export default function CheckVouchersPage() {
     setForm(f => ({ ...f, supplier_id: id || null, ...(s ? { payee: s.registered_name, payee_tin: s.tin } : {}) }))
   }
 
+  const requiredConfig = useMemo<ConfigField[]>(() => [], [])
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: form?.branch_id || branchId,
+    documentCode: 'CV',
+    postingDate: form?.voucher_date || today(),
+    requiredConfig,
+  })
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+
   const save = async () => {
     if (!companyId || !form) return
+    if (setupBlocked) { setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0]); return }
     if (!form.bank_account_id || !form.check_number || !form.payee || !form.particulars) { setError('Bank account, check number, payee and particulars are required'); return }
     const valid = lines.filter(l => l.expense_account_id && Number(l.amount) > 0)
     if (valid.length === 0) { setError('At least one expense line with an account and amount is required'); return }
@@ -250,6 +263,7 @@ export default function CheckVouchersPage() {
         </div>
       </div>
       <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
+        {!ro && <SetupReadinessBanner readiness={readiness} />}
         <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
           <Field label="Voucher Date *"><input type="date" disabled={ro} className={inputCls} value={form?.voucher_date || today()} onChange={e => setForm(f => ({ ...f, voucher_date: e.target.value }))} /></Field>
           <Field label="Bank Account *"><select disabled={ro} className={inputCls} value={form?.bank_account_id || ''} onChange={e => setForm(f => ({ ...f, bank_account_id: e.target.value }))}>

@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
@@ -76,8 +78,19 @@ export default function PettyCashReplenishmentPage() {
 
   const pickFund = async (fundId: string) => { setForm(f => ({ ...f, fund_id: fundId })); await loadUnreplenished(fundId) }
 
+  const requiredConfig = useMemo<ConfigField[]>(() => [], [])
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: form?.branch_id || branchId,
+    documentCode: 'PCR',
+    postingDate: form?.replenishment_date || today(),
+    requiredConfig,
+  })
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+
   const save = async () => {
     if (!companyId || !form) return
+    if (setupBlocked) { setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0]); return }
     if (!form.fund_id || !form.bank_account_id) { setError('Fund and bank account are required'); return }
     if (total <= 0) { setError('No approved unreplenished vouchers for this fund'); return }
     setSaving(true); setError('')
@@ -166,6 +179,7 @@ export default function PettyCashReplenishmentPage() {
         </div>
       </div>
       <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
+        {!ro && <SetupReadinessBanner readiness={readiness} />}
         <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mb-4">
           <Field label="Fund *"><select disabled={ro} className={inputCls} value={form?.fund_id || ''} onChange={e => pickFund(e.target.value)}>
             <option value="">— select fund —</option>{funds.map(f => <option key={f.id} value={f.id}>{f.fund_name}</option>)}</select></Field>

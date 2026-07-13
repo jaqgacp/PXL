@@ -1,8 +1,10 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
 
 type BranchRef = { id: string; branch_code: string; branch_name: string }
 type BankRef = { id: string; bank_name: string; account_number: string; branch_id: string | null }
@@ -61,8 +63,20 @@ export default function InterBranchTransfersPage() {
   const openNew = () => { setForm({ company_id: companyId, transfer_date: today(), status: 'draft', amount: 0 }); setError(''); setMode('edit') }
   const openRow = (r: IBT) => { setForm({ ...r }); setError(''); setMode(r.status === 'draft' ? 'edit' : 'view') }
 
+  // IBT allocates its number series against the source (from) branch — preflight the same branch.
+  const requiredConfig = useMemo<ConfigField[]>(() => [], [])
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: form?.from_branch_id || '',
+    documentCode: 'IBT',
+    postingDate: form?.transfer_date || today(),
+    requiredConfig,
+  })
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+
   const save = async () => {
     if (!companyId || !form) return
+    if (setupBlocked) { setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0]); return }
     if (!form.from_branch_id || !form.to_branch_id || !form.amount) { setError('From branch, to branch and amount are required'); return }
     if (form.from_branch_id === form.to_branch_id) { setError('From and to branches must differ'); return }
     setSaving(true); setError('')
@@ -162,6 +176,7 @@ export default function InterBranchTransfersPage() {
         </div>
       </div>
       <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
+        {!ro && <SetupReadinessBanner readiness={readiness} />}
         <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
           <Field label="Transfer Date *"><input type="date" disabled={ro} className={inputCls} value={form?.transfer_date || today()} onChange={e => setForm(f => ({ ...f, transfer_date: e.target.value }))} /></Field>
           <Field label="Amount *"><input type="number" disabled={ro} className={inputCls} value={form?.amount ?? 0} onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} /></Field>

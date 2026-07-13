@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
@@ -61,8 +63,19 @@ export default function BankAdjustmentsPage() {
   const openNew = () => { setForm({ company_id: companyId, branch_id: branchId || null, adjustment_date: today(), status: 'draft', adjustment_type: 'bank_charge', amount: 0 }); setError(''); setMode('edit') }
   const openRow = (r: BA) => { setForm({ ...r }); setError(''); setMode(r.status === 'draft' ? 'edit' : 'view') }
 
+  const requiredConfig = useMemo<ConfigField[]>(() => [], [])
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: form?.branch_id || branchId,
+    documentCode: 'BADJ',
+    postingDate: form?.adjustment_date || today(),
+    requiredConfig,
+  })
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+
   const save = async () => {
     if (!companyId || !form) return
+    if (setupBlocked) { setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0]); return }
     if (!form.bank_account_id || !form.adjustment_type || !form.amount || !form.gl_account_id || !form.description) {
       setError('Bank account, type, amount, GL account and description are required'); return
     }
@@ -161,6 +174,7 @@ export default function BankAdjustmentsPage() {
         </div>
       </div>
       <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
+        {!ro && <SetupReadinessBanner readiness={readiness} />}
         <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
           <Field label="Adjustment Date *"><input type="date" disabled={ro} className={inputCls} value={form?.adjustment_date || today()} onChange={e => setForm(f => ({ ...f, adjustment_date: e.target.value }))} /></Field>
           <Field label="Bank Account *"><select disabled={ro} className={inputCls} value={form?.bank_account_id || ''} onChange={e => setForm(f => ({ ...f, bank_account_id: e.target.value }))}>

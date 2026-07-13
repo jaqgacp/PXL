@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
@@ -59,8 +61,21 @@ export default function CashCountSheetPage() {
   const counted = (Number(form?.coins_and_bills) || 0) + (Number(form?.unreplenished_pcvs) || 0) + (Number(form?.other_items) || 0)
   const shortageOverage = counted - (Number(form?.book_balance) || 0)
 
+  const requiredConfig = useMemo<ConfigField[]>(() => [], [])
+  // Cash count sheets allocate a number series but do not post to the GL, so no open-period gate.
+  const readiness = useTransactionReadiness({
+    companyId,
+    branchId: form?.branch_id || branchId,
+    documentCode: 'CCS',
+    postingDate: form?.count_date || today(),
+    requiredConfig,
+    requireOpenPeriod: false,
+  })
+  const setupBlocked = readiness.loading || readiness.blockers.length > 0
+
   const save = async (finalize: boolean) => {
     if (!companyId || !form) return
+    if (setupBlocked) { setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0]); return }
     if (!form.fund_id || !form.counted_by) { setError('Fund and counted-by are required'); return }
     setSaving(true); setError('')
     try {
@@ -140,6 +155,7 @@ export default function CashCountSheetPage() {
         </div>
       </div>
       <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
+        {!ro && <SetupReadinessBanner readiness={readiness} />}
         <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
           <Field label="Fund *"><select disabled={ro} className={inputCls} value={form?.fund_id || ''} onChange={e => computeForFund(e.target.value)}>
             <option value="">— select fund —</option>{funds.map(f => <option key={f.id} value={f.id}>{f.fund_name}</option>)}</select></Field>

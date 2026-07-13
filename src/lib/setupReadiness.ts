@@ -16,6 +16,10 @@ type ReadinessArgs = {
   documentCode: string
   postingDate: string
   requiredConfig: ConfigField[]
+  // Pre-financial documents (quotations, sales orders, delivery receipts, cash
+  // count sheets) allocate a number series but do not post to the GL, so they
+  // must not be blocked by a missing/closed fiscal period. Defaults to true.
+  requireOpenPeriod?: boolean
 }
 
 export type SetupReadiness = {
@@ -63,6 +67,7 @@ export function useTransactionReadiness({
   documentCode,
   postingDate,
   requiredConfig,
+  requireOpenPeriod = true,
 }: ReadinessArgs): SetupReadiness {
   const [state, setState] = useState<SetupReadiness>({ loading: false, blockers: [], warnings: [] })
 
@@ -106,7 +111,7 @@ export function useTransactionReadiness({
       ])
 
       if (!branchRes.data?.length) blockers.push('Selected branch is missing or inactive.')
-      if (!periodRes.data?.length) blockers.push(`No open fiscal period covers ${postingDate}.`)
+      if (requireOpenPeriod && !periodRes.data?.length) blockers.push(`No open fiscal period covers ${postingDate}.`)
       if (!seriesRes.ok) {
         blockers.push(`No active number series for document code ${documentCode} in the selected branch.`)
         if (seriesRes.error) warnings.push(`Number series check detail: ${seriesRes.error}`)
@@ -129,7 +134,7 @@ export function useTransactionReadiness({
 
     load()
     return () => { cancelled = true }
-  }, [companyId, branchId, documentCode, postingDate, requiredConfig])
+  }, [companyId, branchId, documentCode, postingDate, requiredConfig, requireOpenPeriod])
 
   return state
 }
