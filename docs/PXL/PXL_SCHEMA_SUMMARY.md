@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-14. Migrations scanned: 105. Tests present: 45.
+Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
 
-## Functions (254)
+## Functions (255)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -225,6 +225,7 @@ Generated: 2026-07-14. Migrations scanned: 105. Tests present: 45.
 | `fn_snapshot_wht_export` | `20260713000006_qap_multi_atc_reconciliation.sql` | 3 |
 | `fn_supersede_form_2307_issued` | `20260714000002_form2307_monthly_breakdown.sql` | 2 |
 | `fn_sync_number_series_shape` | `20260702000001_number_series_document_code_alignment.sql` | 1 |
+| `fn_sync_receipt_totals_from_lines` | `20260714000004_cash_sale_receipt_total_semantics.sql` | 1 |
 | `fn_sync_vendor_bill_ewt_expected` | `20260713000011_withholding_profile_gates.sql` | 1 |
 | `fn_tax_code_is_current` | `20260713000012_tax_code_effective_date_governance.sql` | 1 |
 | `fn_tax_code_used` | `20260713000012_tax_code_effective_date_governance.sql` | 1 |
@@ -444,7 +445,7 @@ Generated: 2026-07-14. Migrations scanned: 105. Tests present: 45.
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `withholding_remittances` | `20260713000005_withholding_remittance_flow.sql` | 1 | `20260713000005_withholding_remittance_flow.sql` |
 
-## Triggers (282)
+## Triggers (283)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -695,6 +696,7 @@ Generated: 2026-07-14. Migrations scanned: 105. Tests present: 45.
 | `trg_stx_updated_at` | `20260630000028_inventory.sql` |
 | `trg_supplier_atc_default` | `20260701000014_supplier_atc_defaults.sql` |
 | `trg_sync_number_series_shape` | `20260702000001_number_series_document_code_alignment.sql` |
+| `trg_sync_receipt_totals_from_lines` | `20260714000004_cash_sale_receipt_total_semantics.sql` |
 | `trg_tax_code_history_guard` | `20260713000012_tax_code_effective_date_governance.sql` |
 | `trg_tax_code_version_rules` | `20260713000012_tax_code_effective_date_governance.sql` |
 | `trg_transaction_event_approval_insert` | `20260713000014_transaction_events.sql` |

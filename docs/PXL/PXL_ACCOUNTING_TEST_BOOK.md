@@ -897,6 +897,22 @@ Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/034_settlem
 | 7 | Post the OR | Posts from the line-derived header. |
 | 8 | Inspect the posted OR JE cash line | Debits Cash by the line-sum 11,000, not the client header value. |
 
+## CASH-SALE-RECEIPT-TOTAL-001 - Cash-Sale Receipt Header and Bounce Totals
+
+Status: Executed Passing (session 92, 2026-07-14) in `supabase/tests/046_cash_sale_receipt_total_semantics_test.sql`, 13 assertions. Related findings: PXL-AUD-046.
+
+Scenario: a VAT cash sale for 10,000 net + 1,200 VAT has 200 CWT withheld, creating a linked cash-sale invoice, receipt, receipt line, original OR JE, and later a bounce reversal.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Save the cash sale through `fn_save_cash_sale` with WC140 CWT of 200 | The linked receipt stores `total_amount = 11,000` cash received, `total_cwt = 200`, and gross clearance derived as 11,200. |
+| 2 | Compare receipt header and receipt-line totals | Header cash/CWT/gross matches line payment/CWT/gross exactly. |
+| 3 | Inspect the linked cash-sale invoice | Invoice total remains the gross sale amount of 11,200. |
+| 4 | Inspect the original cash-sale OR JE | JE header totals are 11,200 debit and 11,200 credit, matching the JE line sums. |
+| 5 | Bounce the cash-sale receipt with `fn_bounce_receipt` | Bounce succeeds, marks the receipt `bounced`, creates a reversal JE linked from the original, and keeps CWT tax detail netted to zero. |
+| 6 | Inspect the reversal JE | Reversal totals are 11,200 debit and 11,200 credit, not the overstated 11,400 gross-plus-CWT amount, and header totals equal line sums. |
+| 7 | Re-read the bounced receipt header | The corrected cash/CWT/gross split remains 11,000 / 200 / 11,200 after bounce. |
+
 ## CM-VC-OVERAPPLY-001 - Over-Apply Guards Net Applied Credit Memos / Vendor Credits
 
 Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/035_cm_vc_aware_overapply_test.sql`, 6 assertions. Related findings: PXL-AUD-039.
