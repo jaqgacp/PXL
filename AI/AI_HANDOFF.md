@@ -1,6 +1,6 @@
 # AI Handoff
 
-Last updated: 2026-07-14 (session 100 - PXL-AUD-045/PXL-AUD-050 completed locally)
+Last updated: 2026-07-14 (session 100 - PXL-AUD-045/PXL-AUD-050 completed and hosted synced)
 
 ## Active Priority (session 100 - remaining audit items closed)
 
@@ -8,7 +8,7 @@ Under **PXL Accounting Core Ready** (DEC-017), session 100 completed the two rem
 
 Verification completed for session 100: held-out-safe `supabase db reset --local` replayed through `20260714000010` with `20260710000004`/`00005` and test `027` moved aside/restored; focused test 053 passed 9/9; full trusted pgTAP passed 909/909 across 52 files with held-out test 027 excluded; `npm run gen:types`, `scripts/gen_schema_summary.sh`, `npm run lint`, `npm run build`, `scripts/check_docs_consistency.sh`, and `git diff --check` passed.
 
-The Findings Status Index is now **72 Retested Passed / 0 In Progress / 0 Open (72)**. Push `main`, then push hosted Supabase through `20260714000010` with the held-out drafts excluded/restored.
+The Findings Status Index is now **72 Retested Passed / 0 In Progress / 0 Open (72)**. `main` is pushed, and hosted Supabase is synced through `20260714000010` with the held-out drafts excluded/restored. A held-out-safe post-push dry run returned "Remote database is up to date."
 
 ## Prior Priority (session 98 - DA-018 heavy report readiness)
 
