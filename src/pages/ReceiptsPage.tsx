@@ -20,6 +20,8 @@ type Receipt = {
 }
 
 type ApplicationLine = {
+  _key: string
+  line_type: 'invoice_application' | 'customer_advance'
   invoice_id: string; si_number: string; si_date: string
   original_amount: number; balance_due: number
   payment_amount: number; cwt_amount: number; forex_adjustment: number
@@ -107,9 +109,14 @@ export default function ReceiptsPage() {
   const [lines, setLines] = useState<ApplicationLine[]>([])
   const [openInvoicesLoading, setOpenInvoicesLoading] = useState(false)
   const requiredConfig = useMemo<ConfigField[]>(
-    () => lines.some(line => line.cwt_amount > 0.005)
-      ? ['ar_account_id', 'default_cash_account_id', 'ewt_withheld_account_id']
-      : ['ar_account_id', 'default_cash_account_id'],
+    () => {
+      const fields: ConfigField[] = ['ar_account_id', 'default_cash_account_id']
+      if (lines.some(line => line.cwt_amount > 0.005)) fields.push('ewt_withheld_account_id')
+      if (lines.some(line => line.line_type === 'customer_advance' && line.payment_amount + line.cwt_amount > 0.005)) {
+        fields.push('customer_advances_account_id')
+      }
+      return fields
+    },
     [lines]
   )
   const readiness = useTransactionReadiness({
@@ -208,6 +215,8 @@ export default function ReceiptsPage() {
       const defaultBase = defaultAtc ? round2(balance * netRatio) : 0
       const defaultCwt = defaultAtc ? round2(defaultBase * defaultAtc.rate / 100) : 0
       return {
+        _key: si.id,
+        line_type: 'invoice_application' as const,
         invoice_id: si.id, si_number: si.si_number, si_date: si.date,
         original_amount: Number(si.total_amount), balance_due: balance,
         payment_amount: defaultAtc ? round2(Math.max(balance - defaultCwt, 0)) : 0,
@@ -260,18 +269,22 @@ export default function ReceiptsPage() {
     // Load existing applied lines
     const { data: rl } = await supabase.from('receipt_lines')
       .select('*').eq('receipt_id', doc.id)
-    const { data: siData } = rl?.length
+    const invoiceIds = (rl || []).map(r => r.invoice_id).filter((id): id is string => Boolean(id))
+    const { data: siData } = invoiceIds.length
       ? await supabase.from('sales_invoices').select('id,si_number,date,total_amount,total_vat_amount')
-          .in('id', rl.map(r => r.invoice_id))
+          .in('id', invoiceIds)
       : { data: [] }
 
     const mapped: ApplicationLine[] = (rl || []).map(r => {
       const si = (siData || []).find(s => s.id === r.invoice_id)
       const siTotal = Number(si?.total_amount || 0)
+      const isAdvance = r.line_type === 'customer_advance' || !r.invoice_id
       return {
-        invoice_id: r.invoice_id, si_number: si?.si_number || '—',
+        _key: r.id,
+        line_type: isAdvance ? 'customer_advance' : 'invoice_application',
+        invoice_id: r.invoice_id || '', si_number: isAdvance ? 'Customer Advance' : si?.si_number || '—',
         si_date: si?.date || '', original_amount: siTotal,
-        balance_due: 0, // will be stale, but fine for view
+        balance_due: isAdvance ? Number(r.payment_amount) + Number(r.cwt_amount) : 0,
         payment_amount: Number(r.payment_amount), cwt_amount: Number(r.cwt_amount),
         forex_adjustment: Number(r.forex_adjustment), atc_code_id: r.atc_code_id || null,
         cwt_tax_base: Number(r.cwt_tax_base || 0),
@@ -284,9 +297,30 @@ export default function ReceiptsPage() {
     setMode(doc.status === 'draft' ? 'edit' : 'view')
   }
 
-  const setLineField = (invoiceId: string, field: 'payment_amount' | 'cwt_amount' | 'forex_adjustment' | 'cwt_tax_base', val: number) => {
+  const addCustomerAdvanceLine = () => {
+    const customer = customers.find(c => c.id === fCustomer)
+    setLines(prev => [...prev, {
+      _key: crypto.randomUUID(),
+      line_type: 'customer_advance',
+      invoice_id: '',
+      si_number: 'Customer Advance',
+      si_date: fDate,
+      original_amount: 0,
+      balance_due: 0,
+      payment_amount: 0,
+      cwt_amount: 0,
+      forex_adjustment: 0,
+      atc_code_id: customer?.is_subject_to_cwt ? customer.default_cwt_atc_code_id : null,
+      cwt_tax_base: 0,
+      cwt_variance_reason: '',
+      net_ratio: 1,
+      base_auto: true,
+    }])
+  }
+
+  const setLineField = (lineKey: string, field: 'payment_amount' | 'cwt_amount' | 'forex_adjustment' | 'cwt_tax_base', val: number) => {
     setLines(prev => prev.map(l => {
-      if (l.invoice_id !== invoiceId) return l
+      if (l._key !== lineKey) return l
       const next = { ...l, [field]: val }
       if (field === 'cwt_amount' && val > 0 && !next.atc_code_id) {
         const customer = customers.find(c => c.id === fCustomer)
@@ -310,17 +344,23 @@ export default function ReceiptsPage() {
     }))
   }
 
-  const setLineVarianceReason = (invoiceId: string, reason: string) => {
-    setLines(prev => prev.map(l => l.invoice_id === invoiceId ? { ...l, cwt_variance_reason: reason } : l))
+  const setLineVarianceReason = (lineKey: string, reason: string) => {
+    setLines(prev => prev.map(l => l._key === lineKey ? { ...l, cwt_variance_reason: reason } : l))
   }
 
-  const setLineAtc = (invoiceId: string, atcCodeId: string | null) => {
-    setLines(prev => prev.map(l => l.invoice_id === invoiceId ? { ...l, atc_code_id: atcCodeId } : l))
+  const setLineAtc = (lineKey: string, atcCodeId: string | null) => {
+    setLines(prev => prev.map(l => l._key === lineKey ? { ...l, atc_code_id: atcCodeId } : l))
   }
 
   const totalPayment = lines.reduce((s, l) => s + l.payment_amount, 0)
   const totalCWT = lines.reduce((s, l) => s + l.cwt_amount, 0)
   const appliedLines = lines.filter(l => l.payment_amount > 0 || l.cwt_amount > 0)
+  const invoiceAppliedGross = appliedLines
+    .filter(l => l.line_type === 'invoice_application')
+    .reduce((s, l) => s + l.payment_amount + l.cwt_amount, 0)
+  const advanceGross = appliedLines
+    .filter(l => l.line_type === 'customer_advance')
+    .reduce((s, l) => s + l.payment_amount + l.cwt_amount, 0)
   const glImpactRows: GLImpactRow[] = [
     {
       accountId: fBankAccount || null,
@@ -330,7 +370,8 @@ export default function ReceiptsPage() {
       credit: 0,
     },
     { configKey: 'ewt_withheld_account_id', description: 'CWT withheld by customer', debit: totalCWT, credit: 0 },
-    { configKey: 'ar_account_id', description: 'Accounts receivable cleared', debit: 0, credit: totalPayment + totalCWT },
+    { configKey: 'ar_account_id', description: 'Accounts receivable cleared', debit: 0, credit: invoiceAppliedGross },
+    { configKey: 'customer_advances_account_id', description: 'Customer advance liability', debit: 0, credit: advanceGross },
   ]
 
   const save = async (nextStatus: RStatus = 'draft') => {
@@ -343,7 +384,7 @@ export default function ReceiptsPage() {
       return
     }
     if (appliedLines.length === 0) {
-      setError('At least one invoice must have a payment amount.')
+      setError('At least one invoice or customer advance line must have an amount.')
       return
     }
     for (const line of appliedLines) {
@@ -385,7 +426,8 @@ export default function ReceiptsPage() {
       }
 
       const linesPayload = appliedLines.map(l => ({
-        invoice_id: l.invoice_id,
+        line_type: l.line_type,
+        invoice_id: l.line_type === 'invoice_application' ? l.invoice_id : null,
         payment_amount: l.payment_amount,
         cwt_amount: l.cwt_amount,
         forex_adjustment: l.forex_adjustment,
@@ -652,19 +694,24 @@ export default function ReceiptsPage() {
               {fCustomer && !readOnly && (
                 <span className="ml-3 text-xs text-gray-400">
                   {openInvoicesLoading ? 'Loading open invoices…' :
-                    lines.length === 0 ? 'No open invoices for this customer' :
-                    `${lines.length} open invoice${lines.length !== 1 ? 's' : ''}`}
+                    lines.filter(l => l.line_type === 'invoice_application').length === 0 ? 'No open invoices for this customer' :
+                    `${lines.filter(l => l.line_type === 'invoice_application').length} open invoice${lines.filter(l => l.line_type === 'invoice_application').length !== 1 ? 's' : ''}`}
                 </span>
               )}
             </div>
-            {!fCustomer && !readOnly && (
+            {!fCustomer && !readOnly ? (
               <span className="text-xs text-gray-400">Select a customer to see open invoices</span>
-            )}
+            ) : !readOnly ? (
+              <button onClick={addCustomerAdvanceLine}
+                className="text-xs font-medium text-gray-500 hover:text-gray-900">
+                + Add Customer Advance
+              </button>
+            ) : null}
           </div>
 
           {lines.length === 0 && !openInvoicesLoading ? (
             <div className="py-10 text-center text-sm text-gray-400">
-              {fCustomer ? 'No open invoices found for this customer.' : 'Select a customer above to load open invoices.'}
+              {fCustomer ? 'No open invoices found for this customer. Add a customer advance if money was received before invoicing.' : 'Select a customer above to load open invoices.'}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -678,21 +725,30 @@ export default function ReceiptsPage() {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {lines.map(l => {
-                    const remaining = l.balance_due - l.payment_amount - l.cwt_amount - l.forex_adjustment
-                    const isOver = l.payment_amount + l.cwt_amount > l.balance_due + 0.005
+                    const isAdvance = l.line_type === 'customer_advance'
+                    const remaining = isAdvance ? 0 : l.balance_due - l.payment_amount - l.cwt_amount - l.forex_adjustment
+                    const isOver = !isAdvance && l.payment_amount + l.cwt_amount > l.balance_due + 0.005
                     return (
-                      <tr key={l.invoice_id} className={`hover:bg-gray-50 ${isOver ? 'bg-red-50/30' : ''}`}>
-                        <td className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-900 whitespace-nowrap">{l.si_number}</td>
-                        <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap"><DateCell date={l.si_date} /></td>
-                        <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-gray-600">{fmt(l.original_amount)}</td>
-                        <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-semibold text-gray-900">{fmt(l.balance_due)}</td>
+                      <tr key={l._key} className={`hover:bg-gray-50 ${isOver ? 'bg-red-50/30' : ''}`}>
+                        <td className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-900 whitespace-nowrap">
+                          <span>{l.si_number}</span>
+                          {!readOnly && isAdvance && (
+                            <button onClick={() => setLines(prev => prev.filter(row => row._key !== l._key))}
+                              className="ml-2 text-[10px] font-sans font-medium text-gray-400 hover:text-red-600">
+                              Remove
+                            </button>
+                          )}
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{isAdvance ? '—' : <DateCell date={l.si_date} />}</td>
+                        <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-gray-600">{isAdvance ? '—' : fmt(l.original_amount)}</td>
+                        <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-semibold text-gray-900">{isAdvance ? '—' : fmt(l.balance_due)}</td>
                         <td className="px-4 py-2.5">
                           {readOnly ? (
                             <span className="font-mono text-xs tabular-nums text-gray-700">{fmt(l.payment_amount)}</span>
                           ) : (
                             <input type="number" min={0} step="any"
                               value={l.payment_amount || ''}
-                              onChange={e => setLineField(l.invoice_id, 'payment_amount', parseFloat(e.target.value) || 0)}
+                              onChange={e => setLineField(l._key, 'payment_amount', parseFloat(e.target.value) || 0)}
                               className="w-28 border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
                               placeholder="0.00" />
                           )}
@@ -703,7 +759,7 @@ export default function ReceiptsPage() {
                           ) : (
                             <input type="number" min={0} step="any"
                               value={l.cwt_tax_base || ''}
-                              onChange={e => setLineField(l.invoice_id, 'cwt_tax_base', parseFloat(e.target.value) || 0)}
+                              onChange={e => setLineField(l._key, 'cwt_tax_base', parseFloat(e.target.value) || 0)}
                               className="w-28 border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
                               placeholder="0.00" />
                           )}
@@ -719,13 +775,13 @@ export default function ReceiptsPage() {
                               <div>
                                 <input type="number" min={0} step="any"
                                   value={l.cwt_amount || ''}
-                                  onChange={e => setLineField(l.invoice_id, 'cwt_amount', parseFloat(e.target.value) || 0)}
+                                  onChange={e => setLineField(l._key, 'cwt_amount', parseFloat(e.target.value) || 0)}
                                   className={`w-24 border rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900 ${mismatch && !l.cwt_variance_reason ? 'border-amber-400 bg-amber-50/40' : 'border-gray-300'}`}
                                   placeholder="0.00" />
                                 {mismatch && (
                                   <select
                                     value={l.cwt_variance_reason}
-                                    onChange={e => setLineVarianceReason(l.invoice_id, e.target.value)}
+                                    onChange={e => setLineVarianceReason(l._key, e.target.value)}
                                     className="mt-1 w-24 border border-amber-300 rounded px-1 py-0.5 text-[10px] focus:outline-none"
                                     title={`Expected ${fmt(expected!)} at ${atc!.rate}% of ${fmt(l.cwt_tax_base)}`}>
                                     <option value="">Variance reason…</option>
@@ -745,7 +801,7 @@ export default function ReceiptsPage() {
                             ) : (
                               <select
                                 value={l.atc_code_id || ''}
-                                onChange={e => setLineAtc(l.invoice_id, e.target.value || null)}
+                                onChange={e => setLineAtc(l._key, e.target.value || null)}
                                 className="w-28 border border-gray-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
                                 <option value="">Select…</option>
                                 {atcCodes.map(a => (
@@ -763,13 +819,13 @@ export default function ReceiptsPage() {
                           ) : (
                             <input type="number" step="any"
                               value={l.forex_adjustment || ''}
-                              onChange={e => setLineField(l.invoice_id, 'forex_adjustment', parseFloat(e.target.value) || 0)}
+                              onChange={e => setLineField(l._key, 'forex_adjustment', parseFloat(e.target.value) || 0)}
                               className="w-24 border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
                               placeholder="0.00" />
                           )}
                         </td>
                         <td className={`px-4 py-2.5 text-right font-mono text-xs tabular-nums ${remaining < -0.005 ? 'text-red-700 font-semibold' : 'text-gray-600'}`}>
-                          {fmt(Math.max(0, remaining))}
+                          {isAdvance ? '—' : fmt(Math.max(0, remaining))}
                           {isOver && <span className="ml-1 text-red-500 text-[10px]">Exceeds balance</span>}
                         </td>
                       </tr>

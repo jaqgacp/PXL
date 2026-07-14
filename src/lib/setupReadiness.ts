@@ -9,6 +9,8 @@ export type ConfigField =
   | 'ap_account_id'
   | 'input_vat_account_id'
   | 'ewt_payable_account_id'
+  | 'customer_advances_account_id'
+  | 'supplier_down_payments_account_id'
 
 type ReadinessArgs = {
   companyId: string
@@ -36,6 +38,8 @@ const CONFIG_LABELS: Record<ConfigField, string> = {
   ap_account_id: 'AP control account',
   input_vat_account_id: 'input VAT account',
   ewt_payable_account_id: 'EWT payable account',
+  customer_advances_account_id: 'customer advances account',
+  supplier_down_payments_account_id: 'supplier down-payments account',
 }
 
 async function hasNumberSeries(companyId: string, branchId: string, documentCode: string) {

@@ -12,11 +12,14 @@ type Config = {
   ap_account_id: string
   input_vat_account_id: string
   ewt_payable_account_id: string
+  customer_advances_account_id: string
+  supplier_down_payments_account_id: string
 }
 
 const EMPTY: Config = {
   ar_account_id: '', vat_payable_account_id: '', ewt_withheld_account_id: '',
   default_cash_account_id: '', ap_account_id: '', input_vat_account_id: '', ewt_payable_account_id: '',
+  customer_advances_account_id: '', supplier_down_payments_account_id: '',
 }
 
 export default function GLPostingConfigPage() {
@@ -48,6 +51,8 @@ export default function GLPostingConfigPage() {
           ap_account_id: cfgRes.data.ap_account_id || '',
           input_vat_account_id: cfgRes.data.input_vat_account_id || '',
           ewt_payable_account_id: cfgRes.data.ewt_payable_account_id || '',
+          customer_advances_account_id: cfgRes.data.customer_advances_account_id || '',
+          supplier_down_payments_account_id: cfgRes.data.supplier_down_payments_account_id || '',
         })
       } else {
         setConfig(EMPTY)
@@ -68,6 +73,8 @@ export default function GLPostingConfigPage() {
       ap_account_id: config.ap_account_id || null,
       input_vat_account_id: config.input_vat_account_id || null,
       ewt_payable_account_id: config.ewt_payable_account_id || null,
+      customer_advances_account_id: config.customer_advances_account_id || null,
+      supplier_down_payments_account_id: config.supplier_down_payments_account_id || null,
       updated_by: (await supabase.auth.getUser()).data.user?.id,
     }
     const { error: e } = config.id
@@ -115,6 +122,12 @@ export default function GLPostingConfigPage() {
               v => setConfig(c => ({ ...c, ar_account_id: v })),
               assetAccounts,
               'Debited when posting Sales Invoices; credited when posting Receipts.')}
+            <div className="mt-4">
+              {sel('Customer Advances', config.customer_advances_account_id,
+                v => setConfig(c => ({ ...c, customer_advances_account_id: v })),
+                liabilityAccounts,
+                'Credited when posting customer advances received before an invoice exists.')}
+            </div>
           </div>
 
           <div className="px-5 py-4">
@@ -156,6 +169,10 @@ export default function GLPostingConfigPage() {
                 v => setConfig(c => ({ ...c, ewt_payable_account_id: v })),
                 liabilityAccounts,
                 'Credited with EWT amounts withheld from suppliers when posting Payment Vouchers.')}
+              {sel('Supplier Down Payments', config.supplier_down_payments_account_id,
+                v => setConfig(c => ({ ...c, supplier_down_payments_account_id: v })),
+                assetAccounts,
+                'Debited when posting supplier down-payments before a vendor bill exists.')}
             </div>
           </div>
 

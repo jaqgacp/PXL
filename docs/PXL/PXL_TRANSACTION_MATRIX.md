@@ -1,6 +1,6 @@
 # PXL Transaction Matrix
 
-Last synced: 2026-07-13
+Last synced: 2026-07-14
 
 Purpose: this is the living source of truth for PXL transaction lifecycle, source chains, UX status, and implementation maturity. Governed posting behavior is now defined in `PXL_ACCOUNTING_RULES_MATRIX.md`. Any code change that adds, removes, modifies, fixes, posts, reverses, voids, reports, or validates a transaction must update this file and, when accounting behavior changes, `PXL_ACCOUNTING_RULES_MATRIX.md` in the same session.
 
@@ -13,7 +13,7 @@ Accounting rule authority: `PXL_ACCOUNTING_RULES_MATRIX.md` is the canonical pos
 Use this section first when choosing transaction work; then read the specific row and relevant addendum before editing code.
 
 - **Active priority:** Accounting core hardening. The Sales Invoice and Report Workspace standards are documented, but rollout is paused. Start from `PXL_ACCOUNTING_CORE_READINESS.md` and the open Critical/High accounting-tax findings before any UI or transaction expansion.
-- **Current high-risk lane:** EWT. Source/accrual AP EWT policy and explicit withholding profile gates are now fixed for VB/PV/CV and QAP/1601EQ surfaces (PXL-AUD-037, PXL-AUD-042); remaining High EWT work is cash purchases/advances, Form 2307 month layout, and received-certificate lifecycle.
+- **Current high-risk lane:** EWT. Source/accrual AP EWT policy, explicit withholding profile gates, cash-purchase EWT, customer-advance CWT, and supplier down-payment EWT are now fixed (PXL-AUD-037, PXL-AUD-042, PXL-AUD-043); remaining High EWT work is Form 2307 month layout and received-certificate lifecycle.
 - **Strongest implemented core:** SI/OR/VB/PV have atomic save/post RPCs, guided setup readiness, exact saved-source GL preview, status-aware immutability, and pgTAP coverage. Company Setup now provides the aggregate readiness checklist.
 - **Secondary transaction caution:** GL Impact coverage now spans CM/DM/cash/CV/treasury/inventory/fixed-asset/schedule/recurring/purchase-return posting surfaces. Atomic create-and-post cash/fixed-asset forms show a labeled client estimate; report/compliance drillback, some tax validation, and reconciliation remain incomplete.
 - **Reporting evidence:** VAT, WHT, CAS, and BIR books export snapshots are server-attested and hashed; CAS DAT byte layout, books source/GL reconciliation, and CAS audit-package evidence are delivered, while remaining drill contracts are still tracked in audit findings.
@@ -96,7 +96,7 @@ Audit-only session; no behavior changed. Findings live in `PXL_END_TO_END_AUDIT_
 | PXL-AUD-040 | Form 2307 Issued | Issuance lines hold quarter totals per ATC only; the official form's month-1/2/3 columns cannot be populated. | Open. Add month dimension to issuance lines. |
 | PXL-AUD-041 | SAWT/QAP exports, EWT remittance | No controlled remittance (0619-E/1601EQ) or CWT-application flow; in-quarter control-account JEs make `fn_wht_gl_reconciliation` fail and hard-block SAWT/QAP export snapshots. | Open. Remittance document type + reconciliation awareness. |
 | PXL-AUD-042 | Company Setup / Compliance Profile | `ewt_registered`/`is_twa`/`twa_auto_ewt_enabled` must govern AP-side EWT payable and TWA defaults. | Retested Passed (session 84, `20260713000011`). Active non-EWT profiles block VB/PV/CV EWT payable, EWT returns, and QAP snapshots; TWA auto-EWT defaults supplier-subject VB lines to WC158 1% goods / WC160 2% services. |
-| PXL-AUD-043 | Cash Purchase, advances | Cash purchases have no EWT support at all; receipts/PVs require a posted SI/VB, so CWT on customer advances and EWT on supplier down-payments cannot be recorded. | Open. |
+| PXL-AUD-043 | Cash Purchase, advances | Cash purchases lacked EWT support, and receipts/PVs required a posted SI/VB so CWT on customer advances and EWT on supplier down-payments could not be recorded. | Retested Passed (sessions 88-89, `20260713000015` + `20260714000001`). Cash purchases post EWT payable/tax detail; OR customer advances post CWT receivable/customer advances; PV supplier down-payments post supplier down-payments/EWT payable. Tests 042/043. |
 | PXL-AUD-044 / PXL-AUD-045 | Customer/Supplier Master, SI/OR/PV pages | Duplicate customer flags (`is_withholding_agent` vs `is_subject_to_cwt`); vestigial `default_ewt_code_id`/`ewt_codes`/`fwt_codes` configured but unread. PV EWT base defaults now use the proportional VAT-exclusive bill base; remaining gaps: SI expected CWT never flows to the OR and needs ATC validation. | PXL-AUD-044 Open; PXL-AUD-045 In Progress. |
 | PXL-AUD-046 | Cash Sale, Receipt bounce, Cash Receipts Book | `receipts.total_amount` = cash on standard ORs but gross on cash-sale ORs; cash-sale bounce writes JE header totals ≠ line sums. | Open. |
 | PXL-AUD-047 | Form 2307 Received | Claim lifecycle is direct CRUD: no validation against receipt CWT, no over-claim guard, no invalidation on bounce, no staleness flag on issued certificates after EWT reversal. | Open. |

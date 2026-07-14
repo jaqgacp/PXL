@@ -11,6 +11,8 @@ type ConfigAccountKey =
   | 'input_vat_account_id'
   | 'ewt_withheld_account_id'
   | 'ewt_payable_account_id'
+  | 'customer_advances_account_id'
+  | 'supplier_down_payments_account_id'
   | 'default_cash_account_id'
 
 export type GLImpactRow = {

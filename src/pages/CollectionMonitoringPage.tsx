@@ -69,6 +69,7 @@ export default function CollectionMonitoringPage() {
     // Compute paid amounts (exclude bounced receipts)
     const paidMap: Record<string, number> = {}
     for (const rl of rlines || []) {
+      if (!rl.invoice_id) continue
       const rec = Array.isArray(rl.receipts) ? rl.receipts[0] : rl.receipts
       if ((rec as { status?: string })?.status === 'bounced') continue
       paidMap[rl.invoice_id] = (paidMap[rl.invoice_id] || 0) + Number(rl.payment_amount) + Number(rl.cwt_amount)

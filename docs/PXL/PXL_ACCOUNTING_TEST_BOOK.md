@@ -694,7 +694,16 @@ Status: Executed Passing (session 88, 2026-07-13) in `supabase/tests/042_cash_pu
 | 4 | Company active compliance profile is not EWT registered | EWT cash purchase save is blocked by the profile gate. |
 | 5 | ATC amount does not match explicit base/rate | Save is rejected unless a controlled variance reason is supplied. |
 
-Remaining PXL-AUD-043 scope: customer advances with CWT and supplier down-payments with EWT are not covered by this scenario and still need a governed advance/down-payment document policy.
+## ADVANCE-PAYMENT-WHT-001 - Withholding on Customer Advances and Supplier Down-Payments
+
+Status: Executed Passing (session 89, 2026-07-14) in `supabase/tests/043_advance_payment_withholding_test.sql`, 13 assertions. Related finding: PXL-AUD-043.
+
+| Step | Transaction | Expected Behavior |
+| ---- | ----------- | ----------------- |
+| 1 | Save an Official Receipt customer-advance line with no SI, CWT ATC/base/amount, and net cash received | Save succeeds as `customer_advance`; posting is blocked until `customer_advances_account_id` is configured. |
+| 2 | Post the customer-advance OR after configuring the clearing account | Posts DR cash, DR CWT receivable, CR customer advances; writes source-line CWT tax detail; WHT reconciliation ties tax detail to GL. |
+| 3 | Save a Payment Voucher supplier down-payment with no VB and EWT while the company profile is not EWT-registered | Save is blocked by the EWT profile gate. |
+| 4 | Save/post the supplier down-payment after enabling EWT and configuring the clearing account | Saves as `supplier_down_payment`; posting is blocked until `supplier_down_payments_account_id` is configured, then posts DR supplier down payments, CR cash, CR EWT payable; writes source-line EWT tax detail; WHT reconciliation ties tax detail to GL. |
 
 ## SETUP-READINESS-001 - Guided Minimum Accounting Setup
 

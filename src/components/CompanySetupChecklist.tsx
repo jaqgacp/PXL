@@ -59,6 +59,8 @@ const GL_FIELDS = [
   ['input_vat_account_id', 'input VAT receivable'],
   ['ewt_withheld_account_id', 'CWT receivable'],
   ['ewt_payable_account_id', 'EWT payable'],
+  ['customer_advances_account_id', 'customer advances'],
+  ['supplier_down_payments_account_id', 'supplier down-payments'],
 ] as const
 
 const STATUS_STYLES: Record<ItemStatus, { badge: string; label: string }> = {
@@ -154,7 +156,7 @@ export function CompanySetupChecklist({ company, onBack, onEditCompany }: Props)
             .eq('company_id', company.id)
             .eq('is_active', true),
           supabase.from('company_accounting_config')
-            .select('ar_account_id, ap_account_id, default_cash_account_id, vat_payable_account_id, input_vat_account_id, ewt_withheld_account_id, ewt_payable_account_id')
+            .select('ar_account_id, ap_account_id, default_cash_account_id, vat_payable_account_id, input_vat_account_id, ewt_withheld_account_id, ewt_payable_account_id, customer_advances_account_id, supplier_down_payments_account_id')
             .eq('company_id', company.id)
             .maybeSingle(),
         ])
@@ -394,6 +396,8 @@ export function CompanySetupChecklist({ company, onBack, onEditCompany }: Props)
           }
           if (field === 'ewt_payable_account_id') return Boolean(profile?.ewt_registered)
           if (field === 'ewt_withheld_account_id') return false
+          if (field === 'customer_advances_account_id') return false
+          if (field === 'supplier_down_payments_account_id') return false
           return true
         })
         const missingConfig = config

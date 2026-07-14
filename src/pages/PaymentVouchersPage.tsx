@@ -21,6 +21,7 @@ type PV = {
 
 type PVLine = {
   _key: string; id?: string
+  line_type: 'bill_application' | 'supplier_down_payment'
   vendor_bill_id: string
   bill_number: string; bill_total: number; bill_outstanding: number
   bill_net_base: number
@@ -61,7 +62,7 @@ const today = () => new Date().toISOString().split('T')[0]
 const round2 = (n: number) => Math.round(n * 100) / 100
 
 const newLine = (): PVLine => ({
-  _key: crypto.randomUUID(), vendor_bill_id: '', bill_number: '', bill_total: 0,
+  _key: crypto.randomUUID(), line_type: 'bill_application', vendor_bill_id: '', bill_number: '', bill_total: 0,
   bill_outstanding: 0, bill_net_base: 0, payment_amount: 0, ewt_amount: 0, atc_code_id: '',
   ewt_tax_base: 0, ewt_income_nature: '', ewt_variance_reason: '',
 })
@@ -106,9 +107,14 @@ export default function PaymentVouchersPage() {
 
   const readOnly = mode === 'view'
   const requiredConfig = useMemo<ConfigField[]>(
-    () => lines.some(line => line.ewt_amount > 0.005)
-      ? ['ap_account_id', 'default_cash_account_id', 'ewt_payable_account_id']
-      : ['ap_account_id', 'default_cash_account_id'],
+    () => {
+      const fields: ConfigField[] = ['ap_account_id', 'default_cash_account_id']
+      if (lines.some(line => line.ewt_amount > 0.005)) fields.push('ewt_payable_account_id')
+      if (lines.some(line => line.line_type === 'supplier_down_payment' && line.payment_amount + line.ewt_amount > 0.005)) {
+        fields.push('supplier_down_payments_account_id')
+      }
+      return fields
+    },
     [lines]
   )
   const readiness = useTransactionReadiness({
@@ -216,8 +222,9 @@ export default function PaymentVouchersPage() {
       .then(({ data }) => {
         const mapped: PVLine[] = (data || []).map((l: any) => ({
           _key: l.id, id: l.id,
+          line_type: l.line_type === 'supplier_down_payment' || !l.vendor_bill_id ? 'supplier_down_payment' : 'bill_application',
           vendor_bill_id: l.vendor_bill_id || '',
-          bill_number: l.vendor_bills?.bill_number || '',
+          bill_number: l.vendor_bill_id ? l.vendor_bills?.bill_number || '' : 'Supplier Down Payment',
           bill_total: Number(l.vendor_bills?.total_amount || 0),
           bill_outstanding: 0,
           bill_net_base: 0,
@@ -245,19 +252,40 @@ export default function PaymentVouchersPage() {
   const pickBill = (lineKey: string, billId: string) => {
     const bill = openBills.find(b => b.id === billId)
     if (!bill) {
-      setLines(ls => ls.map(l => l._key !== lineKey ? l : { ...l, vendor_bill_id: '', bill_number: '', bill_total: 0, bill_outstanding: 0, bill_net_base: 0, payment_amount: 0 }))
+      setLines(ls => ls.map(l => l._key !== lineKey ? l : { ...l, line_type: 'bill_application', vendor_bill_id: '', bill_number: '', bill_total: 0, bill_outstanding: 0, bill_net_base: 0, payment_amount: 0 }))
       return
     }
     const supplier = suppliers.find(s => s.id === editPV?.supplier_id)
     const defaultAtc = supplier?.is_subject_to_ewt ? supplier.default_atc_code_id || '' : ''
     const defaultTaxBase = proportionalNetBase(bill.outstanding, bill.total_amount, bill.net_base)
     setLines(ls => ls.map(l => l._key !== lineKey ? l : recalcLineEwt(l, {
-      vendor_bill_id: bill.id, bill_number: bill.bill_number,
+      line_type: 'bill_application', vendor_bill_id: bill.id, bill_number: bill.bill_number,
       bill_total: bill.total_amount, bill_outstanding: bill.outstanding, bill_net_base: bill.net_base,
       payment_amount: bill.outstanding, ewt_amount: 0,
       ewt_tax_base: l.ewt_tax_base || defaultTaxBase,
       atc_code_id: l.atc_code_id || defaultAtc,
     })))
+  }
+
+  const addDownPaymentLine = () => {
+    const supplier = suppliers.find(s => s.id === editPV?.supplier_id)
+    const defaultAtc = supplier?.is_subject_to_ewt ? supplier.default_atc_code_id || '' : ''
+    const atc = atcCodes.find(a => a.id === defaultAtc)
+    setLines(ls => [...ls, {
+      _key: crypto.randomUUID(),
+      line_type: 'supplier_down_payment',
+      vendor_bill_id: '',
+      bill_number: 'Supplier Down Payment',
+      bill_total: 0,
+      bill_outstanding: 0,
+      bill_net_base: 0,
+      payment_amount: 0,
+      ewt_amount: 0,
+      atc_code_id: defaultAtc,
+      ewt_tax_base: 0,
+      ewt_income_nature: atc?.description || '',
+      ewt_variance_reason: '',
+    }])
   }
 
   const recalcLineEwt = (line: PVLine, patch: Partial<PVLine>) => {
@@ -301,8 +329,15 @@ export default function PaymentVouchersPage() {
 
   const totalPayment = lines.reduce((s, l) => s + l.payment_amount, 0)
   const totalEWT     = lines.reduce((s, l) => s + l.ewt_amount, 0)
+  const billAppliedGross = lines
+    .filter(l => l.line_type === 'bill_application')
+    .reduce((s, l) => s + l.payment_amount + l.ewt_amount, 0)
+  const downPaymentGross = lines
+    .filter(l => l.line_type === 'supplier_down_payment')
+    .reduce((s, l) => s + l.payment_amount + l.ewt_amount, 0)
   const glImpactRows: GLImpactRow[] = [
-    { configKey: 'ap_account_id', description: 'Accounts payable cleared', debit: totalPayment + totalEWT, credit: 0 },
+    { configKey: 'ap_account_id', description: 'Accounts payable cleared', debit: billAppliedGross, credit: 0 },
+    { configKey: 'supplier_down_payments_account_id', description: 'Supplier down-payment asset', debit: downPaymentGross, credit: 0 },
     {
       accountId: editPV?.bank_account_id || null,
       configKey: editPV?.bank_account_id ? undefined : 'default_cash_account_id',
@@ -358,9 +393,10 @@ export default function PaymentVouchersPage() {
         remarks: editPV.remarks || '',
       }
       const linesPayload = lines
-        .filter(l => l.payment_amount > 0)
+        .filter(l => l.payment_amount > 0 || l.ewt_amount > 0)
         .map(l => ({
-          vendor_bill_id: l.vendor_bill_id || null,
+          line_type: l.line_type,
+          vendor_bill_id: l.line_type === 'bill_application' ? l.vendor_bill_id || null : null,
           payment_amount: l.payment_amount,
           ewt_amount: l.ewt_amount,
           atc_code_id: l.atc_code_id || null,
@@ -576,7 +612,7 @@ export default function PaymentVouchersPage() {
         {/* Bills being paid */}
         <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-x-auto">
           <div className="px-4 py-2.5 border-b border-gray-100">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Bills Being Paid</span>
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Bills & Down Payments</span>
           </div>
           <table className="w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
@@ -590,15 +626,27 @@ export default function PaymentVouchersPage() {
               {lines.map(l => (
                 <tr key={l._key}>
                   <td className="px-3 py-2">
-                    <select value={l.vendor_bill_id} disabled={readOnly || !editPV?.supplier_id}
-                      onChange={e => pickBill(l._key, e.target.value)}
-                      className="border border-gray-300 rounded px-2 py-1 text-xs w-48 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50">
-                      <option value="">— select bill —</option>
-                      {openBills.map(b => <option key={b.id} value={b.id}>{b.bill_number} {b.supplier_invoice_number ? `(${b.supplier_invoice_number})` : ''}</option>)}
-                    </select>
+                    {l.line_type === 'supplier_down_payment' ? (
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium text-gray-700">Supplier Down Payment</span>
+                        {!readOnly && (
+                          <button onClick={() => setLines(ls => ls.filter(x => x._key !== l._key))}
+                            className="text-[10px] text-gray-400 hover:text-red-600">
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <select value={l.vendor_bill_id} disabled={readOnly || !editPV?.supplier_id}
+                        onChange={e => pickBill(l._key, e.target.value)}
+                        className="border border-gray-300 rounded px-2 py-1 text-xs w-48 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50">
+                        <option value="">— select bill —</option>
+                        {openBills.map(b => <option key={b.id} value={b.id}>{b.bill_number} {b.supplier_invoice_number ? `(${b.supplier_invoice_number})` : ''}</option>)}
+                      </select>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-600">
-                    {l.bill_outstanding > 0 ? fmt(l.bill_outstanding) : '—'}
+                    {l.line_type === 'supplier_down_payment' ? '—' : l.bill_outstanding > 0 ? fmt(l.bill_outstanding) : '—'}
                   </td>
                   <td className="px-3 py-2">
                     <input type="number" value={l.payment_amount} min={0} disabled={readOnly}
@@ -650,9 +698,11 @@ export default function PaymentVouchersPage() {
             </tbody>
           </table>
           {!readOnly && editPV?.supplier_id && (
-            <div className="px-4 py-2 border-t border-gray-100">
+            <div className="px-4 py-2 border-t border-gray-100 flex items-center gap-4">
               <button onClick={() => setLines(ls => [...ls, newLine()])}
                 className="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Bill</button>
+              <button onClick={addDownPaymentLine}
+                className="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Down Payment</button>
             </div>
           )}
           {!readOnly && !editPV?.supplier_id && (

@@ -2582,11 +2582,13 @@ export type Database = {
           company_id: string
           created_at: string
           created_by: string | null
+          customer_advances_account_id: string | null
           default_cash_account_id: string | null
           ewt_payable_account_id: string | null
           ewt_withheld_account_id: string | null
           id: string
           input_vat_account_id: string | null
+          supplier_down_payments_account_id: string | null
           updated_at: string
           updated_by: string | null
           vat_payable_account_id: string | null
@@ -2597,11 +2599,13 @@ export type Database = {
           company_id: string
           created_at?: string
           created_by?: string | null
+          customer_advances_account_id?: string | null
           default_cash_account_id?: string | null
           ewt_payable_account_id?: string | null
           ewt_withheld_account_id?: string | null
           id?: string
           input_vat_account_id?: string | null
+          supplier_down_payments_account_id?: string | null
           updated_at?: string
           updated_by?: string | null
           vat_payable_account_id?: string | null
@@ -2612,11 +2616,13 @@ export type Database = {
           company_id?: string
           created_at?: string
           created_by?: string | null
+          customer_advances_account_id?: string | null
           default_cash_account_id?: string | null
           ewt_payable_account_id?: string | null
           ewt_withheld_account_id?: string | null
           id?: string
           input_vat_account_id?: string | null
+          supplier_down_payments_account_id?: string | null
           updated_at?: string
           updated_by?: string | null
           vat_payable_account_id?: string | null
@@ -2644,6 +2650,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "company_accounting_config_customer_advances_account_id_fkey"
+            columns: ["customer_advances_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "company_accounting_config_default_cash_account_id_fkey"
             columns: ["default_cash_account_id"]
             isOneToOne: false
@@ -2667,6 +2680,13 @@ export type Database = {
           {
             foreignKeyName: "company_accounting_config_input_vat_account_id_fkey"
             columns: ["input_vat_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_accounting_config_supplier_down_payments_account_i_fkey"
+            columns: ["supplier_down_payments_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
             referencedColumns: ["id"]
@@ -6951,6 +6971,7 @@ export type Database = {
           ewt_tax_base: number | null
           ewt_variance_reason: string | null
           id: string
+          line_type: string
           payment_amount: number
           payment_voucher_id: string
           updated_at: string
@@ -6967,6 +6988,7 @@ export type Database = {
           ewt_tax_base?: number | null
           ewt_variance_reason?: string | null
           id?: string
+          line_type?: string
           payment_amount?: number
           payment_voucher_id: string
           updated_at?: string
@@ -6983,6 +7005,7 @@ export type Database = {
           ewt_tax_base?: number | null
           ewt_variance_reason?: string | null
           id?: string
+          line_type?: string
           payment_amount?: number
           payment_voucher_id?: string
           updated_at?: string
@@ -8152,7 +8175,8 @@ export type Database = {
           cwt_variance_reason: string | null
           forex_adjustment: number
           id: string
-          invoice_id: string
+          invoice_id: string | null
+          line_type: string
           payment_amount: number
           receipt_id: string
           updated_at: string
@@ -8168,7 +8192,8 @@ export type Database = {
           cwt_variance_reason?: string | null
           forex_adjustment?: number
           id?: string
-          invoice_id: string
+          invoice_id?: string | null
+          line_type?: string
           payment_amount?: number
           receipt_id: string
           updated_at?: string
@@ -8184,7 +8209,8 @@ export type Database = {
           cwt_variance_reason?: string | null
           forex_adjustment?: number
           id?: string
-          invoice_id?: string
+          invoice_id?: string | null
+          line_type?: string
           payment_amount?: number
           receipt_id?: string
           updated_at?: string
