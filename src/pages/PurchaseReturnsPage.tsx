@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge, DateCell } from '@/components/ui/shared'
+import { AuditEvidenceBlock, StatusBadge, DateCell } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type ReturnStatus = 'draft' | 'shipped' | 'completed' | 'cancelled'
@@ -10,6 +10,7 @@ type PReturn = {
   id: string; company_id: string; return_number: string; return_date: string
   rr_id: string; supplier_id: string; supplier_name_snapshot: string
   remarks: string | null; status: ReturnStatus; created_at: string
+  updated_at?: string | null; posted_at?: string | null; completed_at?: string | null
 }
 
 type ReturnLine = {
@@ -22,6 +23,7 @@ type RRRef = { id: string; rr_number: string; supplier_name_snapshot: string; rr
 
 const today = () => new Date().toISOString().split('T')[0]
 const fmt4 = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(n)
+const formatDateTime = (value?: string | null) => value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 
 export default function PurchaseReturnsPage() {
   const { companyId, branchId } = useAppCtx()
@@ -123,6 +125,13 @@ export default function PurchaseReturnsPage() {
 
   const STATUS_COLORS: Record<string, string> = { draft: 'draft', shipped: 'warning', completed: 'posted', cancelled: 'error' }
   const inp = 'border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white disabled:bg-gray-50'
+  const auditFacts = editReturn?.id ? [
+    { label: 'Created', value: formatDateTime(editReturn.created_at) },
+    { label: 'Last edited', value: formatDateTime(editReturn.updated_at) },
+    { label: 'Posted', value: formatDateTime(editReturn.posted_at || editReturn.completed_at) },
+    { label: 'Status', value: editReturn.status || 'draft' },
+    { label: 'Lock status', value: editReturn.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ] : []
 
   if (mode !== 'list') return (
     <div className="space-y-4">
@@ -164,6 +173,9 @@ export default function PurchaseReturnsPage() {
           </tbody>
         </table>
       </div>
+      {editReturn?.id && (
+        <AuditEvidenceBlock tableName="purchase_returns" recordId={editReturn.id} facts={auditFacts} />
+      )}
       {!readOnly && <div className="flex justify-end gap-2"><button onClick={() => setMode('list')} className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button><button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save Return'}</button></div>}
     </div>
   )

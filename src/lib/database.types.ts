@@ -9121,6 +9121,8 @@ export type Database = {
           customer_name_snapshot: string
           customer_tin_snapshot: string
           cwt_amount_expected: number | null
+          cwt_atc_code_id: string | null
+          cwt_tax_base: number | null
           date: string
           due_date: string | null
           fiscal_period_id: string | null
@@ -9156,6 +9158,8 @@ export type Database = {
           customer_name_snapshot?: string
           customer_tin_snapshot?: string
           cwt_amount_expected?: number | null
+          cwt_atc_code_id?: string | null
+          cwt_tax_base?: number | null
           date?: string
           due_date?: string | null
           fiscal_period_id?: string | null
@@ -9191,6 +9195,8 @@ export type Database = {
           customer_name_snapshot?: string
           customer_tin_snapshot?: string
           cwt_amount_expected?: number | null
+          cwt_atc_code_id?: string | null
+          cwt_tax_base?: number | null
           date?: string
           due_date?: string | null
           fiscal_period_id?: string | null
@@ -9233,6 +9239,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_cwt_atc_code_id_fkey"
+            columns: ["cwt_atc_code_id"]
+            isOneToOne: false
+            referencedRelation: "atc_codes"
             referencedColumns: ["id"]
           },
           {
@@ -13353,6 +13366,57 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_general_ledger_report: {
+        Args: {
+          p_account_id?: string
+          p_account_types?: string[]
+          p_branch_id?: string
+          p_company_id: string
+          p_cost_center_id?: string
+          p_date_from?: string
+          p_date_to?: string
+          p_department_id?: string
+          p_entry_classes?: string[]
+          p_je_id?: string
+          p_limit?: number
+          p_offset?: number
+          p_reference_doc_id?: string
+          p_reference_doc_type?: string
+        }
+        Returns: {
+          account_code: string
+          account_id: string
+          account_name: string
+          account_type: string
+          branch_id: string
+          company_id: string
+          cost_center_id: string
+          credit_amount: number
+          debit_amount: number
+          department_id: string
+          entry_class: string
+          fiscal_period_id: string
+          is_auto_reversal: boolean
+          je_date: string
+          je_description: string
+          je_id: string
+          je_number: string
+          je_status: string
+          line_description: string
+          line_id: string
+          line_number: number
+          normal_balance: string
+          period_credit: number
+          period_debit: number
+          period_end: string
+          period_name: string
+          period_start: string
+          reference_doc_id: string
+          reference_doc_type: string
+          reversed_by_je_id: string
+          total_rows: number
+        }[]
+      }
       fn_generate_form_2307_issued: {
         Args: {
           p_company_id: string
@@ -13412,10 +13476,72 @@ export type Database = {
           trace_context: Json
         }[]
       }
+      fn_gl_account_ledger_page: {
+        Args: {
+          p_account_id: string
+          p_company_id: string
+          p_date_from: string
+          p_date_to: string
+          p_je_id?: string
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          account_code: string
+          account_id: string
+          account_name: string
+          account_type: string
+          branch_id: string
+          company_id: string
+          cost_center_id: string
+          credit_amount: number
+          debit_amount: number
+          department_id: string
+          entry_class: string
+          fiscal_period_id: string
+          is_auto_reversal: boolean
+          je_date: string
+          je_description: string
+          je_id: string
+          je_number: string
+          je_status: string
+          line_description: string
+          line_id: string
+          line_number: number
+          normal_balance: string
+          period_end: string
+          period_name: string
+          period_start: string
+          reference_doc_id: string
+          reference_doc_type: string
+          reversed_by_je_id: string
+          running_balance: number
+        }[]
+      }
+      fn_gl_account_ledger_summary: {
+        Args: {
+          p_account_id: string
+          p_company_id: string
+          p_date_from: string
+          p_date_to: string
+          p_je_id?: string
+        }
+        Returns: {
+          account_id: string
+          closing_balance: number
+          normal_balance: string
+          opening_balance: number
+          period_credit: number
+          period_debit: number
+          total_rows: number
+        }[]
+      }
       fn_gl_impact_payload: {
         Args: { p_je_id: string; p_mode?: string; p_rule_explanation?: string }
         Returns: Json
       }
+      fn_gl_report_limit: { Args: { p_limit: number }; Returns: number }
+      fn_gl_report_offset: { Args: { p_offset: number }; Returns: number }
       fn_invalidate_form2307_received_for_receipt: {
         Args: { p_reason?: string; p_receipt_id: string }
         Returns: undefined
@@ -13932,6 +14058,27 @@ export type Database = {
         Returns: string
       }
       fn_transfer_fixed_asset: { Args: { p_data: Json }; Returns: string }
+      fn_trial_balance_report: {
+        Args: {
+          p_account_id?: string
+          p_company_id: string
+          p_date_from: string
+          p_date_to: string
+          p_entry_classes?: string[]
+          p_include_zero?: boolean
+        }
+        Returns: {
+          account_code: string
+          account_id: string
+          account_name: string
+          account_type: string
+          closing_net: number
+          normal_balance: string
+          opening_net: number
+          period_credit: number
+          period_debit: number
+        }[]
+      }
       fn_twa_ewt_atc_asof: {
         Args: { p_document_date?: string; p_line_kind: string }
         Returns: string

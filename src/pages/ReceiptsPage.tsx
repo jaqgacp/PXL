@@ -176,7 +176,7 @@ export default function ReceiptsPage() {
     setOpenInvoicesLoading(true)
     // Get posted SIs for customer
     const { data: sis } = await supabase.from('sales_invoices')
-      .select('id,si_number,date,total_amount,total_vat_amount')
+      .select('id,si_number,date,total_amount,total_vat_amount,cwt_amount_expected,cwt_atc_code_id,cwt_tax_base')
       .eq('company_id', companyId).eq('customer_id', customerId)
       .eq('status', 'posted').order('date')
     if (!sis || sis.length === 0) { setLines([]); setOpenInvoicesLoading(false); return }
@@ -184,7 +184,7 @@ export default function ReceiptsPage() {
     // Get all applied amounts from receipt_lines (excluding current doc if editing)
     const siIds = sis.map(s => s.id)
     const { data: applied } = await supabase.from('receipt_lines')
-      .select('invoice_id,payment_amount,cwt_amount')
+      .select('invoice_id,payment_amount,cwt_amount,cwt_tax_base')
       .in('invoice_id', siIds)
       // Exclude current receipt if editing
       .not('receipt_id', editDoc ? 'eq' : 'is', editDoc?.id || null)
@@ -197,32 +197,54 @@ export default function ReceiptsPage() {
 
     const customer = customers.find(c => c.id === customerId)
     const defaultAtcId = customer?.is_subject_to_cwt ? customer.default_cwt_atc_code_id : null
-    const defaultAtc = atcCodes.find(a => a.id === defaultAtcId)
 
     const openLines: ApplicationLine[] = sis.map(si => {
       const totalPaid = (applied || [])
         .filter(a => a.invoice_id === si.id)
         .reduce((s, a) => s + Number(a.payment_amount) + Number(a.cwt_amount), 0)
+      const totalAppliedCwt = (applied || [])
+        .filter(a => a.invoice_id === si.id)
+        .reduce((s, a) => s + Number(a.cwt_amount), 0)
+      const totalAppliedCwtBase = (applied || [])
+        .filter(a => a.invoice_id === si.id)
+        .reduce((s, a) => s + Number(a.cwt_tax_base || 0), 0)
       const totalCM = (cmApplied || [])
         .filter(a => a.invoice_id === si.id)
         .reduce((s, a) => s + Number(a.total_amount), 0)
       const balance = Number(si.total_amount) - totalPaid - totalCM
-      // CWT base defaults to the VAT-exclusive proportion of the amount
-      // applied (statutory base per RR 2-98) — PXL-AUD-031/045.
+      const invoiceExpectedCwt = Number(si.cwt_amount_expected || 0)
+      const invoiceExpectedBase = Number(si.cwt_tax_base || 0)
+      const invoiceAtcId = (si.cwt_atc_code_id as string | null) || null
+      const effectiveAtcId = invoiceExpectedCwt > 0 ? invoiceAtcId : defaultAtcId
+      const effectiveAtc = atcCodes.find(a => a.id === effectiveAtcId)
+      // For CWT-enabled SIs, carry the SI's validated expected ATC/base into
+      // receipts. Older SIs still fall back to customer-master defaults.
       const netRatio = Number(si.total_amount) > 0
         ? (Number(si.total_amount) - Number(si.total_vat_amount || 0)) / Number(si.total_amount)
         : 1
-      const defaultBase = defaultAtc ? round2(balance * netRatio) : 0
-      const defaultCwt = defaultAtc ? round2(defaultBase * defaultAtc.rate / 100) : 0
+      const remainingExpectedCwt = invoiceExpectedCwt > 0
+        ? Math.max(round2(invoiceExpectedCwt - totalAppliedCwt), 0)
+        : null
+      const remainingExpectedBase = invoiceExpectedBase > 0
+        ? Math.max(round2(invoiceExpectedBase - totalAppliedCwtBase), 0)
+        : null
+      let defaultBase = 0
+      let defaultCwt = 0
+      if (effectiveAtc) {
+        defaultBase = remainingExpectedBase !== null ? remainingExpectedBase : round2(balance * netRatio)
+        defaultCwt = remainingExpectedCwt !== null
+          ? Math.min(remainingExpectedCwt, balance)
+          : round2(defaultBase * effectiveAtc.rate / 100)
+      }
       return {
         _key: si.id,
         line_type: 'invoice_application' as const,
         invoice_id: si.id, si_number: si.si_number, si_date: si.date,
         original_amount: Number(si.total_amount), balance_due: balance,
-        payment_amount: defaultAtc ? round2(Math.max(balance - defaultCwt, 0)) : 0,
+        payment_amount: effectiveAtc ? round2(Math.max(balance - defaultCwt, 0)) : 0,
         cwt_amount: defaultCwt,
         forex_adjustment: 0,
-        atc_code_id: defaultAtcId,
+        atc_code_id: effectiveAtcId,
         cwt_tax_base: defaultBase,
         cwt_variance_reason: '',
         net_ratio: netRatio,

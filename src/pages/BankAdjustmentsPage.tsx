@@ -3,7 +3,7 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge } from '@/components/ui/shared'
+import { AuditEvidenceBlock, StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type BankRef = { id: string; bank_name: string; account_number: string }
@@ -13,6 +13,7 @@ type BA = {
   ba_number: string; adjustment_date: string; bank_account_id: string
   adjustment_type: string; amount: number; gl_account_id: string
   reference_number: string | null; description: string; status: string
+  created_at?: string | null; updated_at?: string | null; posted_at?: string | null
   bank_accounts?: { bank_name: string; account_number: string } | null
 }
 
@@ -24,6 +25,7 @@ const TYPE_LABELS: Record<string, string> = {
 const TYPES = Object.keys(TYPE_LABELS)
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
+const formatDateTime = (value?: string | null) => value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 const inputCls = 'border border-gray-300 rounded px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 w-full disabled:bg-gray-50'
 
 export default function BankAdjustmentsPage() {
@@ -72,6 +74,13 @@ export default function BankAdjustmentsPage() {
     requiredConfig,
   })
   const setupBlocked = readiness.loading || readiness.blockers.length > 0
+  const auditFacts = form?.id ? [
+    { label: 'Created', value: formatDateTime(form.created_at) },
+    { label: 'Last edited', value: formatDateTime(form.updated_at) },
+    { label: 'Posted', value: formatDateTime(form.posted_at) },
+    { label: 'Status', value: form.status || 'draft' },
+    { label: 'Lock status', value: form.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ] : []
 
   const save = async () => {
     if (!companyId || !form) return
@@ -190,6 +199,7 @@ export default function BankAdjustmentsPage() {
         {form?.id && (
           <div className="mt-4 max-w-5xl">
             <GLImpactPanel companyId={companyId} sourceDocType="BADJ" sourceDocId={form.id} previewRows={[]} />
+            <AuditEvidenceBlock tableName="bank_adjustments" recordId={form.id} facts={auditFacts} />
           </div>
         )}
       </div>

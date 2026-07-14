@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-14. Migrations scanned: 110. Tests present: 51.
+Generated: 2026-07-14. Migrations scanned: 112. Tests present: 53.
 
-## Functions (266)
+## Functions (272)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -96,13 +96,18 @@ Generated: 2026-07-14. Migrations scanned: 110. Tests present: 51.
 | `fn_forbid_cas_void_evidence_change` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
 | `fn_form2307_period_bounds` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_form2307_report_payload` | `20260714000005_form2307_received_claim_lifecycle.sql` | 2 |
+| `fn_general_ledger_report` | `20260714000009_da018_heavy_report_readiness.sql` | 1 |
 | `fn_generate_form_2307_issued` | `20260714000002_form2307_monthly_breakdown.sql` | 4 |
 | `fn_generate_tax_calendar` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_generate_tax_calendar_trigger` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_get_accounting_trace` | `20260711000002_accounting_trace_reports.sql` | 2 |
 | `fn_get_report_snapshot_trace_links` | `20260711000002_accounting_trace_reports.sql` | 1 |
 | `fn_get_report_trace_set` | `20260714000006_aud049_withholding_trace_drilldowns.sql` | 2 |
+| `fn_gl_account_ledger_page` | `20260714000009_da018_heavy_report_readiness.sql` | 1 |
+| `fn_gl_account_ledger_summary` | `20260714000009_da018_heavy_report_readiness.sql` | 1 |
 | `fn_gl_impact_payload` | `20260714000001_advance_payment_withholding.sql` | 2 |
+| `fn_gl_report_limit` | `20260714000009_da018_heavy_report_readiness.sql` | 1 |
+| `fn_gl_report_offset` | `20260714000009_da018_heavy_report_readiness.sql` | 1 |
 | `fn_grant_all_users_on_new_company` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_grant_creator_company_ownership` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_grant_new_user_all_companies` | `20260630000021_gap_fill.sql` | 2 |
@@ -216,7 +221,7 @@ Generated: 2026-07-14. Migrations scanned: 110. Tests present: 51.
 | `fn_save_purchase_return` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_save_receipt` | `20260714000001_advance_payment_withholding.sql` | 10 |
 | `fn_save_receiving_report` | `20260630000021_gap_fill.sql` | 2 |
-| `fn_save_sales_invoice` | `20260630000021_gap_fill.sql` | 3 |
+| `fn_save_sales_invoice` | `20260714000010_aud045_si_expected_cwt_receipt_flow.sql` | 4 |
 | `fn_save_supplier_debit_memo` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_save_vendor_bill` | `20260713000010_withholding_basis_policy.sql` | 4 |
 | `fn_save_vendor_credit` | `20260630000021_gap_fill.sql` | 2 |
@@ -243,6 +248,7 @@ Generated: 2026-07-14. Migrations scanned: 110. Tests present: 51.
 | `fn_transaction_actor_role` | `20260713000014_transaction_events.sql` | 1 |
 | `fn_transaction_event_type_for_status` | `20260713000014_transaction_events.sql` | 1 |
 | `fn_transfer_fixed_asset` | `20260630000027_fixed_assets.sql` | 1 |
+| `fn_trial_balance_report` | `20260714000009_da018_heavy_report_readiness.sql` | 1 |
 | `fn_twa_ewt_atc_asof` | `20260713000011_withholding_profile_gates.sql` | 1 |
 | `fn_update_form_2307_issued_status` | `20260701000015_form2307_issued_generation_rpc.sql` | 1 |
 | `fn_update_payment_tracking` | `20260630000021_gap_fill.sql` | 2 |
@@ -420,7 +426,7 @@ Generated: 2026-07-14. Migrations scanned: 110. Tests present: 51.
 | `revenue_recognition_entries` | `20260630000026_amortization_revenuerecon.sql` | 1 | `20260630000026_amortization_revenuerecon.sql` |
 | `revenue_recognition_schedules` | `20260630000026_amortization_revenuerecon.sql` | 1 | `20260630000026_amortization_revenuerecon.sql` |
 | `sales_invoice_lines` | `20260629000002_sprint5_sales.sql` | 1 | `20260629000002_sprint5_sales.sql` |
-| `sales_invoices` | `20260629000002_sprint5_sales.sql` | 5 | `20260630000021_gap_fill.sql` |
+| `sales_invoices` | `20260629000002_sprint5_sales.sql` | 6 | `20260714000010_aud045_si_expected_cwt_receipt_flow.sql` |
 | `sales_order_lines` | `20260629000004_sprint5_so_dr.sql` | 1 | `20260629000004_sprint5_so_dr.sql` |
 | `sales_orders` | `20260629000004_sprint5_so_dr.sql` | 1 | `20260629000004_sprint5_so_dr.sql` |
 | `sales_quotation_lines` | `20260629000004_sprint5_so_dr.sql` | 1 | `20260629000004_sprint5_so_dr.sql` |

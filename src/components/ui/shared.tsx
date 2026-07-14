@@ -296,3 +296,41 @@ export function AuditTrailSection({ tableName, recordId, initiallyExpanded = fal
     </div>
   )
 }
+
+export type AuditEvidenceFact = {
+  label: string
+  value: React.ReactNode
+}
+
+export function AuditEvidenceBlock({
+  tableName,
+  recordId,
+  facts,
+  title = 'Audit Evidence',
+  initiallyExpanded = false,
+}: {
+  tableName: string
+  recordId: string | null | undefined
+  facts: AuditEvidenceFact[]
+  title?: string
+  initiallyExpanded?: boolean
+}) {
+  if (!recordId) return null
+
+  return (
+    <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 space-y-3">
+      <div className="bg-white border border-gray-200 rounded-lg p-4">
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">{title}</div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          {facts.map(fact => (
+            <div key={fact.label}>
+              <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{fact.label}</div>
+              <div className="text-xs font-medium text-gray-700">{fact.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <AuditTrailSection tableName={tableName} recordId={recordId} initiallyExpanded={initiallyExpanded} />
+    </div>
+  )
+}

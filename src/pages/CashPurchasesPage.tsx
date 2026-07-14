@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { AuditEvidenceBlock, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
@@ -15,7 +15,7 @@ type CP = {
   payment_account_id: string | null
   payment_method: string; reference_number: string | null; remarks: string | null
   total_taxable_amount: number; total_input_vat_amount: number; total_ewt_amount: number; total_amount: number
-  status: CPStatus; created_at: string
+  status: CPStatus; created_at: string; updated_at?: string | null; posted_at?: string | null
 }
 
 type CPLine = {
@@ -37,6 +37,8 @@ type ATCCode = { id: string; code: string; description: string; rate: number }
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
 const round2 = (n: number) => Math.round(n * 100) / 100
+const formatDateTime = (value?: string | null) =>
+  value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 
 const newLine = (): CPLine => ({
   _key: crypto.randomUUID(), item_id: '', description: '', quantity: 1, uom_id: '',
@@ -236,6 +238,13 @@ export default function CashPurchasesPage() {
     requiredConfig,
   })
   const setupBlocked = readiness.loading || readiness.blockers.length > 0
+  const auditFacts = editCP?.id ? [
+    { label: 'Created', value: formatDateTime(editCP.created_at) },
+    { label: 'Last edited', value: formatDateTime(editCP.updated_at) },
+    { label: 'Posted', value: formatDateTime(editCP.posted_at) },
+    { label: 'Status', value: editCP.status || 'draft' },
+    { label: 'Lock status', value: editCP.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ] : []
   const glPreviewRows = useMemo<GLImpactRow[]>(() => [
     ...lines
       .filter(line => line.net_amount > 0.005)
@@ -483,6 +492,9 @@ export default function CashPurchasesPage() {
         sourceDocId={editCP?.id || null}
         previewRows={glPreviewRows}
       />
+      {editCP?.id && (
+        <AuditEvidenceBlock tableName="cash_purchases" recordId={editCP.id} facts={auditFacts} />
+      )}
 
       {!readOnly && (
         <div className="flex justify-end gap-2">

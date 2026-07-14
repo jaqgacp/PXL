@@ -3,7 +3,7 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge } from '@/components/ui/shared'
+import { AuditEvidenceBlock, StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 
 type COARef = { id: string; account_code: string; account_name: string }
@@ -13,12 +13,14 @@ type PCV = {
   pcv_number: string; voucher_date: string; payee: string; purpose: string
   expense_account_id: string; amount: number; receipt_number: string | null
   replenishment_id: string | null; status: string
+  created_at?: string | null; updated_at?: string | null; posted_at?: string | null
   petty_cash_funds?: { fund_name: string } | null
   chart_of_accounts?: { account_code: string; account_name: string } | null
 }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
+const formatDateTime = (value?: string | null) => value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 const inputCls = 'border border-gray-300 rounded px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 w-full disabled:bg-gray-50'
 
 export default function PettyCashVouchersPage() {
@@ -70,6 +72,13 @@ export default function PettyCashVouchersPage() {
     requiredConfig,
   })
   const setupBlocked = readiness.loading || readiness.blockers.length > 0
+  const auditFacts = form?.id ? [
+    { label: 'Created', value: formatDateTime(form.created_at) },
+    { label: 'Last edited', value: formatDateTime(form.updated_at) },
+    { label: 'Posted', value: formatDateTime(form.posted_at) },
+    { label: 'Status', value: form.status || 'draft' },
+    { label: 'Lock status', value: form.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ] : []
 
   const save = async () => {
     if (!companyId || !form) return
@@ -192,6 +201,7 @@ export default function PettyCashVouchersPage() {
         {form?.id && (
           <div className="mt-4 max-w-5xl">
             <GLImpactPanel companyId={companyId} sourceDocType="PCV" sourceDocId={form.id} previewRows={[]} />
+            <AuditEvidenceBlock tableName="petty_cash_vouchers" recordId={form.id} facts={auditFacts} />
           </div>
         )}
       </div>

@@ -6,7 +6,6 @@ import { useAppCtx } from '@/lib/context'
 
 type COA = { id: string; account_code: string; account_name: string; account_type: string; normal_balance: string }
 type PeriodRef = { id: string; period_name: string; start_date: string; end_date: string }
-type GLAgg = { account_id: string; debit_amount: number; credit_amount: number }
 
 type TBRow = {
   id: string; account_code: string; account_name: string; account_type: string
@@ -38,7 +37,6 @@ export default function TrialBalancePage() {
   const { companyId } = useAppCtx()
   const [searchParams] = useSearchParams()
   const requestedAccountId = searchParams.get('accountId') || searchParams.get('account') || ''
-  const [accounts, setAccounts] = useState<COA[]>([])
   const [periods, setPeriods] = useState<PeriodRef[]>([])
 
   const [useRange, setUseRange] = useState(false)
@@ -54,29 +52,14 @@ export default function TrialBalancePage() {
 
   const loadRefs = useCallback(async () => {
     if (!companyId) return
-    const [coaRes, perRes] = await Promise.all([
-      supabase.from('chart_of_accounts').select('id,account_code,account_name,account_type,normal_balance')
-        .eq('company_id', companyId).eq('is_active', true).eq('is_postable', true).order('account_code'),
-      supabase.from('fiscal_periods').select('id,period_name,start_date,end_date')
-        .eq('company_id', companyId).order('start_date', { ascending: false }),
-    ])
-    setAccounts((coaRes.data as COA[]) || [])
+    const perRes = await supabase.from('fiscal_periods').select('id,period_name,start_date,end_date')
+      .eq('company_id', companyId).order('start_date', { ascending: false })
     const per = (perRes.data as PeriodRef[]) || []
     setPeriods(per)
     if (per.length && !periodId) setPeriodId(per[0].id)
   }, [companyId, periodId])
 
   useEffect(() => { if (companyId) loadRefs() }, [loadRefs, companyId])
-
-  const aggregate = (gl: GLAgg[]): Record<string, { d: number; c: number }> => {
-    const m: Record<string, { d: number; c: number }> = {}
-    for (const r of gl) {
-      if (!m[r.account_id]) m[r.account_id] = { d: 0, c: 0 }
-      m[r.account_id].d += Number(r.debit_amount)
-      m[r.account_id].c += Number(r.credit_amount)
-    }
-    return m
-  }
 
   const apply = async () => {
     if (!companyId) return
@@ -88,26 +71,30 @@ export default function TrialBalancePage() {
     }
     setLoading(true)
     const classes = MODE_CLASSES[mode]
-    const [movRes, openRes] = await Promise.all([
-      supabase.from('vw_general_ledger').select('account_id,debit_amount,credit_amount')
-        .eq('company_id', companyId).in('entry_class', classes).gte('je_date', start).lte('je_date', end),
-      supabase.from('vw_general_ledger').select('account_id,debit_amount,credit_amount')
-        .eq('company_id', companyId).in('entry_class', classes).lt('je_date', start),
-    ])
-    const mov = aggregate((movRes.data as GLAgg[]) || [])
-    const open = aggregate((openRes.data as GLAgg[]) || [])
-
-    const result: TBRow[] = accounts.map(a => {
-      const o = open[a.id] || { d: 0, c: 0 }
-      const m = mov[a.id] || { d: 0, c: 0 }
-      const openingNet = o.d - o.c
-      const closingNet = openingNet + (m.d - m.c)
-      return {
-        id: a.id, account_code: a.account_code, account_name: a.account_name, account_type: a.account_type,
-        openingNet, periodDebit: m.d, periodCredit: m.c, closingNet,
-      }
+    const { data } = await supabase.rpc('fn_trial_balance_report', {
+      p_company_id: companyId,
+      p_date_from: start,
+      p_date_to: end,
+      p_entry_classes: classes,
+      p_include_zero: includeZero,
+      p_account_id: requestedAccountId || undefined,
     })
-    setRows(result)
+    setRows(((data as unknown as Array<COA & {
+      account_id: string
+      opening_net: number
+      period_debit: number
+      period_credit: number
+      closing_net: number
+    }>) || []).map(r => ({
+      id: r.account_id,
+      account_code: r.account_code,
+      account_name: r.account_name,
+      account_type: r.account_type,
+      openingNet: Number(r.opening_net || 0),
+      periodDebit: Number(r.period_debit || 0),
+      periodCredit: Number(r.period_credit || 0),
+      closingNet: Number(r.closing_net || 0),
+    })))
     setApplied(true)
     setLoading(false)
   }
@@ -175,7 +162,7 @@ export default function TrialBalancePage() {
           ))}
         </div>
         <label className="flex items-center gap-1.5 text-xs text-gray-600">
-          <input type="checkbox" checked={includeZero} onChange={e => setIncludeZero(e.target.checked)} /> Include zero-balance
+          <input type="checkbox" checked={includeZero} onChange={e => { setIncludeZero(e.target.checked); setApplied(false) }} /> Include zero-balance
         </label>
         <button onClick={apply} disabled={loading}
           className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">

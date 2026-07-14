@@ -11,12 +11,15 @@ type GLRow = {
   line_description: string | null; debit_amount: number; credit_amount: number
   account_code: string; account_name: string; account_type: string; normal_balance: string
   branch_id: string | null; department_id: string | null; cost_center_id: string | null
+  running_balance?: number; total_rows?: number; period_debit?: number; period_credit?: number
 }
+type LedgerSummary = { totalRows: number; periodDebit: number; periodCredit: number; closing: number }
 
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
 const firstOfYear = () => new Date().getFullYear() + '-01-01'
+const PAGE_SIZE = 200
 
 export default function GeneralLedgerPage() {
   const { companyId } = useAppCtx()
@@ -46,9 +49,15 @@ export default function GeneralLedgerPage() {
 
   const [rows, setRows] = useState<GLRow[]>([])
   const [opening, setOpening] = useState(0)
+  const [ledgerSummary, setLedgerSummary] = useState<LedgerSummary>({ totalRows: 0, periodDebit: 0, periodCredit: 0, closing: 0 })
+  const [page, setPage] = useState(0)
   const [loading, setLoading] = useState(false)
   const [applied, setApplied] = useState(false)
   const [focusedRows, setFocusedRows] = useState<GLRow[]>([])
+  const [focusedPage, setFocusedPage] = useState(0)
+  const [focusedTotalRows, setFocusedTotalRows] = useState(0)
+  const [focusedDebit, setFocusedDebit] = useState(0)
+  const [focusedCredit, setFocusedCredit] = useState(0)
   const [focusedLoading, setFocusedLoading] = useState(false)
   const [focusedError, setFocusedError] = useState('')
   const [autoAppliedKey, setAutoAppliedKey] = useState('')
@@ -65,27 +74,42 @@ export default function GeneralLedgerPage() {
 
   const account = accounts.find(a => a.id === accountId)
 
-  const loadAccountLedger = useCallback(async (targetAccountId: string) => {
+  const loadAccountLedger = useCallback(async (targetAccountId: string, targetPage = 0) => {
     if (!companyId || !targetAccountId || !dateFrom || !dateTo) return
     setLoading(true)
-    const [movRes, openRes] = await Promise.all([
-      supabase.from('vw_general_ledger').select('*')
-        .eq('company_id', companyId).eq('account_id', targetAccountId)
-        .gte('je_date', dateFrom).lte('je_date', dateTo)
-        .order('je_date', { ascending: true }).order('je_number', { ascending: true }),
-      supabase.from('vw_general_ledger').select('debit_amount,credit_amount')
-        .eq('company_id', companyId).eq('account_id', targetAccountId).lt('je_date', dateFrom),
+    const [movRes, summaryRes] = await Promise.all([
+      supabase.rpc('fn_gl_account_ledger_page', {
+        p_company_id: companyId,
+        p_account_id: targetAccountId,
+        p_date_from: dateFrom,
+        p_date_to: dateTo,
+        p_je_id: undefined,
+        p_limit: PAGE_SIZE,
+        p_offset: targetPage * PAGE_SIZE,
+      }),
+      supabase.rpc('fn_gl_account_ledger_summary', {
+        p_company_id: companyId,
+        p_account_id: targetAccountId,
+        p_date_from: dateFrom,
+        p_date_to: dateTo,
+        p_je_id: undefined,
+      }),
     ])
+    const summary = ((summaryRes.data as any[]) || [])[0]
     setRows((movRes.data as GLRow[]) || [])
-    const op = ((openRes.data as any[]) || []).reduce((s, r) => s + Number(r.debit_amount) - Number(r.credit_amount), 0)
-    // opening expressed in the account's normal direction
-    const selectedAccount = accounts.find(item => item.id === targetAccountId)
-    setOpening(selectedAccount?.normal_balance === 'credit' ? -op : op)
+    setOpening(Number(summary?.opening_balance || 0))
+    setLedgerSummary({
+      totalRows: Number(summary?.total_rows || 0),
+      periodDebit: Number(summary?.period_debit || 0),
+      periodCredit: Number(summary?.period_credit || 0),
+      closing: Number(summary?.closing_balance || 0),
+    })
+    setPage(targetPage)
     setApplied(true)
     setLoading(false)
-  }, [accounts, companyId, dateFrom, dateTo])
+  }, [companyId, dateFrom, dateTo])
 
-  const apply = () => { void loadAccountLedger(accountId) }
+  const apply = () => { void loadAccountLedger(accountId, 0) }
 
   useEffect(() => {
     if (hasFocusedFilter) return
@@ -94,7 +118,7 @@ export default function GeneralLedgerPage() {
     if (autoAppliedKey === key) return
     setAccountId(requestedAccountId)
     setAutoAppliedKey(key)
-    void loadAccountLedger(requestedAccountId)
+    void loadAccountLedger(requestedAccountId, 0)
   }, [accounts, autoAppliedKey, companyId, dateFrom, dateTo, hasFocusedFilter, loadAccountLedger, requestedAccountId])
 
   useEffect(() => {
@@ -107,41 +131,42 @@ export default function GeneralLedgerPage() {
     const loadFocusedSlice = async () => {
       setFocusedLoading(true)
       setFocusedError('')
-      let query = supabase.from('vw_general_ledger').select('*').eq('company_id', companyId)
-      if (requestedJeId) query = query.eq('je_id', requestedJeId)
-      if (requestedAccountId) query = query.eq('account_id', requestedAccountId)
-      if (requestedSourceType) query = query.eq('reference_doc_type', requestedSourceType)
-      if (requestedSourceId) query = query.eq('reference_doc_id', requestedSourceId)
-      if (requestedAccountTypes.length) query = query.in('account_type', requestedAccountTypes)
-      if (requestedBranchId) query = query.eq('branch_id', requestedBranchId)
-      if (requestedDepartmentId) query = query.eq('department_id', requestedDepartmentId)
-      if (requestedCostCenterId) query = query.eq('cost_center_id', requestedCostCenterId)
-      if (requestedDateFrom) query = query.gte('je_date', requestedDateFrom)
-      if (requestedDateTo) query = query.lte('je_date', requestedDateTo)
-      const { data, error } = await query
-        .order('je_date', { ascending: true })
-        .order('je_number', { ascending: true })
-        .order('line_id')
+      const { data, error } = await supabase.rpc('fn_general_ledger_report', {
+        p_company_id: companyId,
+        p_date_from: requestedDateFrom || undefined,
+        p_date_to: requestedDateTo || undefined,
+        p_account_id: requestedAccountId || undefined,
+        p_je_id: requestedJeId || undefined,
+        p_reference_doc_type: requestedSourceType || undefined,
+        p_reference_doc_id: requestedSourceId || undefined,
+        p_account_types: requestedAccountTypes.length ? requestedAccountTypes : undefined,
+        p_branch_id: requestedBranchId || undefined,
+        p_department_id: requestedDepartmentId || undefined,
+        p_cost_center_id: requestedCostCenterId || undefined,
+        p_entry_classes: undefined,
+        p_limit: PAGE_SIZE,
+        p_offset: focusedPage * PAGE_SIZE,
+      })
       if (!alive) return
-      setFocusedRows((data as GLRow[]) || [])
-      setFocusedError(error?.message || (!data?.length ? 'No posted GL lines were found for these filters.' : ''))
+      const nextRows = (data as GLRow[]) || []
+      const first = nextRows[0]
+      setFocusedRows(nextRows)
+      setFocusedTotalRows(Number(first?.total_rows || 0))
+      setFocusedDebit(Number(first?.period_debit || 0))
+      setFocusedCredit(Number(first?.period_credit || 0))
+      setFocusedError(error?.message || (!nextRows.length ? 'No posted GL lines were found for these filters.' : ''))
       setFocusedLoading(false)
     }
     void loadFocusedSlice()
     return () => { alive = false }
-  }, [companyId, hasFocusedFilter, requestedAccountId, requestedAccountTypes, requestedBranchId, requestedCostCenterId, requestedDateFrom, requestedDateTo, requestedDepartmentId, requestedJeId, requestedSourceId, requestedSourceType])
+  }, [companyId, focusedPage, hasFocusedFilter, requestedAccountId, requestedAccountTypes, requestedBranchId, requestedCostCenterId, requestedDateFrom, requestedDateTo, requestedDepartmentId, requestedJeId, requestedSourceId, requestedSourceType])
 
-  // running balance in normal direction
-  const isCredit = account?.normal_balance === 'credit'
-  let running = opening
-  const computed = rows.map(r => {
-    const delta = isCredit ? (r.credit_amount - r.debit_amount) : (r.debit_amount - r.credit_amount)
-    running += delta
-    return { ...r, running }
-  })
-  const periodDebit = rows.reduce((s, r) => s + r.debit_amount, 0)
-  const periodCredit = rows.reduce((s, r) => s + r.credit_amount, 0)
-  const closing = running
+  const computed = rows.map(r => ({ ...r, running: Number(r.running_balance || 0) }))
+  const periodDebit = ledgerSummary.periodDebit
+  const periodCredit = ledgerSummary.periodCredit
+  const closing = ledgerSummary.closing
+  const pageCount = Math.max(1, Math.ceil(ledgerSummary.totalRows / PAGE_SIZE))
+  const focusedPageCount = Math.max(1, Math.ceil(focusedTotalRows / PAGE_SIZE))
 
   const exportCSV = () => {
     const header = ['Date', 'JE Number', 'Description', 'Ref Type', 'Line Description', 'Debit', 'Credit', 'Running Balance']
@@ -160,8 +185,8 @@ export default function GeneralLedgerPage() {
   }
 
   if (hasFocusedFilter) {
-    const targetDebit = focusedRows.reduce((sum, row) => sum + Number(row.debit_amount), 0)
-    const targetCredit = focusedRows.reduce((sum, row) => sum + Number(row.credit_amount), 0)
+    const targetDebit = focusedDebit
+    const targetCredit = focusedCredit
     const focusedLabel = requestedJeId
       ? `JE ${requestedJeId.slice(0, 8)}`
       : requestedSourceType || requestedSourceId
@@ -181,6 +206,15 @@ export default function GeneralLedgerPage() {
           </Link>
         </div>
         <div className="px-5 py-4">
+          {focusedTotalRows > PAGE_SIZE && (
+            <div className="mb-3 flex items-center justify-end gap-2 text-xs text-gray-500">
+              <span>Rows {focusedPage * PAGE_SIZE + 1}-{Math.min((focusedPage + 1) * PAGE_SIZE, focusedTotalRows)} of {focusedTotalRows}</span>
+              <button onClick={() => setFocusedPage(page => Math.max(0, page - 1))} disabled={focusedPage === 0 || focusedLoading}
+                className="px-2 py-1 border border-gray-300 rounded disabled:opacity-40">Previous</button>
+              <button onClick={() => setFocusedPage(page => Math.min(focusedPageCount - 1, page + 1))} disabled={focusedPage >= focusedPageCount - 1 || focusedLoading}
+                className="px-2 py-1 border border-gray-300 rounded disabled:opacity-40">Next</button>
+            </div>
+          )}
           <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
             {focusedLoading ? (
               <div className="py-12 text-center text-sm text-gray-400">Loading general ledger lines...</div>
@@ -249,7 +283,7 @@ export default function GeneralLedgerPage() {
           {loading ? 'Loading…' : 'Apply'}
         </button>
         {applied && computed.length > 0 && (
-          <button onClick={exportCSV} className="ml-auto px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50">Export CSV</button>
+          <button onClick={exportCSV} className="ml-auto px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50">Export Page CSV</button>
         )}
       </div>
 
@@ -265,6 +299,15 @@ export default function GeneralLedgerPage() {
                 <BookOpen className="h-4 w-4" aria-hidden="true" />
               </Link>
               <span className="text-xs text-gray-500 uppercase">Normal balance: {account.normal_balance}</span>
+            </div>
+          )}
+          {ledgerSummary.totalRows > PAGE_SIZE && (
+            <div className="mb-3 flex items-center justify-end gap-2 text-xs text-gray-500">
+              <span>Rows {page * PAGE_SIZE + 1}-{Math.min((page + 1) * PAGE_SIZE, ledgerSummary.totalRows)} of {ledgerSummary.totalRows}</span>
+              <button onClick={() => void loadAccountLedger(accountId, Math.max(0, page - 1))} disabled={page === 0 || loading}
+                className="px-2 py-1 border border-gray-300 rounded disabled:opacity-40">Previous</button>
+              <button onClick={() => void loadAccountLedger(accountId, Math.min(pageCount - 1, page + 1))} disabled={page >= pageCount - 1 || loading}
+                className="px-2 py-1 border border-gray-300 rounded disabled:opacity-40">Next</button>
             </div>
           )}
           <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">

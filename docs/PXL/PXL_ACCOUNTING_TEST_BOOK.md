@@ -1008,6 +1008,36 @@ Scenario: a posted receipt with 200 CWT receives customer Form 2307 evidence, th
 | 9 | Try claiming the invalidated certificate | Rejected because only `received` rows can be claimed. |
 | 10 | Generate and send an issued Form 2307 certificate from AP EWT detail, then cancel the source PV | The sent certificate remains immutable evidence but is flagged `requires_supersede` with a reason derived from the EWT reversal. |
 
+## HEAVY-REPORT-READINESS-001 - Server-side GL Pagination and TB Aggregation
+
+Status: Executed Passing (session 98, 2026-07-14) in `supabase/tests/052_heavy_report_readiness_test.sql`, 18 assertions. Related finding: PXL-DA-018.
+
+Scenario: a company has an opening balance before the report range, 25 regular revenue journals, and 5 adjusting expense journals in January 2026.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Read January GL through `fn_general_ledger_report` with a page size of 7 | Returns only 7 rows, while exposing total filtered rows and full-period debit/credit totals independent of page size. |
+| 2 | Apply account-type and entry-class filters to the GL report | Filtering runs server-side and returns only matching regular revenue lines. |
+| 3 | Request an invalid small page limit | The server clamps the limit to one row instead of allowing an unbounded or invalid request. |
+| 4 | Read Cash through `fn_gl_account_ledger_summary` | Opening balance, period debit, period credit, closing balance, and total movement rows are computed server-side. |
+| 5 | Read page 2 of Cash through `fn_gl_account_ledger_page` | Returns the requested page size, and the first row's running balance includes all rows before the page offset. |
+| 6 | Apply a JE drilldown filter to the account ledger page | The page returns only the selected JE's account line without loading the full period. |
+| 7 | Read Trial Balance through `fn_trial_balance_report` in unadjusted and adjusted modes | Unadjusted excludes adjusting entries; adjusted includes them; the adjusted TB remains balanced. |
+
+## SI-EXPECTED-CWT-OR-001 - SI Expected CWT to OR Carry-Forward
+
+Status: Executed Passing (session 100, 2026-07-14) in `supabase/tests/053_si_expected_cwt_receipt_flow_test.sql`, 9 assertions. Related finding: PXL-AUD-045.
+
+Scenario: a VAT sales invoice has 10,000 VAT-exclusive income and the customer default CWT ATC is WC140 at 2%.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Save the SI with expected CWT 210 | Rejected because WC140 on a 10,000 base expects 200. |
+| 2 | Save the SI with a non-default CWT ATC | Rejected because SI expected CWT must match the customer default ATC. |
+| 3 | Save the SI with expected CWT 200 and no explicit base | Succeeds and stores WC140 plus a 10,000 VAT-exclusive CWT base. |
+| 4 | Approve and post the SI | Both lifecycle transitions succeed. |
+| 5 | Save and post an OR applying 11,000 cash plus 200 CWT to the SI | The receipt line and CWT tax detail carry WC140, base 10,000, and CWT 200; AR is cleared by cash plus CWT. |
+
 ## CM-VC-OVERAPPLY-001 - Over-Apply Guards Net Applied Credit Memos / Vendor Credits
 
 Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/035_cm_vc_aware_overapply_test.sql`, 6 assertions. Related findings: PXL-AUD-039.

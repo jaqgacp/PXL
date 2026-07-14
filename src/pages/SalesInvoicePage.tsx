@@ -21,6 +21,8 @@ type SI = {
   total_exempt_amount: number; total_vat_amount: number
   total_amount: number; status: SIStatus
   cwt_amount_expected: number | null
+  cwt_atc_code_id: string | null
+  cwt_tax_base: number | null
   void_reason_id: string | null; approved_at?: string | null; posted_at: string | null
   created_at: string; updated_at: string
 }
@@ -46,6 +48,7 @@ type CustomerRef = {
   id: string; registered_name: string; tin: string; tin_branch_code: string
   registered_address: string; default_tax_type: string; is_subject_to_cwt: boolean
   default_terms_id: string | null; default_gl_account_id: string | null
+  default_cwt_atc_code_id: string | null
   payment_terms?: { days_to_due: number; term_name: string } | null
 }
 
@@ -63,12 +66,14 @@ type VATRef = {
 type TaxRegistration = 'vat' | 'non_vat' | 'exempt'
 type Branch = { id: string; branch_code: string; branch_name: string }
 type VoidReason = { id: string; code: string; description: string }
+type ATCCode = { id: string; code: string; description: string; rate: number }
 
 // ── Helpers ──────────────────────────────────────────────────
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 
 const today = () => new Date().toISOString().split('T')[0]
+const round2 = (n: number) => Math.round(n * 100) / 100
 const formatDateTime = (value?: string | null) =>
   value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 
@@ -171,6 +176,7 @@ export default function SalesInvoicePage() {
   const [customers, setCustomers] = useState<CustomerRef[]>([])
   const [items, setItems] = useState<ItemRef[]>([])
   const [vatCodes, setVatCodes] = useState<VATRef[]>([])
+  const [cwtAtcCodes, setCwtAtcCodes] = useState<ATCCode[]>([])
   const [taxRegistration, setTaxRegistration] = useState<TaxRegistration>('vat')
   const [branches, setBranches] = useState<Branch[]>([])
   const [voidReasons, setVoidReasons] = useState<VoidReason[]>([])
@@ -207,6 +213,8 @@ export default function SalesInvoicePage() {
   // CWT state (informational — does not affect invoice total)
   const [fIsWithholdingAgent, setFIsWithholdingAgent] = useState(false)
   const [fCwtExpected, setFCwtExpected] = useState<number>(0)
+  const [fCwtAtc, setFCwtAtc] = useState('')
+  const [fCwtBase, setFCwtBase] = useState<number>(0)
 
   // Void dialog
   const [showVoid, setShowVoid] = useState(false)
@@ -241,11 +249,11 @@ export default function SalesInvoicePage() {
   useEffect(() => {
     if (!companyId) return
     const load = async () => {
-      const [{ data: company }, { data: cos }, { data: itms }, { data: vcs }, { data: brs }, { data: vrs }] =
+      const [{ data: company }, { data: cos }, { data: itms }, { data: vcs }, { data: atcs }, { data: brs }, { data: vrs }] =
         await Promise.all([
           supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
           supabase.from('customers')
-            .select('id,registered_name,tin,tin_branch_code,registered_address,default_tax_type,is_subject_to_cwt,default_terms_id,default_gl_account_id,payment_terms(days_to_due,term_name)')
+            .select('id,registered_name,tin,tin_branch_code,registered_address,default_tax_type,is_subject_to_cwt,default_terms_id,default_gl_account_id,default_cwt_atc_code_id,payment_terms(days_to_due,term_name)')
             .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
           supabase.from('items')
             .select('id,item_code,description,uom_id,units_of_measure(uom_code),standard_selling_price,default_sales_vat_id,sales_account_id')
@@ -253,6 +261,9 @@ export default function SalesInvoicePage() {
           supabase.from('vat_codes')
             .select('id,vat_code,description,vat_classification,tax_codes(rate)')
             .eq('transaction_type', 'output_vat').eq('is_active', true),
+          supabase.from('atc_codes')
+            .select('id,code,description,rate')
+            .eq('is_active', true).eq('tax_category', 'ewt').order('code'),
           supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
           supabase.from('void_reason_codes').select('id,code,description').eq('is_active', true).order('code'),
         ])
@@ -276,6 +287,7 @@ export default function SalesInvoicePage() {
         vat_classification: v.vat_classification,
         rate: (Array.isArray(v.tax_codes) ? v.tax_codes[0]?.rate : (v.tax_codes as { rate?: number } | null)?.rate) ?? 0,
       })).filter(v => companyTaxRegistration === 'vat' || v.rate === 0) as VATRef[])
+      setCwtAtcCodes(atcs as ATCCode[] || [])
 
       setBranches(brs as Branch[] || [])
       setVoidReasons(vrs as VoidReason[] || [])
@@ -317,7 +329,7 @@ export default function SalesInvoicePage() {
     setFDate(today()); setFBranch(branchId); setFCustomer(''); setFCustomerName('')
     setFCustomerTIN(''); setFCustomerAddr(''); setFTerms(''); setFDueDate('')
     setFCurrency('PHP'); setFRef(''); setFMemo('')
-    setFIsWithholdingAgent(false); setFCwtExpected(0)
+    setFIsWithholdingAgent(false); setFCwtExpected(0); setFCwtAtc(''); setFCwtBase(0)
     setLines([emptyLine()])
     setError('')
     setMode('new')
@@ -334,6 +346,8 @@ export default function SalesInvoicePage() {
     const cust = customers.find(c => c.id === si.customer_id)
     setFIsWithholdingAgent(cust?.is_subject_to_cwt ?? false)
     setFCwtExpected(si.cwt_amount_expected ? Number(si.cwt_amount_expected) : 0)
+    setFCwtAtc(si.cwt_atc_code_id || cust?.default_cwt_atc_code_id || '')
+    setFCwtBase(si.cwt_tax_base ? Number(si.cwt_tax_base) : 0)
     setError('')
 
     // Load existing lines
@@ -376,7 +390,11 @@ export default function SalesInvoicePage() {
     setFCustomerTIN(c.tin + (c.tin_branch_code ? `-${c.tin_branch_code}` : ''))
     setFCustomerAddr(c.registered_address)
     setFIsWithholdingAgent(c.is_subject_to_cwt)
-    if (!c.is_subject_to_cwt) setFCwtExpected(0)
+    setFCwtAtc(c.is_subject_to_cwt ? c.default_cwt_atc_code_id || '' : '')
+    if (!c.is_subject_to_cwt) {
+      setFCwtExpected(0)
+      setFCwtBase(0)
+    }
     const pt = c.payment_terms
     if (pt && c.default_terms_id) {
       setFTerms(c.default_terms_id)
@@ -443,6 +461,10 @@ export default function SalesInvoicePage() {
       setError('Complete setup readiness blockers before saving or posting this sales invoice.')
       return
     }
+    if (fIsWithholdingAgent && !fCwtAtc) {
+      setError('Customer is subject to CWT but has no default active EWT ATC code.')
+      return
+    }
     if (lines.every(l => !l.description.trim())) {
       setError('At least one line item is required.')
       return
@@ -475,6 +497,8 @@ export default function SalesInvoicePage() {
         memo: fMemo || null,
         ...totals,
         cwt_amount_expected: fIsWithholdingAgent && fCwtExpected > 0 ? fCwtExpected : null,
+        cwt_atc_code_id: fIsWithholdingAgent && fCwtExpected > 0 ? fCwtAtc || null : null,
+        cwt_tax_base: fIsWithholdingAgent && fCwtExpected > 0 ? fCwtBase || null : null,
       }
 
       const linesPayload = lines
@@ -543,6 +567,32 @@ export default function SalesInvoicePage() {
     await openEdit({ ...editSI, status: 'draft' } as SI)
     setSaving(false)
   }
+
+  useEffect(() => {
+    if (mode !== 'new' && mode !== 'edit') return
+    if (!fIsWithholdingAgent) {
+      setFCwtBase(prev => prev === 0 ? prev : 0)
+      setFCwtExpected(prev => prev === 0 ? prev : 0)
+      return
+    }
+
+    const atc = cwtAtcCodes.find(a => a.id === fCwtAtc)
+    if (!atc) {
+      setFCwtBase(prev => prev === 0 ? prev : 0)
+      setFCwtExpected(prev => prev === 0 ? prev : 0)
+      return
+    }
+
+    const currentTotals = computeTotals(lines)
+    const base = round2(
+      currentTotals.total_taxable_amount +
+      currentTotals.total_zero_rated_amount +
+      currentTotals.total_exempt_amount
+    )
+    const expected = round2(base * atc.rate / 100)
+    setFCwtBase(prev => Math.abs(prev - base) > 0.005 ? base : prev)
+    setFCwtExpected(prev => Math.abs(prev - expected) > 0.005 ? expected : prev)
+  }, [cwtAtcCodes, fCwtAtc, fIsWithholdingAgent, lines, mode])
 
   const totals = computeTotals(lines)
   const revenueImpactRows: GLImpactRow[] = Array.from(
@@ -996,34 +1046,35 @@ export default function SalesInvoicePage() {
               <span className="text-sm font-semibold text-gray-900">Grand Total</span>
               <span className="text-sm font-mono tabular-nums font-semibold text-gray-900">{fmt(totals.total_amount)}</span>
             </div>
-            {fIsWithholdingAgent && (
-              <div className="pt-2 mt-1 border-t border-blue-100 bg-blue-50/60 rounded-md px-3 py-2.5 space-y-1.5">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">2307 / CWT — Informational Only</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-blue-700">Less: CWT (not deducted from total — collected via OR)</span>
-                  {mode === 'view' ? (
+            {fIsWithholdingAgent && (() => {
+              const selectedAtc = cwtAtcCodes.find(a => a.id === fCwtAtc)
+              return (
+                <div className="pt-2 mt-1 border-t border-blue-100 bg-blue-50/60 rounded-md px-3 py-2.5 space-y-1.5">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-semibold uppercase tracking-wide text-blue-600">2307 / CWT — Expected on Receipt</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-blue-700">Customer ATC</span>
+                    <span className="text-xs font-medium text-blue-700 text-right">
+                      {selectedAtc ? `${selectedAtc.code} (${fmt(selectedAtc.rate)}%)` : 'No active customer ATC'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-blue-700">CWT taxable base</span>
+                    <span className="text-xs font-mono tabular-nums text-blue-700">{fmt(fCwtBase)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-blue-700">Expected CWT for OR</span>
                     <span className="text-xs font-mono tabular-nums text-blue-700">
                       {fCwtExpected > 0 ? `(${fmt(fCwtExpected)})` : '—'}
                     </span>
-                  ) : (
-                    <input
-                      type="number"
-                      min={0}
-                      step="any"
-                      value={fCwtExpected || ''}
-                      onChange={e => setFCwtExpected(parseFloat(e.target.value) || 0)}
-                      className="w-32 border border-blue-200 bg-white rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-blue-400"
-                      placeholder="0.00"
-                    />
-                  )}
+                  </div>
+                  <p className="text-[10px] text-blue-500 leading-relaxed">
+                    Amount is calculated from the customer default ATC and VAT-exclusive invoice base, then validated again by the server.
+                  </p>
                 </div>
-                <p className="text-[10px] text-blue-500 leading-relaxed">
-                  Customer is flagged as withholding agent. CWT will be settled when the customer remits BIR Form 2307.
-                </p>
-              </div>
-            )}
+              )
+            })()}
           </div>
         </div>
 

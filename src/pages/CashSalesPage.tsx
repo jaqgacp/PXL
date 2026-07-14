@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
@@ -315,7 +316,7 @@ export default function CashSalesPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Date','SI Number','OR Number','Customer','TIN','Total','VAT','CWT'].map(h => (
+                    {['Date','SI Number','OR Number','Customer','TIN','Total','VAT','CWT','Evidence'].map(h => (
                       <th key={h} className={`${th} ${['Total','VAT','CWT'].includes(h) ? 'text-right' : ''}`}>{h}</th>
                     ))}
                   </tr>
@@ -341,6 +342,14 @@ export default function CashSalesPage() {
                             {fmt(cs.total_cwt)}
                           </ReportTraceLink>
                         ) : '—'}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs">
+                        <Link
+                          to={`/accounting-source?sourceType=SI&sourceId=${encodeURIComponent(cs.id)}`}
+                          className="text-blue-700 hover:text-blue-900 font-medium"
+                        >
+                          Audit
+                        </Link>
                       </td>
                     </tr>
                   ))}

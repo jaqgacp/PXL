@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, BookOpen, FileText, Route, Scale } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { AuditEvidenceBlock } from '@/components/ui/shared'
 
 type SourceTrace = {
   source_doc_type: string
@@ -18,6 +19,38 @@ type SourceTrace = {
 
 const hiddenFields = new Set(['company_id', 'created_by', 'updated_by'])
 const humanize = (value: string) => value.replace(/_/g, ' ').replace(/\b\w/g, letter => letter.toUpperCase())
+const sourceAuditTables: Record<string, string> = {
+  SI: 'sales_invoices',
+  OR: 'receipts',
+  CM: 'credit_memos',
+  DM: 'debit_memos',
+  VB: 'vendor_bills',
+  PV: 'payment_vouchers',
+  CP: 'cash_purchases',
+  VC: 'vendor_credits',
+  PR: 'purchase_returns',
+  FT: 'fund_transfers',
+  IBT: 'inter_branch_transfers',
+  BADJ: 'bank_adjustments',
+  PCV: 'petty_cash_vouchers',
+  PCR: 'petty_cash_replenishments',
+  CV: 'check_vouchers',
+  INV_ADJ: 'stock_adjustments',
+  INV_STX: 'stock_transfers',
+  INV_GI: 'goods_issues',
+  INV_COUNT: 'physical_count_sheets',
+  FA: 'fixed_assets',
+  FA_DEPR: 'asset_depreciation_entries',
+  FA_DISP: 'asset_disposals',
+  FA_IMP: 'asset_impairments',
+  AMORT: 'amortization_entries',
+  REVREC: 'revenue_recognition_entries',
+  WHTREM: 'withholding_remittances',
+  MANUAL: 'journal_entries',
+  RECURRING: 'recurring_journal_templates',
+}
+const formatDateTime = (value: unknown) =>
+  typeof value === 'string' && value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 const formatValue = (value: unknown) => {
   if (value === null || value === undefined || value === '') return '—'
   if (typeof value === 'boolean') return value ? 'Yes' : 'No'
@@ -63,6 +96,18 @@ export default function AccountingSourcePage() {
   }, [sourceId, sourceType])
 
   const fields = Object.entries(trace?.source_record || {}).filter(([key]) => !hiddenFields.has(key))
+  const auditTable = trace ? sourceAuditTables[trace.source_doc_type] : null
+  const sourceRecord = trace?.source_record || {}
+  const auditFacts = trace ? [
+    { label: 'Created', value: formatDateTime(sourceRecord.created_at) },
+    { label: 'Last edited', value: formatDateTime(sourceRecord.updated_at) },
+    { label: 'Approved', value: formatDateTime(sourceRecord.approved_at) },
+    { label: 'Posted', value: formatDateTime(sourceRecord.posted_at) },
+    {
+      label: 'Lock status',
+      value: trace.source_status === 'draft' ? 'Draft editable' : trace.source_status ? 'Frozen by lifecycle controls' : 'System source',
+    },
+  ] : []
 
   return (
     <div className="px-5 py-4 space-y-4">
@@ -137,6 +182,15 @@ export default function AccountingSourcePage() {
               {fields.length === 0 && <div className="px-4 py-8 text-sm text-gray-400">No source fields were returned.</div>}
             </dl>
           </section>
+
+          {auditTable && (
+            <AuditEvidenceBlock
+              tableName={auditTable}
+              recordId={trace.source_doc_id}
+              facts={auditFacts}
+              initiallyExpanded
+            />
+          )}
         </>
       )}
     </div>

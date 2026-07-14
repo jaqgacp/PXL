@@ -6,7 +6,9 @@
 #      in its main-table row and/or New Finding Detail section (the index is
 #      authoritative; any disagreement is an error).
 #   2. Every finding that exists in the document appears in the index.
-#   3. Every `supabase/tests/*.sql` file referenced by the accounting test book
+#   3. The transaction matrix carries the current Findings Status Index checksum
+#      and references every non-passed finding still requiring follow-up.
+#   4. Every `supabase/tests/*.sql` file referenced by the accounting test book
 #      exists on disk, and every test file on disk is referenced by the book.
 #
 # Usage: scripts/check_docs_consistency.sh
@@ -15,6 +17,7 @@ cd "$(dirname "$0")/.."
 
 DOC=docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md
 BOOK=docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md
+MATRIX=docs/PXL/PXL_TRANSACTION_MATRIX.md
 fail=0
 
 # ── Parse the authoritative index (4-cell rows: ID | Severity | Status | Next) ─
@@ -66,7 +69,33 @@ for id in "${!idx[@]}"; do
   fi
 done
 
-# ── 3. Test book <-> test files ────────────────────────────────────────────────
+# ── 3. Transaction matrix sync ─────────────────────────────────────────────────
+count_status() {
+  local status=$1
+  awk -F'\t' -v wanted="$status" '$2 == wanted { count++ } END { print count + 0 }' <<< "$index"
+}
+
+total_count=$(wc -l <<< "$index" | tr -d ' ')
+passed_count=$(count_status "Retested Passed")
+in_progress_count=$(count_status "In Progress")
+open_count=$(count_status "Open")
+matrix_checksum="Findings Status Index checksum: ${passed_count} Retested Passed / ${in_progress_count} In Progress / ${open_count} Open (${total_count} findings)"
+
+if ! grep -Fq "$matrix_checksum" "$MATRIX"; then
+  echo "FAIL: $MATRIX is missing the current checksum: $matrix_checksum"
+  fail=1
+fi
+
+active_ids=$(awk -F'\t' '$2 != "Retested Passed" { print $1 }' <<< "$index")
+while read -r id; do
+  [ -z "$id" ] && continue
+  if ! grep -q -- "$id" "$MATRIX"; then
+    echo "FAIL: active finding $id is missing from $MATRIX"
+    fail=1
+  fi
+done <<< "$active_ids"
+
+# ── 4. Test book <-> test files ────────────────────────────────────────────────
 book_refs=$(grep -oE 'supabase/tests/[0-9a-z_]+\.sql' "$BOOK" | sort -u)
 while read -r f; do
   [ -f "$f" ] || { echo "FAIL: $BOOK references missing file $f"; fail=1; }
@@ -77,6 +106,6 @@ for f in supabase/tests/*.sql; do
 done
 
 if [ "$fail" -eq 0 ]; then
-  echo "OK: findings index consistent ($(wc -l <<< "$index") findings); test book matches $(ls supabase/tests/*.sql | wc -l) test files"
+  echo "OK: findings index consistent (${total_count} findings); matrix checksum/current findings in sync; test book matches $(ls supabase/tests/*.sql | wc -l) test files"
 fi
 exit $fail

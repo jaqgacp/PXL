@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { AuditEvidenceBlock, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
@@ -14,6 +14,7 @@ type VC = {
   supplier_cm_no: string | null; reference_bill_id: string | null
   remarks: string | null; total_taxable_amount: number; total_input_vat_amount: number
   total_amount: number; remaining_balance: number; status: VCStatus; created_at: string
+  updated_at?: string | null; posted_at?: string | null; applied_at?: string | null
 }
 
 type VCLine = {
@@ -32,6 +33,8 @@ type VBRef = { id: string; bill_number: string; bill_date: string; total_amount:
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
+const formatDateTime = (value?: string | null) =>
+  value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 
 const newLine = (): VCLine => ({
   _key: crypto.randomUUID(), item_id: '', description: '', quantity: 1, uom_id: '',
@@ -121,6 +124,13 @@ export default function VendorCreditsPage() {
     requiredConfig,
   })
   const setupBlocked = readiness.loading || readiness.blockers.length > 0
+  const auditFacts = editVC?.id ? [
+    { label: 'Created', value: formatDateTime(editVC.created_at) },
+    { label: 'Last edited', value: formatDateTime(editVC.updated_at) },
+    { label: 'Posted', value: formatDateTime(editVC.posted_at) },
+    { label: 'Applied', value: formatDateTime(editVC.applied_at) },
+    { label: 'Lock status', value: editVC.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ] : []
   const glPreviewRows = useMemo<GLImpactRow[]>(() => [
     {
       configKey: 'ap_account_id',
@@ -287,6 +297,9 @@ export default function VendorCreditsPage() {
         sourceDocId={editVC?.id || null}
         previewRows={glPreviewRows}
       />
+      {editVC?.id && (
+        <AuditEvidenceBlock tableName="vendor_credits" recordId={editVC.id} facts={auditFacts} />
+      )}
       {!readOnly && (
         <div className="flex justify-end gap-2">
           <button onClick={() => setMode('list')} className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>

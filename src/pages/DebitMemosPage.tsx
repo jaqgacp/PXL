@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { AuditEvidenceBlock, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
@@ -15,7 +15,8 @@ type DM = {
   source_doc_type: 'invoice' | 'receipt' | null; source_doc_id: string | null
   reason_code_id: string; remarks: string | null
   total_net_amount: number; total_vat_amount: number; total_amount: number
-  status: DMStatus; posted_at: string | null; created_at: string; branch_id: string
+  status: DMStatus; posted_at: string | null; created_at: string; updated_at?: string | null
+  approved_at?: string | null; branch_id: string
 }
 
 type DMLLine = {
@@ -36,6 +37,8 @@ type COAAccount = { id: string; account_code: string; account_name: string }
 const fmt = (n: number) =>
   new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
+const formatDateTime = (value?: string | null) =>
+  value ? new Date(value).toLocaleString('en-PH') : 'Not recorded'
 const newLine = (idx = 0): DMLLine => ({
   _key: crypto.randomUUID(), account_id: '', item_id: '', description: '',
   amount: 0, vat_code_id: '', vat_classification: 'regular', vat_rate: 12,
@@ -254,6 +257,13 @@ export default function DebitMemosPage() {
   const readOnly = mode === 'view'
   const canEdit = mode === 'new' || mode === 'edit'
   const dmStatus = editDoc?.status || 'draft'
+  const auditFacts = editDoc ? [
+    { label: 'Created', value: formatDateTime(editDoc.created_at) },
+    { label: 'Last edited', value: formatDateTime(editDoc.updated_at) },
+    { label: 'Approved', value: formatDateTime(editDoc.approved_at) },
+    { label: 'Posted', value: formatDateTime(editDoc.posted_at) },
+    { label: 'Lock status', value: editDoc.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
+  ] : []
 
   // ── List ───────────────────────────────────────────────────
   if (mode === 'list') {
@@ -512,6 +522,9 @@ export default function DebitMemosPage() {
             previewRows={glPreviewRows}
           />
         </div>
+        {editDoc?.id && (
+          <AuditEvidenceBlock tableName="debit_memos" recordId={editDoc.id} facts={auditFacts} />
+        )}
       </div>
     </div>
   )

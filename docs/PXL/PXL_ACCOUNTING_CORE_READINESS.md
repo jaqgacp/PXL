@@ -139,19 +139,20 @@ Not every document needs every state. Non-posting documents may not post. But ev
 | Dimensions | Branch/department/cost center JE-line guards exist. | Header/line dimension capture and defaulting are incomplete. | Medium | Define dimension master/rules before broader transaction rollout. |
 | Multi-company | RLS and membership checks exist. | Cross-company mismatch tests must accompany each new source type. | Critical | Every posting test must include wrong-company negative coverage. |
 | Multi-branch | Branch is a reporting dimension; numbering is branch-scoped. | Inter-branch behavior and branch attribution need per-document policy. | High | Define branch posting policy for each transaction class. |
-| Audit trail | Row audit, legacy posting events, and governed `transaction_events` lifecycle evidence exist. | Per-document Activity Timeline UI and future source-specific lifecycle checklists still need rollout discipline. | Medium | Wire UI adoption under PXL-AUD-050 and require lifecycle classification for every new posting source. |
+| Audit trail | Row audit, legacy posting events, governed `transaction_events` lifecycle evidence, and audit evidence UI across core transaction/source drillback pages exist. | Future source-specific lifecycle checklists still need rollout discipline. | Medium | Require lifecycle classification and audit evidence adoption for every new posting source. |
 
 ### 4.4 Accounting engine gaps to resolve first
 
 | Gap ID | Gap | Existing reference | Severity | Next action |
 | --- | --- | --- | --- | --- |
-| ACR-001 | Complete posting lifecycle contract for every accounting document. | PXL-AUD-050, PXL-DA-016 | High | Use the shipped `transaction_events` stream in the source-type lifecycle checklist; continue per-document audit/timeline UI rollout. |
+| ACR-001 | Complete posting lifecycle contract for every accounting document. | PXL-AUD-050, PXL-DA-016 | Done (session 100 for audit UI scope) | Governed `transaction_events` exists and audit evidence is visible on core transaction/source drillback pages. Future source types must add lifecycle classification and audit evidence during implementation. |
 | ACR-002 | Finish financial statement readiness: JE classifications, close, retained earnings, FS mappings. | PXL-AUD-013, PXL-DA-014 | Done (session 86) | JE `entry_class`, `fn_close_fiscal_year` (revenue/expense → retained earnings, DEC-019), period lock, and unadjusted/adjusted/post-closing TB modes shipped (`20260713000013` + test 040). Configurable FS-line mapping and IS/BS/RE statement wiring remain backlog enhancements. |
 | ACR-003 | Standardize reversal, void, cancellation, and tax counter-row behavior across all source types. | PXL-DA-004, PXL-DA-019 | High | Review every posting/cancel/void RPC and document exact behavior. |
 | ACR-004 | Finish universal numbering readiness; preserve CAS evidence model. | PXL-AUD-016, PXL-DA-019 | Done (session 86) | Number-series preflight now covers every numbered transaction page; DA-019 CAS evidence package is closed. |
 | ACR-005 | Finish semantic lifecycle event log. | PXL-DA-016 | Done (session 87) | Governed `transaction_events` shipped in `20260713000014` with posting/reversal, approval, registered-source, and report-snapshot event triggers. |
 | ACR-006 | Define account determination engine. | Product backlog account-determination row | High | Replace page/manual account choice with governed posting rules where applicable. |
-| ACR-007 | Finish server-side heavy report and reconciliation foundation. | PXL-DA-018, DEC-016 | Medium | Server-side report computation after core posting/tax rules stabilize. |
+| ACR-007 | Finish server-side heavy report and reconciliation foundation. | PXL-DA-018, DEC-016 | Done (session 98) | GL/TB heavy report family now uses server-side paginated/aggregated RPCs (`20260714000009` + test 052). Future large reports should follow the same bounded RPC/export pattern. |
+| ACR-008 | Enforce transaction-matrix synchronization with active audit findings. | PXL-DA-020 | Done (session 99) | `scripts/check_docs_consistency.sh` now requires the transaction matrix to carry the Findings Status Index checksum and reference every non-passed finding. |
 
 ## 5. Posting Engine review
 
@@ -303,7 +304,7 @@ Current architectural gaps:
 | VAT | Strongest tax lane; server-computed/gated for major flows. Effective-date/version governance on VAT/PT rate codes delivered (PXL-DA-010, `20260713000012`): versioned rates, used-rate immutability, and a document-date `fn_tax_code_version_asof` resolver. | Report rollout still needs core stability; document/item pickers should route through the as-of resolver (backlog UI). | Medium | Keep VAT as reference implementation for tax engine contracts. |
 | Percentage Tax | Compliance pages/tables exist. | Needs configurable applicability, posting/report source, reconciliation, and filing rules. | High | Define PT tax-rule model before expansion. |
 | EWT | PV/CV validation, 2307 hardening, Form 2307 issued month layout and source-line drilldowns, document-date ATC versioning, controlled remittance flow, QAP multi-ATC reconciliation/drilldowns, AP source-basis EWT policy, withholding profile gates, cash-purchase EWT, supplier down-payment EWT, consolidated ATC-backed master defaults, and issued-certificate supersede prompts after EWT reversal exist. | Broader reusable tax-rule engine still missing. | Medium | Continue generic tax-rule model after core findings are closed or accepted. |
-| CWT | OR CWT detail, cash-sale CWT source drilldowns, customer defaults, customer-advance CWT, and governed Form 2307 received receive/claim/invalidation lifecycle exist. | Customer SI expected-CWT to OR default-flow tests remain under PXL-AUD-045. | Medium | Complete PXL-AUD-045 customer CWT default-flow tests. |
+| CWT | OR CWT detail, cash-sale CWT source drilldowns, customer defaults, customer-advance CWT, SI expected-CWT to OR carry-forward, and governed Form 2307 received receive/claim/invalidation lifecycle exist. | Broader reusable tax-rule engine still missing. | Medium | Continue generic tax-rule model after core findings are closed or accepted. |
 | FWT | Tables/returns exist. | No mature posted FWT tax-detail engine. | High | Define FWT tax engine path before enabling FWT filing readiness. |
 | Future BIR changes | Effective-dated, version-locked **rate** governance now exists for ATC and VAT/PT codes (PXL-DA-010): a statutory rate change is a new successor version, not an in-place edit, and historical postings keep their frozen rate. | The versioned **rate** model exists, but a full configuration-driven **rule** model (applicability/selection logic beyond rates) is still needed. | High | Extend the versioned-rate primitive into a configuration-driven tax-rule model; route pickers through the as-of resolver. |
 
@@ -394,7 +395,7 @@ Do not build these transactions now. This section records accounting requirement
 
 | Transaction family | Current readiness | Accounting requirements before rollout | Missing capabilities |
 | --- | --- | --- | --- |
-| Official Receipt | Strong core posting exists. | Lifecycle contract, CWT profile defaults, over-apply guard including CMs, line-derived cash totals, and cash-sale bounce total semantics are in place; remaining CWT expected-flow work continues. | PXL-AUD-045. |
+| Official Receipt | Strong core posting exists. | Lifecycle contract, CWT profile defaults, over-apply guard including CMs, line-derived cash totals, cash-sale bounce total semantics, and SI expected-CWT carry-forward are in place. | No open audit finding; future settlement enhancements are backlog. |
 | Vendor Bill | Strong core posting exists, including source/accrual EWT policy, net AP posting when supplier EWT applies, and seeded supplier-default EWT/2307 evidence. | RR linkage policy and expense account determination. | ACR-006. |
 | Payment Voucher | Strong core posting exists, including line-derived totals, VC-aware over-apply, controlled remittance linkage, duplicate-withholding block for source-accrued VBs, explicit non-EWT profile gates, and supplier down-payment EWT. | Later down-payment application to a subsequently issued VB can be expanded as a settlement-product enhancement. | PXL-AUD-043 closed for withholding recording. |
 | Credit Memo | Posting exists. | CM application trace, OR over-apply interaction, reversal/void semantics, VAT/tax counter-row confirmation. | PXL-AUD-039, ACR-003. |
@@ -424,8 +425,9 @@ Do not build these transactions now. This section records accounting requirement
 | ~~High~~ PV/OR done (session 77) | Settlement header totals are client-driven. | Accounting/Tax | GL can diverge from line/subledger/tax rows. | PXL-AUD-038, PXL-AUD-048 (done for PV/OR, `20260713000003`) |
 | ~~High~~ Done (session 77) | CM/VC-aware over-apply guards incomplete. | Subledger | AR/AP balances and withholding can be overstated. | PXL-AUD-039 (done, `20260713000004`) |
 | High | Universal number-series preflight incomplete. | Posting/Compliance | Users can reach late numbering errors; CAS evidence gaps possible. | PXL-AUD-016 |
-| ~~High~~ Done (session 87) | Semantic lifecycle event log is now governed by `transaction_events`; UI adoption remains under PXL-AUD-050. | Audit | Audit timeline evidence now has a single lifecycle stream with row audit as supporting detail. | PXL-DA-016 |
-| Medium | Heavy reports need server-side computation/pagination/materialization. | Reporting Core | Large reports may be slow or unsafe. | PXL-DA-018 |
+| ~~High~~ Done (sessions 87/100) | Semantic lifecycle event log is governed by `transaction_events`; core audit evidence UI adoption closed under PXL-AUD-050. | Audit | Audit timeline evidence now has a single lifecycle stream with row audit as supporting detail. | PXL-DA-016 / PXL-AUD-050 |
+| ~~High~~ Done (session 99) | Transaction matrix synchronization is now mechanically enforced by the docs gate. | Documentation Governance | Findings status changes and active-finding additions force an intentional matrix update before the docs gate passes. | PXL-DA-020 done |
+| ~~Medium~~ Done (session 98) | Heavy GL/TB reports now use server-side computation and pagination. | Reporting Core | General Ledger, Account Detail Ledger, and Trial Balance no longer materialize broad GL ranges client-side. | PXL-DA-018 done |
 | Medium | Dimension capture/defaulting incomplete. | Accounting/Master Data | Branch/department/cost-center/project reporting can be inconsistent. | PXL-DA-017 residue |
 | ~~Medium~~ Done (session 93) | Form 2307 received claim lifecycle is now governed. | Tax/Compliance | CWT claims are validated, locked after claim/invalidation, and invalidated when support reverses. | PXL-AUD-047 |
 | Low | Campaign/opportunity/industry masters are absent. | Master Data | Useful context, but not blocking accounting core unless required by a transaction. | Master data gap |
@@ -469,7 +471,7 @@ Follow this sequence unless a blocking defect requires escalation:
 Current concrete lane inside this sequence:
 
 1. Maintain `PXL_ACCOUNTING_RULES_MATRIX.md` as the accounting behavior source of truth.
-2. Continue the remaining high-priority accounting/tax lane: DA-018/DA-020 plus remaining coverage items AUD-045/AUD-050.
+2. ~~Complete the remaining accounting/tax coverage items: AUD-045 and AUD-050.~~ DONE (session 100, `20260714000010`, test 053, audit-evidence UI rollout).
 3. ~~Complete ATC document-date versioning safely, replacing the held-out draft rather than adopting it as-is.~~ DONE (session 77, `20260713000002`, test 033; held-out draft `20260710000004` stays excluded).
 4. ~~Complete controlled EWT remittance/CWT application flow.~~ DONE (session 78, `20260713000005`, test 036).
 5. ~~Decide and encode withholding basis policy.~~ DONE (session 83, `20260713000010`, test 037).
