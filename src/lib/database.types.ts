@@ -5136,7 +5136,10 @@ export type Database = {
           date_sent: string | null
           id: string
           remarks: string | null
+          requires_supersede: boolean
           status: string
+          supersede_reason: string | null
+          supersede_required_at: string | null
           superseded_at: string | null
           superseded_by_issuance_id: string | null
           supersedes_issuance_id: string | null
@@ -5158,7 +5161,10 @@ export type Database = {
           date_sent?: string | null
           id?: string
           remarks?: string | null
+          requires_supersede?: boolean
           status?: string
+          supersede_reason?: string | null
+          supersede_required_at?: string | null
           superseded_at?: string | null
           superseded_by_issuance_id?: string | null
           supersedes_issuance_id?: string | null
@@ -5180,7 +5186,10 @@ export type Database = {
           date_sent?: string | null
           id?: string
           remarks?: string | null
+          requires_supersede?: boolean
           status?: string
+          supersede_reason?: string | null
+          supersede_required_at?: string | null
           superseded_at?: string | null
           superseded_by_issuance_id?: string | null
           supersedes_issuance_id?: string | null
@@ -5227,6 +5236,10 @@ export type Database = {
       form_2307_tracking: {
         Row: {
           atc_code_id: string | null
+          claim_tax_quarter: number | null
+          claim_tax_year: number | null
+          claimed_at: string | null
+          claimed_by: string | null
           company_id: string
           created_at: string
           created_by: string | null
@@ -5235,6 +5248,8 @@ export type Database = {
           date_received: string | null
           file_url: string | null
           id: string
+          invalidated_at: string | null
+          invalidated_reason: string | null
           period_covered: string | null
           receipt_line_id: string
           remarks: string | null
@@ -5244,6 +5259,10 @@ export type Database = {
         }
         Insert: {
           atc_code_id?: string | null
+          claim_tax_quarter?: number | null
+          claim_tax_year?: number | null
+          claimed_at?: string | null
+          claimed_by?: string | null
           company_id: string
           created_at?: string
           created_by?: string | null
@@ -5252,6 +5271,8 @@ export type Database = {
           date_received?: string | null
           file_url?: string | null
           id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
           period_covered?: string | null
           receipt_line_id: string
           remarks?: string | null
@@ -5261,6 +5282,10 @@ export type Database = {
         }
         Update: {
           atc_code_id?: string | null
+          claim_tax_quarter?: number | null
+          claim_tax_year?: number | null
+          claimed_at?: string | null
+          claimed_by?: string | null
           company_id?: string
           created_at?: string
           created_by?: string | null
@@ -5269,6 +5294,8 @@ export type Database = {
           date_received?: string | null
           file_url?: string | null
           id?: string
+          invalidated_at?: string | null
+          invalidated_reason?: string | null
           period_covered?: string | null
           receipt_line_id?: string
           remarks?: string | null
@@ -13088,6 +13115,15 @@ export type Database = {
         Args: { p_schedule_id: string }
         Returns: undefined
       }
+      fn_claim_form2307_received: {
+        Args: {
+          p_claim_tax_quarter: number
+          p_claim_tax_year: number
+          p_claimed_date?: string
+          p_tracking_id: string
+        }
+        Returns: undefined
+      }
       fn_close_fiscal_year: {
         Args: {
           p_close_date?: string
@@ -13331,6 +13367,10 @@ export type Database = {
         Args: { p_je_id: string; p_mode?: string; p_rule_explanation?: string }
         Returns: Json
       }
+      fn_invalidate_form2307_received_for_receipt: {
+        Args: { p_reason?: string; p_receipt_id: string }
+        Returns: undefined
+      }
       fn_mark_tax_event_filed: {
         Args: { p_date_filed: string; p_efps_ref?: string; p_event_id: string }
         Returns: undefined
@@ -13521,6 +13561,18 @@ export type Database = {
         Returns: undefined
       }
       fn_receive_inventory: { Args: { p_data: Json }; Returns: string }
+      fn_record_form2307_received: {
+        Args: {
+          p_atc_code_id: string
+          p_certificate_amount?: number
+          p_date_received: string
+          p_file_url?: string
+          p_period_covered: string
+          p_receipt_line_id: string
+          p_remarks?: string
+        }
+        Returns: string
+      }
       fn_record_impairment: { Args: { p_data: Json }; Returns: string }
       fn_record_posting_event: {
         Args: {
@@ -13868,6 +13920,20 @@ export type Database = {
           p_line_vat_amount_column: unknown
           p_parent_column: unknown
           p_transaction_type: string
+        }
+        Returns: undefined
+      }
+      fn_validate_form2307_received_tracking: {
+        Args: {
+          p_atc_code_id: string
+          p_claim_tax_quarter: number
+          p_claim_tax_year: number
+          p_company_id: string
+          p_cwt_amount_booked: number
+          p_date_received: string
+          p_period_covered: string
+          p_receipt_line_id: string
+          p_status: string
         }
         Returns: undefined
       }

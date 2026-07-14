@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
+Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
 
-## Functions (255)
+## Functions (261)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -39,7 +39,7 @@ Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
 | `fn_block_si_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` | 1 |
 | `fn_block_vb_line_mutation_after_draft` | `20260701000009_core_line_immutability.sql` | 1 |
 | `fn_books_export_reconciliation` | `20260713000009_books_reconciliation_audit_package.sql` | 1 |
-| `fn_bounce_receipt` | `20260711000001_posting_engine_completion.sql` | 5 |
+| `fn_bounce_receipt` | `20260714000005_form2307_received_claim_lifecycle.sql` | 6 |
 | `fn_bt_reverse_je` | `20260711000001_posting_engine_completion.sql` | 3 |
 | `fn_can_perform` | `20260702000010_can_perform_role_actions.sql` | 1 |
 | `fn_cancel_amortization_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
@@ -56,6 +56,7 @@ Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
 | `fn_capture_journal_entry_event` | `20260713000014_transaction_events.sql` | 1 |
 | `fn_capture_registered_source_event` | `20260713000014_transaction_events.sql` | 1 |
 | `fn_capture_report_snapshot_event` | `20260713000014_transaction_events.sql` | 1 |
+| `fn_claim_form2307_received` | `20260714000005_form2307_received_claim_lifecycle.sql` | 1 |
 | `fn_close_fiscal_year` | `20260713000013_je_classification_and_close.sql` | 1 |
 | `fn_company_ap_ewt_policy` | `20260713000010_withholding_basis_policy.sql` | 1 |
 | `fn_company_ewt_payable_enabled` | `20260713000011_withholding_profile_gates.sql` | 1 |
@@ -87,9 +88,10 @@ Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
 | `fn_export_dat_tin` | `20260713000008_cas_dat_layout.sql` | 1 |
 | `fn_export_decimal` | `20260713000007_cas_export_file_hashes.sql` | 1 |
 | `fn_finalize_journal_entry` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
+| `fn_flag_form2307_issued_for_ewt_reversal` | `20260714000005_form2307_received_claim_lifecycle.sql` | 1 |
 | `fn_forbid_cas_void_evidence_change` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
 | `fn_form2307_period_bounds` | `20260703000005_report_snapshots_form2307.sql` | 1 |
-| `fn_form2307_report_payload` | `20260703000005_report_snapshots_form2307.sql` | 1 |
+| `fn_form2307_report_payload` | `20260714000005_form2307_received_claim_lifecycle.sql` | 2 |
 | `fn_generate_form_2307_issued` | `20260714000002_form2307_monthly_breakdown.sql` | 4 |
 | `fn_generate_tax_calendar` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_generate_tax_calendar_trigger` | `20260628000005_sprint2_tax.sql` | 1 |
@@ -104,12 +106,14 @@ Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
 | `fn_guard_cas_number_series` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
 | `fn_guard_doc_header` | `20260704000002_status_immutability.sql` | 1 |
 | `fn_guard_doc_lines` | `20260704000002_status_immutability.sql` | 1 |
+| `fn_guard_form2307_received_tracking` | `20260714000005_form2307_received_claim_lifecycle.sql` | 1 |
 | `fn_guard_form2307_snapshot_immutable` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_guard_journal_entry_line` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_guard_journal_entry_posting` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_guard_tax_code_history` | `20260713000012_tax_code_effective_date_governance.sql` | 1 |
 | `fn_guard_vat_code_history` | `20260713000012_tax_code_effective_date_governance.sql` | 1 |
 | `fn_guard_vat_return_snapshot_immutable` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
+| `fn_invalidate_form2307_received_for_receipt` | `20260714000005_form2307_received_claim_lifecycle.sql` | 1 |
 | `fn_je_dimensions_guard` | `20260704000001_je_line_dimensions.sql` | 1 |
 | `fn_je_line_dimensions_guard` | `20260704000001_je_line_dimensions.sql` | 1 |
 | `fn_link_cas_document_number` | `20260710000005_cas_numbering_void_dat_controls.sql` | 1 |
@@ -152,6 +156,7 @@ Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
 | `fn_qap_2307_reconciliation` | `20260713000006_qap_multi_atc_reconciliation.sql` | 1 |
 | `fn_rebuild_document_vat_details` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_receive_inventory` | `20260630000028_inventory.sql` | 1 |
+| `fn_record_form2307_received` | `20260714000005_form2307_received_claim_lifecycle.sql` | 1 |
 | `fn_record_impairment` | `20260712000002_aud051_numbering_registry_alignment.sql` | 2 |
 | `fn_record_posting_event` | `20260713000014_transaction_events.sql` | 2 |
 | `fn_record_transaction_event` | `20260713000014_transaction_events.sql` | 1 |
@@ -241,6 +246,7 @@ Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
 | `fn_validate_company_vat_amount` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_validate_company_vat_code` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_validate_document_vat_registration` | `20260710000002_vat_registration_all_documents.sql` | 1 |
+| `fn_validate_form2307_received_tracking` | `20260714000005_form2307_received_claim_lifecycle.sql` | 1 |
 | `fn_validate_invoice_posting_totals` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_validate_payment_voucher_ewt_ready` | `20260713000011_withholding_profile_gates.sql` | 7 |
 | `fn_validate_payment_voucher_line_ewt` | `20260713000002_atc_document_date_versioning.sql` | 5 |
@@ -360,8 +366,8 @@ Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
 | `fixed_assets` | `20260630000027_fixed_assets.sql` | 1 | `20260630000027_fixed_assets.sql` |
 | `form_2306_issuances` | `20260701000003_withholding_tax.sql` | 1 | `20260701000003_withholding_tax.sql` |
 | `form_2307_issuance_lines` | `20260630000022_tax_ledger_completeness.sql` | 2 | `20260714000002_form2307_monthly_breakdown.sql` |
-| `form_2307_issuances` | `20260629000018_purchasing_full.sql` | 3 | `20260702000007_form2307_version_supersede.sql` |
-| `form_2307_tracking` | `20260629000007_cwt_2307.sql` | 3 | `20260630000021_gap_fill.sql` |
+| `form_2307_issuances` | `20260629000018_purchasing_full.sql` | 4 | `20260714000005_form2307_received_claim_lifecycle.sql` |
+| `form_2307_tracking` | `20260629000007_cwt_2307.sql` | 4 | `20260714000005_form2307_received_claim_lifecycle.sql` |
 | `fund_transfers` | `20260630000023_banking_treasury_schema.sql` | 1 | `20260630000023_banking_treasury_schema.sql` |
 | `fwt_returns` | `20260701000003_withholding_tax.sql` | 0 | `—` |
 | `goods_issue_lines` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
@@ -445,7 +451,7 @@ Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `withholding_remittances` | `20260713000005_withholding_remittance_flow.sql` | 1 | `20260713000005_withholding_remittance_flow.sql` |
 
-## Triggers (283)
+## Triggers (285)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -571,12 +577,14 @@ Generated: 2026-07-14. Migrations scanned: 106. Tests present: 46.
 | `trg_f2307_updated_at` | `20260630000021_gap_fill.sql` |
 | `trg_fa_updated_at` | `20260630000027_fixed_assets.sql` |
 | `trg_fac_updated_at` | `20260630000027_fixed_assets.sql` |
+| `trg_flag_form2307_issued_for_ewt_reversal` | `20260714000005_form2307_received_claim_lifecycle.sql` |
 | `trg_form2307_snapshot` | `20260703000005_report_snapshots_form2307.sql` |
 | `trg_form2307_snapshot_guard` | `20260703000005_report_snapshots_form2307.sql` |
 | `trg_form_2307_tracking_updated_at` | `20260629000007_cwt_2307.sql` |
 | `trg_fund_transfers_updated_at` | `20260630000023_banking_treasury_schema.sql` |
 | `trg_generate_calendar_on_profile_change` | `20260628000005_sprint2_tax.sql` |
 | `trg_gi_updated_at` | `20260630000028_inventory.sql` |
+| `trg_guard_form2307_received_tracking` | `20260714000005_form2307_received_claim_lifecycle.sql` |
 | `trg_guard_header_amortization_entries` | `20260704000002_status_immutability.sql` |
 | `trg_guard_header_amortization_schedules` | `20260704000002_status_immutability.sql` |
 | `trg_guard_header_asset_depreciation_entries` | `20260704000002_status_immutability.sql` |

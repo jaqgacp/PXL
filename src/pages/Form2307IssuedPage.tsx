@@ -12,6 +12,7 @@ type Issuance = {
   total_tax_base: number; total_ewt: number; status: IssuanceStatus
   version: number; supersedes_issuance_id: string | null; superseded_by_issuance_id: string | null
   date_generated: string | null; date_sent: string | null; date_acknowledged: string | null
+  requires_supersede: boolean; supersede_required_at: string | null; supersede_reason: string | null
   remarks: string | null; created_at: string
   suppliers?: { registered_name: string; tin: string }
   form_2307_issuance_lines?: IssuanceLine[]
@@ -147,7 +148,16 @@ export default function Form2307IssuedPage() {
                     <td className="px-3 py-2 text-gray-500">v{iss.version ?? 1}</td>
                     <td className="px-3 py-2 text-right font-mono">{fmt(iss.total_tax_base)}</td>
                     <td className="px-3 py-2 text-right font-mono font-medium text-red-700">{fmt(iss.total_ewt)}</td>
-                    <td className="px-3 py-2"><StatusBadge status={STATUS_COLORS[iss.status]} label={iss.status} /></td>
+                    <td className="px-3 py-2">
+                      <div className="flex flex-col gap-1">
+                        <StatusBadge status={STATUS_COLORS[iss.status]} label={iss.status} />
+                        {iss.requires_supersede && iss.status !== 'superseded' && (
+                          <span className="inline-flex w-fit rounded bg-red-50 px-1.5 py-0.5 text-[10px] font-medium text-red-700" title={iss.supersede_reason || undefined}>
+                            Supersede required
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-3 py-2 text-gray-500">{iss.date_generated ? <DateCell date={iss.date_generated.split('T')[0]} /> : '—'}</td>
                     <td className="px-3 py-2 text-gray-500">{iss.date_sent ? <DateCell date={iss.date_sent.split('T')[0]} /> : '—'}</td>
                     <td className="px-3 py-2 text-gray-500">{iss.date_acknowledged ? <DateCell date={iss.date_acknowledged.split('T')[0]} /> : '—'}</td>
@@ -164,7 +174,7 @@ export default function Form2307IssuedPage() {
                         </ReportTraceLink>
                         {iss.status === 'generated' && <button onClick={() => { setActionModal({ issuance: iss, action: 'sent' }); setActionDate(new Date().toISOString().split('T')[0]) }} className="text-orange-600 hover:text-orange-800">Mark Sent</button>}
                         {iss.status === 'sent' && <button onClick={() => { setActionModal({ issuance: iss, action: 'acknowledged' }); setActionDate(new Date().toISOString().split('T')[0]) }} className="text-green-600 hover:text-green-800">Mark Acknowledged</button>}
-                        {(iss.status === 'sent' || iss.status === 'acknowledged') && <button onClick={() => { setActionModal({ issuance: iss, action: 'supersede' }); setActionReason('') }} className="text-red-600 hover:text-red-800">Supersede</button>}
+                        {(iss.status === 'sent' || iss.status === 'acknowledged') && <button onClick={() => { setActionModal({ issuance: iss, action: 'supersede' }); setActionReason(iss.supersede_reason || '') }} className="text-red-600 hover:text-red-800">{iss.requires_supersede ? 'Supersede Now' : 'Supersede'}</button>}
                       </div>
                     </td>
                   </tr>

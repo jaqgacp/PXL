@@ -4,13 +4,14 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type TrackingStatus = 'pending' | 'received' | 'claimed'
+type TrackingStatus = 'pending' | 'received' | 'claimed' | 'invalidated'
 
 type Line2307 = {
   receipt_line_id: string
   receipt_id: string
   receipt_number: string
   receipt_date: string
+  receipt_status: string
   customer_name: string
   customer_tin: string
   customer_id: string | null
@@ -22,6 +23,9 @@ type Line2307 = {
   date_received: string | null
   period_covered: string | null
   tracking_atc_code_id: string | null
+  claim_tax_year: number | null
+  claim_tax_quarter: number | null
+  invalidated_reason: string | null
   remarks: string | null
 }
 
@@ -40,7 +44,16 @@ function StatusBadge2307({ status }: { status: TrackingStatus | null }) {
   if (status === 'received') {
     return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-50 text-amber-700">Received</span>
   }
-  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-50 text-green-700">Claimed</span>
+  if (status === 'claimed') {
+    return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-green-50 text-green-700">Claimed</span>
+  }
+  return <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-600">Invalidated</span>
+}
+
+function parseQuarterPeriod(period: string | null) {
+  const match = /^Q([1-4])-(\d{4})$/.exec(period || '')
+  if (!match) return null
+  return { quarter: Number(match[1]), year: Number(match[2]) }
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -74,7 +87,7 @@ export default function Form2307ReceivedPage() {
     // Load receipts for this company (exclude cancelled)
     const { data: receipts } = await supabase
       .from('receipts')
-      .select('id,receipt_number,receipt_date,customer_name_snapshot,customer_tin_snapshot,customer_id')
+      .select('id,receipt_number,receipt_date,status,customer_name_snapshot,customer_tin_snapshot,customer_id')
       .eq('company_id', companyId)
       .in('status', ['posted', 'bounced'])
       .order('receipt_date', { ascending: false })
@@ -118,6 +131,7 @@ export default function Form2307ReceivedPage() {
         receipt_id: l.receipt_id,
         receipt_number: r?.receipt_number || '—',
         receipt_date: r?.receipt_date || '',
+        receipt_status: r?.status || '',
         customer_name: r?.customer_name_snapshot || '—',
         customer_tin: r?.customer_tin_snapshot || '—',
         customer_id: r?.customer_id || null,
@@ -129,6 +143,9 @@ export default function Form2307ReceivedPage() {
         date_received: t?.date_received || null,
         period_covered: t?.period_covered || null,
         tracking_atc_code_id: t?.atc_code_id || null,
+        claim_tax_year: t?.claim_tax_year || null,
+        claim_tax_quarter: t?.claim_tax_quarter || null,
+        invalidated_reason: t?.invalidated_reason || null,
         remarks: t?.remarks || null,
       }
     })
@@ -159,28 +176,15 @@ export default function Form2307ReceivedPage() {
     if (!mPeriod)       { setMError('Period Covered is required.'); return }
     setMSaving(true); setMError('')
 
-    const payload = {
-      company_id: companyId,
-      receipt_line_id: modalLine.receipt_line_id,
-      customer_id: modalLine.customer_id,
-      cwt_amount_booked: modalLine.cwt_amount,
-      status: 'received' as TrackingStatus,
-      date_received: mDateReceived,
-      atc_code_id: mAtcCodeId,
-      period_covered: mPeriod,
-      file_url: mFileRef || null,
-      remarks: mRemarks || null,
-    }
-
-    let error
-    if (modalLine.tracking_id) {
-      ;({ error } = await supabase
-        .from('form_2307_tracking')
-        .update({ ...payload, status: modalLine.tracking_status === 'claimed' ? 'claimed' : 'received' })
-        .eq('id', modalLine.tracking_id))
-    } else {
-      ;({ error } = await supabase.from('form_2307_tracking').insert([payload]))
-    }
+    const { error } = await supabase.rpc('fn_record_form2307_received', {
+      p_receipt_line_id: modalLine.receipt_line_id,
+      p_date_received: mDateReceived,
+      p_atc_code_id: mAtcCodeId,
+      p_period_covered: mPeriod,
+      p_file_url: mFileRef || undefined,
+      p_remarks: mRemarks || undefined,
+      p_certificate_amount: modalLine.cwt_amount,
+    })
 
     if (error) {
       setMError('Cannot save.\nReason: ' + error.message)
@@ -194,7 +198,20 @@ export default function Form2307ReceivedPage() {
 
   const handleMarkClaimed = async (l: Line2307) => {
     if (!l.tracking_id) return
-    await supabase.from('form_2307_tracking').update({ status: 'claimed' }).eq('id', l.tracking_id)
+    const claimPeriod = parseQuarterPeriod(l.period_covered)
+    if (!claimPeriod) {
+      alert('Set a valid period covered before claiming this certificate.')
+      return
+    }
+    const { error } = await supabase.rpc('fn_claim_form2307_received', {
+      p_tracking_id: l.tracking_id,
+      p_claim_tax_year: claimPeriod.year,
+      p_claim_tax_quarter: claimPeriod.quarter,
+    })
+    if (error) {
+      alert(error.message)
+      return
+    }
     load()
   }
 
@@ -215,6 +232,7 @@ export default function Form2307ReceivedPage() {
   const pendingCount  = lines.filter(l => !l.tracking_status || l.tracking_status === 'pending').length
   const receivedCount = lines.filter(l => l.tracking_status === 'received').length
   const claimedCount  = lines.filter(l => l.tracking_status === 'claimed').length
+  const invalidatedCount = lines.filter(l => l.tracking_status === 'invalidated').length
 
   const inp = 'border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900'
   const minp = 'w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900'
@@ -232,7 +250,7 @@ export default function Form2307ReceivedPage() {
 
       {/* KPI strip */}
       {lines.length > 0 && (
-        <div className="bg-white border border-gray-200 rounded-lg grid grid-cols-3 divide-x divide-gray-200">
+        <div className="bg-white border border-gray-200 rounded-lg grid grid-cols-4 divide-x divide-gray-200">
           <div className="px-5 py-3">
             <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Pending 2307</div>
             <div className="text-xl font-bold font-mono tabular-nums text-red-600 mt-0.5">{pendingCount}</div>
@@ -244,6 +262,10 @@ export default function Form2307ReceivedPage() {
           <div className="px-5 py-3">
             <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Claimed</div>
             <div className="text-xl font-bold font-mono tabular-nums text-green-700 mt-0.5">{claimedCount}</div>
+          </div>
+          <div className="px-5 py-3">
+            <div className="text-[11px] font-medium text-gray-400 uppercase tracking-wide">Invalidated</div>
+            <div className="text-xl font-bold font-mono tabular-nums text-gray-600 mt-0.5">{invalidatedCount}</div>
           </div>
         </div>
       )}
@@ -261,6 +283,7 @@ export default function Form2307ReceivedPage() {
           <option value="pending">Pending 2307</option>
           <option value="received">Received</option>
           <option value="claimed">Claimed</option>
+          <option value="invalidated">Invalidated</option>
         </select>
         <select value={filterQuarter} onChange={e => setFilterQuarter(e.target.value)} className={inp}>
           <option value="">All Quarters</option>
@@ -354,7 +377,7 @@ export default function Form2307ReceivedPage() {
                             Trace
                           </ReportTraceLink>
                         )}
-                        {(!l.tracking_status || l.tracking_status === 'pending') && (
+                        {(!l.tracking_status || l.tracking_status === 'pending') && l.receipt_status !== 'bounced' && (
                           <button onClick={() => openMarkReceived(l)}
                             className="text-xs text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap">
                             Mark Received
@@ -371,6 +394,10 @@ export default function Form2307ReceivedPage() {
                           </>
                         )}
                         {l.tracking_status === 'claimed' && (
+                          <button onClick={() => openMarkReceived(l)}
+                            className="text-xs text-gray-500 hover:text-gray-700 font-medium">View</button>
+                        )}
+                        {l.tracking_status === 'invalidated' && (
                           <button onClick={() => openMarkReceived(l)}
                             className="text-xs text-gray-500 hover:text-gray-700 font-medium">View</button>
                         )}
@@ -395,8 +422,14 @@ export default function Form2307ReceivedPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/40" onClick={closeModal} />
           <div className="relative bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-md p-6 z-10">
+            {(() => {
+              const modalReadOnly = modalLine.tracking_status === 'claimed' || modalLine.tracking_status === 'invalidated'
+              return (
+            <>
             <div className="mb-4">
-              <h2 className="text-sm font-semibold text-gray-900">Mark 2307 as Received</h2>
+              <h2 className="text-sm font-semibold text-gray-900">
+                {modalReadOnly ? 'Form 2307 Received Evidence' : 'Mark 2307 as Received'}
+              </h2>
               <p className="text-xs text-gray-500 mt-0.5">
                 {modalLine.receipt_number} · {modalLine.customer_name} · ₱{fmt(modalLine.cwt_amount)} CWT
               </p>
@@ -405,11 +438,11 @@ export default function Form2307ReceivedPage() {
             <div className="space-y-3">
               <div>
                 <label className={mlbl}>Date Received <span className="text-red-500">*</span></label>
-                <input type="date" value={mDateReceived} onChange={e => setMDateReceived(e.target.value)} className={minp} />
+                <input type="date" value={mDateReceived} onChange={e => setMDateReceived(e.target.value)} className={minp} disabled={modalReadOnly} />
               </div>
               <div>
                 <label className={mlbl}>ATC Code <span className="text-red-500">*</span></label>
-                <select value={mAtcCodeId} onChange={e => setMAtcCodeId(e.target.value)} className={minp}>
+                <select value={mAtcCodeId} onChange={e => setMAtcCodeId(e.target.value)} className={minp} disabled={modalReadOnly}>
                   <option value="">Select ATC Code…</option>
                   {atcCodes.map(a => (
                     <option key={a.id} value={a.id}>
@@ -420,7 +453,7 @@ export default function Form2307ReceivedPage() {
               </div>
               <div>
                 <label className={mlbl}>Period Covered <span className="text-red-500">*</span></label>
-                <select value={mPeriod} onChange={e => setMPeriod(e.target.value)} className={minp}>
+                <select value={mPeriod} onChange={e => setMPeriod(e.target.value)} className={minp} disabled={modalReadOnly}>
                   <option value="">Select Quarter…</option>
                   {QUARTERS.map(q => <option key={q} value={q}>{q}</option>)}
                 </select>
@@ -431,6 +464,7 @@ export default function Form2307ReceivedPage() {
                   value={mFileRef}
                   onChange={e => setMFileRef(e.target.value)}
                   className={minp}
+                  disabled={modalReadOnly}
                   placeholder="File name, Google Drive link, or DMS reference"
                 />
               </div>
@@ -441,9 +475,20 @@ export default function Form2307ReceivedPage() {
                   onChange={e => setMRemarks(e.target.value)}
                   rows={2}
                   className={minp}
+                  disabled={modalReadOnly}
                   placeholder="Note any amount discrepancies or conditions"
                 />
               </div>
+              {modalLine.tracking_status === 'claimed' && (
+                <p className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">
+                  Claimed in Q{modalLine.claim_tax_quarter} {modalLine.claim_tax_year}. Claimed records are locked.
+                </p>
+              )}
+              {modalLine.tracking_status === 'invalidated' && (
+                <p className="text-xs text-gray-700 bg-gray-50 border border-gray-200 rounded px-3 py-2">
+                  Invalidated: {modalLine.invalidated_reason || 'Underlying receipt was reversed.'}
+                </p>
+              )}
             </div>
 
             {mError && (
@@ -453,13 +498,18 @@ export default function Form2307ReceivedPage() {
             <div className="mt-5 flex justify-end gap-2">
               <button onClick={closeModal}
                 className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">
-                Cancel
+                {modalReadOnly ? 'Close' : 'Cancel'}
               </button>
-              <button onClick={handleMarkReceived} disabled={mSaving}
-                className="bg-gray-900 text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
-                {mSaving ? 'Saving…' : 'Confirm Received'}
-              </button>
+              {!modalReadOnly && (
+                <button onClick={handleMarkReceived} disabled={mSaving}
+                  className="bg-gray-900 text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
+                  {mSaving ? 'Saving…' : 'Confirm Received'}
+                </button>
+              )}
             </div>
+            </>
+              )
+            })()}
           </div>
         </div>
       )}

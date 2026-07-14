@@ -1,14 +1,22 @@
 # AI Handoff
 
-Last updated: 2026-07-14 (session 92 - PXL-AUD-046 completed locally)
+Last updated: 2026-07-14 (session 93 - PXL-AUD-047 completed locally)
 
-## Active Priority (session 92 - cash-sale receipt total semantics)
+## Active Priority (session 93 - Form 2307 received claim lifecycle)
+
+Under **PXL Accounting Core Ready** (DEC-017), session 93 completed **PXL-AUD-047** with `supabase/migrations/20260714000005_form2307_received_claim_lifecycle.sql` + `supabase/tests/047_form2307_received_claim_lifecycle_test.sql` (FORM2307-RECEIVED-CLAIM-001, 18 assertions). Received Form 2307 evidence now routes through `fn_record_form2307_received`, claims route through `fn_claim_form2307_received`, certificate amounts validate against receipt-line and unreversed-ledger CWT, claimed/invalidated rows are locked, `fn_bounce_receipt` invalidates linked evidence after reversing CWT tax detail, and issued certificates are flagged for supersede when source EWT reverses after sent/acknowledged status.
+
+Verification completed for session 93: held-out-safe `supabase db reset --local`; focused test 047 passed 18/18; neighbor tests 001/007/010/012/016/021/022/044/046/047 passed 184/184; full trusted pgTAP passed **825/825 across 46 files** with held-out test 027 excluded; `npm run gen:types` and schema summary regenerated (261 functions / 20 views / 149 tables / 285 triggers); `npm run lint`, `npm run build`, `bash -n scripts/gen_schema_summary.sh`, `scripts/check_docs_consistency.sh`, `git diff --check`, and `git diff --cached --check` passed. Hosted Supabase push for `20260714000003`, `20260714000004`, and `20260714000005` is pending unless a later session records it.
+
+AUD-047 is now **Retested Passed**. Continue with **PXL-AUD-049** and remaining In-Progress coverage/report items (AUD-008/009/010, DA-013/018/020, AUD-045/050).
+
+## Prior Priority (session 92 - cash-sale receipt total semantics)
 
 Under **PXL Accounting Core Ready** (DEC-017), session 92 completed **PXL-AUD-046** with `supabase/migrations/20260714000004_cash_sale_receipt_total_semantics.sql` + `supabase/tests/046_cash_sale_receipt_total_semantics_test.sql` (CASH-SALE-RECEIPT-TOTAL-001, 13 assertions). `fn_sync_receipt_totals_from_lines` and `trg_sync_receipt_totals_from_lines` keep draft receipt headers line-authoritative for cash received and CWT; existing posted cash-sale OR headers were backfilled to the same split; gross clearance remains `total_amount + total_cwt`; and cash-sale bounce reversals now match the original gross JE instead of gross plus CWT.
 
 Verification completed for session 92: held-out-safe `supabase db reset --local`; focused test 046 passed 13/13; neighbor tests 001/012/015/021/034/046 passed 116/116; full trusted pgTAP passed **807/807 across 45 files** with held-out test 027 excluded; `npm run gen:types` and schema summary regenerated (255 functions / 20 views / 149 tables / 283 triggers); `npm run lint`, `npm run build`, `bash -n scripts/gen_schema_summary.sh`, `scripts/check_docs_consistency.sh`, `git diff --check`, and `git diff --cached --check` passed. Hosted Supabase push for `20260714000003` and `20260714000004` is pending unless a later session records it.
 
-AUD-046 is now **Retested Passed**. Continue with **PXL-AUD-047** (2307-received claim lifecycle), then **PXL-AUD-049** and remaining In-Progress coverage/report items (AUD-008/009/010, DA-013/018/020, AUD-045/050).
+AUD-046 is now **Retested Passed**.
 
 ## Prior Priority (session 91 - withholding master consolidation)
 
@@ -38,11 +46,11 @@ Under **PXL Accounting Core Ready** (DEC-017), session 87 closed **PXL-DA-016** 
 
 Under **PXL Accounting Core Ready** (DEC-017), session 85 closed **PXL-DA-010** by extending the ATC effective-date/version release pattern to VAT/percentage-tax codes. Migration `supabase/migrations/20260713000012_tax_code_effective_date_governance.sql` + test `supabase/tests/039_tax_code_effective_date_governance_test.sql` (TAX-CODE-VERSION-001, 17 assertions): `tax_codes` (VAT/PT rate holder) and `vat_codes` (classification/mapping) now carry effective-from/to + deprecation/supersession columns, version-aware uniqueness `(code, effective_from)`, an overlap + successor-integrity guard, `fn_tax_code_used`/`fn_vat_code_used` usage predicates, history guards freezing rate/identity/effective-start once used (and blocking deletes of used codes), and `fn_tax_code_version_asof`/`fn_tax_code_is_current` resolvers. No heavy VAT/PT posting RPC changed — historical stability comes from used-version immutability + deprecate-and-succeed, so a statutory rate change spawns a NEW successor version while every posted line keeps its frozen rate.
 
-**Note — earlier state was stale:** sessions 78–84 (not captured in the prior session-77 snapshot) already closed **AUD-041**, the **AUD-034** residue, **DA-009**, **DA-019**, **AUD-037**, and **AUD-042** via migrations `20260713000005`–`20260713000011`. The authoritative status is the Findings Status Index in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`: **62 Retested Passed / 8 In Progress / 2 Open (72), no Criticals open**. Session 86 closed **PXL-AUD-016** and **PXL-AUD-013 + PXL-DA-014** (`20260713000013`, test 040). Session 87 closed **PXL-DA-016** (`20260713000014`, test 041). Sessions 88-89 closed **PXL-AUD-043** (`20260713000015`, test 042; `20260714000001`, test 043). Session 90 closed **PXL-AUD-040** (`20260714000002`, test 044). Session 91 closed **PXL-AUD-044** (`20260714000003`, test 045). Session 92 closed **PXL-AUD-046** (`20260714000004`, test 046).
+**Note — earlier state was stale:** sessions 78–84 (not captured in the prior session-77 snapshot) already closed **AUD-041**, the **AUD-034** residue, **DA-009**, **DA-019**, **AUD-037**, and **AUD-042** via migrations `20260713000005`–`20260713000011`. The authoritative status is the Findings Status Index in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`: **63 Retested Passed / 8 In Progress / 1 Open (72), no Criticals open**. Session 86 closed **PXL-AUD-016** and **PXL-AUD-013 + PXL-DA-014** (`20260713000013`, test 040). Session 87 closed **PXL-DA-016** (`20260713000014`, test 041). Sessions 88-89 closed **PXL-AUD-043** (`20260713000015`, test 042; `20260714000001`, test 043). Session 90 closed **PXL-AUD-040** (`20260714000002`, test 044). Session 91 closed **PXL-AUD-044** (`20260714000003`, test 045). Session 92 closed **PXL-AUD-046** (`20260714000004`, test 046). Session 93 closed **PXL-AUD-047** (`20260714000005`, test 047).
 
 **Commit / push status (session 85):** **committed as `d39e1a5` on `main`** ("Add tax code effective-date governance and update audit docs") — migration `20260713000012`, test `039`, doc updates (findings, test book, state/handoff/queue), and regenerated `src/lib/database.types.ts` + schema summary. Hosted Supabase is now synced beyond this point through `20260713000015`. The three held-out draft files remain tracked but excluded from trusted replay/push evidence.
 
-**Current next fix:** continue with PXL-AUD-047 (2307-received claim lifecycle), then AUD-049 and remaining In-Progress coverage/report items.
+**Current next fix:** continue with PXL-AUD-049, then remaining In-Progress coverage/report items.
 
 Third fix — `supabase/migrations/20260713000004_cm_vc_aware_overapply_guards.sql` + `supabase/tests/035_cm_vc_aware_overapply_test.sql` (CM-VC-OVERAPPLY-001, 6 assertions): the `fn_save_receipt`/`fn_save_payment_voucher` over-apply guards now net applied credit memos (AR) and non-reversed vendor-credit applications on open/applied vendor credits (AP) from the invoice/bill outstanding, mirroring `fn_ar_aging_asof`/`fn_ap_aging_asof` (scalar subqueries so the two credit sources don't fan out). Test 004 stays green.
 

@@ -913,6 +913,25 @@ Scenario: a VAT cash sale for 10,000 net + 1,200 VAT has 200 CWT withheld, creat
 | 6 | Inspect the reversal JE | Reversal totals are 11,200 debit and 11,200 credit, not the overstated 11,400 gross-plus-CWT amount, and header totals equal line sums. |
 | 7 | Re-read the bounced receipt header | The corrected cash/CWT/gross split remains 11,000 / 200 / 11,200 after bounce. |
 
+## FORM2307-RECEIVED-CLAIM-001 - Governed Received-Certificate Claims
+
+Status: Executed Passing (session 93, 2026-07-14) in `supabase/tests/047_form2307_received_claim_lifecycle_test.sql`, 18 assertions. Related findings: PXL-AUD-047.
+
+Scenario: a posted receipt with 200 CWT receives customer Form 2307 evidence, the certificate is claimed in an ITR quarter, then the receipt bounces; separately, a sent issued Form 2307 certificate is affected by a later EWT source reversal.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Try recording a received certificate for 201 against a receipt line with 200 CWT | Rejected: certificate amount cannot exceed the receipt-line CWT. |
+| 2 | As an authenticated application role, try direct INSERT into `form_2307_tracking` | Rejected by the RPC-only write posture. |
+| 3 | Record the certificate through `fn_record_form2307_received` | Succeeds and stores status `received`, exact amount 200, date received, ATC, and covered period. |
+| 4 | Try a direct owner update increasing the certificate amount | Rejected by the table guard against the receipt-line CWT ceiling. |
+| 5 | Try claiming with invalid quarter 5 | Rejected by the claim RPC. |
+| 6 | Claim through `fn_claim_form2307_received` for Q1 2026 | Succeeds and records status `claimed`, claim year/quarter, claimed timestamp, and actor. |
+| 7 | Try direct mutation of the claimed row and try re-recording it through the receive RPC | Both rejected; terminal evidence is locked. |
+| 8 | Bounce the underlying receipt | Succeeds, nets OR CWT tax detail to zero, and marks the linked received certificate `invalidated` with a reason. |
+| 9 | Try claiming the invalidated certificate | Rejected because only `received` rows can be claimed. |
+| 10 | Generate and send an issued Form 2307 certificate from AP EWT detail, then cancel the source PV | The sent certificate remains immutable evidence but is flagged `requires_supersede` with a reason derived from the EWT reversal. |
+
 ## CM-VC-OVERAPPLY-001 - Over-Apply Guards Net Applied Credit Memos / Vendor Credits
 
 Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/035_cm_vc_aware_overapply_test.sql`, 6 assertions. Related findings: PXL-AUD-039.
