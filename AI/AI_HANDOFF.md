@@ -1,12 +1,12 @@
 # AI Handoff
 
-Last updated: 2026-07-14 (session 90 - PXL-AUD-040 completed)
+Last updated: 2026-07-14 (session 90 - PXL-AUD-040 completed and hosted synced)
 
 ## Active Priority (session 90 - Form 2307 monthly breakdown)
 
 Under **PXL Accounting Core Ready** (DEC-017), session 90 completed **PXL-AUD-040** with `supabase/migrations/20260714000002_form2307_monthly_breakdown.sql` + `supabase/tests/044_form2307_monthly_breakdown_test.sql` (F2307-MONTHLY-001, 8 assertions). Form 2307 issued lines now carry month-1/month-2/month-3 tax-base and withheld columns, generation and supersede bucket source EWT rows by `vw_ewt_summary_ap.invoice_date`, sent/acknowledged snapshots freeze the monthly certificate-line payload, and `Form2307IssuedPage` renders each certificate's ATC/nature monthly breakdown plus quarter totals.
 
-Verification completed for session 90: held-out-safe `supabase db reset --local`; focused test 044 passed 8/8; neighbor tests 007/010/016/022/044 passed 75/75; full trusted pgTAP passed **782/782 across 43 files** with held-out test 027 excluded; `npm run gen:types` and schema summary regenerated (254 functions / 20 views / 152 tables / 287 triggers); `npm run lint`, `npm run build`, `scripts/check_docs_consistency.sh`, `git diff --check`, and `git diff --cached --check` passed. Hosted Supabase sync for `20260714000001` and `20260714000002` is pending; hosted remains synced through `20260713000015`.
+Verification completed for session 90: held-out-safe `supabase db reset --local`; focused test 044 passed 8/8; neighbor tests 007/010/016/022/044 passed 75/75; full trusted pgTAP passed **782/782 across 43 files** with held-out test 027 excluded; `npm run gen:types` and schema summary regenerated (254 functions / 20 views / 152 tables / 287 triggers); `npm run lint`, `npm run build`, `scripts/check_docs_consistency.sh`, `git diff --check`, and `git diff --cached --check` passed. Hosted Supabase push applied `20260714000001` and `20260714000002`; migration list and held-out-safe dry run verified the remote is up to date through `20260714000002`.
 
 AUD-040 is now **Retested Passed**. Existing sent/acknowledged certificate evidence remains preserved; corrections should use supersede to create a refreshed version with monthly columns.
 
