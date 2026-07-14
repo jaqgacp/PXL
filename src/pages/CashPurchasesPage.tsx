@@ -5,6 +5,7 @@ import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { ReportTraceLink } from '@/components/AccountingTraceLink'
 
 type CPStatus = 'draft' | 'posted' | 'cancelled'
 
@@ -264,6 +265,17 @@ export default function CashPurchasesPage() {
       credit: totals.cash,
     },
   ], [editCP?.payment_account_id, lines, totals.cash, totals.ewt, totals.vat])
+  const ewtTraceFiltersForLine = (line: CPLine) => {
+    const atc = atcCodes.find(a => a.id === line.ewt_atc_code_id)
+    return {
+      tax_kind: 'ewt_payable',
+      source_doc_type: 'CP',
+      source_doc_id: editCP?.id,
+      atc_code_id: line.ewt_atc_code_id || undefined,
+      income_nature: line.ewt_income_nature || undefined,
+      tax_rate: atc ? String(atc.rate) : undefined,
+    }
+  }
 
   const save = async () => {
     if (setupBlocked) {
@@ -422,7 +434,18 @@ export default function CashPurchasesPage() {
                 <td className="py-1.5 pr-1 text-right font-mono text-blue-600">{fmt(l.input_vat_amount)}</td>
                 <td className="py-1.5 pr-1"><select value={l.ewt_atc_code_id} disabled={readOnly} onChange={e => selectEWT(i, e.target.value)} className="border border-gray-300 rounded px-1.5 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-gray-900"><option value="">—</option>{atcCodes.map(a => <option key={a.id} value={a.id}>{a.code}</option>)}</select></td>
                 <td className="py-1.5 pr-1"><input type="number" value={l.ewt_tax_base || 0} disabled={readOnly || !l.ewt_atc_code_id} onChange={e => updateLine(i, { ewt_tax_base: +e.target.value })} className="border border-gray-300 rounded px-1.5 py-1 text-xs w-24 text-right focus:outline-none focus:ring-1 focus:ring-gray-900" min={0} step="any" /></td>
-                <td className="py-1.5 pr-1 text-right font-mono text-purple-700">{fmt(l.ewt_amount)}</td>
+                <td className="py-1.5 pr-1 text-right font-mono text-purple-700">
+                  {readOnly && editCP?.id && l.ewt_amount > 0 ? (
+                    <ReportTraceLink
+                      companyId={companyId || ''}
+                      reportFamily="tax"
+                      filters={ewtTraceFiltersForLine(l)}
+                      title="Open the EWT tax-ledger trace for this cash-purchase line"
+                    >
+                      {fmt(l.ewt_amount)}
+                    </ReportTraceLink>
+                  ) : fmt(l.ewt_amount)}
+                </td>
                 <td className="py-1.5 text-right font-mono font-medium">{fmt(l.total_amount)}</td>
                 {!readOnly && <td className="py-1.5 pl-1"><button onClick={() => setLines(p => p.filter((_, j) => j !== i))} className="text-gray-300 hover:text-red-500 text-sm">×</button></td>}
               </tr>
@@ -435,7 +458,18 @@ export default function CashPurchasesPage() {
               <td className="pt-2 text-right font-mono text-blue-600">{fmt(totals.vat)}</td>
               <td />
               <td className="pt-2 text-right font-mono">{fmt(totals.ewtBase)}</td>
-              <td className="pt-2 text-right font-mono text-purple-700">{fmt(totals.ewt)}</td>
+              <td className="pt-2 text-right font-mono text-purple-700">
+                {readOnly && editCP?.id && totals.ewt > 0 ? (
+                  <ReportTraceLink
+                    companyId={companyId || ''}
+                    reportFamily="tax"
+                    filters={{ tax_kind: 'ewt_payable', source_doc_type: 'CP', source_doc_id: editCP.id }}
+                    title="Open all EWT tax-ledger rows for this cash purchase"
+                  >
+                    {fmt(totals.ewt)}
+                  </ReportTraceLink>
+                ) : fmt(totals.ewt)}
+              </td>
               <td className="pt-2 text-right font-mono text-sm">{fmt(totals.cash)}</td>
             </tr>
           </tfoot>
@@ -490,7 +524,18 @@ export default function CashPurchasesPage() {
                   <td className="px-3 py-2 font-mono font-medium text-gray-900">{cp.cp_number}</td>
                   <td className="px-3 py-2 text-gray-700">{cp.supplier_name_snapshot || '—'}</td>
                   <td className="px-3 py-2 capitalize text-gray-500">{cp.payment_method}</td>
-                  <td className="px-3 py-2 text-right"><AmountCell amount={cp.total_ewt_amount || 0} /></td>
+                  <td className="px-3 py-2 text-right">
+                    {cp.total_ewt_amount > 0 && cp.status !== 'draft' ? (
+                      <ReportTraceLink
+                        companyId={companyId || ''}
+                        reportFamily="tax"
+                        filters={{ tax_kind: 'ewt_payable', source_doc_type: 'CP', source_doc_id: cp.id }}
+                        title="Open the EWT tax-ledger trace for this cash purchase"
+                      >
+                        <AmountCell amount={cp.total_ewt_amount || 0} />
+                      </ReportTraceLink>
+                    ) : <AmountCell amount={cp.total_ewt_amount || 0} />}
+                  </td>
                   <td className="px-3 py-2 text-right"><AmountCell amount={cp.total_amount} /></td>
                   <td className="px-3 py-2"><StatusBadge status={STATUS_COLORS[cp.status]} label={cp.status} /></td>
                   <td className="px-3 py-2">

@@ -98,6 +98,16 @@ export default function QAPPage() {
   const totalBase = rows.reduce((s, r) => s + r.tax_base, 0)
   const totalWithheld = rows.reduce((s, r) => s + r.tax_withheld, 0)
   const years = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 2 + i)
+  const qapTraceFilters = (row: Agg) => ({
+    tax_kind: 'ewt_payable',
+    counterparty_id: row.supplier_id || undefined,
+    atc_code: row.atc_code || undefined,
+    income_nature: row.nature_of_payment || undefined,
+    tax_rate: String(row.tax_rate),
+    active_only: 'true',
+    date_from: dateFrom,
+    date_to: dateTo,
+  })
 
   const exportCSV = async () => {
     if (!companyId) return
@@ -183,10 +193,10 @@ export default function QAPPage() {
                   <td className="px-4 py-2.5 text-gray-700">
                     {r.supplier_id ? (
                       <ReportTraceLink
-                        companyId={companyId}
+                        companyId={companyId || ''}
                         reportFamily="tax"
-                        filters={{ tax_kind: 'ewt_payable', counterparty_id: r.supplier_id, date_from: dateFrom, date_to: dateTo }}
-                        title="Open the accounting sources included for this payee"
+                        filters={qapTraceFilters(r)}
+                        title="Open the accounting sources included for this QAP payee/ATC row"
                       >
                         {r.supplier_name}
                       </ReportTraceLink>
@@ -196,7 +206,18 @@ export default function QAPPage() {
                   <td className="px-4 py-2.5 text-gray-500">{r.nature_of_payment || '—'}</td>
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700">{fmt(r.tax_rate)}%</td>
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-700">{fmt(r.tax_base)}</td>
-                  <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-900 font-semibold">{fmt(r.tax_withheld)}</td>
+                  <td className="px-4 py-2.5 text-right font-mono tabular-nums text-gray-900 font-semibold">
+                    {r.supplier_id ? (
+                      <ReportTraceLink
+                        companyId={companyId || ''}
+                        reportFamily="tax"
+                        filters={qapTraceFilters(r)}
+                        title="Open the tax-ledger sources for this QAP withholding amount"
+                      >
+                        {fmt(r.tax_withheld)}
+                      </ReportTraceLink>
+                    ) : fmt(r.tax_withheld)}
+                  </td>
                 </tr>
               ))}
             </tbody>

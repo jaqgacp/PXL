@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
+Generated: 2026-07-14. Migrations scanned: 110. Tests present: 51.
 
-## Functions (261)
+## Functions (266)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -17,6 +17,7 @@ Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
 | `fn_add_posting_line` | `20260710000003_posting_engine_preview_trace.sql` | 1 |
 | `fn_add_tax_detail` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_ap_aging_asof` | `20260713000010_withholding_basis_policy.sql` | 2 |
+| `fn_ap_subledger_gl_reconciliation_asof` | `20260714000008_da013_asof_ledger_reconciliation.sql` | 1 |
 | `fn_apply_cash_purchase_line_ewt_profile` | `20260713000015_cash_purchase_ewt.sql` | 1 |
 | `fn_apply_vendor_bill_line_ewt_profile` | `20260713000011_withholding_profile_gates.sql` | 1 |
 | `fn_apply_vendor_credit` | `20260701000011_vendor_credit_application_reversal.sql` | 4 |
@@ -25,6 +26,7 @@ Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
 | `fn_approve_sales_invoice` | `20260701000008_accounting_readiness_approval.sql` | 3 |
 | `fn_approve_vendor_bill` | `20260701000008_accounting_readiness_approval.sql` | 3 |
 | `fn_ar_aging_asof` | `20260702000003_ar_ap_aging_asof_rpcs.sql` | 1 |
+| `fn_ar_subledger_gl_reconciliation_asof` | `20260714000008_da013_asof_ledger_reconciliation.sql` | 1 |
 | `fn_assert_posting_source` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_assert_source_journal_link` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_atc_code_is_current` | `20260701000018_atc_effective_date_governance.sql` | 1 |
@@ -72,6 +74,8 @@ Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
 | `fn_create_amortization_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
 | `fn_create_posted_journal_entry` | `20260711000001_posting_engine_completion.sql` | 2 |
 | `fn_create_revenue_recognition_schedule` | `20260630000026_amortization_revenuerecon.sql` | 1 |
+| `fn_customer_ledger_asof` | `20260714000008_da013_asof_ledger_reconciliation.sql` | 1 |
+| `fn_default_ap_supplier_tin_snapshot` | `20260714000007_aud009_aud010_accounting_readiness_closure.sql` | 1 |
 | `fn_dispose_fixed_asset` | `20260712000002_aud051_numbering_registry_alignment.sql` | 2 |
 | `fn_enforce_approval_sod` | `20260703000001_approval_sod_enforcement.sql` | 1 |
 | `fn_enforce_atc_version_rules` | `20260713000002_atc_document_date_versioning.sql` | 1 |
@@ -97,7 +101,7 @@ Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
 | `fn_generate_tax_calendar_trigger` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_get_accounting_trace` | `20260711000002_accounting_trace_reports.sql` | 2 |
 | `fn_get_report_snapshot_trace_links` | `20260711000002_accounting_trace_reports.sql` | 1 |
-| `fn_get_report_trace_set` | `20260711000002_accounting_trace_reports.sql` | 1 |
+| `fn_get_report_trace_set` | `20260714000006_aud049_withholding_trace_drilldowns.sql` | 2 |
 | `fn_gl_impact_payload` | `20260714000001_advance_payment_withholding.sql` | 2 |
 | `fn_grant_all_users_on_new_company` | `20260630000021_gap_fill.sql` | 2 |
 | `fn_grant_creator_company_ownership` | `20260630000021_gap_fill.sql` | 2 |
@@ -229,6 +233,7 @@ Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
 | `fn_snapshot_vat_return` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
 | `fn_snapshot_wht_export` | `20260713000006_qap_multi_atc_reconciliation.sql` | 3 |
 | `fn_supersede_form_2307_issued` | `20260714000002_form2307_monthly_breakdown.sql` | 2 |
+| `fn_supplier_ledger_asof` | `20260714000008_da013_asof_ledger_reconciliation.sql` | 1 |
 | `fn_sync_number_series_shape` | `20260702000001_number_series_document_code_alignment.sql` | 1 |
 | `fn_sync_receipt_totals_from_lines` | `20260714000004_cash_sale_receipt_total_semantics.sql` | 1 |
 | `fn_sync_vendor_bill_ewt_expected` | `20260713000011_withholding_profile_gates.sql` | 1 |
@@ -248,7 +253,7 @@ Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
 | `fn_validate_document_vat_registration` | `20260710000002_vat_registration_all_documents.sql` | 1 |
 | `fn_validate_form2307_received_tracking` | `20260714000005_form2307_received_claim_lifecycle.sql` | 1 |
 | `fn_validate_invoice_posting_totals` | `20260711000001_posting_engine_completion.sql` | 1 |
-| `fn_validate_payment_voucher_ewt_ready` | `20260713000011_withholding_profile_gates.sql` | 7 |
+| `fn_validate_payment_voucher_ewt_ready` | `20260714000007_aud009_aud010_accounting_readiness_closure.sql` | 8 |
 | `fn_validate_payment_voucher_line_ewt` | `20260713000002_atc_document_date_versioning.sql` | 5 |
 | `fn_validate_receipt_cwt_ready` | `20260713000003_settlement_total_line_authority.sql` | 5 |
 | `fn_validate_receipt_line_cwt` | `20260713000002_atc_document_date_versioning.sql` | 5 |
@@ -256,7 +261,7 @@ Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
 | `fn_validate_sales_invoice_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_validate_settlement_posting` | `20260714000001_advance_payment_withholding.sql` | 3 |
 | `fn_validate_supplier_atc_default` | `20260701000018_atc_effective_date_governance.sql` | 2 |
-| `fn_validate_vendor_bill_accounting_ready` | `20260701000008_accounting_readiness_approval.sql` | 1 |
+| `fn_validate_vendor_bill_accounting_ready` | `20260714000007_aud009_aud010_accounting_readiness_closure.sql` | 2 |
 | `fn_validate_vendor_bill_vat_registration` | `20260701000012_vat_registration_enforcement.sql` | 1 |
 | `fn_vat_code_used` | `20260713000012_tax_code_effective_date_governance.sql` | 1 |
 | `fn_vat_gl_reconciliation` | `20260702000005_gl_reversal_visibility.sql` | 2 |
@@ -451,7 +456,7 @@ Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `withholding_remittances` | `20260713000005_withholding_remittance_flow.sql` | 1 | `20260713000005_withholding_remittance_flow.sql` |
 
-## Triggers (285)
+## Triggers (287)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -564,6 +569,8 @@ Generated: 2026-07-14. Migrations scanned: 107. Tests present: 47.
 | `trg_dashboard_widgets_updated_at` | `20260629000001_dashboard.sql` |
 | `trg_debit_memo_lines_updated_at` | `20260629000003_sprint5_ar.sql` |
 | `trg_debit_memos_updated_at` | `20260629000003_sprint5_ar.sql` |
+| `trg_default_payment_voucher_supplier_tin_snapshot` | `20260714000007_aud009_aud010_accounting_readiness_closure.sql` |
+| `trg_default_vendor_bill_supplier_tin_snapshot` | `20260714000007_aud009_aud010_accounting_readiness_closure.sql` |
 | `trg_dm_line_vat_registration` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_dm_vat_registration_status` | `20260710000002_vat_registration_all_documents.sql` |
 | `trg_dr_updated_at` | `20260629000004_sprint5_so_dr.sql` |

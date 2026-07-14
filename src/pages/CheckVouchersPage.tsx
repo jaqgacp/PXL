@@ -5,6 +5,7 @@ import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { ReportTraceLink } from '@/components/AccountingTraceLink'
 
 type BankRef = { id: string; bank_name: string; account_number: string }
 type COARef = { id: string; account_code: string; account_name: string }
@@ -219,7 +220,18 @@ export default function CheckVouchersPage() {
                 <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{r.check_date}</td>
                 <td className="px-3 py-2.5 text-xs text-gray-700 max-w-[140px] truncate">{r.payee}</td>
                 <td className="px-3 py-2.5 text-right font-mono text-xs text-gray-700">{fmt(r.total_gross_amount)}</td>
-                <td className="px-3 py-2.5 text-right font-mono text-xs text-blue-600">{fmt(r.total_ewt_amount)}</td>
+                <td className="px-3 py-2.5 text-right font-mono text-xs text-blue-600">
+                  {r.total_ewt_amount > 0 && r.status !== 'draft' ? (
+                    <ReportTraceLink
+                      companyId={companyId || ''}
+                      reportFamily="tax"
+                      filters={{ tax_kind: 'ewt_payable', source_doc_type: 'CV', source_doc_id: r.id }}
+                      title="Open the EWT tax-ledger trace for this check voucher"
+                    >
+                      {fmt(r.total_ewt_amount)}
+                    </ReportTraceLink>
+                  ) : fmt(r.total_ewt_amount)}
+                </td>
                 <td className="px-3 py-2.5 text-right font-mono text-xs font-bold text-gray-900">{fmt(r.net_check_amount)}</td>
                 <td className="px-3 py-2.5"><StatusBadge status={r.status} /></td>
                 <td className="px-3 py-2.5 text-right whitespace-nowrap">
@@ -316,7 +328,19 @@ export default function CheckVouchersPage() {
         <div className="bg-white border border-gray-200 rounded-lg p-5 flex justify-end">
           <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm min-w-[280px]">
             <span className="text-gray-500 text-xs">Total Gross</span><span className="text-right font-mono text-xs text-gray-900">{fmt(totalGross)}</span>
-            <span className="text-gray-500 text-xs">EWT Withheld</span><span className="text-right font-mono text-xs text-blue-700">{fmt(ewt)}</span>
+            <span className="text-gray-500 text-xs">EWT Withheld</span>
+            <span className="text-right font-mono text-xs text-blue-700">
+              {form?.id && ewt > 0 && form.status !== 'draft' ? (
+                <ReportTraceLink
+                  companyId={companyId || ''}
+                  reportFamily="tax"
+                  filters={{ tax_kind: 'ewt_payable', source_doc_type: 'CV', source_doc_id: form.id }}
+                  title="Open the EWT tax-ledger trace for this check voucher"
+                >
+                  {fmt(ewt)}
+                </ReportTraceLink>
+              ) : fmt(ewt)}
+            </span>
             <span className="text-gray-900 font-semibold border-t border-gray-200 pt-1 mt-1">Net Check Amount</span>
             <span className={`text-right font-mono font-bold border-t border-gray-200 pt-1 mt-1 ${netCheck <= 0 ? 'text-red-600' : 'text-gray-900'}`}>{fmt(netCheck)}</span>
           </div>

@@ -12965,6 +12965,21 @@ export type Database = {
           supplier_name: string
         }[]
       }
+      fn_ap_subledger_gl_reconciliation_asof: {
+        Args: { p_as_of: string; p_company_id: string }
+        Returns: {
+          as_of_date: string
+          company_id: string
+          control_account_code: string
+          control_account_id: string
+          control_account_name: string
+          gl_balance: number
+          is_reconciled: boolean
+          ledger_code: string
+          subledger_balance: number
+          variance: number
+        }[]
+      }
       fn_apply_vendor_credit: {
         Args: {
           p_amount: number
@@ -13007,6 +13022,21 @@ export type Database = {
           invoice_id: string
           original_amount: number
           si_number: string
+        }[]
+      }
+      fn_ar_subledger_gl_reconciliation_asof: {
+        Args: { p_as_of: string; p_company_id: string }
+        Returns: {
+          as_of_date: string
+          company_id: string
+          control_account_code: string
+          control_account_id: string
+          control_account_name: string
+          gl_balance: number
+          is_reconciled: boolean
+          ledger_code: string
+          subledger_balance: number
+          variance: number
         }[]
       }
       fn_assert_posting_source: {
@@ -13245,6 +13275,25 @@ export type Database = {
           p_total_periods: number
         }
         Returns: string
+      }
+      fn_customer_ledger_asof: {
+        Args: { p_as_of: string; p_company_id: string; p_customer_id?: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          credit_amount: number
+          customer_id: string
+          customer_name: string
+          debit_amount: number
+          description: string
+          document_id: string
+          document_number: string
+          document_type: string
+          running_balance: number
+          source_doc_id: string
+          source_doc_type: string
+          transaction_date: string
+        }[]
       }
       fn_dispose_fixed_asset: { Args: { p_data: Json }; Returns: string }
       fn_ensure_stock_balance: {
@@ -13847,6 +13896,26 @@ export type Database = {
       fn_supersede_form_2307_issued: {
         Args: { p_issuance_id: string; p_reason?: string }
         Returns: string
+      }
+      fn_supplier_ledger_asof: {
+        Args: { p_as_of: string; p_company_id: string; p_supplier_id?: string }
+        Returns: {
+          company_id: string
+          created_at: string
+          credit_amount: number
+          debit_amount: number
+          description: string
+          document_id: string
+          document_number: string
+          document_type: string
+          external_ref: string
+          running_balance: number
+          source_doc_id: string
+          source_doc_type: string
+          supplier_id: string
+          supplier_name: string
+          transaction_date: string
+        }[]
       }
       fn_tax_code_is_current: {
         Args: { p_as_of?: string; p_tax_code_id: string }

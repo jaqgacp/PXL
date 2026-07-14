@@ -2,7 +2,7 @@
 
 Status: Active production-readiness phase
 Milestone: **PXL Accounting Core Ready**
-Last updated: 2026-07-13
+Last updated: 2026-07-14
 Authority: User directive 2026-07-13; DEC-017; DEC-018
 
 This document is the active production-readiness control plan for PXL's accounting core. The Sales Invoice Workspace and Report Workspace standards are documented. Do not create additional UI standards, roll out additional transaction workspaces, implement report pilots, or build dashboards until this accounting core readiness phase is explicitly cleared.
@@ -291,6 +291,7 @@ Current architectural gaps:
 - ~~Duplicate customer withholding flags and unused EWT/FWT wrapper masters remain in setup.~~ DONE (session 91, `20260714000003`): customer CWT uses `is_subject_to_cwt` + `default_cwt_atc_code_id`, AP supplier defaults use `default_atc_code_id`, and `ewt_codes`/`fwt_codes` plus legacy wrapper columns are retired. Test 045.
 - ~~Cash-sale receipt headers used gross while standard OR headers used cash, causing bounce total ambiguity.~~ DONE (session 92, `20260714000004`): receipt headers sync cash/CWT from lines, posted cash-sale ORs were backfilled to cash/CWT split, and cash-sale bounce reverses the original gross JE exactly. Test 046.
 - ~~Received Form 2307 claim lifecycle was direct CRUD and could stay claimable after receipt reversal.~~ DONE (session 93, `20260714000005`): received/claimed transitions are RPC-governed, validated against receipt-line and unreversed-ledger CWT, locked after claim/invalidation, invalidated on receipt bounce, and issued certificates are flagged for supersede after EWT reversal. Test 047.
+- ~~Withholding amount/report drilldowns stopped at broad report filters instead of exact source evidence.~~ DONE (session 94, `20260714000006`): CV/CP/cash-sale EWT/CWT amounts and QAP/Form 2307 issued rows route through source-doc, ATC, nature, rate, and active-only trace filters. Test 048.
 - Percentage Tax exists as compliance/reporting structures but is not fully integrated as a generic posting tax engine.
 - FWT return structures exist, but no broad posted FWT tax-detail flow is production-ready.
 - Some tax behavior is still expressed through document-specific SQL/RPC logic rather than a reusable tax-rule evaluator.
@@ -301,8 +302,8 @@ Current architectural gaps:
 | --- | --- | --- | --- | --- |
 | VAT | Strongest tax lane; server-computed/gated for major flows. Effective-date/version governance on VAT/PT rate codes delivered (PXL-DA-010, `20260713000012`): versioned rates, used-rate immutability, and a document-date `fn_tax_code_version_asof` resolver. | Report rollout still needs core stability; document/item pickers should route through the as-of resolver (backlog UI). | Medium | Keep VAT as reference implementation for tax engine contracts. |
 | Percentage Tax | Compliance pages/tables exist. | Needs configurable applicability, posting/report source, reconciliation, and filing rules. | High | Define PT tax-rule model before expansion. |
-| EWT | PV/CV validation, 2307 hardening, Form 2307 issued month layout, document-date ATC versioning, controlled remittance flow, QAP multi-ATC reconciliation, AP source-basis EWT policy, withholding profile gates, cash-purchase EWT, supplier down-payment EWT, consolidated ATC-backed master defaults, and issued-certificate supersede prompts after EWT reversal exist. | Broader reusable tax-rule engine still missing. | Medium | Continue generic tax-rule model after core findings are closed or accepted. |
-| CWT | OR CWT detail, customer defaults, customer-advance CWT, and governed Form 2307 received receive/claim/invalidation lifecycle exist. | Customer SI expected-CWT to OR default-flow tests remain under PXL-AUD-045. | Medium | Complete PXL-AUD-045 customer CWT default-flow tests. |
+| EWT | PV/CV validation, 2307 hardening, Form 2307 issued month layout and source-line drilldowns, document-date ATC versioning, controlled remittance flow, QAP multi-ATC reconciliation/drilldowns, AP source-basis EWT policy, withholding profile gates, cash-purchase EWT, supplier down-payment EWT, consolidated ATC-backed master defaults, and issued-certificate supersede prompts after EWT reversal exist. | Broader reusable tax-rule engine still missing. | Medium | Continue generic tax-rule model after core findings are closed or accepted. |
+| CWT | OR CWT detail, cash-sale CWT source drilldowns, customer defaults, customer-advance CWT, and governed Form 2307 received receive/claim/invalidation lifecycle exist. | Customer SI expected-CWT to OR default-flow tests remain under PXL-AUD-045. | Medium | Complete PXL-AUD-045 customer CWT default-flow tests. |
 | FWT | Tables/returns exist. | No mature posted FWT tax-detail engine. | High | Define FWT tax engine path before enabling FWT filing readiness. |
 | Future BIR changes | Effective-dated, version-locked **rate** governance now exists for ATC and VAT/PT codes (PXL-DA-010): a statutory rate change is a new successor version, not an in-place edit, and historical postings keep their frozen rate. | The versioned **rate** model exists, but a full configuration-driven **rule** model (applicability/selection logic beyond rates) is still needed. | High | Extend the versioned-rate primitive into a configuration-driven tax-rule model; route pickers through the as-of resolver. |
 
@@ -323,6 +324,7 @@ Current architectural gaps:
 | TAX-011 | Form 2307 issued lacked month-of-quarter line evidence. | PXL-AUD-040 | ~~High~~ Resolved (session 90) | DONE — `20260714000002` adds month-1/2/3 base and withheld columns, buckets generated/superseded certificate lines by source invoice date, freezes the monthly payload in sent/acknowledged snapshots, and renders the breakdown in the issued-certificate page. Test 044. |
 | TAX-012 | Duplicate/vestigial withholding masters created conflicting setup paths. | PXL-AUD-044 | ~~Medium~~ Resolved (session 91) | DONE — `20260714000003` migrates defaults to ATC-backed customer/supplier columns, removes the duplicate customer flag and default-EWT columns, drops `ewt_codes`/`fwt_codes`, and removes the obsolete setup UI. Test 045. |
 | TAX-013 | Cash-sale OR header totals used gross while standard ORs used cash; bounce totals could overstate. | PXL-AUD-046 | ~~Medium~~ Resolved (session 92) | DONE — `20260714000004` syncs draft receipt headers from line cash/CWT totals, backfills posted cash-sale ORs to the same split, and test 046 proves bounce JE totals equal the original gross JE. |
+| TAX-014 | Withholding amount/report drilldowns did not resolve to exact source tax evidence. | PXL-AUD-049 | ~~Medium~~ Resolved (session 94) | DONE — `20260714000006` adds source-doc, ATC, nature, rate, and active-only report-trace filters and wires CV/CP/cash-sale EWT/CWT, QAP, and Form 2307 issued rows to them. Test 048. |
 
 ## 8. Master Data Governance review
 
@@ -393,7 +395,7 @@ Do not build these transactions now. This section records accounting requirement
 | Transaction family | Current readiness | Accounting requirements before rollout | Missing capabilities |
 | --- | --- | --- | --- |
 | Official Receipt | Strong core posting exists. | Lifecycle contract, CWT profile defaults, over-apply guard including CMs, line-derived cash totals, and cash-sale bounce total semantics are in place; remaining CWT expected-flow work continues. | PXL-AUD-045. |
-| Vendor Bill | Strong core posting exists, including source/accrual EWT policy and net AP posting when supplier EWT applies. | Supplier withholding profile breadth, RR linkage policy, expense account determination. | PXL-AUD-008, ACR-006. |
+| Vendor Bill | Strong core posting exists, including source/accrual EWT policy, net AP posting when supplier EWT applies, and seeded supplier-default EWT/2307 evidence. | RR linkage policy and expense account determination. | ACR-006. |
 | Payment Voucher | Strong core posting exists, including line-derived totals, VC-aware over-apply, controlled remittance linkage, duplicate-withholding block for source-accrued VBs, explicit non-EWT profile gates, and supplier down-payment EWT. | Later down-payment application to a subsequently issued VB can be expanded as a settlement-product enhancement. | PXL-AUD-043 closed for withholding recording. |
 | Credit Memo | Posting exists. | CM application trace, OR over-apply interaction, reversal/void semantics, VAT/tax counter-row confirmation. | PXL-AUD-039, ACR-003. |
 | Debit Memo | Posting exists. | Consistent numbering/readiness, application semantics, reversal/void behavior, tax trace. | ACR-003, ACR-004. |
@@ -417,7 +419,7 @@ Do not build these transactions now. This section records accounting requirement
 | Critical | New posting behavior can diverge without the Accounting Rules Matrix. | Accounting/Posting Engine | Future modules can invent inconsistent posting logic. | `PXL_ACCOUNTING_RULES_MATRIX.md` |
 | High | Financial statement/close model incomplete. | Accounting Engine | TB/FS can be misleading. | PXL-AUD-013, PXL-DA-014 |
 | High | Account determination engine incomplete. | Accounting Engine | Users may pick wrong GL accounts; rollout cannot scale. | ACR-006 |
-| ~~High~~ Master-data duplicate done (session 91) | Withholding profile/configuration cleanup continues only for broader profile/test breadth. | Tax/Master Data | Duplicate/legacy withholding master data is consolidated; supplier/customer profile breadth remains under existing In-Progress coverage findings. | PXL-AUD-008; PXL-AUD-044 done |
+| ~~High~~ Master-data defaults done (session 95) | ATC-backed supplier/customer withholding defaults are consolidated and seeded-tested. | Tax/Master Data | Duplicate/legacy withholding master data is consolidated; supplier/customer default flows now cover source-basis VB EWT, receipt CWT, and Form 2307 evidence. Broader configurable tax-rule/profile breadth is architecture backlog. | PXL-AUD-008 done; PXL-AUD-044 done |
 | High | Remittance/application flow missing. | Tax Engine | Filed EWT/CWT workflows and reconciliations remain blocked. | PXL-AUD-041 |
 | ~~High~~ PV/OR done (session 77) | Settlement header totals are client-driven. | Accounting/Tax | GL can diverge from line/subledger/tax rows. | PXL-AUD-038, PXL-AUD-048 (done for PV/OR, `20260713000003`) |
 | ~~High~~ Done (session 77) | CM/VC-aware over-apply guards incomplete. | Subledger | AR/AP balances and withholding can be overstated. | PXL-AUD-039 (done, `20260713000004`) |
@@ -467,7 +469,7 @@ Follow this sequence unless a blocking defect requires escalation:
 Current concrete lane inside this sequence:
 
 1. Maintain `PXL_ACCOUNTING_RULES_MATRIX.md` as the accounting behavior source of truth.
-2. Continue the remaining high-priority accounting/tax lane: AUD-047/049 and the remaining In-Progress coverage/report items.
+2. Continue the remaining high-priority accounting/tax lane: DA-018/DA-020 plus remaining coverage items AUD-045/AUD-050.
 3. ~~Complete ATC document-date versioning safely, replacing the held-out draft rather than adopting it as-is.~~ DONE (session 77, `20260713000002`, test 033; held-out draft `20260710000004` stays excluded).
 4. ~~Complete controlled EWT remittance/CWT application flow.~~ DONE (session 78, `20260713000005`, test 036).
 5. ~~Decide and encode withholding basis policy.~~ DONE (session 83, `20260713000010`, test 037).

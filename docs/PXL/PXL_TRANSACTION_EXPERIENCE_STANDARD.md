@@ -38,7 +38,7 @@ Maturity against this standard (structure/exposure, not accounting correctness �
 
 - **Core four (SI, OR, VB, PV): ~60%** — validation + GL preview + summary exist; no tabs, no tax impact, no audit display, no related-documents navigation, no per-document routes.
 - **Journal Entry: ~40%** — solid posting/reversal mechanics and balance indicator; no readiness preflight, no dimension columns in the UI (DB supports them per PXL-DA-017), no audit display, account picker is a bare `<select>` over the whole COA.
-- **Secondary documents (CM, DM, VC, Cash Sale, Cash Purchase, CV): ~30%** — capture works; no validation banner, no GL impact, no tax impact, minimal summaries (PXL-AUD-049 covers the GL-panel slice).
+- **Secondary documents (CM, DM, VC, Cash Sale, Cash Purchase, CV): ~35%** — capture works; GL impact and withholding trace links are present on the AUD-049 CV/cash slices, but the broader workspace validation banner, Tax Impact tab, and summaries remain inconsistent.
 - **Overall transaction experience: ~45%.**
 
 ## 3. The Standard Transaction Layout
@@ -190,7 +190,7 @@ All summary figures are drill sources: clicking Output VAT opens the Tax Impact 
 1. **Draft preview** — delivered for saved sources via the PXL-DA-001 rollback preview RPC (same code path as posting); atomic unsaved forms show a clearly labeled client estimate. Account, description, debit, credit, balance, account source, date, period, branch, and rule explanation are shown.
 2. **Posted journal** — delivered: JE number/date/lines plus links to JE, GL, account detail, source, and full accounting trace. Reversal-pair presentation remains a layout enhancement.
 3. **Drillback** — PXL-DA-002 is Retested Passed: governed source/JE/GL routes and report-family trace sets cover financial, subledger, tax, 2307, and snapshot surfaces. Universal amount-level links and breadcrumb presentation remain Phase 2 layout enhancements.
-4. Coverage: broad posting-surface rollout completed in session 59; PXL-AUD-049 remains In Progress only for withholding tax-ledger/2307/QAP drilldown.
+4. Coverage: broad posting-surface rollout completed in session 59; PXL-AUD-049 closed in session 94 for CV/cash withholding amount and QAP/Form 2307 drilldown coverage.
 
 ## 10. Tax Impact Standard
 
@@ -248,7 +248,7 @@ Phase-2+ configuration surface, in priority order: (1) column picker per grid wi
 | Document header + fixed toolbar + workflow strip | partial (ad hoc) | partial | partial |
 | Line grid vs section 5 | partial (business cols; manual account picks; no dimensions) | partial (no dimensions UI) | partial |
 | Financial summary contract | ✓ mostly | ✓ balance | ✗/partial |
-| GL Impact | ✓ (client preview) | n/a | ✗ (PXL-AUD-049) |
+| GL Impact | ✓ (client preview) | n/a | partial (AUD-049 CV/cash slices closed; full workspace standard remains future rollout) |
 | Tax Impact | ✗ | n/a | ✗ |
 | Posting validation | ✓ | ✗ | ✗ |
 | Approval visibility | ✗ (DB-only) | ✗ | ✗ |
@@ -262,6 +262,6 @@ Phase 2 build order (after current Critical/High findings close): 1) `DocumentLa
 
 ## 18. Cross-References
 
-- Findings: PXL-AUD-050 (audit visibility, new — session 48), PXL-AUD-049 (GL panels), PXL-AUD-042/044/045 (profile gating, duplicate flags, gross defaults), PXL-AUD-016 (readiness rollout), PXL-DA-001 (server GL preview), PXL-DA-002 (drill contract), PXL-DA-004 (posting primitives), PXL-DA-012 (approval SoD residue), PXL-DA-016 (transaction events timeline), PXL-DA-017 (dimensions).
+- Findings: PXL-AUD-050 (audit visibility, new — session 48), PXL-AUD-049 (GL panels and withholding drilldowns, closed session 94), PXL-AUD-042/044/045 (profile gating, duplicate flags, gross defaults), PXL-AUD-016 (readiness rollout), PXL-DA-001 (server GL preview), PXL-DA-002 (drill contract), PXL-DA-004 (posting primitives), PXL-DA-012 (approval SoD residue), PXL-DA-016 (transaction events timeline), PXL-DA-017 (dimensions).
 - Backlog: every enhancement row in `PXL_PRODUCT_BACKLOG.md` §Cross-Module maps into a section here; the backlog keeps priority/complexity metadata, this document keeps the design.
 - Decisions: DEC-002 (immutability → lock status display), DEC-005 (profile-driven scope → tab/column gating), DEC-009/010 (permissions/SoD → approval tab), DEC-011 (branch dimension), DEC-012 (this document is architecture, not a work order).

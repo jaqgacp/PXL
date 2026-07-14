@@ -4,6 +4,7 @@ import { useAppCtx } from '@/lib/context'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { ReportTraceLink } from '@/components/AccountingTraceLink'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Mode = 'list' | 'new'
@@ -12,7 +13,8 @@ type CashSale = {
   id: string; si_number: string; date: string
   customer_name_snapshot: string; customer_tin_snapshot: string | null
   total_amount: number; total_vat_amount: number
-  receipt_number: string | null; posted_at: string | null
+  receipt_id: string | null; receipt_number: string | null; total_cwt: number
+  posted_at: string | null
 }
 
 type Customer    = { id: string; registered_name: string; tin: string; address: string | null }
@@ -95,7 +97,7 @@ export default function CashSalesPage() {
     const from = page * PAGE_SIZE, to = from + PAGE_SIZE - 1
     let q = supabase.from('sales_invoices')
       .select(`id,si_number,date,customer_name_snapshot,customer_tin_snapshot,total_amount,total_vat_amount,posted_at,
-        receipts!inner(receipt_number)`, { count: 'exact' })
+        receipts!inner(id,receipt_number,total_cwt)`, { count: 'exact' })
       .eq('company_id', companyId).eq('is_cash_sale', true).eq('status', 'posted')
       .order('date', { ascending: false }).order('si_number', { ascending: false })
       .range(from, to)
@@ -104,7 +106,12 @@ export default function CashSalesPage() {
     // Flatten receipt_number from join
     const rows = (data || []).map((r: Record<string, unknown>) => {
       const rec = Array.isArray(r.receipts) ? r.receipts[0] : r.receipts
-      return { ...r, receipt_number: (rec as Record<string, unknown>)?.receipt_number || null } as CashSale
+      return {
+        ...r,
+        receipt_id: (rec as Record<string, unknown>)?.id || null,
+        receipt_number: (rec as Record<string, unknown>)?.receipt_number || null,
+        total_cwt: Number((rec as Record<string, unknown>)?.total_cwt || 0),
+      } as CashSale
     })
     setList(rows)
     setTotalCount(count || 0)
@@ -308,8 +315,8 @@ export default function CashSalesPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Date','SI Number','OR Number','Customer','TIN','Total','VAT'].map(h => (
-                      <th key={h} className={`${th} ${['Total','VAT'].includes(h) ? 'text-right' : ''}`}>{h}</th>
+                    {['Date','SI Number','OR Number','Customer','TIN','Total','VAT','CWT'].map(h => (
+                      <th key={h} className={`${th} ${['Total','VAT','CWT'].includes(h) ? 'text-right' : ''}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -323,6 +330,18 @@ export default function CashSalesPage() {
                       <td className="px-4 py-2.5 font-mono text-xs text-gray-500">{cs.customer_tin_snapshot || '—'}</td>
                       <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-semibold text-gray-900">{fmt(Number(cs.total_amount))}</td>
                       <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-blue-700">{cs.total_vat_amount ? fmt(Number(cs.total_vat_amount)) : '—'}</td>
+                      <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-amber-700">
+                        {cs.receipt_id && cs.total_cwt > 0 ? (
+                          <ReportTraceLink
+                            companyId={companyId || ''}
+                            reportFamily="tax"
+                            filters={{ tax_kind: 'cwt_receivable', source_doc_type: 'OR', source_doc_id: cs.receipt_id }}
+                            title="Open the CWT tax-ledger trace for this cash-sale receipt"
+                          >
+                            {fmt(cs.total_cwt)}
+                          </ReportTraceLink>
+                        ) : '—'}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

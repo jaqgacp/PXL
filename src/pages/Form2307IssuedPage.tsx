@@ -110,6 +110,12 @@ export default function Form2307IssuedPage() {
   const quarterMonthLabels = [0, 1, 2].map(offset =>
     new Date(year, (quarter - 1) * 3 + offset, 1).toLocaleString('en-PH', { month: 'short' })
   )
+  const lineTraceFilters = (issuance: Issuance, line: IssuanceLine) => ({
+    record_id: issuance.id,
+    atc_code: line.atc_code || undefined,
+    income_nature: line.nature_of_income || undefined,
+    tax_rate: line.tax_rate == null ? undefined : String(line.tax_rate),
+  })
 
   return (
     <div className="space-y-3">
@@ -164,7 +170,7 @@ export default function Form2307IssuedPage() {
                     <td className="px-3 py-2">
                       <div className="flex gap-2">
                         <ReportTraceLink
-                          companyId={companyId}
+                          companyId={companyId || ''}
                           reportFamily="form_2307_issued"
                           filters={{ record_id: iss.id }}
                           className="text-blue-600 hover:text-blue-800"
@@ -208,7 +214,16 @@ export default function Form2307IssuedPage() {
                                   <td className="px-2 py-1.5 text-right font-mono">{fmt(line.month_3_tax_withheld)}</td>
                                   <td className="px-2 py-1.5 text-right font-mono font-medium">{fmt(line.tax_base)}</td>
                                   <td className="px-2 py-1.5 text-right font-mono">{line.tax_rate == null ? '—' : `${fmt(line.tax_rate)}%`}</td>
-                                  <td className="px-2 py-1.5 text-right font-mono font-medium text-red-700">{fmt(line.tax_withheld)}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono font-medium text-red-700">
+                                    <ReportTraceLink
+                                      companyId={companyId || ''}
+                                      reportFamily="form_2307_issued"
+                                      filters={lineTraceFilters(iss, line)}
+                                      title="Open the source tax-ledger rows for this Form 2307 line"
+                                    >
+                                      {fmt(line.tax_withheld)}
+                                    </ReportTraceLink>
+                                  </td>
                                 </tr>
                               ))}
                             </tbody>

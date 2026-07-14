@@ -95,6 +95,30 @@ Expected accounting behavior:
 - The scenario can only pass when AP aging, supplier ledger, GL AP control, input VAT adjustment support, report drilldown, and audit trail evidence reconcile.
 - Session 8 added scoped UI handling for stored vendor credit applications, but this scenario is not `Retested Passed` until seeded execution validates it.
 
+## ASOF-LEDGER-RECON-001 - Customer/Supplier Ledger and GL Reconciliation
+
+Status: Executed Passing (2026-07-14) in `supabase/tests/051_asof_ledger_reconciliation_test.sql`, 16 assertions.
+
+Related findings: PXL-DA-013.
+
+Scenario:
+
+| Step | Transaction | Date | Amount | Expected Reporting Behavior |
+| ---- | ----------- | ---- | ------ | --------------------------- |
+| 1 | Posted Sales Invoice | 2026-01-15 | 10,000.00 | Customer ledger as of 2026-01-31 shows only the SI and a 10,000.00 AR balance. |
+| 2 | Posted Official Receipt | 2026-02-15 | 4,000.00 | Customer ledger as of 2026-02-19 includes SI + OR only and has a 6,000.00 running balance. |
+| 3 | Applied Credit Memo | 2026-02-20 | 1,000.00 | Customer ledger as of 2026-02-28 orders SI, OR, CM and AR subledger-to-GL reconciliation reports a 5,000.00 subledger balance with zero variance. |
+| 4 | Posted Vendor Bill | 2026-01-10 | 12,000.00 | Supplier ledger as of 2026-01-31 shows only the VB and a 12,000.00 AP balance. |
+| 5 | Posted Payment Voucher | 2026-02-10 | 7,000.00 cash + 1,000.00 EWT | Supplier ledger as of 2026-02-28 has a 4,000.00 running balance. |
+| 6 | Posted Vendor Bill and Vendor Credit | 2026-03-05 / 2026-03-20 | 8,000.00 / 2,000.00 | Supplier ledger as of 2026-03-31 orders VB, PV, VB, VC and AP subledger-to-GL reconciliation reports a 10,000.00 subledger balance with zero variance. |
+
+Expected accounting behavior:
+
+- No new GL entry is created by running the ledger or reconciliation reports.
+- Customer ledger rows must honor the cutoff date and include only AR-clearing receipt applications, not customer advances.
+- Supplier ledger rows must honor the cutoff date, exclude supplier down-payment rows from AP, and net source-accrued EWT from the originating vendor bill's AP amount.
+- Reconciliation reports must use `company_accounting_config.ar_account_id` / `ap_account_id` and compare the as-of subledger totals to posted GL control-account balances.
+
 ## VC-APPLICATION-DATE-001 - User-Controlled Vendor Credit Application Date
 
 Status: Executed Passing (2026-07-02) in `supabase/tests/004_vendor_credit_application_controls_test.sql`, including pre-credit-date and locked-period rejection and direct-insert denial.
@@ -240,6 +264,46 @@ Scenario (final schema after retiring duplicate customer flags and unused EWT/FW
 | 4 | Call `fn_atc_code_used` for the customer default ATC | Returns true without relying on the retired wrapper tables. |
 | 5 | Create a supplier with `default_atc_code_id` but `is_subject_to_ewt = false` | The existing supplier default trigger auto-enables `is_subject_to_ewt`, proving AP defaults point directly at ATC masters. |
 | 6 | Call `fn_atc_code_used` for the supplier default ATC | Returns true through `suppliers.default_atc_code_id`, so used ATCs remain protected after wrapper retirement. |
+
+## WHT-MASTER-DEFAULTS-001 - Supplier/Customer Withholding Default Flows
+
+Status: Executed Passing (2026-07-14, session 95) in `supabase/tests/049_withholding_master_defaults_test.sql` with 15 assertions.
+
+Related findings: PXL-AUD-008.
+
+Scenario (single ATC-backed supplier/customer withholding defaults after master consolidation):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Create supplier/customer defaults with FWT ATC WC001 | Both writes are rejected because supplier EWT and customer CWT defaults must reference active/current withholding ATCs for the expected side. |
+| 2 | Create supplier and customer with WC140 defaults while their withholding flags are false | The database auto-enables `is_subject_to_ewt` / `is_subject_to_cwt` and stores the ATC-backed defaults. |
+| 3 | Save/post a source-basis VAT vendor bill for the supplier | The VB line derives ATC WC140, base 10,000.00, EWT 200.00; the header expected EWT matches; posting writes supplier-linked `ewt_payable` tax detail. |
+| 4 | Generate issued Form 2307 for Q1 | The certificate line preserves WC140, base 10,000.00, withheld 200.00, and month-1 withheld 200.00. |
+| 5 | Save/post a VAT sales invoice and receipt for the customer | The receipt line uses the customer default WC140 on explicit base 10,000.00 with CWT 200.00; posting writes customer-linked `cwt_receivable` tax detail. |
+| 6 | Record received Form 2307 evidence against the receipt line | The governed RPC creates received evidence for 200.00 under WC140, making the customer-default CWT claimable through the received-certificate lifecycle. |
+
+## ACCOUNTING-READINESS-APPROVAL-001 - SI/VB Approval Readiness and EWT Identity
+
+Status: Executed Passing (2026-07-14, session 96) in `supabase/tests/050_accounting_readiness_approval_test.sql` with 17 assertions.
+
+Related findings: PXL-AUD-009, PXL-AUD-010.
+
+Scenario: a VAT company exercises both approval RPCs and direct status-transition triggers for sales invoices and vendor bills, plus AP-side EWT supplier-TIN readiness.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Save a draft SI line with no revenue account, then approve via RPC | Rejected: every SI line must have a revenue account before approval/posting. |
+| 2 | Directly update the same SI to `approved` | Rejected by the database status trigger with the same revenue-account readiness error. |
+| 3 | Save an SI using an inactive revenue account | Approval is rejected because the revenue account is not active/postable for the company. |
+| 4 | Save an SI with VAT-12 while active, deactivate the VAT code, then approve | Approval is rejected because the output VAT code is no longer active/valid. |
+| 5 | Save, approve, and post an accounting-ready SI | Approval and posting both succeed, and the SI ends `posted`. |
+| 6 | Save a draft VB line with no expense account, then approve via RPC | Rejected: every VB line must have an expense account before approval/posting. |
+| 7 | Directly update the same VB to `approved` | Rejected by the database status trigger with the same expense-account readiness error. |
+| 8 | Save a VB using an inactive expense account | Approval is rejected because the expense account is not active/postable for the company. |
+| 9 | Save a VB with IVAT-12 while active, deactivate the VAT code, then approve | Approval is rejected because the input VAT code is no longer active/valid. |
+| 10 | Save, approve, and post an accounting-ready VB | Approval and posting both succeed, and the VB ends `posted`. |
+| 11 | Save a source-basis EWT VB whose supplier master and header snapshot both have blank TIN | RPC approval and direct approved-status transition are both rejected before posting. |
+| 12 | Save a supplier down-payment PV with EWT and no usable supplier TIN snapshot | PV posting is rejected before an EWT tax-detail row can be written. |
 
 ## VAT-RECON-001 - VAT Tax-Ledger-to-GL Reconciliation and Return Gate
 
@@ -586,6 +650,18 @@ Status: Executed Passing (session 57, 2026-07-05) — `supabase/tests/022_cv_ewt
 | 2 | CV EWT without a supplier / wrong rate without reason / expired ATC | Rejected with the PV-style messages at save time (header trigger) and again at post. |
 | 3 | Quarterly 2307 generation for a quarter containing CV EWT | Generates (previously ABORTED the whole batch); CV amounts included per supplier/ATC; supplier-unlinked legacy rows are skipped with `skipped_unlinked_count` in the result; an all-unlinked quarter raises an actionable message. |
 | 4 | Cancel the posted CV | Counter tax row with `reverses_tax_detail_id`, dated on cancel date; `vw_ewt_summary_ap` drops both rows; QAP detail excludes the cancelled CV. |
+
+## WITHHOLDING-TRACE-DRILLDOWN-001 - EWT/CWT Tax-Ledger, QAP, and Form 2307 Drilldowns
+
+Status: Executed Passing (session 94, 2026-07-14) — `supabase/tests/048_withholding_trace_drilldowns_test.sql`, 9 assertions. Related findings: PXL-AUD-049, PXL-DA-002.
+
+| Step | Transaction / Trace | Expected Behavior |
+| ---- | ------------------- | ----------------- |
+| 1 | Check Voucher EWT amount trace with `tax_kind=ewt_payable`, `source_doc_type=CV`, and the CV source id | Resolves one grouped tax trace row for the exact CV source document and exposes the CV tax-detail id and amount. |
+| 2 | QAP payee/ATC/nature/rate drilldown for a quarter | Resolves only active source rows matching the supplier, ATC, nature of payment, tax rate, and quarter dates; grouped totals equal the report line. |
+| 3 | Form 2307 issued line drilldown | Certificate-line filters (`record_id`, ATC, nature, rate) resolve the contributing source tax-ledger rows instead of every line on the certificate. |
+| 4 | Cash-sale CWT amount trace with `tax_kind=cwt_receivable`, `source_doc_type=OR`, and the receipt id | Resolves the exact receipt tax detail and links onward through the source accounting trace. |
+| 5 | Cash-purchase line and total EWT traces | CP source-document filters, plus optional line ATC/nature/rate dimensions, resolve the exact cash-purchase EWT evidence. |
 
 ## EWT-RETURN-GATE-001 - 1601EQ Reconciliation Gate
 
