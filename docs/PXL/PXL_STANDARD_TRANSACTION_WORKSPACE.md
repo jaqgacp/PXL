@@ -1,8 +1,9 @@
 # PXL Transaction Workspace Standard
 
 Status: **OFFICIAL CANONICAL TRANSACTION WORKSPACE STANDARD**
-Canonical reference implementation: **Sales Invoice Workspace** (`/sales-invoices/:id`, `src/pages/SalesInvoiceDocumentPage.tsx`)
-Last updated: 2026-07-13
+Canonical pilot references: **Sales Invoice Form UX Standard** (`PXL_SALES_INVOICE_UX_STANDARD.md`) and **Sales Invoice View UX Standard** (`PXL_SALES_INVOICE_VIEW_UX_STANDARD.md`)
+Current saved-document reference implementation: **Sales Invoice Workspace** (`/sales-invoices/:id`, `src/pages/SalesInvoiceDocumentPage.tsx`)
+Last updated: 2026-07-14
 
 This document is the governing standard for all future PXL transaction workspaces. Do not implement Purchase Invoice, Sales Order, Purchase Order, Delivery Receipt, Official Receipt, Credit Memo, Debit Memo, Journal Entry, Inventory Transactions, Banking, Fixed Assets, Payroll, or Compliance Registers by inventing a new page shape. Future transaction screens must inherit this architecture and extend it only where the document type genuinely requires it.
 
@@ -11,11 +12,15 @@ Current rollout gate: **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READIN
 ## 1. Document hierarchy and authority
 
 1. `PXL_ACCOUNTING_RULES_MATRIX.md` defines governed debit/credit behavior, account determination, tax impact, reversal/void/cancel rules, lock behavior, report impact, and test expectations.
-2. `PXL_TRANSACTION_MATRIX.md` + database migrations define transaction lifecycle behavior, statuses, compliance controls, source chains, and data contracts.
-3. **This document** defines the official transaction workspace architecture, UX rationale, component standard, and implementation pattern.
-4. `PXL_TRANSACTION_EXPERIENCE_STANDARD.md` contains lower-level design details and maturity tracking. When it conflicts with this document, update it to match this document.
-5. `UI_UX_PRINCIPLES.md` defines broad visual/interaction principles. Its stack notes are aspirational unless already adopted.
-6. `PXL_PRODUCT_BACKLOG.md` holds feature-level rollout planning and deferred enhancements.
+2. `PXL_TRANSACTION_MATRIX.md` defines transaction lifecycle behavior, statuses, compliance controls, source chains, posting behavior, and document data contracts.
+3. `PXL_SALES_INVOICE_UX_STANDARD.md` is the canonical Sales Invoice create and draft-edit UX pilot.
+4. `PXL_SALES_INVOICE_VIEW_UX_STANDARD.md` is the canonical saved-document, approval, posted, collection, audit, void, and reversal view pilot.
+5. **This document** defines the reusable transaction-workspace architecture across all PXL transaction types.
+6. `PXL_TRANSACTION_EXPERIENCE_STANDARD.md` contains lower-level implementation guidance, table behavior, component contracts, maturity tracking, and rollout detail. When it conflicts with the approved Sales Invoice pilot standards or this document, update it to match.
+7. `UI_UX_PRINCIPLES.md` defines broad visual/interaction principles. Its stack notes are aspirational unless already adopted.
+8. `PXL_PRODUCT_BACKLOG.md` holds feature-level rollout planning and deferred enhancements.
+
+The accounting and transaction matrices remain authoritative over all UX standards. The Sales Invoice form and view standards are the canonical pilot references; this general standard inherits and summarizes them but must not override them accidentally.
 
 Routing rule for discoveries during workspace work:
 
@@ -63,6 +68,10 @@ Core principles:
 - Customer/vendor detail lives in Related Party.
 - Related documents live in Related Documents.
 - Master data lives in master records and is referenced by transactions.
+
+When a transaction has both create/edit and saved-document modes, both modes must share the same workspace language and architecture, but may prioritize different information. Form mode prioritizes capture, defaults, lines, previews, and readiness. View mode prioritizes status, financial position, posted truth, collection state, traceability, and audit evidence.
+
+Read-only view is not a disabled form. Existing documents must use labels, values, links, status chips, and tables; input controls appear only when an action genuinely requires user entry.
 
 ## 3. Standard workspace anatomy
 
@@ -216,14 +225,16 @@ Do not put these here:
 
 ### Customer/Vendor/Party Information
 
-Purpose: identify the counterparty and expose the critical tax identity needed for the transaction.
+Purpose: identify the counterparty and expose the critical transaction snapshot or party identity needed for the transaction.
 
 Sales Invoice keeps:
 
-- Customer, clickable to the Customer master.
+- Customer name or link.
 - Customer Code.
 - TIN.
+- TIN branch code when stored.
 - VAT Classification.
+- Business style when useful.
 
 Equivalent supplier/employee/bank/asset party identifiers are allowed by document type.
 
@@ -238,6 +249,8 @@ Do not put these here:
 - Recent invoices/payments/bills.
 
 Those belong in Related Party or the party master.
+
+For documents with legal, tax, or audit outputs, the card must label historical facts as the transaction snapshot when relevant. The Related Party tab owns current master data.
 
 ### Transaction Context
 
@@ -266,6 +279,18 @@ Do not put these here:
 - Journal numbers link to Journal Entry or Accounting Trace.
 - Related document numbers link to their canonical workspace.
 - Links must not open duplicate view pages.
+
+### Transaction snapshot vs current master data
+
+Transaction workspaces must distinguish historical transaction snapshot facts from current master data whenever a customer, supplier, employee, bank, asset, item, or other master record can change after the document is issued.
+
+For Sales Invoice:
+
+- The Customer Information card shows invoice snapshot essentials such as customer name, code, TIN, TIN branch code, VAT classification, and business style when stored.
+- The Related Party tab shows the Current Customer Master profile such as current credit, contacts, addresses, aging, status, group, terms, price level, and recent transactions.
+- Posted invoice review and customer-facing output must not silently change because the customer master was edited later.
+
+If a required snapshot field is not preserved by the data model, show a truthful unavailable state or record a data-model gap. Do not use live master data as a fake historical snapshot.
 
 ## 6. Tab architecture
 
@@ -303,11 +328,11 @@ Future tabs may be added only when the data cannot reasonably fit one of these r
 | Approval | Authorization history. | Approvers, auditors, accountants. | Approval instances/workflow tables. | Level, approver, role, action/status, date. | Remarks, electronic signature, delegation. | Approver/user links when available. | Must show no-workflow empty state compactly and truthfully. |
 | Audit | Chronological audit trail. | Auditors, support, controllers. | System audit logs plus document lifecycle fields. | Created, edited, approved, posted, voided/restored events; user; timestamp. | IP, device, changed fields, old/new values. | User/device details are display-only; source rows link where appropriate. | Audit trail must be immutable/server-owned where compliance requires. |
 | Related Docs | Upstream/downstream document chain. | All transaction users. | Document links, source references, application lines, JE links. | Relationship, type, doc number, status, amount, direction, action. | Graph display, missing-stage reasons. | Every existing document number opens its canonical workspace; missing stages show “Not linked/Not created.” | Chain must support drilldown/drillback and never hide missing expected stages silently. |
-| Related Party | Embedded counterparty profile snapshot. | AR/AP, collections, purchasing, sales, tax. | Customer/supplier/party master plus AR/AP aging and recent docs. | Identity, contacts, addresses, tax profile, credit profile, outstanding balance. | Recent invoices/payments/bills, aging buckets, payment info, sales/purchasing info. | Party name opens master record; recent docs open canonical routes. | Transaction should indicate when master record is unavailable and show saved snapshot where applicable. |
+| Related Party | Current counterparty profile, structured separately from the transaction snapshot. | AR/AP, collections, purchasing, sales, tax. | Customer/supplier/party master plus AR/AP aging and recent docs. | Summary, tax/registration, credit/aging, contacts/addresses. | Recent invoices/payments/bills, aging buckets, payment info, sales/purchasing info. | Party name opens master record; recent docs open canonical routes. | Transaction should indicate when master record is unavailable; historical transaction snapshot facts stay in the document information surfaces, not live master data. |
 | Attachments | Supporting files. | Accountants, auditors, compliance users. | Attachment register/storage/OCR subsystem. | File, type, uploaded by, date, preview/download action, OCR status. | Source document scan, BIR docs, delivery proof, approvals. | Preview/download must use governed storage URLs. | Upload/download/OCR events should appear in Activity/Audit when implemented. |
 | Activity | Business/system event timeline. | Accountants, support, managers. | Transaction event stream, email/notification/API logs. | Created, approved, posted, printed, emailed, collected, voided. | Integration/API events, comments, notifications. | Linked events open source artifacts where available. | System events must be timestamped and attributable where possible. |
 | Notes | Human-entered notes by category. | Accountants, collections, customer/vendor support. | Note tables or document memo fields. | Internal, customer/vendor, accounting, collection notes. | Threaded comments, mentions, attachments. | Notes remain in the transaction; public-facing notes must be clearly separated. | Edits should be auditable once persisted as note entities. |
-| System | Technical metadata only. | Support, developers, auditors when needed. | Database IDs, RPC names, engine versions, hashes, migration metadata. | UUID, database ID, source module/type, RPC names, timestamps, internal IDs. | Engine versions, hash, migration version, internal references. | No daily business actions here. | Values must be factual and useful for support/audit traceability. |
+| System | Technical metadata only. | Support, developers, auditors when needed. | Existing IDs, process metadata, integration references, timestamps, hashes, and version fields when stored. | UUID, database ID, source module/type, timestamps, useful internal references. | Existing engine versions, hash, migration/schema version, integration references. | No daily business actions here. | Display only fields that already exist and provide operational, audit, integration, support, or troubleshooting value. |
 
 ## 7. Lines tab and Smart Grid standard
 
@@ -463,18 +488,22 @@ Rules:
 - Use tax ledger/detail entries and tax master data.
 - Show draft estimates only when clearly labeled.
 - VAT, EWT/CWT, ATC, tax base, rate, amount, recoverable/payable, BIR return, status, and source rule belong here.
+- For Sales Invoice, distinguish Expected CWT from Actual CWT Recognized and 2307 Status. Expected CWT is informational unless governed accounting rules state otherwise; actual CWT must link to the receipt, payment application, or certificate source.
 - Do not mix tax totals into the header.
 
 ### Validation
 
-Validation explains whether the document can be posted.
+Validation explains whether the document can be saved, submitted, approved, posted, or trusted as an already-posted document.
 
 Rules:
 
 - Use `PostingValidationPanel`.
 - Mirror server-side validation.
-- Show success/warning/error/info indicators compactly.
+- Show a compact readiness indicator near the relevant action area, e.g. Ready to Save, Ready to Post, Posted Successfully, 2 Warnings, or 3 Integrity Issues.
+- The compact indicator opens or focuses the Validation tab.
+- The full Validation tab owns the detailed table: Validation, Status, Message, Resolution, Source.
 - Do not use validation as a substitute for server enforcement.
+- Do not create a permanent Validation sidebar.
 
 ### Workflow and Approval
 
@@ -486,6 +515,8 @@ Rules:
 - Full lifecycle path belongs in Workflow.
 - Approver/action/date/remarks/signature belong in Approval.
 - Approval absence must show a compact empty state.
+- Workflow and Approval may initially render as a combined `Workflow & Approval` tab only when approval is single-step, no meaningful multi-level approval engine exists, and two tabs would create two nearly empty surfaces.
+- Even when combined, lifecycle and authorization responsibilities must remain logically separable so they can split later without redesigning the workspace.
 
 ### Audit
 
@@ -525,14 +556,18 @@ Purchase Request → Purchase Order → Receiving Report → Vendor Bill → Pay
 
 ### Related Party
 
-Related Party is the embedded live master profile.
+Related Party is the structured current master profile. It is not the transaction snapshot and must not become a scattered dashboard.
 
 Rules:
 
 - Customer/vendor master details belong here, not in the header.
-- Show identity, contacts, addresses, tax profile, credit profile, outstanding AR/AP, recent transactions, aging, payment/sales/purchasing info.
+- Use compact collapsible sections or internal sub-navigation.
+- Recommended sections are Summary, Tax and Registration, Credit and Aging, Contacts and Addresses, Recent Transactions, and Recent Payments.
+- Summary and Credit/Aging may default expanded; Contacts/Addresses and recent activity sections may default collapsed.
+- Show identity, contacts, addresses, tax profile, credit profile, outstanding AR/AP, recent transactions, aging, payment/sales/purchasing info only when authoritative.
 - The party name links to the master record.
-- When the master is unavailable, show a compact empty state and preserve transaction snapshot facts where available.
+- When the master is unavailable, show a compact empty state and preserve transaction snapshot facts in the document snapshot surfaces where available.
+- Label current master data separately from invoice/vendor/customer snapshots when both appear in the same workspace.
 
 ### Attachments
 
@@ -570,9 +605,10 @@ System is technical metadata only.
 
 Rules:
 
-- UUID, database ID, RPC names, posting/tax engine versions, hash, source module/type, migration version, created/updated timestamps, internal IDs.
+- Display UUID, database ID, RPC names, posting/tax engine versions, hash, source module/type, migration version, created/updated timestamps, and internal IDs only when they already exist and provide real operational, support, audit, integration, or troubleshooting value.
 - Business users should not need this tab daily.
 - Do not put business workflow or party data here.
+- Do not create new technical metadata fields merely to make the tab look complete.
 
 ## 9. UI/UX standards
 
@@ -805,15 +841,35 @@ For schema/posting/tax changes:
 
 ## 13. Sales Invoice reference implementation
 
-Sales Invoice is the canonical pilot and must be treated as the reference for future document workspaces.
+Sales Invoice is the canonical pilot pair and must be treated as the reference for future document workspaces.
 
-### Route and page
+Pilot standards:
 
-- Route: `/sales-invoices/:id`.
+- `PXL_SALES_INVOICE_UX_STANDARD.md` governs Sales Invoice create and draft-edit UX.
+- `PXL_SALES_INVOICE_VIEW_UX_STANDARD.md` governs saved-document review, approval, posted view, collection monitoring, audit, void, and reversal UX.
+
+The implementation references below describe the current app state; the pilot standards remain the product target where gaps exist.
+
+### View route and page
+
+- Canonical saved-document route: `/sales-invoices/:id`.
 - Page: `src/pages/SalesInvoiceDocumentPage.tsx`.
 - Shell: `DocumentLayout`.
 - Register routes non-draft rows into this workspace.
-- Draft create/edit still uses the register editor until routed consolidation is implemented.
+- Draft create/edit still uses the register editor until `/sales-invoices/new` and `/sales-invoices/:id/edit` consolidation is implemented.
+
+### Form standard status
+
+- Canonical create route target: `/sales-invoices/new`.
+- Canonical draft edit route target: `/sales-invoices/:id/edit`.
+- Product target: compact header, three-card band, one-line tabs, entry-focused lines, compact live summary, GL/tax preview, and readiness.
+- Current gap: routed create/edit consolidation remains pending.
+
+### View standard status
+
+- Canonical view route target: `/sales-invoices/:id`.
+- Product target: document-of-record workspace for status, monetary position, posted GL truth, posted tax truth, collection state, document trace, and audit evidence.
+- Current implementation is the saved-document reference but still needs future alignment for all approved view-standard details.
 
 ### Header implementation
 
@@ -829,7 +885,7 @@ Sales Invoice is the canonical pilot and must be treated as the reference for fu
 ### Primary cards
 
 - Document Information: Invoice Date, Due Date, Branch, Currency, Payment Terms, Reference.
-- Customer Information: Customer link, Customer Code, TIN, VAT Classification.
+- Customer Information: invoice snapshot essentials such as Customer link/name, Customer Code, TIN, TIN Branch Code when stored, VAT Classification, and Business Style when useful.
 - Sales Context: Salesperson, Project, Cost Center, Department.
 
 ### Tabs
@@ -854,11 +910,13 @@ Sales Invoice currently implements:
 ### Known boundaries in the reference
 
 - Draft create/edit route consolidation remains pending.
-- Tax Impact is VAT-safe only until withholding-base defects are resolved.
+- Customer snapshot coverage must be confirmed against available fields; live customer master data must not be treated as historical invoice snapshot.
+- Tax Impact must distinguish Expected CWT from Actual CWT Recognized and 2307 Status.
+- Tax Impact is limited by authoritative tax-detail and withholding/certificate sources that are available to the view.
 - Attachment/OCR storage is not configured.
-- Semantic activity event stream is not yet stored.
+- Semantic activity event stream coverage varies by source.
 - Categorized notes are not yet persisted as separate note entities.
-- Document hash/version fields are not yet stored.
+- System metadata is shown only when existing and operationally useful; document hash/version fields are not required merely for display.
 - E-invoice integration is disabled until provider setup exists.
 - Some Sales/Customer/Dimension fields are not yet governed master data links and display as unassigned.
 
