@@ -14,13 +14,12 @@ type UOM = {
   companies?: { registered_name: string }; base_uom?: { uom_code: string }
 }
 type VATCode = { id: string; vat_code: string; description: string; vat_classification: string; transaction_type: string }
-type EWTCode = { id: string; ewt_code: string; description: string; rate: number }
 type Item = {
   id: string; company_id: string; item_code: string; description: string; item_type: string
   category_id: string; uom_id: string; barcode: string | null
   standard_selling_price: number; standard_cost: number; price_is_vat_inclusive: boolean
   default_sales_vat_id: string | null; default_purchase_vat_id: string | null
-  default_ewt_code_id: string | null; costing_method: string | null
+  costing_method: string | null
   min_stock_level: number | null; reorder_point: number | null; is_active: boolean
   companies?: { registered_name: string }
   item_categories?: { category_name: string }
@@ -57,7 +56,6 @@ export default function ItemCatalogPage() {
   const [uoms, setUoms] = useState<UOM[]>([])
   const [items, setItems] = useState<Item[]>([])
   const [vatCodes, setVatCodes] = useState<VATCode[]>([])
-  const [ewtCodes, setEwtCodes] = useState<EWTCode[]>([])
   const [filterCompany, setFilterCompany] = useState('')
   const [filterType, setFilterType] = useState('')
   const [search, setSearch] = useState('')
@@ -74,7 +72,7 @@ export default function ItemCatalogPage() {
     company_id: '', item_code: '', description: '', description_long: '', item_type: 'inventory_item',
     category_id: '', uom_id: '', barcode: '',
     standard_selling_price: '0', standard_cost: '0', price_is_vat_inclusive: false,
-    default_sales_vat_id: '', default_purchase_vat_id: '', default_ewt_code_id: '',
+    default_sales_vat_id: '', default_purchase_vat_id: '',
     sales_account_id: '', cogs_account_id: '', inventory_account_id: '', purchase_expense_account_id: '',
     costing_method: 'weighted_average', min_stock_level: '', reorder_point: '',
   })
@@ -100,7 +98,6 @@ export default function ItemCatalogPage() {
     const cid = itemForm.company_id || catForm.company_id
     if (!cid) { setCoa([]); return }
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', cid).eq('is_active', true).eq('is_postable', true).order('account_code').then(({ data }) => setCoa(data || []))
-    supabase.from('ewt_codes').select('id,ewt_code,description,rate').eq('company_id', cid).eq('is_active', true).order('ewt_code').then(({ data }) => setEwtCodes(data || []))
   }, [itemForm.company_id, catForm.company_id])
 
   const setC = (k: string, v: string) => { setSaved(false); setCatForm(f => ({ ...f, [k]: v })) }
@@ -127,7 +124,6 @@ export default function ItemCatalogPage() {
       price_is_vat_inclusive: item.price_is_vat_inclusive,
       default_sales_vat_id: item.default_sales_vat_id || '',
       default_purchase_vat_id: item.default_purchase_vat_id || '',
-      default_ewt_code_id: item.default_ewt_code_id || '',
       sales_account_id: '', cogs_account_id: '', inventory_account_id: '', purchase_expense_account_id: '',
       costing_method: item.costing_method || 'weighted_average',
       min_stock_level: item.min_stock_level ? String(item.min_stock_level) : '',
@@ -159,7 +155,6 @@ export default function ItemCatalogPage() {
         price_is_vat_inclusive: itemForm.price_is_vat_inclusive,
         default_sales_vat_id: itemForm.default_sales_vat_id || null,
         default_purchase_vat_id: itemForm.default_purchase_vat_id || null,
-        default_ewt_code_id: itemForm.default_ewt_code_id || null,
         sales_account_id: itemForm.sales_account_id || null,
         cogs_account_id: itemForm.cogs_account_id || null,
         inventory_account_id: itemForm.inventory_account_id || null,
@@ -343,7 +338,7 @@ export default function ItemCatalogPage() {
 
         <div className={sec}><h2 className={hd}>Section 3 — Tax Defaults</h2>
           <div className="bg-blue-50 border border-blue-100 rounded px-3 py-2 mb-2 text-xs text-blue-700">
-            These codes auto-fill on every Sales Invoice or Purchase Invoice line when this item is selected.
+            VAT codes auto-fill on every Sales Invoice or Purchase Invoice line when this item is selected.
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div><label className={lbl}>Default Sales VAT Code <span className="text-red-500">*</span></label>
@@ -355,11 +350,6 @@ export default function ItemCatalogPage() {
               <select value={itemForm.default_purchase_vat_id} onChange={e => setI('default_purchase_vat_id', e.target.value)} className={inp}>
                 <option value="">Select input VAT code...</option>
                 {inputVatCodes.map(v => <option key={v.id} value={v.id}>{v.vat_code} — {v.description}</option>)}
-              </select></div>
-            <div><label className={lbl}>Default EWT Code (purchase, item-level override)</label>
-              <select value={itemForm.default_ewt_code_id} onChange={e => setI('default_ewt_code_id', e.target.value)} className={inp}>
-                <option value="">None (use supplier default)</option>
-                {ewtCodes.map(e => <option key={e.id} value={e.id}>{e.ewt_code} — {e.description} ({e.rate}%)</option>)}
               </select></div>
           </div>
         </div>

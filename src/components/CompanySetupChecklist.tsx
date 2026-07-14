@@ -98,8 +98,6 @@ export function CompanySetupChecklist({ company, onBack, onEditCompany }: Props)
           profileRes,
           vatCodesRes,
           atcCodesRes,
-          ewtCodesRes,
-          fwtCodesRes,
           ptCodesRes,
           configRes,
         ] = await Promise.all([
@@ -143,14 +141,6 @@ export function CompanySetupChecklist({ company, onBack, onEditCompany }: Props)
             .is('deprecated_at', null)
             .lte('effective_from', today)
             .or(`effective_to.is.null,effective_to.gte.${today}`),
-          supabase.from('ewt_codes')
-            .select('id, atc_id')
-            .eq('company_id', company.id)
-            .eq('is_active', true),
-          supabase.from('fwt_codes')
-            .select('id, atc_id')
-            .eq('company_id', company.id)
-            .eq('is_active', true),
           supabase.from('percentage_tax_codes')
             .select('id, atc_id')
             .eq('company_id', company.id)
@@ -343,22 +333,23 @@ export function CompanySetupChecklist({ company, onBack, onEditCompany }: Props)
             ].filter(Boolean)
           : []
         const atcCodes = atcCodesRes.data || []
-        const currentAtcCategory = new Map(atcCodes.map(code => [code.id, code.tax_category]))
-        const companyCodeCount: Record<string, number> = {
-          ewt: ewtCodesRes.data?.filter(code => currentAtcCategory.get(code.atc_id) === 'ewt').length || 0,
-          fwt: fwtCodesRes.data?.filter(code => currentAtcCategory.get(code.atc_id) === 'fwt').length || 0,
-          pt: ptCodesRes.data?.filter(code => currentAtcCategory.get(code.atc_id) === 'pt').length || 0,
+        const currentAtcIdsByCategory = new Map<string, Set<string>>()
+        for (const code of atcCodes) {
+          const current = currentAtcIdsByCategory.get(code.tax_category) || new Set<string>()
+          current.add(code.id)
+          currentAtcIdsByCategory.set(code.tax_category, current)
         }
-        const companyCodeError: Record<string, string> = {
-          ewt: ewtCodesRes.error?.message || '',
-          fwt: fwtCodesRes.error?.message || '',
-          pt: ptCodesRes.error?.message || '',
+        const percentageTaxAtcs = currentAtcIdsByCategory.get('pt') || new Set<string>()
+        const availableCategory: Record<string, boolean> = {
+          ewt: Boolean(currentAtcIdsByCategory.get('ewt')?.size),
+          fwt: Boolean(currentAtcIdsByCategory.get('fwt')?.size),
+          pt: Boolean(ptCodesRes.data?.some(code => percentageTaxAtcs.has(code.atc_id))),
         }
         const missingAtcCategories = requiredAtcCategories.filter(category =>
-          !atcCodes.some(code => code.tax_category === category) || companyCodeCount[category] === 0
+          !availableCategory[category]
         )
         const atcQueryError = atcCodesRes.error?.message
-          || requiredAtcCategories.map(category => companyCodeError[category]).find(Boolean)
+          || (requiredAtcCategories.includes('pt') ? ptCodesRes.error?.message : '')
           || ''
         nextItems.push({
           id: 'atc-codes',
@@ -383,8 +374,8 @@ export function CompanySetupChecklist({ company, onBack, onEditCompany }: Props)
                 : atcQueryError
                   ? errorDetail(atcQueryError)
                   : missingAtcCategories.length === 0
-                    ? `Current ATC masters and company codes cover: ${requiredAtcCategories.join(', ')}.`
-                    : `Missing current ATC master or company code coverage: ${missingAtcCategories.join(', ')}.`,
+                    ? `Current ATC masters cover: ${requiredAtcCategories.join(', ')}.`
+                    : `Missing current ATC coverage: ${missingAtcCategories.join(', ')}.`,
           path: '/tax-setup',
           actionLabel: 'Open tax codes',
         })

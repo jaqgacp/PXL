@@ -3688,7 +3688,6 @@ export type Database = {
           customer_group: string | null
           default_currency_id: string | null
           default_cwt_atc_code_id: string | null
-          default_ewt_code_id: string | null
           default_gl_account_id: string | null
           default_tax_type: string
           default_terms_id: string | null
@@ -3697,7 +3696,6 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_subject_to_cwt: boolean
-          is_withholding_agent: boolean
           phone_number: string | null
           registered_address: string
           registered_name: string
@@ -3718,7 +3716,6 @@ export type Database = {
           customer_group?: string | null
           default_currency_id?: string | null
           default_cwt_atc_code_id?: string | null
-          default_ewt_code_id?: string | null
           default_gl_account_id?: string | null
           default_tax_type?: string
           default_terms_id?: string | null
@@ -3727,7 +3724,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_subject_to_cwt?: boolean
-          is_withholding_agent?: boolean
           phone_number?: string | null
           registered_address: string
           registered_name: string
@@ -3748,7 +3744,6 @@ export type Database = {
           customer_group?: string | null
           default_currency_id?: string | null
           default_cwt_atc_code_id?: string | null
-          default_ewt_code_id?: string | null
           default_gl_account_id?: string | null
           default_tax_type?: string
           default_terms_id?: string | null
@@ -3757,7 +3752,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_subject_to_cwt?: boolean
-          is_withholding_agent?: boolean
           phone_number?: string | null
           registered_address?: string
           registered_name?: string
@@ -3787,13 +3781,6 @@ export type Database = {
             columns: ["default_cwt_atc_code_id"]
             isOneToOne: false
             referencedRelation: "atc_codes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customers_default_ewt_code_id_fkey"
-            columns: ["default_ewt_code_id"]
-            isOneToOne: false
-            referencedRelation: "ewt_codes"
             referencedColumns: ["id"]
           },
           {
@@ -4498,76 +4485,6 @@ export type Database = {
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ewt_codes: {
-        Row: {
-          atc_id: string
-          company_id: string
-          created_at: string | null
-          created_by: string | null
-          description: string
-          ewt_code: string
-          form_type: string
-          id: string
-          is_active: boolean | null
-          rate: number
-          tax_code_id: string
-          updated_at: string | null
-          updated_by: string | null
-        }
-        Insert: {
-          atc_id: string
-          company_id: string
-          created_at?: string | null
-          created_by?: string | null
-          description: string
-          ewt_code: string
-          form_type: string
-          id?: string
-          is_active?: boolean | null
-          rate: number
-          tax_code_id: string
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Update: {
-          atc_id?: string
-          company_id?: string
-          created_at?: string | null
-          created_by?: string | null
-          description?: string
-          ewt_code?: string
-          form_type?: string
-          id?: string
-          is_active?: boolean | null
-          rate?: number
-          tax_code_id?: string
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ewt_codes_atc_id_fkey"
-            columns: ["atc_id"]
-            isOneToOne: false
-            referencedRelation: "atc_codes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ewt_codes_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ewt_codes_tax_code_id_fkey"
-            columns: ["tax_code_id"]
-            isOneToOne: false
-            referencedRelation: "tax_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -5499,76 +5416,6 @@ export type Database = {
           },
         ]
       }
-      fwt_codes: {
-        Row: {
-          atc_id: string
-          company_id: string
-          created_at: string | null
-          created_by: string | null
-          description: string
-          form_type: string
-          fwt_code: string
-          id: string
-          is_active: boolean | null
-          rate: number
-          tax_code_id: string
-          updated_at: string | null
-          updated_by: string | null
-        }
-        Insert: {
-          atc_id: string
-          company_id: string
-          created_at?: string | null
-          created_by?: string | null
-          description: string
-          form_type?: string
-          fwt_code: string
-          id?: string
-          is_active?: boolean | null
-          rate: number
-          tax_code_id: string
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Update: {
-          atc_id?: string
-          company_id?: string
-          created_at?: string | null
-          created_by?: string | null
-          description?: string
-          form_type?: string
-          fwt_code?: string
-          id?: string
-          is_active?: boolean | null
-          rate?: number
-          tax_code_id?: string
-          updated_at?: string | null
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "fwt_codes_atc_id_fkey"
-            columns: ["atc_id"]
-            isOneToOne: false
-            referencedRelation: "atc_codes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fwt_codes_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "fwt_codes_tax_code_id_fkey"
-            columns: ["tax_code_id"]
-            isOneToOne: false
-            referencedRelation: "tax_codes"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       fwt_returns: {
         Row: {
           company_id: string
@@ -6279,7 +6126,6 @@ export type Database = {
           costing_method: string | null
           created_at: string | null
           created_by: string | null
-          default_ewt_code_id: string | null
           default_purchase_vat_id: string | null
           default_sales_vat_id: string | null
           description: string
@@ -6308,7 +6154,6 @@ export type Database = {
           costing_method?: string | null
           created_at?: string | null
           created_by?: string | null
-          default_ewt_code_id?: string | null
           default_purchase_vat_id?: string | null
           default_sales_vat_id?: string | null
           description: string
@@ -6337,7 +6182,6 @@ export type Database = {
           costing_method?: string | null
           created_at?: string | null
           created_by?: string | null
-          default_ewt_code_id?: string | null
           default_purchase_vat_id?: string | null
           default_sales_vat_id?: string | null
           description?: string
@@ -6378,13 +6222,6 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "items_default_ewt_code_id_fkey"
-            columns: ["default_ewt_code_id"]
-            isOneToOne: false
-            referencedRelation: "ewt_codes"
             referencedColumns: ["id"]
           },
           {
@@ -10328,7 +10165,6 @@ export type Database = {
           created_by: string | null
           default_atc_code_id: string | null
           default_currency_id: string | null
-          default_ewt_code_id: string | null
           default_gl_account_id: string | null
           default_tax_type: string
           default_terms_id: string | null
@@ -10354,7 +10190,6 @@ export type Database = {
           created_by?: string | null
           default_atc_code_id?: string | null
           default_currency_id?: string | null
-          default_ewt_code_id?: string | null
           default_gl_account_id?: string | null
           default_tax_type?: string
           default_terms_id?: string | null
@@ -10380,7 +10215,6 @@ export type Database = {
           created_by?: string | null
           default_atc_code_id?: string | null
           default_currency_id?: string | null
-          default_ewt_code_id?: string | null
           default_gl_account_id?: string | null
           default_tax_type?: string
           default_terms_id?: string | null
@@ -10418,13 +10252,6 @@ export type Database = {
             columns: ["default_currency_id"]
             isOneToOne: false
             referencedRelation: "currencies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "suppliers_default_ewt_code_id_fkey"
-            columns: ["default_ewt_code_id"]
-            isOneToOne: false
-            referencedRelation: "ewt_codes"
             referencedColumns: ["id"]
           },
           {

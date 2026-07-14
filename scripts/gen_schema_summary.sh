@@ -11,7 +11,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 OUT=docs/PXL/PXL_SCHEMA_SUMMARY.md
-declare -A fn_last fn_count vw_last vw_count tb_created tb_alt_count tb_alt_last trg_last
+declare -A fn_last fn_count vw_last vw_count tb_created tb_alt_count tb_alt_last trg_last trg_table
 
 for f in $(ls supabase/migrations/*.sql | sort); do
   base=$(basename "$f")
@@ -35,11 +35,32 @@ for f in $(ls supabase/migrations/*.sql | sort); do
     tb_alt_count[$name]=$(( ${tb_alt_count[$name]:-0} + 1 )); tb_alt_last[$name]=$base
   done < <(grep -ohE 'ALTER TABLE (IF EXISTS )?(ONLY )?[a-zA-Z0-9_.]+' "$f" \
            | sed -E 's/.*TABLE (IF EXISTS )?(ONLY )?//; s/^public\.//' | sort -u)
+  while IFS=$'\t' read -r name table_name; do
+    [ -z "$name" ] && continue
+    table_name=${table_name#public.}
+    trg_last[$name]=$base
+    trg_table[$name]=$table_name
+  done < <(perl -0777 -ne '
+      while (/CREATE\s+(?:OR\s+REPLACE\s+)?(?:CONSTRAINT\s+)?TRIGGER\s+([a-zA-Z0-9_]+)\b.*?\bON\s+(?:ONLY\s+)?([a-zA-Z0-9_.]+)/sig) {
+        print "$1\t$2\n";
+      }
+    ' "$f" | sort -u)
+
   while read -r name; do
     [ -z "$name" ] && continue
-    trg_last[$name]=$base
-  done < <(grep -ohE 'CREATE (OR REPLACE )?(CONSTRAINT )?TRIGGER +[a-zA-Z0-9_]+' "$f" \
-           | sed -E 's/.*TRIGGER +//' | sort -u)
+    name=${name#public.}
+    [ "${name#pg_temp.}" != "$name" ] && continue
+    unset 'tb_created[$name]' 'tb_alt_count[$name]' 'tb_alt_last[$name]'
+    for trg in "${!trg_table[@]}"; do
+      if [ "${trg_table[$trg]}" = "$name" ]; then
+        unset 'trg_last[$trg]' 'trg_table[$trg]'
+      fi
+    done
+  done < <(perl -ne '
+      while (/DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?((?:(?:public|pg_temp)\.)?[a-zA-Z0-9_]+)/ig) {
+        print "$1\n";
+      }
+    ' "$f" | sort -u)
 done
 
 {

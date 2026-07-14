@@ -6,12 +6,11 @@ type Company = { id: string; registered_name: string }
 type Currency = { id: string; currency_code: string; name: string }
 type PaymentTerm = { id: string; term_code: string; term_name: string }
 type COA = { id: string; account_code: string; account_name: string }
-type EWTCode = { id: string; ewt_code: string; description: string; rate: number }
 type ATCCode = { id: string; code: string; description: string; rate: number }
 type Customer = {
   id: string; company_id: string; customer_code: string; customer_group: string | null
   registered_name: string; trade_name: string | null; business_style: string | null
-  tin: string; default_tax_type: string; default_ewt_code_id: string | null
+  tin: string; default_tax_type: string
   is_subject_to_cwt: boolean; default_cwt_atc_code_id: string | null
   registered_address: string; delivery_address: string; contact_person: string | null
   email: string | null; phone_number: string | null
@@ -33,7 +32,7 @@ const CUSTOMER_GROUPS = ['Retail', 'Wholesale', 'Corporate', 'Government', 'Expo
 
 const EMPTY = {
   company_id: '', customer_code: '', customer_group: '', registered_name: '', trade_name: '',
-  business_style: '', tin: '', default_tax_type: 'vat_registered', default_ewt_code_id: '',
+  business_style: '', tin: '', default_tax_type: 'vat_registered',
   is_subject_to_cwt: false, default_cwt_atc_code_id: '',
   registered_address: '', delivery_address: '', contact_person: '', email: '', phone_number: '',
   default_terms_id: '', default_currency_id: '', default_gl_account_id: '', credit_limit: '0',
@@ -52,7 +51,6 @@ export default function CustomersPage() {
   const [currencies, setCurrencies] = useState<Currency[]>([])
   const [terms, setTerms] = useState<PaymentTerm[]>([])
   const [coa, setCoa] = useState<COA[]>([])
-  const [ewtCodes, setEwtCodes] = useState<EWTCode[]>([])
   const [atcCodes, setAtcCodes] = useState<ATCCode[]>([])
   const [search, setSearch] = useState('')
   const [filterCompany, setFilterCompany] = useState('')
@@ -80,10 +78,9 @@ export default function CustomersPage() {
   }, [])
 
   useEffect(() => {
-    if (!form.company_id) { setTerms([]); setCoa([]); setEwtCodes([]); setAtcCodes([]); return }
+    if (!form.company_id) { setTerms([]); setCoa([]); setAtcCodes([]); return }
     supabase.from('payment_terms').select('id,term_code,term_name').eq('company_id', form.company_id).eq('is_active', true).order('term_code').then(({ data }) => setTerms(data || []))
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', form.company_id).eq('is_active', true).eq('is_postable', true).order('account_code').then(({ data }) => setCoa(data || []))
-    supabase.from('ewt_codes').select('id,ewt_code,description,rate').eq('company_id', form.company_id).eq('is_active', true).order('ewt_code').then(({ data }) => setEwtCodes(data || []))
     supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code').then(({ data }) => setAtcCodes(data || []))
   }, [form.company_id])
 
@@ -100,7 +97,6 @@ export default function CustomersPage() {
       customer_group: c.customer_group || '', registered_name: c.registered_name,
       trade_name: c.trade_name || '', business_style: c.business_style || '',
       tin: c.tin, default_tax_type: c.default_tax_type,
-      default_ewt_code_id: c.default_ewt_code_id || '',
       is_subject_to_cwt: c.is_subject_to_cwt || false,
       default_cwt_atc_code_id: c.default_cwt_atc_code_id || '',
       registered_address: c.registered_address, delivery_address: c.delivery_address,
@@ -138,7 +134,6 @@ export default function CustomersPage() {
       customer_group: form.customer_group || null, registered_name: form.registered_name,
       trade_name: form.trade_name || null, business_style: form.business_style || null,
       tin: form.tin, default_tax_type: form.default_tax_type,
-      default_ewt_code_id: form.default_ewt_code_id || null,
       is_subject_to_cwt: Boolean(form.is_subject_to_cwt),
       default_cwt_atc_code_id: form.is_subject_to_cwt ? form.default_cwt_atc_code_id || null : null,
       registered_address: form.registered_address, delivery_address: form.delivery_address,
@@ -264,11 +259,6 @@ export default function CustomersPage() {
           <div><label className={lbl}>Tax Type <span className="text-red-500">*</span></label>
             <select value={form.default_tax_type} onChange={e => set('default_tax_type', e.target.value)} className={inp}>
               {TAX_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select></div>
-          <div><label className={lbl}>Default EWT Code (if subject to withholding)</label>
-            <select value={form.default_ewt_code_id} onChange={e => set('default_ewt_code_id', e.target.value)} className={inp}>
-              <option value="">None</option>
-              {ewtCodes.map(e => <option key={e.id} value={e.id}>{e.ewt_code} — {e.description} ({e.rate}%)</option>)}
             </select></div>
           <label className="flex items-center gap-2 mt-6 text-sm text-gray-700">
             <input type="checkbox" checked={Boolean(form.is_subject_to_cwt)}

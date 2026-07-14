@@ -5,12 +5,11 @@ type Company = { id: string; registered_name: string }
 type Currency = { id: string; currency_code: string; name: string }
 type PaymentTerm = { id: string; term_code: string; term_name: string }
 type COA = { id: string; account_code: string; account_name: string }
-type EWTCode = { id: string; ewt_code: string; description: string; rate: number }
 type ATCCode = { id: string; code: string; description: string; rate: number }
 type Supplier = {
   id: string; company_id: string; supplier_code: string; supplier_group: string | null
   registered_name: string; trade_name: string | null; business_style: string | null
-  tin: string; default_tax_type: string; default_ewt_code_id: string | null
+  tin: string; default_tax_type: string
   is_subject_to_ewt: boolean; default_atc_code_id: string | null
   registered_address: string; contact_person: string | null
   email: string | null; phone_number: string | null
@@ -19,7 +18,6 @@ type Supplier = {
   companies?: { registered_name: string }
   payment_terms?: { term_code: string; term_name: string }
   currencies?: { currency_code: string }
-  ewt_codes?: { ewt_code: string; description: string; rate: number }
   atc_codes?: { code: string; description: string; rate: number }
 }
 
@@ -33,7 +31,7 @@ const SUPPLIER_GROUPS = ['Inventory Supplier', 'Services', 'Utilities', 'Rent', 
 
 const EMPTY = {
   company_id: '', supplier_code: '', supplier_group: '', registered_name: '', trade_name: '',
-  business_style: '', tin: '', default_tax_type: 'vat_registered', default_ewt_code_id: '',
+  business_style: '', tin: '', default_tax_type: 'vat_registered',
   is_subject_to_ewt: false, default_atc_code_id: '',
   registered_address: '', contact_person: '', email: '', phone_number: '',
   default_terms_id: '', default_currency_id: '', default_gl_account_id: '',
@@ -51,7 +49,6 @@ export default function SuppliersPage() {
   const [currencies, setCurrencies] = useState<Currency[]>([])
   const [terms, setTerms] = useState<PaymentTerm[]>([])
   const [coa, setCoa] = useState<COA[]>([])
-  const [ewtCodes, setEwtCodes] = useState<EWTCode[]>([])
   const [atcCodes, setAtcCodes] = useState<ATCCode[]>([])
   const [search, setSearch] = useState('')
   const [filterCompany, setFilterCompany] = useState('')
@@ -67,7 +64,7 @@ export default function SuppliersPage() {
 
   const fetchSuppliers = async () => {
     const { data } = await supabase.from('suppliers')
-      .select('*, companies(registered_name), payment_terms(term_code,term_name), currencies(currency_code), ewt_codes(ewt_code,description,rate), atc_codes(code,description,rate)')
+      .select('*, companies(registered_name), payment_terms(term_code,term_name), currencies(currency_code), atc_codes(code,description,rate)')
       .order('registered_name')
     setSuppliers((data as Supplier[]) || [])
   }
@@ -78,10 +75,9 @@ export default function SuppliersPage() {
   }, [])
 
   useEffect(() => {
-    if (!form.company_id) { setTerms([]); setCoa([]); setEwtCodes([]); setAtcCodes([]); return }
+    if (!form.company_id) { setTerms([]); setCoa([]); setAtcCodes([]); return }
     supabase.from('payment_terms').select('id,term_code,term_name').eq('company_id', form.company_id).eq('is_active', true).order('term_code').then(({ data }) => setTerms(data || []))
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', form.company_id).eq('is_active', true).eq('is_postable', true).order('account_code').then(({ data }) => setCoa(data || []))
-    supabase.from('ewt_codes').select('id,ewt_code,description,rate').eq('company_id', form.company_id).eq('is_active', true).order('ewt_code').then(({ data }) => setEwtCodes(data || []))
     supabase.from('atc_codes').select('id,code,description,rate').eq('tax_category', 'ewt').eq('is_active', true).order('code').then(({ data }) => setAtcCodes(data || []))
   }, [form.company_id])
 
@@ -93,7 +89,6 @@ export default function SuppliersPage() {
       supplier_group: s.supplier_group || '', registered_name: s.registered_name,
       trade_name: s.trade_name || '', business_style: s.business_style || '',
       tin: s.tin, default_tax_type: s.default_tax_type,
-      default_ewt_code_id: s.default_ewt_code_id || '',
       is_subject_to_ewt: s.is_subject_to_ewt || false,
       default_atc_code_id: s.default_atc_code_id || '',
       registered_address: s.registered_address,
@@ -114,7 +109,6 @@ export default function SuppliersPage() {
       supplier_group: form.supplier_group || null, registered_name: form.registered_name,
       trade_name: form.trade_name || null, business_style: form.business_style || null,
       tin: form.tin, default_tax_type: form.default_tax_type,
-      default_ewt_code_id: form.default_ewt_code_id || null,
       is_subject_to_ewt: form.is_subject_to_ewt,
       default_atc_code_id: form.is_subject_to_ewt ? (form.default_atc_code_id || null) : null,
       registered_address: form.registered_address,
@@ -166,7 +160,6 @@ export default function SuppliersPage() {
           <div className="grid grid-cols-2 gap-4">
             <div><label className={lbl}>TIN</label><input readOnly value={viewData.tin} className={roInp} /></div>
             <div><label className={lbl}>Tax Type</label><input readOnly value={taxLabel} className={roInp} /></div>
-            <div><label className={lbl}>Default EWT Code</label><input readOnly value={viewData.ewt_codes ? `${viewData.ewt_codes.ewt_code} — ${viewData.ewt_codes.description} (${viewData.ewt_codes.rate}%)` : '—'} className={roInp} /></div>
             <div><label className={lbl}>AP Withholding</label><input readOnly value={viewData.is_subject_to_ewt ? 'Subject to EWT' : 'Not subject to EWT'} className={roInp} /></div>
             <div><label className={lbl}>Default AP ATC</label><input readOnly value={viewData.atc_codes ? `${viewData.atc_codes.code} — ${viewData.atc_codes.description} (${viewData.atc_codes.rate}%)` : '—'} className={roInp} /></div>
           </div>
@@ -231,7 +224,7 @@ export default function SuppliersPage() {
 
       <div className={sec}><h2 className={hd}>Section 2 — Tax & Compliance Details</h2>
         <div className="bg-blue-50 border border-blue-100 rounded-md px-3 py-2 mb-2">
-          <p className="text-xs text-blue-700">EWT code here is the default applied on all purchases from this supplier. It can be overridden per transaction or per item.</p>
+          <p className="text-xs text-blue-700">The AP withholding ATC is the default applied on purchases from this supplier. It can be overridden per transaction.</p>
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div><label className={lbl}>TIN <span className="text-red-500">*</span></label>
@@ -239,11 +232,6 @@ export default function SuppliersPage() {
           <div><label className={lbl}>Tax Type <span className="text-red-500">*</span></label>
             <select value={form.default_tax_type} onChange={e => set('default_tax_type', e.target.value)} className={inp}>
               {TAX_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select></div>
-          <div><label className={lbl}>Default EWT Code</label>
-            <select value={form.default_ewt_code_id} onChange={e => set('default_ewt_code_id', e.target.value)} className={inp}>
-              <option value="">None (configure per transaction)</option>
-              {ewtCodes.map(e => <option key={e.id} value={e.id}>{e.ewt_code} — {e.description} ({e.rate}%)</option>)}
             </select></div>
           <div className="flex items-center gap-2 pt-6">
             <input id="is_subject_to_ewt" type="checkbox" checked={form.is_subject_to_ewt}

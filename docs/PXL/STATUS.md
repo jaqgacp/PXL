@@ -4,8 +4,8 @@
 
 Last updated: 2026-07-14
 Build: ✅ Clean (zero TS errors)
-Migrations: see `docs/PXL/PXL_SCHEMA_SUMMARY.md` (generated) for the full chain; hosted sync status is tracked in `AI/AI_STATE.md` (verify with `supabase migration list --linked`). As of session 90, hosted is synced through `20260714000002` with held-out drafts excluded. The held-out `20260710000004`/`20260710000005` drafts remain excluded unless explicitly owned and fixed.
-Production hardening: the active milestone is **PXL Accounting Core Ready** (`docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md`, DEC-017). Governed posting behavior is now specified in `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md`. Audit findings standing is tracked in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` and is currently 60 Retested Passed / 8 In Progress / 4 Open (72 findings). Latest trusted full local suite evidence in AI state: 782/782 across 43 files, with held-out test 027 excluded.
+Migrations: see `docs/PXL/PXL_SCHEMA_SUMMARY.md` (generated) for the full chain; hosted sync status is tracked in `AI/AI_STATE.md` (verify with `supabase migration list --linked`). As of session 91, hosted is synced through `20260714000002`; local migration `20260714000003` is pending hosted sync until pushed. The held-out `20260710000004`/`20260710000005` drafts remain excluded unless explicitly owned and fixed.
+Production hardening: the active milestone is **PXL Accounting Core Ready** (`docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md`, DEC-017). Governed posting behavior is now specified in `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md`. Audit findings standing is tracked in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` and is currently 61 Retested Passed / 8 In Progress / 3 Open (72 findings). Latest trusted full local suite evidence in AI state: 794/794 across 44 files, with held-out test 027 excluded.
 
 ---
 

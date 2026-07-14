@@ -59,7 +59,7 @@ Any code, schema, or UI design that violates the 27 principles below shall be cl
 ## 11. Low Maintenance
 **WHAT:** The architecture must be designed so that standard business operations, fiscal year turnovers, and BIR tax rate updates require absolutely zero developer intervention.
 **WHY:** Enterprises cannot afford to hire developers every time the BIR changes the EWT rate or when a new fiscal year starts. The system must be self-sustaining.
-**HOW:** Tax rates (e.g., VAT 12%, ATC WC158 1%) are never hardcoded in the codebase. They are stored in `tax_codes` and `ewt_codes` tables. The `09. Accounting/Period End Closing` module contains the UI and backend logic to automatically lock periods and sweep Retained Earnings, entirely managed by the Financial Controller.
+**HOW:** Tax rates (e.g., VAT 12%, ATC WC158 1%) are never hardcoded in the codebase. VAT/PT rates are stored in `tax_codes`, and withholding rates/defaults resolve through versioned `atc_codes`. The `09. Accounting/Period End Closing` module contains the UI and backend logic to automatically lock periods and sweep Retained Earnings, entirely managed by the Financial Controller.
 
 ## 12. Metadata Driven
 **WHAT:** Business logic (Tax codes, approval matrices, number series, workflows) must reside in relational database configuration tables, never hardcoded into the React frontend or backend functions.

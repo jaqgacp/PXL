@@ -224,6 +224,23 @@ Scenario (supplier EWT source rows in January, February, and March 2026; certifi
 | 3 | Add a late March withholding row and supersede the sent certificate | Old version keeps its original month-3 evidence; replacement version refreshes the quarter total and month-3 bucket. |
 | 4 | Compare old and new evidence | Month-1/month-2 values remain stable, while replacement month-3 base/withheld includes the late row. |
 
+## WHT-MASTER-CONSOLIDATION-001 - Withholding Master Consolidation
+
+Status: Executed Passing (2026-07-14, session 91) in `supabase/tests/045_withholding_master_consolidation_test.sql` with 12 assertions.
+
+Related findings: PXL-AUD-044.
+
+Scenario (final schema after retiring duplicate customer flags and unused EWT/FWT wrapper masters):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect the schema for retired wrapper structures | `ewt_codes` and `fwt_codes` no longer exist. |
+| 2 | Inspect customer, supplier, and item columns | `customers.is_withholding_agent`, `customers.default_ewt_code_id`, `suppliers.default_ewt_code_id`, and `items.default_ewt_code_id` no longer exist. |
+| 3 | Create a customer with `default_cwt_atc_code_id` but `is_subject_to_cwt = false` | The existing CWT default trigger auto-enables `is_subject_to_cwt`, proving the single customer CWT flag/default path remains operative. |
+| 4 | Call `fn_atc_code_used` for the customer default ATC | Returns true without relying on the retired wrapper tables. |
+| 5 | Create a supplier with `default_atc_code_id` but `is_subject_to_ewt = false` | The existing supplier default trigger auto-enables `is_subject_to_ewt`, proving AP defaults point directly at ATC masters. |
+| 6 | Call `fn_atc_code_used` for the supplier default ATC | Returns true through `suppliers.default_atc_code_id`, so used ATCs remain protected after wrapper retirement. |
+
 ## VAT-RECON-001 - VAT Tax-Ledger-to-GL Reconciliation and Return Gate
 
 Status: Executed Passing (2026-07-03) in `supabase/tests/008_vat_ledger_gl_reconciliation_test.sql`.

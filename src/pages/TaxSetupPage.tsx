@@ -17,12 +17,10 @@ type ATCCode = {
   deprecated_reason: string | null
   supersedes_atc_code_id: string | null
 }
-type EWTCode = { id: string; company_id: string; tax_code_id: string; ewt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { code: string }; tax_codes?: { code: string } }
-type FWTCode = { id: string; company_id: string; tax_code_id: string; fwt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { code: string }; tax_codes?: { code: string } }
 type PTCode  = { id: string; company_id: string; tax_code_id: string; pt_code: string; description: string; atc_id: string; rate: number; form_type: string; is_active: boolean; atc_codes?: { code: string }; tax_codes?: { code: string } }
 type Company = { id: string; registered_name: string }
 
-type Tab = 'tax_codes' | 'vat_codes' | 'ewt_codes' | 'fwt_codes' | 'pt_codes' | 'atc_codes'
+type Tab = 'tax_codes' | 'vat_codes' | 'pt_codes' | 'atc_codes'
 
 const inp = 'w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900'
 const lbl = 'block text-xs font-medium text-gray-500 mb-1'
@@ -44,8 +42,6 @@ const fmtDate = (value?: string | null) => value ? new Date(value).toLocaleDateS
 
 function emptyTC() { return { code: '', description: '', tax_type: 'vat', rate: '' } }
 function emptyVC() { return { tax_code_id: '', vat_code: '', description: '', vat_classification: 'regular', transaction_type: 'output_vat', relief_category: '' } }
-function emptyEWT(cid: string) { return { company_id: cid, tax_code_id: '', ewt_code: '', description: '', atc_id: '', rate: '', form_type: '1601EQ' } }
-function emptyFWT(cid: string) { return { company_id: cid, tax_code_id: '', fwt_code: '', description: '', atc_id: '', rate: '', form_type: '1601FQ' } }
 function emptyPT(cid: string) { return { company_id: cid, tax_code_id: '', pt_code: '', description: '', atc_id: '', rate: '', form_type: '2551Q' } }
 
 export default function TaxSetupPage() {
@@ -57,8 +53,6 @@ export default function TaxSetupPage() {
   const [taxCodes, setTaxCodes] = useState<TaxCode[]>([])
   const [vatCodes, setVatCodes] = useState<VatCode[]>([])
   const [atcCodes, setATCCodes] = useState<ATCCode[]>([])
-  const [ewtCodes, setEWTCodes] = useState<EWTCode[]>([])
-  const [fwtCodes, setFWTCodes] = useState<FWTCode[]>([])
   const [ptCodes, setPTCodes]   = useState<PTCode[]>([])
   const [companies, setCompanies] = useState<Company[]>([])
   const [selectedCompany, setSelectedCompany] = useState('')
@@ -70,8 +64,6 @@ export default function TaxSetupPage() {
 
   const [tcForm, setTcForm] = useState(emptyTC())
   const [vcForm, setVcForm] = useState(emptyVC())
-  const [ewtForm, setEwtForm] = useState(emptyEWT(''))
-  const [fwtForm, setFwtForm] = useState(emptyFWT(''))
   const [ptForm,  setPtForm]  = useState(emptyPT(''))
 
   const cid = companyId || selectedCompany
@@ -84,8 +76,6 @@ export default function TaxSetupPage() {
   }
   const fetchCompanyCodes = async (coid: string) => {
     if (!coid) return
-    supabase.from('ewt_codes').select('*, atc_codes(code), tax_codes(code)').eq('company_id', coid).order('ewt_code').then(({ data }) => setEWTCodes((data as EWTCode[]) || []))
-    supabase.from('fwt_codes').select('*, atc_codes(code), tax_codes(code)').eq('company_id', coid).order('fwt_code').then(({ data }) => setFWTCodes((data as FWTCode[]) || []))
     supabase.from('percentage_tax_codes').select('*, atc_codes(code), tax_codes(code)').eq('company_id', coid).order('pt_code').then(({ data }) => setPTCodes((data as PTCode[]) || []))
   }
 
@@ -130,42 +120,6 @@ export default function TaxSetupPage() {
     fetchAll()
   }
 
-  // ── EWT Codes ─────────────────────────────────────────────
-  const openEWT = (r?: EWTCode) => {
-    setEwtForm(r ? { company_id: r.company_id, tax_code_id: r.tax_code_id, ewt_code: r.ewt_code, description: r.description, atc_id: r.atc_id, rate: String(r.rate), form_type: r.form_type } : emptyEWT(cid))
-    setEditId(r?.id ?? null); setShowForm(true); setSaved(false)
-  }
-  const saveEWT = async () => {
-    setSaving(true)
-    const payload = { ...ewtForm, rate: parseFloat(ewtForm.rate) }
-    const { error } = editId ? await supabase.from('ewt_codes').update(payload).eq('id', editId) : await supabase.from('ewt_codes').insert([payload])
-    if (error) alert(error.message)
-    else { setSaved(true); fetchCompanyCodes(cid); resetForm() }
-    setSaving(false)
-  }
-  const toggleEWT = async (r: EWTCode) => {
-    await supabase.from('ewt_codes').update({ is_active: !r.is_active }).eq('id', r.id)
-    fetchCompanyCodes(cid)
-  }
-
-  // ── FWT Codes ─────────────────────────────────────────────
-  const openFWT = (r?: FWTCode) => {
-    setFwtForm(r ? { company_id: r.company_id, tax_code_id: r.tax_code_id, fwt_code: r.fwt_code, description: r.description, atc_id: r.atc_id, rate: String(r.rate), form_type: r.form_type } : emptyFWT(cid))
-    setEditId(r?.id ?? null); setShowForm(true); setSaved(false)
-  }
-  const saveFWT = async () => {
-    setSaving(true)
-    const payload = { ...fwtForm, rate: parseFloat(fwtForm.rate) }
-    const { error } = editId ? await supabase.from('fwt_codes').update(payload).eq('id', editId) : await supabase.from('fwt_codes').insert([payload])
-    if (error) alert(error.message)
-    else { setSaved(true); fetchCompanyCodes(cid); resetForm() }
-    setSaving(false)
-  }
-  const toggleFWT = async (r: FWTCode) => {
-    await supabase.from('fwt_codes').update({ is_active: !r.is_active }).eq('id', r.id)
-    fetchCompanyCodes(cid)
-  }
-
   // ── PT Codes ──────────────────────────────────────────────
   const openPT = (r?: PTCode) => {
     setPtForm(r ? { company_id: r.company_id, tax_code_id: r.tax_code_id, pt_code: r.pt_code, description: r.description, atc_id: r.atc_id, rate: String(r.rate), form_type: r.form_type } : emptyPT(cid))
@@ -188,27 +142,23 @@ export default function TaxSetupPage() {
   const filtTax = taxCodes.filter(r => (!filterType || r.tax_type === filterType) && (!q || r.code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
   const filtVAT = vatCodes.filter(r => (!filterType || r.vat_classification === filterType) && (!q || r.vat_code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
   const filtATC = atcCodes.filter(r => (!filterType || r.tax_category === filterType) && (!q || r.code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
-  const filtEWT = ewtCodes.filter(r => (!q || r.ewt_code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
-  const filtFWT = fwtCodes.filter(r => (!q || r.fwt_code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
   const filtPT  = ptCodes.filter(r => (!q || r.pt_code.toLowerCase().includes(q) || r.description.toLowerCase().includes(q)))
 
   const TABS: { id: Tab; label: string }[] = [
     { id: 'tax_codes',  label: 'Tax Codes' },
     { id: 'vat_codes',  label: 'VAT Codes' },
-    { id: 'ewt_codes',  label: 'EWT Codes' },
-    { id: 'fwt_codes',  label: 'FWT Codes' },
     { id: 'pt_codes',   label: 'Percentage Tax Codes' },
     { id: 'atc_codes',  label: 'ATC Codes' },
   ]
 
-  const needsCompany = ['ewt_codes','fwt_codes','pt_codes'].includes(tab)
+  const needsCompany = tab === 'pt_codes'
   const canAdd = !needsCompany || !!cid
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-semibold text-gray-900">Tax Code Setup</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Configure Philippine tax codes, VAT, EWT, FWT, and percentage tax parameters</p>
+        <p className="text-sm text-gray-500 mt-0.5">Configure Philippine tax codes, VAT, ATC, and percentage tax parameters</p>
       </div>
 
       {/* Tabs */}
@@ -311,62 +261,6 @@ export default function TaxSetupPage() {
                 </tr>
               ))}
               {!filtVAT.length && <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No VAT codes found</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* ── EWT CODES TABLE ── */}
-      {tab === 'ewt_codes' && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>{['EWT Code','Description','ATC','Rate (%)','Form','Status',''].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>)}</tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtEWT.map(r => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono font-medium text-gray-900">{r.ewt_code}</td>
-                  <td className="px-4 py-3 text-gray-700">{r.description}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-indigo-700">{r.atc_codes?.code}</td>
-                  <td className="px-4 py-3 font-mono">{r.rate}%</td>
-                  <td className="px-4 py-3 text-xs">{r.form_type}</td>
-                  <td className="px-4 py-3">{badge(r.is_active)}</td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <button onClick={() => openEWT(r)} className="text-xs text-indigo-600 hover:underline">Edit</button>
-                    <button onClick={() => toggleEWT(r)} className="text-xs text-gray-500 hover:underline">{r.is_active ? 'Deactivate' : 'Activate'}</button>
-                  </td>
-                </tr>
-              ))}
-              {!filtEWT.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{cid ? 'No EWT codes found' : 'Select a company to view EWT codes'}</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* ── FWT CODES TABLE ── */}
-      {tab === 'fwt_codes' && (
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>{['FWT Code','Description','ATC','Rate (%)','Form','Status',''].map(h => <th key={h} className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wide">{h}</th>)}</tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {filtFWT.map(r => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-mono font-medium text-gray-900">{r.fwt_code}</td>
-                  <td className="px-4 py-3 text-gray-700">{r.description}</td>
-                  <td className="px-4 py-3 font-mono text-xs text-indigo-700">{r.atc_codes?.code}</td>
-                  <td className="px-4 py-3 font-mono">{r.rate}%</td>
-                  <td className="px-4 py-3 text-xs">{r.form_type}</td>
-                  <td className="px-4 py-3">{badge(r.is_active)}</td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <button onClick={() => openFWT(r)} className="text-xs text-indigo-600 hover:underline">Edit</button>
-                    <button onClick={() => toggleFWT(r)} className="text-xs text-gray-500 hover:underline">{r.is_active ? 'Deactivate' : 'Activate'}</button>
-                  </td>
-                </tr>
-              ))}
-              {!filtFWT.length && <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{cid ? 'No FWT codes found' : 'Select a company to view FWT codes'}</td></tr>}
             </tbody>
           </table>
         </div>
@@ -494,76 +388,6 @@ export default function TaxSetupPage() {
             <div className="flex justify-end gap-3">
               <button onClick={resetForm} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
               <button onClick={saveVC} disabled={saving} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : saved ? 'Saved!' : 'Save'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showForm && tab === 'ewt_codes' && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
-            <h2 className="text-base font-semibold text-gray-900">{editId ? 'Edit' : 'Add'} EWT Code</h2>
-            <div className={sec}>
-              <p className={hd}>EWT Code Details</p>
-              <div><label className={lbl}>Parent Tax Code *</label>
-                <select className={inp} value={ewtForm.tax_code_id} onChange={e => setEwtForm(f => ({ ...f, tax_code_id: e.target.value }))}>
-                  <option value="">— select —</option>
-                  {taxCodes.filter(t => t.tax_type === 'ewt').map(t => <option key={t.id} value={t.id}>{t.code} — {t.description}</option>)}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className={lbl}>EWT Code *</label><input className={inp} value={ewtForm.ewt_code} onChange={e => setEwtForm(f => ({ ...f, ewt_code: e.target.value }))} placeholder="e.g. EWT-WC158-10" /></div>
-                <div><label className={lbl}>ATC *</label>
-                  <select className={inp} value={ewtForm.atc_id} onChange={e => setEwtForm(f => ({ ...f, atc_id: e.target.value }))}>
-                    <option value="">— select —</option>
-                    {atcCodes.filter(a => a.tax_category === 'ewt').map(a => <option key={a.id} value={a.id}>{a.code} — {a.description}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div><label className={lbl}>Description *</label><input className={inp} value={ewtForm.description} onChange={e => setEwtForm(f => ({ ...f, description: e.target.value }))} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className={lbl}>Rate (%) *</label><input className={inp} type="number" step="0.01" value={ewtForm.rate} onChange={e => setEwtForm(f => ({ ...f, rate: e.target.value }))} /></div>
-                <div><label className={lbl}>Form Type</label><input className={inp} value={ewtForm.form_type} readOnly /></div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button onClick={resetForm} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
-              <button onClick={saveEWT} disabled={saving} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : saved ? 'Saved!' : 'Save'}</button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showForm && tab === 'fwt_codes' && (
-        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg p-6 space-y-4">
-            <h2 className="text-base font-semibold text-gray-900">{editId ? 'Edit' : 'Add'} FWT Code</h2>
-            <div className={sec}>
-              <p className={hd}>FWT Code Details</p>
-              <div><label className={lbl}>Parent Tax Code *</label>
-                <select className={inp} value={fwtForm.tax_code_id} onChange={e => setFwtForm(f => ({ ...f, tax_code_id: e.target.value }))}>
-                  <option value="">— select —</option>
-                  {taxCodes.filter(t => t.tax_type === 'fwt').map(t => <option key={t.id} value={t.id}>{t.code} — {t.description}</option>)}
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className={lbl}>FWT Code *</label><input className={inp} value={fwtForm.fwt_code} onChange={e => setFwtForm(f => ({ ...f, fwt_code: e.target.value }))} placeholder="e.g. FWT-DIV" /></div>
-                <div><label className={lbl}>ATC *</label>
-                  <select className={inp} value={fwtForm.atc_id} onChange={e => setFwtForm(f => ({ ...f, atc_id: e.target.value }))}>
-                    <option value="">— select —</option>
-                    {atcCodes.filter(a => a.tax_category === 'fwt').map(a => <option key={a.id} value={a.id}>{a.code} — {a.description}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div><label className={lbl}>Description *</label><input className={inp} value={fwtForm.description} onChange={e => setFwtForm(f => ({ ...f, description: e.target.value }))} /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className={lbl}>Rate (%) *</label><input className={inp} type="number" step="0.01" value={fwtForm.rate} onChange={e => setFwtForm(f => ({ ...f, rate: e.target.value }))} /></div>
-                <div><label className={lbl}>Form Type</label><input className={inp} value={fwtForm.form_type} readOnly /></div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button onClick={resetForm} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
-              <button onClick={saveFWT} disabled={saving} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : saved ? 'Saved!' : 'Save'}</button>
             </div>
           </div>
         </div>

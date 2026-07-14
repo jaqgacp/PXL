@@ -217,7 +217,7 @@ EXECUTE FUNCTION fn_audit_log_trigger();
 | `customers` | `tin` — BIR compliance |
 | `bank_accounts` | Account number fraud |
 | `chart_of_accounts` | GL mapping manipulation |
-| `ewt_codes` | Tax rate manipulation |
+| `atc_codes` | Withholding ATC/rate manipulation |
 | `vat_codes` | VAT rate manipulation |
 | `approval_workflows` | Threshold reduction fraud |
 

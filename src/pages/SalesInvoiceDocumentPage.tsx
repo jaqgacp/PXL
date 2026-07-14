@@ -60,7 +60,7 @@ type CustomerMaster = {
   id: string; registered_name: string; tin: string; tin_branch_code: string | null
   registered_address: string; delivery_address: string | null
   contact_person: string | null; email: string | null; phone_number: string | null
-  default_tax_type: string; is_withholding_agent: boolean
+  default_tax_type: string; is_subject_to_cwt: boolean
   default_terms_id: string | null; credit_limit: number | null
   customer_code: string; customer_group: string | null; business_style: string | null
   trade_name: string | null; created_at: string | null; is_active: boolean | null
@@ -811,7 +811,7 @@ export default function SalesInvoiceDocumentPage() {
           ['TIN', si.customer_tin_snapshot || customer.tin || '—'],
           ['TIN Branch', customer.tin_branch_code || '—'],
           ['VAT Classification', customerTaxLabel],
-          ['Withholding Status', customer.is_withholding_agent ? 'Withholding agent' : 'Not a withholding agent'],
+          ['Withholding Status', customer.is_subject_to_cwt ? 'Subject to CWT' : 'Not subject to CWT'],
         ]))}
         {relatedPartySection('Credit Profile', relatedPartyGrid([
           ['Credit Limit', creditLimitValue],

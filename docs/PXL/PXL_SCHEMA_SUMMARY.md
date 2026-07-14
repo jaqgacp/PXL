@@ -4,7 +4,7 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
+Generated: 2026-07-14. Migrations scanned: 105. Tests present: 45.
 
 ## Functions (254)
 
@@ -28,7 +28,7 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `fn_assert_posting_source` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_assert_source_journal_link` | `20260711000001_posting_engine_completion.sql` | 1 |
 | `fn_atc_code_is_current` | `20260701000018_atc_effective_date_governance.sql` | 1 |
-| `fn_atc_code_used` | `20260713000011_withholding_profile_gates.sql` | 3 |
+| `fn_atc_code_used` | `20260714000003_withholding_master_consolidation.sql` | 4 |
 | `fn_atc_last_document_date` | `20260710000004_atc_document_date_versioning.sql` | 1 |
 | `fn_atc_version_asof` | `20260713000002_atc_document_date_versioning.sql` | 1 |
 | `fn_audit_trigger` | `20260630000021_gap_fill.sql` | 2 |
@@ -290,7 +290,7 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `vw_trial_balance` | `20260702000005_gl_reversal_visibility.sql` | 2 |
 | `vw_vendor_bill_register` | `20260630000021_gap_fill.sql` | 2 |
 
-## Tables (152)
+## Tables (149)
 
 | Table | Created in | Alters | Last altered in |
 | ----- | ---------- | ------ | --------------- |
@@ -342,7 +342,7 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `credit_memo_lines` | `20260629000003_sprint5_ar.sql` | 1 | `20260629000003_sprint5_ar.sql` |
 | `credit_memos` | `20260629000003_sprint5_ar.sql` | 4 | `20260630000022_tax_ledger_completeness.sql` |
 | `currencies` | `20260628000002_sprint1.sql` | 2 | `20260628000004_fixes.sql` |
-| `customers` | `20260628000003_sprint2.sql` | 3 | `20260701000017_customer_cwt_defaults.sql` |
+| `customers` | `20260628000003_sprint2.sql` | 4 | `20260714000003_withholding_master_consolidation.sql` |
 | `dashboard_layouts` | `20260629000001_dashboard.sql` | 1 | `20260629000001_dashboard.sql` |
 | `dashboard_widgets` | `20260629000001_dashboard.sql` | 1 | `20260629000001_dashboard.sql` |
 | `debit_memo_lines` | `20260629000003_sprint5_ar.sql` | 1 | `20260629000003_sprint5_ar.sql` |
@@ -351,7 +351,6 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `delivery_receipts` | `20260629000004_sprint5_so_dr.sql` | 1 | `20260629000004_sprint5_so_dr.sql` |
 | `departments` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `employees` | `20260630000029_master_data_completion.sql` | 1 | `20260630000029_master_data_completion.sql` |
-| `ewt_codes` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `ewt_returns` | `20260701000003_withholding_tax.sql` | 0 | `—` |
 | `exchange_rates` | `20260628000002_sprint1.sql` | 2 | `20260628000004_fixes.sql` |
 | `fiscal_periods` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
@@ -363,7 +362,6 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `form_2307_issuances` | `20260629000018_purchasing_full.sql` | 3 | `20260702000007_form2307_version_supersede.sql` |
 | `form_2307_tracking` | `20260629000007_cwt_2307.sql` | 3 | `20260630000021_gap_fill.sql` |
 | `fund_transfers` | `20260630000023_banking_treasury_schema.sql` | 1 | `20260630000023_banking_treasury_schema.sql` |
-| `fwt_codes` | `20260628000005_sprint2_tax.sql` | 1 | `20260628000005_sprint2_tax.sql` |
 | `fwt_returns` | `20260701000003_withholding_tax.sql` | 0 | `—` |
 | `goods_issue_lines` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `goods_issues` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
@@ -372,7 +370,7 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `inventory_cost_layers` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `inventory_transactions` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `item_categories` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
-| `items` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
+| `items` | `20260628000003_sprint2.sql` | 2 | `20260714000003_withholding_master_consolidation.sql` |
 | `itr_filings` | `20260701000004_income_tax.sql` | 0 | `—` |
 | `journal_entries` | `20260629000013_gl_core.sql` | 7 | `20260713000013_je_classification_and_close.sql` |
 | `journal_entry_lines` | `20260629000013_gl_core.sql` | 3 | `20260704000001_je_line_dimensions.sql` |
@@ -399,7 +397,6 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `receiving_reports` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
 | `recurring_journal_template_lines` | `20260630000025_accounting_module.sql` | 1 | `20260630000025_accounting_module.sql` |
 | `recurring_journal_templates` | `20260630000025_accounting_module.sql` | 1 | `20260630000025_accounting_module.sql` |
-| `ref_atc_codes` | `20260629000007_cwt_2307.sql` | 1 | `20260629000007_cwt_2307.sql` |
 | `ref_compliance_forms` | `20260628000005_sprint2_tax.sql` | 1 | `20260628000005_sprint2_tax.sql` |
 | `ref_document_types` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `ref_feature_definitions` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
@@ -423,7 +420,7 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `stock_transfers` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `supplier_debit_memo_lines` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
 | `supplier_debit_memos` | `20260629000018_purchasing_full.sql` | 2 | `20260630000021_gap_fill.sql` |
-| `suppliers` | `20260628000003_sprint2.sql` | 2 | `20260701000014_supplier_atc_defaults.sql` |
+| `suppliers` | `20260628000003_sprint2.sql` | 3 | `20260714000003_withholding_master_consolidation.sql` |
 | `sys_audit_logs` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `sys_feature_enablement` | `20260628000002_sprint1.sql` | 1 | `20260628000002_sprint1.sql` |
 | `tax_calendar_events` | `20260628000005_sprint2_tax.sql` | 1 | `20260628000005_sprint2_tax.sql` |
@@ -447,7 +444,7 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `withholding_remittances` | `20260713000005_withholding_remittance_flow.sql` | 1 | `20260713000005_withholding_remittance_flow.sql` |
 
-## Triggers (287)
+## Triggers (282)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -462,11 +459,9 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `cost_centers_updated_at` | `20260628000002_sprint1.sql` |
 | `customers_updated_at` | `20260628000003_sprint2.sql` |
 | `departments_updated_at` | `20260628000002_sprint1.sql` |
-| `ewt_codes_updated_at` | `20260628000003_sprint2.sql` |
 | `feature_enablement_updated_at` | `20260628000002_sprint1.sql` |
 | `fiscal_periods_updated_at` | `20260628000002_sprint1.sql` |
 | `fiscal_years_updated_at` | `20260628000002_sprint1.sql` |
-| `fwt_codes_updated_at` | `20260628000005_sprint2_tax.sql` |
 | `item_categories_updated_at` | `20260628000003_sprint2.sql` |
 | `items_updated_at` | `20260628000003_sprint2.sql` |
 | `number_series_updated_at` | `20260628000002_sprint1.sql` |
@@ -475,7 +470,7 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `suppliers_updated_at` | `20260628000003_sprint2.sql` |
 | `tax_calendar_events_updated_at` | `20260628000005_sprint2_tax.sql` |
 | `tax_codes_updated_at` | `20260628000004_fixes.sql` |
-| `trg_` | `20260701000004_income_tax.sql` |
+| `trg_` | `20260701000003_withholding_tax.sql` |
 | `trg_admin_lifecycle_journal_entries` | `20260702000010_can_perform_role_actions.sql` |
 | `trg_admin_lifecycle_journal_entries_insert` | `20260702000010_can_perform_role_actions.sql` |
 | `trg_admin_lifecycle_payment_vouchers` | `20260701000006_permissions_hardening.sql` |
@@ -489,7 +484,6 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `trg_admin_lifecycle_vendor_bills` | `20260701000006_permissions_hardening.sql` |
 | `trg_admin_lifecycle_vendor_bills_insert` | `20260701000006_permissions_hardening.sql` |
 | `trg_amort_sched_updated_at` | `20260630000026_amortization_revenuerecon.sql` |
-| `trg_approval_sod_` | `20260703000001_approval_sod_enforcement.sql` |
 | `trg_atc_code_history_guard` | `20260701000018_atc_effective_date_governance.sql` |
 | `trg_atc_version_rules` | `20260713000002_atc_document_date_versioning.sql` |
 | `trg_atc_version_window` | `20260710000004_atc_document_date_versioning.sql` |
@@ -709,8 +703,6 @@ Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 | `trg_transaction_event_journal_source_link` | `20260713000014_transaction_events.sql` |
 | `trg_transaction_event_journal_status` | `20260713000014_transaction_events.sql` |
 | `trg_transaction_event_report_snapshot` | `20260713000014_transaction_events.sql` |
-| `trg_transaction_event_source_insert` | `20260713000014_transaction_events.sql` |
-| `trg_transaction_event_source_status` | `20260713000014_transaction_events.sql` |
 | `trg_vat_code_history_guard` | `20260713000012_tax_code_effective_date_governance.sql` |
 | `trg_vat_return_snapshot` | `20260703000004_report_snapshots_vat_returns.sql` |
 | `trg_vat_return_snapshot_guard` | `20260703000004_report_snapshots_vat_returns.sql` |

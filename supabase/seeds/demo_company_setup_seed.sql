@@ -264,9 +264,9 @@ BEGIN
   ON CONFLICT (company_id) DO NOTHING;
 
   -- ---------------------------------------------------------------------------
-  -- D2. Company EWT codes (required by the checklist when ewt_registered).
-  --     Global EWT tax_codes are created once if absent; ewt_codes link the
-  --     company to current active ATC masters.
+  -- D2. EWT tax-code labels. Operational withholding defaults now point directly
+  --     at current active ATC masters; no company-specific EWT wrapper rows are
+  --     seeded.
   -- ---------------------------------------------------------------------------
   INSERT INTO tax_codes (code, description, tax_type, rate, is_active, created_by)
   SELECT x.code, x.descr, 'ewt', x.rate, true, v_user
@@ -277,21 +277,6 @@ BEGIN
     ('EWT-10', 'Expanded withholding 10% (TEST seed)', 10.00)
   ) AS x(code, descr, rate)
   WHERE NOT EXISTS (SELECT 1 FROM tax_codes t WHERE t.code = x.code);
-
-  INSERT INTO ewt_codes (company_id, tax_code_id, ewt_code, description, atc_id,
-    rate, form_type, is_active, created_by)
-  SELECT v_company, tc.id, x.ewt_code, a.description || ' (TEST seed)', a.id,
-    a.rate, '1601EQ', true, v_user
-  FROM (VALUES
-    ('EWT-PF-CORP', 'WC010', 'EWT-10'),
-    ('EWT-RENT-PP', 'WC120', 'EWT-5'),
-    ('EWT-RENT-RP', 'WC130', 'EWT-2'),
-    ('EWT-CONTRACTOR', 'WC140', 'EWT-2'),
-    ('EWT-GOODS-TWA', 'WC158', 'EWT-1')
-  ) AS x(ewt_code, atc, tax_code)
-  JOIN atc_codes a ON a.code = x.atc AND a.is_active AND a.deprecated_at IS NULL
-  JOIN tax_codes tc ON tc.code = x.tax_code
-  ON CONFLICT DO NOTHING;
 
   -- ---------------------------------------------------------------------------
   -- E. Number series: one active series per document code the application
@@ -335,7 +320,7 @@ SELECT
     WHERE co.registered_name = 'PXL Demo Trading Corporation') AS fiscal_periods,
   (SELECT count(*) FROM number_series n JOIN companies co ON co.id = n.company_id
     WHERE co.registered_name = 'PXL Demo Trading Corporation' AND n.is_active) AS number_series,
-  (SELECT count(*) FROM ewt_codes e JOIN companies co ON co.id = e.company_id
-    WHERE co.registered_name = 'PXL Demo Trading Corporation' AND e.is_active) AS ewt_codes,
+  (SELECT count(*) FROM atc_codes a
+    WHERE a.tax_category = 'ewt' AND a.is_active AND a.deprecated_at IS NULL) AS current_ewt_atcs,
   (SELECT count(*) FROM compliance_profiles cp JOIN companies co ON co.id = cp.company_id
     WHERE co.registered_name = 'PXL Demo Trading Corporation' AND cp.is_active) AS compliance_profiles;

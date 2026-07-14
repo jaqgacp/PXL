@@ -44,7 +44,7 @@ type SILine = {
 
 type CustomerRef = {
   id: string; registered_name: string; tin: string; tin_branch_code: string
-  registered_address: string; default_tax_type: string; is_withholding_agent: boolean
+  registered_address: string; default_tax_type: string; is_subject_to_cwt: boolean
   default_terms_id: string | null; default_gl_account_id: string | null
   payment_terms?: { days_to_due: number; term_name: string } | null
 }
@@ -245,7 +245,7 @@ export default function SalesInvoicePage() {
         await Promise.all([
           supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
           supabase.from('customers')
-            .select('id,registered_name,tin,tin_branch_code,registered_address,default_tax_type,is_withholding_agent,default_terms_id,default_gl_account_id,payment_terms(days_to_due,term_name)')
+            .select('id,registered_name,tin,tin_branch_code,registered_address,default_tax_type,is_subject_to_cwt,default_terms_id,default_gl_account_id,payment_terms(days_to_due,term_name)')
             .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
           supabase.from('items')
             .select('id,item_code,description,uom_id,units_of_measure(uom_code),standard_selling_price,default_sales_vat_id,sales_account_id')
@@ -332,7 +332,7 @@ export default function SalesInvoicePage() {
     setFCurrency(si.currency_code); setFRef(si.reference || ''); setFMemo(si.memo || '')
     // Restore CWT state from saved SI + customer master
     const cust = customers.find(c => c.id === si.customer_id)
-    setFIsWithholdingAgent(cust?.is_withholding_agent ?? false)
+    setFIsWithholdingAgent(cust?.is_subject_to_cwt ?? false)
     setFCwtExpected(si.cwt_amount_expected ? Number(si.cwt_amount_expected) : 0)
     setError('')
 
@@ -375,8 +375,8 @@ export default function SalesInvoicePage() {
     setFCustomerName(c.registered_name)
     setFCustomerTIN(c.tin + (c.tin_branch_code ? `-${c.tin_branch_code}` : ''))
     setFCustomerAddr(c.registered_address)
-    setFIsWithholdingAgent(c.is_withholding_agent)
-    if (!c.is_withholding_agent) setFCwtExpected(0)
+    setFIsWithholdingAgent(c.is_subject_to_cwt)
+    if (!c.is_subject_to_cwt) setFCwtExpected(0)
     const pt = c.payment_terms
     if (pt && c.default_terms_id) {
       setFTerms(c.default_terms_id)
