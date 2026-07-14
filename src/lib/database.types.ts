@@ -5138,6 +5138,12 @@ export type Database = {
           created_at: string
           id: string
           issuance_id: string
+          month_1_tax_base: number
+          month_1_tax_withheld: number
+          month_2_tax_base: number
+          month_2_tax_withheld: number
+          month_3_tax_base: number
+          month_3_tax_withheld: number
           nature_of_income: string
           tax_base: number
           tax_rate: number | null
@@ -5150,6 +5156,12 @@ export type Database = {
           created_at?: string
           id?: string
           issuance_id: string
+          month_1_tax_base?: number
+          month_1_tax_withheld?: number
+          month_2_tax_base?: number
+          month_2_tax_withheld?: number
+          month_3_tax_base?: number
+          month_3_tax_withheld?: number
           nature_of_income?: string
           tax_base?: number
           tax_rate?: number | null
@@ -5162,6 +5174,12 @@ export type Database = {
           created_at?: string
           id?: string
           issuance_id?: string
+          month_1_tax_base?: number
+          month_1_tax_withheld?: number
+          month_2_tax_base?: number
+          month_2_tax_withheld?: number
+          month_3_tax_base?: number
+          month_3_tax_withheld?: number
           nature_of_income?: string
           tax_base?: number
           tax_rate?: number | null

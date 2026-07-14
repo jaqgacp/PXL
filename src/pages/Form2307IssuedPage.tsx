@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { Fragment, useState, useEffect, useCallback } from 'react'
 import { ReportTraceLink } from '@/components/AccountingTraceLink'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
@@ -18,7 +18,11 @@ type Issuance = {
 }
 
 type IssuanceLine = {
-  atc_code: string; nature_of_income: string; tax_base: number; tax_rate: number | null; tax_withheld: number
+  atc_code: string; nature_of_income: string
+  month_1_tax_base: number; month_1_tax_withheld: number
+  month_2_tax_base: number; month_2_tax_withheld: number
+  month_3_tax_base: number; month_3_tax_withheld: number
+  tax_base: number; tax_rate: number | null; tax_withheld: number
 }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
@@ -40,7 +44,7 @@ export default function Form2307IssuedPage() {
     if (!companyId) return
     setLoading(true)
     const { data } = await supabase.from('form_2307_issuances')
-      .select('*,suppliers(registered_name,tin),form_2307_issuance_lines(atc_code,nature_of_income,tax_base,tax_rate,tax_withheld)')
+      .select('*,suppliers(registered_name,tin),form_2307_issuance_lines(atc_code,nature_of_income,month_1_tax_base,month_1_tax_withheld,month_2_tax_base,month_2_tax_withheld,month_3_tax_base,month_3_tax_withheld,tax_base,tax_rate,tax_withheld)')
       .eq('company_id', companyId).eq('tax_year', year).eq('tax_quarter', quarter)
       .order('created_at')
     setIssuances(data as Issuance[] || [])
@@ -102,6 +106,9 @@ export default function Form2307IssuedPage() {
   }
 
   const inp = 'border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900'
+  const quarterMonthLabels = [0, 1, 2].map(offset =>
+    new Date(year, (quarter - 1) * 3 + offset, 1).toLocaleString('en-PH', { month: 'short' })
+  )
 
   return (
     <div className="space-y-3">
@@ -133,33 +140,74 @@ export default function Form2307IssuedPage() {
             </thead>
             <tbody className="divide-y divide-gray-100">
               {issuances.map(iss => (
-                <tr key={iss.id} className="hover:bg-gray-50">
-                  <td className="px-3 py-2 text-gray-700">{(iss.suppliers as any)?.registered_name || '—'}</td>
-                  <td className="px-3 py-2 font-mono text-gray-500">{(iss.suppliers as any)?.tin || '—'}</td>
-                  <td className="px-3 py-2 text-gray-500">v{iss.version ?? 1}</td>
-                  <td className="px-3 py-2 text-right font-mono">{fmt(iss.total_tax_base)}</td>
-                  <td className="px-3 py-2 text-right font-mono font-medium text-red-700">{fmt(iss.total_ewt)}</td>
-                  <td className="px-3 py-2"><StatusBadge status={STATUS_COLORS[iss.status]} label={iss.status} /></td>
-                  <td className="px-3 py-2 text-gray-500">{iss.date_generated ? <DateCell date={iss.date_generated.split('T')[0]} /> : '—'}</td>
-                  <td className="px-3 py-2 text-gray-500">{iss.date_sent ? <DateCell date={iss.date_sent.split('T')[0]} /> : '—'}</td>
-                  <td className="px-3 py-2 text-gray-500">{iss.date_acknowledged ? <DateCell date={iss.date_acknowledged.split('T')[0]} /> : '—'}</td>
-                  <td className="px-3 py-2">
-                    <div className="flex gap-2">
-                      <ReportTraceLink
-                        companyId={companyId}
-                        reportFamily="form_2307_issued"
-                        filters={{ record_id: iss.id }}
-                        className="text-blue-600 hover:text-blue-800"
-                        title="Open the accounting sources for this certificate"
-                      >
-                        Trace
-                      </ReportTraceLink>
-                      {iss.status === 'generated' && <button onClick={() => { setActionModal({ issuance: iss, action: 'sent' }); setActionDate(new Date().toISOString().split('T')[0]) }} className="text-orange-600 hover:text-orange-800">Mark Sent</button>}
-                      {iss.status === 'sent' && <button onClick={() => { setActionModal({ issuance: iss, action: 'acknowledged' }); setActionDate(new Date().toISOString().split('T')[0]) }} className="text-green-600 hover:text-green-800">Mark Acknowledged</button>}
-                      {(iss.status === 'sent' || iss.status === 'acknowledged') && <button onClick={() => { setActionModal({ issuance: iss, action: 'supersede' }); setActionReason('') }} className="text-red-600 hover:text-red-800">Supersede</button>}
-                    </div>
-                  </td>
-                </tr>
+                <Fragment key={iss.id}>
+                  <tr className="hover:bg-gray-50">
+                    <td className="px-3 py-2 text-gray-700">{(iss.suppliers as any)?.registered_name || '—'}</td>
+                    <td className="px-3 py-2 font-mono text-gray-500">{(iss.suppliers as any)?.tin || '—'}</td>
+                    <td className="px-3 py-2 text-gray-500">v{iss.version ?? 1}</td>
+                    <td className="px-3 py-2 text-right font-mono">{fmt(iss.total_tax_base)}</td>
+                    <td className="px-3 py-2 text-right font-mono font-medium text-red-700">{fmt(iss.total_ewt)}</td>
+                    <td className="px-3 py-2"><StatusBadge status={STATUS_COLORS[iss.status]} label={iss.status} /></td>
+                    <td className="px-3 py-2 text-gray-500">{iss.date_generated ? <DateCell date={iss.date_generated.split('T')[0]} /> : '—'}</td>
+                    <td className="px-3 py-2 text-gray-500">{iss.date_sent ? <DateCell date={iss.date_sent.split('T')[0]} /> : '—'}</td>
+                    <td className="px-3 py-2 text-gray-500">{iss.date_acknowledged ? <DateCell date={iss.date_acknowledged.split('T')[0]} /> : '—'}</td>
+                    <td className="px-3 py-2">
+                      <div className="flex gap-2">
+                        <ReportTraceLink
+                          companyId={companyId}
+                          reportFamily="form_2307_issued"
+                          filters={{ record_id: iss.id }}
+                          className="text-blue-600 hover:text-blue-800"
+                          title="Open the accounting sources for this certificate"
+                        >
+                          Trace
+                        </ReportTraceLink>
+                        {iss.status === 'generated' && <button onClick={() => { setActionModal({ issuance: iss, action: 'sent' }); setActionDate(new Date().toISOString().split('T')[0]) }} className="text-orange-600 hover:text-orange-800">Mark Sent</button>}
+                        {iss.status === 'sent' && <button onClick={() => { setActionModal({ issuance: iss, action: 'acknowledged' }); setActionDate(new Date().toISOString().split('T')[0]) }} className="text-green-600 hover:text-green-800">Mark Acknowledged</button>}
+                        {(iss.status === 'sent' || iss.status === 'acknowledged') && <button onClick={() => { setActionModal({ issuance: iss, action: 'supersede' }); setActionReason('') }} className="text-red-600 hover:text-red-800">Supersede</button>}
+                      </div>
+                    </td>
+                  </tr>
+                  {(iss.form_2307_issuance_lines || []).length > 0 && (
+                    <tr className="bg-gray-50/60">
+                      <td colSpan={10} className="px-3 pb-3">
+                        <div className="overflow-x-auto border border-gray-200 rounded-md bg-white">
+                          <table className="w-full min-w-[980px] text-[11px]">
+                            <thead className="bg-gray-50 border-b border-gray-200">
+                              <tr>
+                                {[
+                                  'ATC', 'Nature', `${quarterMonthLabels[0]} Base`, `${quarterMonthLabels[0]} EWT`,
+                                  `${quarterMonthLabels[1]} Base`, `${quarterMonthLabels[1]} EWT`,
+                                  `${quarterMonthLabels[2]} Base`, `${quarterMonthLabels[2]} EWT`,
+                                  'Total Base', 'Rate', 'Total EWT'
+                                ].map(h => (
+                                  <th key={h} className={`px-2 py-1.5 font-medium text-gray-500 ${h === 'ATC' || h === 'Nature' ? 'text-left' : 'text-right'}`}>{h}</th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                              {(iss.form_2307_issuance_lines || []).map((line, index) => (
+                                <tr key={`${line.atc_code}-${line.nature_of_income}-${index}`}>
+                                  <td className="px-2 py-1.5 font-mono text-gray-700">{line.atc_code}</td>
+                                  <td className="px-2 py-1.5 text-gray-700">{line.nature_of_income || '—'}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono">{fmt(line.month_1_tax_base)}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono">{fmt(line.month_1_tax_withheld)}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono">{fmt(line.month_2_tax_base)}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono">{fmt(line.month_2_tax_withheld)}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono">{fmt(line.month_3_tax_base)}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono">{fmt(line.month_3_tax_withheld)}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono font-medium">{fmt(line.tax_base)}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono">{line.tax_rate == null ? '—' : `${fmt(line.tax_rate)}%`}</td>
+                                  <td className="px-2 py-1.5 text-right font-mono font-medium text-red-700">{fmt(line.tax_withheld)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>

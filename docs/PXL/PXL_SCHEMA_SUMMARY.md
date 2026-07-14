@@ -4,7 +4,7 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-14. Migrations scanned: 103. Tests present: 43.
+Generated: 2026-07-14. Migrations scanned: 104. Tests present: 44.
 
 ## Functions (254)
 
@@ -90,7 +90,7 @@ Generated: 2026-07-14. Migrations scanned: 103. Tests present: 43.
 | `fn_forbid_cas_void_evidence_change` | `20260712000004_cas_numbering_void_evidence.sql` | 1 |
 | `fn_form2307_period_bounds` | `20260703000005_report_snapshots_form2307.sql` | 1 |
 | `fn_form2307_report_payload` | `20260703000005_report_snapshots_form2307.sql` | 1 |
-| `fn_generate_form_2307_issued` | `20260705000001_cv_ewt_supplier_validation.sql` | 3 |
+| `fn_generate_form_2307_issued` | `20260714000002_form2307_monthly_breakdown.sql` | 4 |
 | `fn_generate_tax_calendar` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_generate_tax_calendar_trigger` | `20260628000005_sprint2_tax.sql` | 1 |
 | `fn_get_accounting_trace` | `20260711000002_accounting_trace_reports.sql` | 2 |
@@ -219,11 +219,11 @@ Generated: 2026-07-14. Migrations scanned: 103. Tests present: 43.
 | `fn_snapshot_cas_audit_package` | `20260713000009_books_reconciliation_audit_package.sql` | 2 |
 | `fn_snapshot_cas_export` | `20260710000002_vat_registration_all_documents.sql` | 2 |
 | `fn_snapshot_cas_export_unchecked` | `20260713000008_cas_dat_layout.sql` | 2 |
-| `fn_snapshot_form2307_issued` | `20260703000005_report_snapshots_form2307.sql` | 1 |
+| `fn_snapshot_form2307_issued` | `20260714000002_form2307_monthly_breakdown.sql` | 2 |
 | `fn_snapshot_vat_export` | `20260710000002_vat_registration_all_documents.sql` | 2 |
 | `fn_snapshot_vat_return` | `20260703000004_report_snapshots_vat_returns.sql` | 1 |
 | `fn_snapshot_wht_export` | `20260713000006_qap_multi_atc_reconciliation.sql` | 3 |
-| `fn_supersede_form_2307_issued` | `20260702000007_form2307_version_supersede.sql` | 1 |
+| `fn_supersede_form_2307_issued` | `20260714000002_form2307_monthly_breakdown.sql` | 2 |
 | `fn_sync_number_series_shape` | `20260702000001_number_series_document_code_alignment.sql` | 1 |
 | `fn_sync_vendor_bill_ewt_expected` | `20260713000011_withholding_profile_gates.sql` | 1 |
 | `fn_tax_code_is_current` | `20260713000012_tax_code_effective_date_governance.sql` | 1 |
@@ -359,7 +359,7 @@ Generated: 2026-07-14. Migrations scanned: 103. Tests present: 43.
 | `fixed_asset_categories` | `20260630000027_fixed_assets.sql` | 1 | `20260630000027_fixed_assets.sql` |
 | `fixed_assets` | `20260630000027_fixed_assets.sql` | 1 | `20260630000027_fixed_assets.sql` |
 | `form_2306_issuances` | `20260701000003_withholding_tax.sql` | 1 | `20260701000003_withholding_tax.sql` |
-| `form_2307_issuance_lines` | `20260630000022_tax_ledger_completeness.sql` | 1 | `20260630000022_tax_ledger_completeness.sql` |
+| `form_2307_issuance_lines` | `20260630000022_tax_ledger_completeness.sql` | 2 | `20260714000002_form2307_monthly_breakdown.sql` |
 | `form_2307_issuances` | `20260629000018_purchasing_full.sql` | 3 | `20260702000007_form2307_version_supersede.sql` |
 | `form_2307_tracking` | `20260629000007_cwt_2307.sql` | 3 | `20260630000021_gap_fill.sql` |
 | `fund_transfers` | `20260630000023_banking_treasury_schema.sql` | 1 | `20260630000023_banking_treasury_schema.sql` |

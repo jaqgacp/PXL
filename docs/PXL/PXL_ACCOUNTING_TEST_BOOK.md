@@ -209,6 +209,21 @@ Scenario (VB 11,200 in Q1 2026; PV1 2026-02-05 withholds 100.00 on base 5,000.00
 | 8 | Mark replacement v2 sent | Creates a separate `report_snapshots` row for version 2 with status `sent`, Q1 period bounds, one certificate line, and a 64-character SHA-256 source hash. |
 | 9 | Direct `UPDATE` to un-supersede as an authenticated user | Denied by RLS/effectively matches no row. |
 
+## F2307-MONTHLY-001 - Form 2307 Month-of-Quarter Breakdown
+
+Status: Executed Passing (2026-07-14, session 90) in `supabase/tests/044_form2307_monthly_breakdown_test.sql` with 8 assertions.
+
+Related findings: PXL-AUD-040, PXL-AUD-015, PXL-DA-015.
+
+Scenario (supplier EWT source rows in January, February, and March 2026; certificate generated for Q1):
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Generate Q1 2026 via `fn_generate_form_2307_issued` | Certificate totals equal the source quarter, and the line retains separate month-1/month-2/month-3 base and withheld amounts. |
+| 2 | Mark the certificate sent | `fn_snapshot_form2307_issued` freezes the monthly certificate-line payload in `report_snapshots.snapshot_data`. |
+| 3 | Add a late March withholding row and supersede the sent certificate | Old version keeps its original month-3 evidence; replacement version refreshes the quarter total and month-3 bucket. |
+| 4 | Compare old and new evidence | Month-1/month-2 values remain stable, while replacement month-3 base/withheld includes the late row. |
+
 ## VAT-RECON-001 - VAT Tax-Ledger-to-GL Reconciliation and Return Gate
 
 Status: Executed Passing (2026-07-03) in `supabase/tests/008_vat_ledger_gl_reconciliation_test.sql`.

@@ -287,7 +287,7 @@ Current architectural gaps:
 - ~~Company withholding profile flags do not consistently gate transaction surfaces.~~ DONE (session 84, `20260713000011`): active non-EWT profiles gate VB/PV/CV EWT payable, EWT returns, and QAP exports.
 - ~~TWA auto-EWT is not operationally governed.~~ DONE (session 84, `20260713000011`): supplier-subject source-basis VB lines default to WC158 1% goods or WC160 2% services when the TWA profile is active.
 - ~~Withholding basis policy is not configurable for payment vs accrual.~~ DONE (session 83, `20260713000010`): company-level AP EWT recognition policy defaults to source/accrual at VB and keeps explicit payment-basis compatibility.
-- Cash-purchase EWT, customer-advance CWT, and supplier down-payment EWT are implemented with governed posting accounts and tax-detail reconciliation.
+- Cash-purchase EWT, customer-advance CWT, supplier down-payment EWT, and Form 2307 issued month-of-quarter breakdown are implemented with governed posting accounts, tax-detail reconciliation, certificate evidence, and snapshot support.
 - Percentage Tax exists as compliance/reporting structures but is not fully integrated as a generic posting tax engine.
 - FWT return structures exist, but no broad posted FWT tax-detail flow is production-ready.
 - Some tax behavior is still expressed through document-specific SQL/RPC logic rather than a reusable tax-rule evaluator.
@@ -298,7 +298,7 @@ Current architectural gaps:
 | --- | --- | --- | --- | --- |
 | VAT | Strongest tax lane; server-computed/gated for major flows. Effective-date/version governance on VAT/PT rate codes delivered (PXL-DA-010, `20260713000012`): versioned rates, used-rate immutability, and a document-date `fn_tax_code_version_asof` resolver. | Report rollout still needs core stability; document/item pickers should route through the as-of resolver (backlog UI). | Medium | Keep VAT as reference implementation for tax engine contracts. |
 | Percentage Tax | Compliance pages/tables exist. | Needs configurable applicability, posting/report source, reconciliation, and filing rules. | High | Define PT tax-rule model before expansion. |
-| EWT | PV/CV validation, 2307 hardening, document-date ATC versioning, controlled remittance flow, QAP multi-ATC reconciliation, AP source-basis EWT policy, withholding profile gates, cash-purchase EWT, and supplier down-payment EWT exist. | 2307 month layout, duplicate withholding masters, and received-2307 lifecycle remain incomplete. | High | Complete PXL-AUD-040/044/047. |
+| EWT | PV/CV validation, 2307 hardening, Form 2307 issued month layout, document-date ATC versioning, controlled remittance flow, QAP multi-ATC reconciliation, AP source-basis EWT policy, withholding profile gates, cash-purchase EWT, and supplier down-payment EWT exist. | Duplicate withholding masters and received-2307 lifecycle remain incomplete. | High | Complete PXL-AUD-044/047. |
 | CWT | OR CWT detail, customer defaults, and customer-advance CWT exist. | 2307 received lifecycle, over-claim guard, stale/reversal handling incomplete. | High | Complete PXL-AUD-047 and customer CWT default-flow tests. |
 | FWT | Tables/returns exist. | No mature posted FWT tax-detail engine. | High | Define FWT tax engine path before enabling FWT filing readiness. |
 | Future BIR changes | Effective-dated, version-locked **rate** governance now exists for ATC and VAT/PT codes (PXL-DA-010): a statutory rate change is a new successor version, not an in-place edit, and historical postings keep their frozen rate. | The versioned **rate** model exists, but a full configuration-driven **rule** model (applicability/selection logic beyond rates) is still needed. | High | Extend the versioned-rate primitive into a configuration-driven tax-rule model; route pickers through the as-of resolver. |
@@ -317,6 +317,7 @@ Current architectural gaps:
 | TAX-008 | Withholding profile gating is incomplete. | PXL-AUD-042 | ~~High~~ Resolved (session 84) | DONE — `20260713000011` gates explicit non-EWT profiles across AP-side EWT payable, EWT returns, and QAP exports, and implements TWA goods/services auto-EWT defaults. Test 038. |
 | TAX-009 | Cash-purchase and advance/down-payment withholding coverage was incomplete. | PXL-AUD-043 | ~~High~~ Resolved (session 89) | DONE — `20260713000015` adds cash-purchase EWT, and `20260714000001` adds governed OR customer-advance CWT plus PV supplier-down-payment EWT with clearing accounts, tax detail, and reconciliation tests. Tests 042/043. |
 | TAX-010 | 2307 received claim lifecycle is not governed. | PXL-AUD-047 | Medium | Add validation, over-claim guard, stale/reversal handling. |
+| TAX-011 | Form 2307 issued lacked month-of-quarter line evidence. | PXL-AUD-040 | ~~High~~ Resolved (session 90) | DONE — `20260714000002` adds month-1/2/3 base and withheld columns, buckets generated/superseded certificate lines by source invoice date, freezes the monthly payload in sent/acknowledged snapshots, and renders the breakdown in the issued-certificate page. Test 044. |
 
 ## 8. Master Data Governance review
 
