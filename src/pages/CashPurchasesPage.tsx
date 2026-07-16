@@ -6,6 +6,8 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { ReportTraceLink } from '@/components/AccountingTraceLink'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { normalizePhTin } from '@/lib/philippines'
 
 type CPStatus = 'draft' | 'posted' | 'cancelled'
 
@@ -170,7 +172,7 @@ export default function CashPurchasesPage() {
       ...p,
       supplier_id: id || null,
       supplier_name_snapshot: s?.registered_name || '',
-      supplier_tin_snapshot: s?.tin || '',
+      supplier_tin_snapshot: s?.tin ? normalizePhTin(s.tin) : '',
     }))
     const defaultAtc = s?.is_subject_to_ewt ? s.default_atc_code_id || '' : ''
     setLines(prev => prev.map(l => computeLine({
@@ -355,7 +357,7 @@ export default function CashPurchasesPage() {
 
   if (mode !== 'list') return (
     <div className="space-y-4" ref={listRef}>
-      <div className="flex items-center justify-between">
+      <div className={`${transactionHeaderClass('purchase')} justify-between`}>
         <div>
           <h2 className="text-base font-semibold text-gray-900">{editCP?.id ? (readOnly ? 'Cash Purchase' : 'Edit Cash Purchase') : 'New Cash Purchase'}</h2>
           {editCP?.cp_number && <p className="text-xs text-gray-500 mt-0.5">{editCP.cp_number} · <StatusBadge status={STATUS_COLORS[editCP.status as string] || 'draft'} label={editCP.status as string} /></p>}

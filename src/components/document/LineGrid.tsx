@@ -571,7 +571,7 @@ export function LineGrid<T>({
     return {
       width,
       minWidth: width,
-      ...(pinned ? { position: 'sticky', left: pinnedOffsets[column.key], zIndex: 31, background: '#f9fafb' } : {}),
+      ...(pinned ? { position: 'sticky', left: pinnedOffsets[column.key], zIndex: 31, background: 'var(--pxl-surface-table-header)' } : {}),
     }
   }
 
@@ -581,12 +581,12 @@ export function LineGrid<T>({
     return {
       width,
       minWidth: width,
-      ...(pinned ? { position: 'sticky', left: pinnedOffsets[column.key], zIndex: 12, background: expanded ? '#f9fafb' : '#fff' } : {}),
+      ...(pinned ? { position: 'sticky', left: pinnedOffsets[column.key], zIndex: 12, background: expanded ? 'var(--pxl-surface-table-selected)' : 'var(--pxl-surface-raised)' } : {}),
     }
   }
 
   const expandStickyStyle: React.CSSProperties = renderExpandedRow
-    ? { position: 'sticky', left: 0, zIndex: 32, background: '#f9fafb' }
+    ? { position: 'sticky', left: 0, zIndex: 32, background: 'var(--pxl-surface-table-header)' }
     : {}
 
   return (
@@ -598,7 +598,7 @@ export function LineGrid<T>({
             id={`${storageKey}-view-selector`}
             value={activeViewKey}
             onChange={event => applyView(event.target.value)}
-            className="h-7 max-w-44 border border-gray-300 rounded bg-white px-2 text-[11px] text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="pxl-input h-8 max-w-44 px-2 py-1 text-xs"
           >
             {allViews.map(view => (
               <option key={view.key} value={view.key}>{view.label}</option>
@@ -607,55 +607,55 @@ export function LineGrid<T>({
 
           <div className="relative shrink-0" ref={pickerRef}>
             <button type="button" onClick={() => setPickerOpen(open => !open)}
-              className="h-7 px-2.5 border border-gray-300 rounded text-[11px] font-medium text-gray-600 hover:bg-gray-50">
+              className="pxl-button pxl-button--neutral h-8 px-2.5 text-xs">
               Choose Columns ▾
             </button>
             {pickerOpen && (
-              <div className="absolute left-0 top-full mt-1 z-30 w-[420px] max-w-[calc(100vw-2rem)] max-h-[70vh] overflow-y-auto bg-white border border-gray-200 rounded shadow-xl p-3">
+              <div className="pxl-dialog absolute left-0 top-full z-30 mt-1 max-h-[70vh] w-[420px] max-w-[calc(100vw-2rem)] overflow-y-auto p-3">
                 <div className="flex items-start justify-between gap-3 pb-2 border-b border-gray-100">
                   <div>
-                    <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-700">Table View</div>
-                    <div className="text-[11px] text-gray-500">{activeView?.label || 'Custom'} · {orderedColumns.length} visible column{orderedColumns.length !== 1 ? 's' : ''}</div>
+                    <div className="pxl-section-title">Table View</div>
+                    <div className="pxl-caption">{activeView?.label || 'Custom'} · {orderedColumns.length} visible column{orderedColumns.length !== 1 ? 's' : ''}</div>
                   </div>
                   <button type="button" onClick={() => setPickerOpen(false)} className="text-gray-400 hover:text-gray-700 text-sm leading-none">×</button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 py-2 border-b border-gray-100">
-                  <button type="button" onClick={saveCurrentView} className="border border-gray-300 rounded px-2 py-1 text-[11px] text-gray-700 hover:bg-gray-50">Save View</button>
-                  <button type="button" onClick={updateSavedView} className="border border-gray-300 rounded px-2 py-1 text-[11px] text-gray-700 hover:bg-gray-50">
+                  <button type="button" onClick={saveCurrentView} className="pxl-button pxl-button--neutral h-8 px-2 text-xs">Save View</button>
+                  <button type="button" onClick={updateSavedView} className="pxl-button pxl-button--neutral h-8 px-2 text-xs">
                     {activeSavedView ? 'Update View' : 'Save as Custom'}
                   </button>
-                  <button type="button" onClick={renameSavedView} disabled={!activeSavedView} className="border border-gray-300 rounded px-2 py-1 text-[11px] text-gray-700 hover:bg-gray-50 disabled:opacity-40">Rename</button>
-                  <button type="button" onClick={deleteSavedView} disabled={!activeSavedView} className="border border-red-200 rounded px-2 py-1 text-[11px] text-red-700 hover:bg-red-50 disabled:opacity-40">Delete</button>
+                  <button type="button" onClick={renameSavedView} disabled={!activeSavedView} className="pxl-button pxl-button--neutral h-8 px-2 text-xs">Rename</button>
+                  <button type="button" onClick={deleteSavedView} disabled={!activeSavedView} className="pxl-button pxl-button--danger h-8 px-2 text-xs">Delete</button>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 py-2 border-b border-gray-100">
                   <label className="text-[11px] text-gray-500">
-                    <span className="block mb-1 uppercase tracking-wide text-[10px] text-gray-400">Density</span>
+                    <span className="pxl-field-label mb-1 block uppercase">Density</span>
                     <select value={density} onChange={event => updateDensity(event.target.value as TableDensity)}
-                      className="w-full border border-gray-300 rounded px-2 py-1 text-[11px] text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-900">
+                      className="pxl-input w-full px-2 py-1 text-xs">
                       <option value="compact">Compact</option>
                       <option value="comfortable">Comfortable</option>
                       <option value="spacious">Spacious</option>
                     </select>
                   </label>
                   <label className="text-[11px] text-gray-500">
-                    <span className="block mb-1 uppercase tracking-wide text-[10px] text-gray-400">Find columns</span>
+                    <span className="pxl-field-label mb-1 block uppercase">Find columns</span>
                     <input value={columnSearch} onChange={event => setColumnSearch(event.target.value)}
-                      className="w-full border border-gray-300 rounded px-2 py-1 text-[11px] focus:outline-none focus:ring-1 focus:ring-gray-900"
+                      className="pxl-input w-full px-2 py-1 text-xs"
                       placeholder="Search columns…" />
                   </label>
                 </div>
 
                 <div className="flex items-center gap-1.5 flex-wrap py-2 border-b border-gray-100">
-                  <button type="button" onClick={selectAllColumns} className="px-2 py-1 rounded bg-gray-100 text-[11px] text-gray-700 hover:bg-gray-200">Select All</button>
-                  <button type="button" onClick={clearAllColumns} className="px-2 py-1 rounded bg-gray-100 text-[11px] text-gray-700 hover:bg-gray-200">Clear All</button>
-                  <button type="button" onClick={resetToCurrentView} className="px-2 py-1 rounded bg-gray-100 text-[11px] text-gray-700 hover:bg-gray-200">Reset to Current View</button>
-                  <button type="button" onClick={applyDefaultView} className="px-2 py-1 rounded bg-gray-100 text-[11px] text-gray-700 hover:bg-gray-200">Reset to System Default</button>
+                  <button type="button" onClick={selectAllColumns} className="pxl-button pxl-button--neutral h-8 px-2 text-xs">Select All</button>
+                  <button type="button" onClick={clearAllColumns} className="pxl-button pxl-button--neutral h-8 px-2 text-xs">Clear All</button>
+                  <button type="button" onClick={resetToCurrentView} className="pxl-button pxl-button--neutral h-8 px-2 text-xs">Reset to Current View</button>
+                  <button type="button" onClick={applyDefaultView} className="pxl-button pxl-button--neutral h-8 px-2 text-xs">Reset to System Default</button>
                 </div>
 
                 <div className="py-2 border-b border-gray-100">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Column Order</div>
+                  <div className="pxl-section-title mb-1.5">Column Order</div>
                   <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
                     {orderedColumns.length === 0 ? (
                       <div className="text-[11px] text-gray-400 px-2 py-2 border border-dashed border-gray-200 rounded">No visible columns selected.</div>
@@ -668,7 +668,7 @@ export function LineGrid<T>({
                           onDragStart={() => setDragKey(column.key)}
                           onDragOver={event => event.preventDefault()}
                           onDrop={event => { event.preventDefault(); if (dragKey) moveColumn(dragKey, column.key); setDragKey(null) }}
-                          className="flex items-center gap-2 rounded border border-gray-200 bg-white px-2 py-1 text-[11px] text-gray-700 cursor-move"
+                          className="flex cursor-move items-center gap-2 rounded border border-[var(--pxl-border-subtle)] bg-white px-2 py-1 text-xs text-gray-700"
                         >
                           <span className="text-gray-300">⋮⋮</span>
                           <span className="min-w-0 flex-1 truncate">{column.header}</span>
@@ -685,7 +685,7 @@ export function LineGrid<T>({
                 <div className="pt-2 space-y-2">
                   {groupedColumns.map(([groupLabel, groupColumns]) => (
                     <section key={groupLabel}>
-                      <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-500 mb-1">{groupLabel}</div>
+                      <div className="pxl-field-label mb-1 uppercase">{groupLabel}</div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                         {groupColumns.map(column => (
                           <label key={column.key} className="flex items-center gap-2 px-2 py-1.5 text-xs text-gray-700 rounded hover:bg-gray-50 cursor-pointer">
@@ -702,17 +702,17 @@ export function LineGrid<T>({
           </div>
 
           <button type="button" onClick={() => setFilterOpen(open => !open)}
-            className={`h-7 px-2.5 border rounded text-[11px] font-medium ${filters.global ? 'border-blue-200 bg-blue-50 text-blue-700' : 'border-gray-300 text-gray-600 hover:bg-gray-50'}`}>
+            className={`pxl-button h-8 px-2.5 text-xs ${filters.global ? 'pxl-button--secondary' : 'pxl-button--neutral'}`}>
             Filter
           </button>
-          <button type="button" onClick={exportCsv} className="h-7 px-2.5 border border-gray-300 rounded text-[11px] font-medium text-gray-600 hover:bg-gray-50">Export</button>
+          <button type="button" onClick={exportCsv} className="pxl-button pxl-button--neutral h-8 px-2.5 text-xs">Export</button>
           <button type="button" onClick={() => void onRefresh?.()} disabled={!onRefresh}
-            className="h-7 px-2.5 border border-gray-300 rounded text-[11px] font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40">
+            className="pxl-button pxl-button--neutral h-8 px-2.5 text-xs">
             Refresh
           </button>
         </div>
 
-        <div className="text-[11px] text-gray-400 whitespace-nowrap">
+        <div className="pxl-caption whitespace-nowrap">
           {displayRows.length}/{rows.length} row{rows.length !== 1 ? 's' : ''}
         </div>
       </div>
@@ -720,12 +720,12 @@ export function LineGrid<T>({
       {filterOpen && (
         <div className="pb-2">
           <input value={filters.global ?? ''} onChange={event => updateGlobalFilter(event.target.value)}
-            className="w-full max-w-sm border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900"
+            className="pxl-input w-full max-w-sm px-2 py-1 text-xs"
             placeholder="Filter visible columns…" />
         </div>
       )}
 
-      <div className="overflow-x-auto border border-gray-200 rounded">
+      <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]">
         <table className={`min-w-full w-max ${ERP_TABLE}`}>
           <colgroup>
             {renderExpandedRow && <col style={{ width: 28, minWidth: 28 }} />}
@@ -755,7 +755,7 @@ export function LineGrid<T>({
               ))}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100">
+          <tbody className="divide-y divide-[var(--pxl-border-subtle)]">
             {displayRows.length === 0 ? (
               <tr><td colSpan={detailColSpan} className={ERP_EMPTY_CELL}>{rows.length === 0 ? emptyLabel : 'No rows match the current filter.'}</td></tr>
             ) : displayRows.map(({ row, index }) => {
@@ -765,22 +765,23 @@ export function LineGrid<T>({
                 <Fragment key={key}>
                   <tr onClick={onRowClick ? () => onRowClick(row, index) : undefined}
                     aria-expanded={renderExpandedRow ? expanded : undefined}
-                    className={`${onRowClick ? 'cursor-pointer' : ''} ${expanded ? 'bg-gray-50' : 'hover:bg-gray-50/60'}`}>
+                    data-selected={expanded ? 'true' : undefined}
+                    className={`${onRowClick ? 'cursor-pointer' : ''}`}>
                     {renderExpandedRow && (
-                      <td className={`px-1 ${DENSITY_EXPAND[density]} text-center text-gray-400`} style={{ position: 'sticky', left: 0, zIndex: 13, background: expanded ? '#f9fafb' : '#fff' }}>
+                      <td className={`px-1 ${DENSITY_EXPAND[density]} text-center text-gray-400`} style={{ position: 'sticky', left: 0, zIndex: 13, background: expanded ? 'var(--pxl-surface-table-selected)' : 'var(--pxl-surface-raised)' }}>
                         <span aria-hidden>{expanded ? '▾' : '›'}</span>
                       </td>
                     )}
                     {orderedColumns.map(column => (
                       <td key={column.key}
                         style={tdStyle(column, expanded)}
-                        className={`px-2 ${DENSITY_ROW[density]} text-[11px] text-gray-800 whitespace-nowrap ${alignClass(column.align)}`}>
+                        className={`px-2 ${DENSITY_ROW[density]} whitespace-nowrap ${alignClass(column.align)}`}>
                         {column.render(row, index)}
                       </td>
                     ))}
                   </tr>
                   {expanded && renderExpandedRow && (
-                    <tr className="bg-gray-50/70">
+                    <tr className="bg-[var(--pxl-surface-table-selected)]">
                       <td colSpan={detailColSpan} className="p-0">{renderExpandedRow(row, index)}</td>
                     </tr>
                   )}
@@ -790,12 +791,12 @@ export function LineGrid<T>({
           </tbody>
           {hasFooter && displayRows.length > 0 && (
             <tfoot className="sticky bottom-0 z-20">
-              <tr className="border-t border-gray-200 bg-gray-50">
-                {renderExpandedRow && <td style={{ position: 'sticky', left: 0, zIndex: 21, background: '#f9fafb' }} />}
+              <tr className="border-t border-[var(--pxl-border-strong)] bg-[var(--pxl-surface-table-selected)]">
+                {renderExpandedRow && <td style={{ position: 'sticky', left: 0, zIndex: 21, background: 'var(--pxl-surface-table-selected)' }} />}
                 {orderedColumns.map(column => (
                   <td key={column.key}
-                    style={{ ...tdStyle(column, true), background: '#f9fafb' }}
-                    className={`px-2 py-1.5 text-[11px] font-semibold text-gray-900 ${alignClass(column.align)}`}>
+                    style={{ ...tdStyle(column, true), background: 'var(--pxl-surface-table-selected)' }}
+                    className={`px-2 py-1.5 font-semibold text-gray-900 ${alignClass(column.align)}`}>
                     {column.footer}
                   </td>
                 ))}
@@ -806,11 +807,11 @@ export function LineGrid<T>({
       </div>
 
       {summary.length > 0 && (
-        <dl className="mt-2 flex items-center justify-end gap-x-5 gap-y-1.5 flex-wrap rounded bg-gray-50 border border-gray-100 px-2.5 py-1.5">
+        <dl className="mt-2 flex flex-wrap items-center justify-end gap-x-5 gap-y-1.5 rounded border border-[var(--pxl-border-medium)] bg-[var(--pxl-surface-table-selected)] px-2.5 py-1.5">
           {summary.map(metric => (
             <div key={metric.key} className="flex items-baseline gap-1.5 whitespace-nowrap">
-              <dt className="text-[10px] uppercase tracking-wide text-gray-400">{metric.label}</dt>
-              <dd className={`text-xs font-mono tabular-nums ${metric.emphasis ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{metric.value}</dd>
+              <dt className="pxl-caption uppercase">{metric.label}</dt>
+              <dd className={`font-mono tabular-nums ${metric.emphasis ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>{metric.value}</dd>
             </div>
           ))}
         </dl>

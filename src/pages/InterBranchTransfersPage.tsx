@@ -5,6 +5,7 @@ import { StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 
 type BranchRef = { id: string; branch_code: string; branch_name: string }
 type BankRef = { id: string; bank_name: string; account_number: string; branch_id: string | null }
@@ -164,7 +165,7 @@ export default function InterBranchTransfersPage() {
   const toBanks = banks.filter(b => !form?.to_branch_id || b.branch_id === form.to_branch_id || b.branch_id == null)
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-2">
+      <div className={transactionHeaderClass('banking')}>
         <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
         <span className="text-gray-300">|</span>
         <span className="text-sm font-semibold text-gray-700">{form?.ibt_number || 'New Inter-Branch Transfer'}</span>

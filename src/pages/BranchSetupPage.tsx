@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { TablesInsert, TablesUpdate } from '@/lib/database.types'
+import { formatPhTinBranchInput, normalizePhTinBranch, PH_TIN_BRANCH_PATTERN } from '@/lib/philippines'
 
 type RDO = { id: string; rdo_code: string; rdo_name: string }
 type Company = { id: string; registered_name: string }
@@ -75,11 +76,11 @@ export default function BranchSetupPage() {
 
   const set = (k: string, v: string) => { setSaved(false); setForm(f => ({ ...f, [k]: v })) }
 
-  const openCreate = () => { setForm({ ...EMPTY }); setEditId(null); setShowForm(true); setSaved(false) }
+  const openCreate = () => { setForm({ ...EMPTY, tin_branch_code: '00000' }); setEditId(null); setShowForm(true); setSaved(false) }
   const openEdit = (b: Branch) => {
     setForm({
       company_id: b.company_id, branch_code: b.branch_code, branch_name: b.branch_name,
-      branch_type: b.branch_type, tin_branch_code: b.tin_branch_code,
+      branch_type: b.branch_type, tin_branch_code: normalizePhTinBranch(b.tin_branch_code),
       rdo_id: b.rdo_id || '', tax_registration_override: b.tax_registration_override,
       bir_reg_date: b.bir_reg_date || '', lgu_permit_number: b.lgu_permit_number || '',
       lgu_reg_date: b.lgu_reg_date || '', cas_permit_no: b.cas_permit_no || '',
@@ -93,8 +94,13 @@ export default function BranchSetupPage() {
   const openView = (b: Branch) => { setViewData(b); setShowView(true) }
 
   const handleSave = async () => {
+    const tinBranch = normalizePhTinBranch(form.tin_branch_code)
+    if (!PH_TIN_BRANCH_PATTERN.test(tinBranch)) {
+      alert('TIN Branch must be exactly 5 digits, for example 00000.')
+      return
+    }
     setSaving(true)
-    const payload = { ...form, rdo_id: form.rdo_id || null, bir_reg_date: form.bir_reg_date || null,
+    const payload = { ...form, tin_branch_code: tinBranch, rdo_id: form.rdo_id || null, bir_reg_date: form.bir_reg_date || null,
       lgu_reg_date: form.lgu_reg_date || null, cas_date_issued: form.cas_date_issued || null }
     const { error } = editId
       ? await supabase.from('branches').update(payload as TablesUpdate<'branches'>).eq('id', editId)
@@ -130,7 +136,7 @@ export default function BranchSetupPage() {
             <div><label className={lbl}>Branch Code</label><input readOnly value={viewData.branch_code} className={ro} /></div>
             <div className="col-span-2"><label className={lbl}>Branch Name</label><input readOnly value={viewData.branch_name} className={ro} /></div>
             <div><label className={lbl}>Branch Type</label><input readOnly value={BRANCH_TYPES.find(t => t.value === viewData.branch_type)?.label || viewData.branch_type} className={ro} /></div>
-            <div><label className={lbl}>TIN Branch Code</label><input readOnly value={viewData.tin_branch_code || '—'} className={ro} /></div>
+            <div><label className={lbl}>TIN Branch</label><input readOnly value={normalizePhTinBranch(viewData.tin_branch_code)} className={ro} /></div>
           </div>
         </div>
         <div className={sec}><h2 className={hd}>Section 2 — BIR, Tax & LGU Registration</h2>
@@ -207,8 +213,8 @@ export default function BranchSetupPage() {
             </select>
           </div>
           <div>
-            <label className={lbl}>TIN Branch Code <span className="text-red-500">*</span></label>
-            <input value={form.tin_branch_code} onChange={e => set('tin_branch_code', e.target.value)}
+            <label className={lbl}>TIN Branch <span className="text-red-500">*</span></label>
+            <input value={form.tin_branch_code} onChange={e => set('tin_branch_code', formatPhTinBranchInput(e.target.value))}
               className={inp} placeholder="e.g., 00000 (Head Office), 00001 (Branch 1)" maxLength={5} />
           </div>
         </div>

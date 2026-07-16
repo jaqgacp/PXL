@@ -3,6 +3,7 @@ import Papa from 'papaparse'
 import { supabase } from '@/lib/supabase'
 import type { TablesInsert } from '@/lib/database.types'
 import { CompanySetupChecklist } from '@/components/CompanySetupChecklist'
+import { formatPhTinInput, isValidPhTin, normalizePhTin, phTinMatches, PH_TIN_PLACEHOLDER } from '@/lib/philippines'
 
 type RDO = { id: string; rdo_code: string; rdo_name: string }
 type Company = {
@@ -95,7 +96,7 @@ const hydrateCompanyForm = (data: Record<string, any>): CompanyForm => ({
   trade_name: data.trade_name || '',
   line_of_business: data.line_of_business || '',
   psic_code: data.psic_code || '',
-  tin: data.tin || '',
+  tin: normalizePhTin(data.tin) || '',
   tax_registration: data.tax_registration || '',
   rdo_id: data.rdo_id || '',
   registration_number: data.registration_number || '',
@@ -116,7 +117,7 @@ const hydrateCompanyForm = (data: Record<string, any>): CompanyForm => ({
   mobile_number: data.mobile_number || '',
   signatory_name: data.signatory_name || '',
   signatory_position: data.signatory_position || '',
-  signatory_tin: data.signatory_tin || '',
+  signatory_tin: data.signatory_tin ? normalizePhTin(data.signatory_tin) : '',
   workspace_accent_color: data.workspace_accent_color || '#14532D',
 })
 
@@ -185,10 +186,20 @@ export default function CompanySetupPage() {
       alert('Cannot save company.\nWorkspace accent must be a six-digit hexadecimal color, for example #14532D.')
       return
     }
+    if (!isValidPhTin(form.tin)) {
+      alert(`Cannot save company.\nTIN must use ${PH_TIN_PLACEHOLDER}.`)
+      return
+    }
+    if (form.signatory_tin && !isValidPhTin(form.signatory_tin)) {
+      alert(`Cannot save company.\nSignatory TIN must use ${PH_TIN_PLACEHOLDER}.`)
+      return
+    }
 
     setSaving(true)
     const payload = {
       ...form,
+      tin: normalizePhTin(form.tin),
+      signatory_tin: form.signatory_tin ? normalizePhTin(form.signatory_tin) : null,
       parent_company_id: form.parent_company_id || null,
       rdo_id: form.rdo_id || null,
       fiscal_start_month: form.fiscal_start_month ? parseInt(form.fiscal_start_month) : null,
@@ -244,6 +255,8 @@ export default function CompanySetupPage() {
       transform: (v) => v.trim(),
       complete: ({ data }) => {
         const rows: ImportRow[] = data.map((record, idx) => {
+          record.tin = normalizePhTin(record.tin)
+          record.signatory_tin = record.signatory_tin ? normalizePhTin(record.signatory_tin) : ''
           const errors: string[] = []
 
           REQUIRED_COLUMNS.forEach(col => {
@@ -260,10 +273,10 @@ export default function CompanySetupPage() {
           if (record.accounting_period === 'fiscal' && !record.fiscal_start_month)
             errors.push('"fiscal_start_month" is required when accounting_period is "fiscal"')
 
-          if (record.tin && !/^\d{3}-\d{3}-\d{3}/.test(record.tin))
-            errors.push('TIN format should be 000-000-000-00000')
+          if (record.tin && !isValidPhTin(record.tin))
+            errors.push(`TIN format should be ${PH_TIN_PLACEHOLDER}`)
 
-          if (record.tin && companies.some(c => c.tin === record.tin))
+          if (record.tin && companies.some(c => normalizePhTin(c.tin) === record.tin))
             errors.push(`TIN "${record.tin}" already exists in the system`)
           if (record.workspace_accent_color && !/^#[0-9A-Fa-f]{6}$/.test(record.workspace_accent_color))
             errors.push('workspace_accent_color must be a six-digit hex color such as #14532D')
@@ -309,6 +322,8 @@ export default function CompanySetupPage() {
 
       const { error } = await supabase.from('companies').insert([{
         ...row.data,
+        tin: normalizePhTin(row.data.tin),
+        signatory_tin: row.data.signatory_tin ? normalizePhTin(row.data.signatory_tin) : null,
         fiscal_start_month: row.data.fiscal_start_month ? parseInt(row.data.fiscal_start_month) : null,
         bir_reg_date: row.data.bir_reg_date || null,
         sec_dti_reg_date: row.data.sec_dti_reg_date || null,
@@ -532,7 +547,7 @@ export default function CompanySetupPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className={labelClass}>TIN</label>
-              <input readOnly value={viewForm.tin || '—'} className={roInput} />
+              <input readOnly value={normalizePhTin(viewForm.tin) || '—'} className={roInput} />
             </div>
             <div>
               <label className={labelClass}>Tax Registration</label>
@@ -639,7 +654,7 @@ export default function CompanySetupPage() {
             </div>
             <div>
               <label className={labelClass}>Signatory TIN</label>
-              <input readOnly value={viewForm.signatory_tin || '—'} className={roInput} />
+              <input readOnly value={viewForm.signatory_tin ? normalizePhTin(viewForm.signatory_tin) : '—'} className={roInput} />
             </div>
           </div>
         </div>
@@ -724,7 +739,7 @@ export default function CompanySetupPage() {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className={labelClass}>TIN <span className="text-red-500">*</span></label>
-            <input value={form.tin} onChange={e => set('tin', e.target.value)} className={inputClass} placeholder="000-000-000-00000" />
+            <input value={form.tin} onChange={e => set('tin', formatPhTinInput(e.target.value))} className={inputClass} placeholder={PH_TIN_PLACEHOLDER} />
           </div>
           <div>
             <label className={labelClass}>Tax Registration <span className="text-red-500">*</span></label>
@@ -851,8 +866,8 @@ export default function CompanySetupPage() {
           </div>
           <div>
             <label className={labelClass}>Signatory TIN</label>
-            <input value={form.signatory_tin} onChange={e => set('signatory_tin', e.target.value)}
-              className={inputClass} placeholder="Personal TIN of signatory" />
+            <input value={form.signatory_tin} onChange={e => set('signatory_tin', formatPhTinInput(e.target.value))}
+              className={inputClass} placeholder={PH_TIN_PLACEHOLDER} />
           </div>
         </div>
       </div>
@@ -882,7 +897,7 @@ export default function CompanySetupPage() {
   const filtered = companies.filter(c => {
     const matchSearch = !search ||
       c.registered_name?.toLowerCase().includes(search.toLowerCase()) ||
-      c.tin?.includes(search)
+      phTinMatches(c.tin, search)
     const matchStatus = filterStatus === 'all' ||
       (filterStatus === 'active' && c.is_active) ||
       (filterStatus === 'inactive' && !c.is_active)
@@ -948,7 +963,7 @@ export default function CompanySetupPage() {
                   {c.trade_name && <span className="text-gray-400 text-xs ml-1">({c.trade_name})</span>}
                 </td>
                 <td className="px-4 py-3 text-gray-500">—</td>
-                <td className="px-4 py-3 text-gray-600 font-mono">{c.tin}</td>
+                <td className="px-4 py-3 text-gray-600 font-mono">{normalizePhTin(c.tin)}</td>
                 <td className="px-4 py-3 text-gray-600">
                   {c.ref_rdo_codes ? `${c.ref_rdo_codes.rdo_code} — ${c.ref_rdo_codes.rdo_name}` : '—'}
                 </td>

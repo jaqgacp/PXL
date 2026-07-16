@@ -5,6 +5,8 @@ import { AuditEvidenceBlock, StatusBadge, AmountCell, DateCell } from '@/compone
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { composePhTin } from '@/lib/philippines'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────
 type DMStatus = 'draft' | 'approved' | 'paid' | 'cancelled'
@@ -139,7 +141,7 @@ export default function DebitMemosPage() {
     const c = customers.find(x => x.id === id)
     setFCustomer(id)
     setFCustomerName(c?.registered_name || '')
-    setFCustomerTIN(c ? c.tin + (c.tin_branch_code !== '000' ? `-${c.tin_branch_code}` : '') : '')
+    setFCustomerTIN(c ? composePhTin(c.tin, c.tin_branch_code) : '')
   }
 
   const setLineField = (key: string, field: keyof DMLLine, value: string | number) => {
@@ -337,7 +339,7 @@ export default function DebitMemosPage() {
   // ── Form ───────────────────────────────────────────────────
   return (
     <div>
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3 flex-wrap">
+      <div className={transactionHeaderClass('sales')}>
         <button onClick={() => setMode('list')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M15 18l-6-6 6-6" /></svg>
           Debit Memos

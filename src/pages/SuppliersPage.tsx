@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
+import { formatPhTinInput, isValidPhTin, normalizePhTin, phTinMatches, PH_TIN_PLACEHOLDER } from '@/lib/philippines'
 
 type Company = { id: string; registered_name: string }
 type Currency = { id: string; currency_code: string; name: string }
@@ -88,7 +89,7 @@ export default function SuppliersPage() {
       company_id: s.company_id, supplier_code: s.supplier_code,
       supplier_group: s.supplier_group || '', registered_name: s.registered_name,
       trade_name: s.trade_name || '', business_style: s.business_style || '',
-      tin: s.tin, default_tax_type: s.default_tax_type,
+      tin: normalizePhTin(s.tin), default_tax_type: s.default_tax_type,
       is_subject_to_ewt: s.is_subject_to_ewt || false,
       default_atc_code_id: s.default_atc_code_id || '',
       registered_address: s.registered_address,
@@ -103,12 +104,16 @@ export default function SuppliersPage() {
   const openView = (s: Supplier) => { setViewData(s); setShowView(true) }
 
   const handleSave = async () => {
+    if (!isValidPhTin(form.tin)) {
+      alert(`TIN must use ${PH_TIN_PLACEHOLDER}.`)
+      return
+    }
     setSaving(true)
     const payload = {
       company_id: form.company_id, supplier_code: form.supplier_code.toUpperCase(),
       supplier_group: form.supplier_group || null, registered_name: form.registered_name,
       trade_name: form.trade_name || null, business_style: form.business_style || null,
-      tin: form.tin, default_tax_type: form.default_tax_type,
+      tin: normalizePhTin(form.tin), default_tax_type: form.default_tax_type,
       is_subject_to_ewt: form.is_subject_to_ewt,
       default_atc_code_id: form.is_subject_to_ewt ? (form.default_atc_code_id || null) : null,
       registered_address: form.registered_address,
@@ -158,7 +163,7 @@ export default function SuppliersPage() {
         </div>
         <div className={sec}><h2 className={hd}>Section 2 — Tax & Compliance</h2>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className={lbl}>TIN</label><input readOnly value={viewData.tin} className={roInp} /></div>
+            <div><label className={lbl}>TIN</label><input readOnly value={normalizePhTin(viewData.tin)} className={roInp} /></div>
             <div><label className={lbl}>Tax Type</label><input readOnly value={taxLabel} className={roInp} /></div>
             <div><label className={lbl}>AP Withholding</label><input readOnly value={viewData.is_subject_to_ewt ? 'Subject to EWT' : 'Not subject to EWT'} className={roInp} /></div>
             <div><label className={lbl}>Default AP ATC</label><input readOnly value={viewData.atc_codes ? `${viewData.atc_codes.code} — ${viewData.atc_codes.description} (${viewData.atc_codes.rate}%)` : '—'} className={roInp} /></div>
@@ -228,7 +233,7 @@ export default function SuppliersPage() {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div><label className={lbl}>TIN <span className="text-red-500">*</span></label>
-            <input value={form.tin} onChange={e => set('tin', e.target.value)} className={inp} placeholder="000-000-000-00000" /></div>
+            <input value={form.tin} onChange={e => set('tin', formatPhTinInput(e.target.value))} className={inp} placeholder={PH_TIN_PLACEHOLDER} /></div>
           <div><label className={lbl}>Tax Type <span className="text-red-500">*</span></label>
             <select value={form.default_tax_type} onChange={e => set('default_tax_type', e.target.value)} className={inp}>
               {TAX_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
@@ -284,7 +289,7 @@ export default function SuppliersPage() {
 
   // LIST
   const filtered = suppliers.filter(s => {
-    const m = !search || s.supplier_code.toLowerCase().includes(search.toLowerCase()) || s.registered_name.toLowerCase().includes(search.toLowerCase()) || s.tin.includes(search)
+    const m = !search || s.supplier_code.toLowerCase().includes(search.toLowerCase()) || s.registered_name.toLowerCase().includes(search.toLowerCase()) || phTinMatches(s.tin, search)
     const co = !filterCompany || s.company_id === filterCompany
     const t = !filterTaxType || s.default_tax_type === filterTaxType
     const st = filterStatus === 'all' || (filterStatus === 'active' ? s.is_active : !s.is_active)
@@ -345,7 +350,7 @@ export default function SuppliersPage() {
                     <p className="text-gray-900 font-medium">{s.registered_name}</p>
                     {s.trade_name && <p className="text-xs text-gray-400">{s.trade_name}</p>}
                   </td>
-                  <td className="px-4 py-3 font-mono text-gray-600">{s.tin}</td>
+                  <td className="px-4 py-3 font-mono text-gray-600">{normalizePhTin(s.tin)}</td>
                   <td className="px-4 py-3"><span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
                     s.default_tax_type === 'vat_registered' ? 'bg-blue-50 text-blue-700' :
                     s.default_tax_type === 'zero_rated' ? 'bg-green-50 text-green-700' :

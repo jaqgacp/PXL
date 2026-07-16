@@ -59,6 +59,8 @@ Business-policy and architecture decisions are delegated (DEC-008): decide with 
 
 When touching any module during a session, perform a lightweight architectural review toward the Standard Transaction Experience defined in `docs/PXL/PXL_PRODUCT_BACKLOG.md`. Prepare the architecture only when the risk is negligible and it avoids future refactoring; otherwise record the opportunity in the backlog — documentation only. Enhancements never go into the audit findings file; genuine accounting/tax/security/posting/GL/data-integrity bugs become NEW findings there and are not fixed unless they block the current finding. Forward planning must never delay, re-prioritize, or expand the current audit session.
 
+Transaction workspace rollout rule: before implementing any new transaction workspace, read `docs/PXL/PXL_TRANSACTION_WORKSPACE_MANIFEST.md`, `docs/PXL/PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`, `docs/PXL/PXL_TRANSACTION_DEFINITION_SCHEMA.md`, `docs/PXL/PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md`, and `src/lib/transactionWorkspaceRollout.ts`. Select only the next eligible transaction, implement one transaction only, update the manifest/status docs, and do not copy Sales Invoice-specific business content into other documents. No transaction may move from `DEFINED` to `READY_FOR_IMPLEMENTATION` until its Field Source Matrix establishes authoritative source, storage, editability, appearance, and business use for every required field.
+
 Ask before ONLY:
 
 - weakening or removing accounting/tax/audit-trail/security controls,

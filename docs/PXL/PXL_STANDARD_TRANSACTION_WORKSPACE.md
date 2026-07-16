@@ -3,11 +3,17 @@
 Status: **OFFICIAL CANONICAL TRANSACTION WORKSPACE STANDARD**
 Canonical pilot references: **Sales Invoice Form UX Standard** (`PXL_SALES_INVOICE_UX_STANDARD.md`) and **Sales Invoice View UX Standard** (`PXL_SALES_INVOICE_VIEW_UX_STANDARD.md`)
 Current saved-document reference implementation: **Sales Invoice Workspace** (`/sales-invoices/:id`, `src/pages/SalesInvoiceDocumentPage.tsx`)
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 
 This document is the governing standard for all future PXL transaction workspaces. Do not implement Purchase Invoice, Sales Order, Purchase Order, Delivery Receipt, Official Receipt, Credit Memo, Debit Memo, Journal Entry, Inventory Transactions, Banking, Fixed Assets, Payroll, or Compliance Registers by inventing a new page shape. Future transaction screens must inherit this architecture and extend it only where the document type genuinely requires it.
 
 Current rollout gate: **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READINESS.md`, DEC-017) must be cleared before expanding this workspace to additional transaction types. This standard remains the UI/UX reference, but accounting engine, tax engine, and master-data governance now take priority over rollout.
+
+Rollout framework: transaction workspace rollout is governed by `PXL_TRANSACTION_WORKSPACE_STANDARD.md`, `PXL_TRANSACTION_WORKSPACE_MANIFEST.md`, `PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`, `PXL_TRANSACTION_DEFINITION_SCHEMA.md`, and the typed registry in `src/lib/transactionWorkspaceRollout.ts`. These files define how future transactions are selected, defined, implemented, validated, and documented one at a time.
+
+Sales Invoice completeness gate: the Sales Invoice form and view remain the structural UI references, but full transaction approval also requires the source maps in `PXL_SALES_INVOICE_FUNCTIONAL_SPECIFICATION.md`, `PXL_SALES_INVOICE_FIELD_MAPPING.md`, `PXL_SALES_INVOICE_DIMENSION_MAPPING.md`, `PXL_SALES_INVOICE_GL_MAPPING.md`, and `PXL_SALES_INVOICE_TAX_MAPPING.md`. Future rollouts must inherit the workspace shell and components, not unresolved Sales Invoice data gaps such as non-persisted VAT Price Basis, unsupported operational dimensions, or inventory/COGS placeholders.
+
+Field Source Matrix gate: `PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md` is mandatory for every transaction rollout. No transaction workspace may be approved if fields appear without documented source, storage, editability, appearance, business use, snapshot/live behavior, and validation status.
 
 ## 1. Document hierarchy and authority
 
@@ -16,11 +22,17 @@ Current rollout gate: **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READIN
 3. `PXL_SALES_INVOICE_UX_STANDARD.md` is the canonical Sales Invoice create and draft-edit UX pilot.
 4. `PXL_SALES_INVOICE_VIEW_UX_STANDARD.md` is the canonical saved-document, approval, posted, collection, audit, void, and reversal view pilot.
 5. **This document** defines the reusable transaction-workspace architecture across all PXL transaction types.
-6. `PXL_TRANSACTION_EXPERIENCE_STANDARD.md` contains lower-level implementation guidance, table behavior, component contracts, maturity tracking, and rollout detail. When it conflicts with the approved Sales Invoice pilot standards or this document, update it to match.
-7. `UI_UX_PRINCIPLES.md` defines broad visual/interaction principles. Its stack notes are aspirational unless already adopted.
-8. `PXL_PRODUCT_BACKLOG.md` holds feature-level rollout planning and deferred enhancements.
+6. `PXL_TRANSACTION_WORKSPACE_MANIFEST.md` controls rollout status and sequence.
+7. `PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md` controls the implementation workflow and validation checklist.
+8. `PXL_TRANSACTION_DEFINITION_SCHEMA.md` and `src/lib/transactionWorkspaceRollout.ts` define the typed transaction-definition registry.
+9. `PXL_TRANSACTION_EXPERIENCE_STANDARD.md` contains lower-level implementation guidance, table behavior, component contracts, maturity tracking, and rollout detail. When it conflicts with the approved Sales Invoice pilot standards or this document, update it to match.
+10. `PXL_DESIGN_SYSTEM.md` and its component standards govern reusable visual tokens, typography, color, tables, cards, buttons, forms, and tabs.
+11. `UI_UX_PRINCIPLES.md` defines broad visual/interaction principles. Its stack notes are subordinate to the adopted PXL Design System where they differ.
+12. `PXL_PRODUCT_BACKLOG.md` holds feature-level rollout planning and deferred enhancements.
 
 The accounting and transaction matrices remain authoritative over all UX standards. The Sales Invoice form and view standards are the canonical pilot references; this general standard inherits and summarizes them but must not override them accidentally.
+
+The rollout framework does not authorize automatic rollout to additional transaction pages. Each future transaction must be selected from the manifest, implemented once, validated, and documented before another transaction begins.
 
 Routing rule for discoveries during workspace work:
 
@@ -68,6 +80,7 @@ Core principles:
 - Customer/vendor detail lives in Related Party.
 - Related documents live in Related Documents.
 - Master data lives in master records and is referenced by transactions.
+- Every displayed transaction fact must be entered, inherited, computed, posted, or generated by a documented source. If a source is not available, do not display it as an ordinary business value.
 
 When a transaction has both create/edit and saved-document modes, both modes must share the same workspace language and architecture, but may prioritize different information. Form mode prioritizes capture, defaults, lines, previews, and readiness. View mode prioritizes status, financial position, posted truth, collection state, traceability, and audit evidence.
 
@@ -211,7 +224,8 @@ Sales Invoice keeps:
 - Branch.
 - Currency.
 - Payment Terms.
-- Reference, when present.
+- External Reference, when present.
+- VAT Price Basis.
 
 Equivalent document-specific fields are allowed, e.g. receipt date, bill date, posting date, transfer date.
 
@@ -232,11 +246,21 @@ Sales Invoice keeps:
 - Customer name or link.
 - Customer Code.
 - TIN.
-- TIN branch code when stored.
+- TIN Branch when stored.
 - VAT Classification.
 - Business style when useful.
 
 Equivalent supplier/employee/bank/asset party identifiers are allowed by document type.
+
+TIN presentation follows BIR terminology:
+
+- Full TIN display uses the PXL Philippine TIN Standard: `XXX-XXX-XXX-XXXXX`.
+- The first 9 digits are the taxpayer number.
+- `TIN Branch`, when shown separately for clarity, is the 5-digit branch identifier, e.g. `00000`.
+- Never display or persist 3-digit or 4-digit branch identifiers.
+- Search must support raw digits and formatted values.
+
+See `PXL_PHILIPPINE_TIN_STANDARD.md` for the system-wide database, UI, import/export, API, report, and BIR-readiness contract.
 
 Do not put these here:
 
@@ -256,14 +280,21 @@ For documents with legal, tax, or audit outputs, the card must label historical 
 
 Purpose: dimensions and operational context that affect posting or responsibility.
 
-Sales Invoice keeps:
+Transaction Context displays only configured operational dimensions and ownership fields.
 
+Examples:
+
+- Account Owner.
 - Salesperson.
-- Project.
-- Cost Center.
 - Department.
+- Cost Center.
+- Project.
+- Business Unit.
+- Location.
+- Campaign.
+- Lead Source.
 
-Equivalent document-specific posting dimensions may appear here. If a field does not exist as governed master data, display it truthfully as unassigned/untracked and add the proper master-data gap. Do not hardcode static values into the transaction page.
+If dimensions are enabled for the company and transaction type, display editable selectors where the document is editable. If dimensions are disabled, hide them completely. Do not permanently place Department, Cost Center, Project, or similar dimensions in every transaction. If no operational dimensions are assigned, use a concise empty state.
 
 Do not put these here:
 
@@ -280,13 +311,28 @@ Do not put these here:
 - Related document numbers link to their canonical workspace.
 - Links must not open duplicate view pages.
 
+### Enterprise lookup controls
+
+Customer, Supplier, Item, Employee, Project, Cost Center, Location, and GL Account selectors must share one lookup behavior:
+
+- Clicking inside the field opens the searchable list.
+- Typing filters results in real time.
+- Arrow keys navigate results.
+- Enter selects the highlighted result.
+- Escape closes.
+- A dropdown icon opens the list.
+- A clear action is available where clearing is valid.
+- Dropdowns render above surrounding containers and are not clipped by cards, grids, tabs, or scroll areas.
+- Results use consistent styling and show the business identifiers users need to choose confidently.
+- Recent selections may be added later without changing the lookup contract.
+
 ### Transaction snapshot vs current master data
 
 Transaction workspaces must distinguish historical transaction snapshot facts from current master data whenever a customer, supplier, employee, bank, asset, item, or other master record can change after the document is issued.
 
 For Sales Invoice:
 
-- The Customer Information card shows invoice snapshot essentials such as customer name, code, TIN, TIN branch code, VAT classification, and business style when stored.
+- The Customer Information card shows invoice snapshot essentials such as customer name, code, TIN, TIN Branch, VAT classification, and business style when stored.
 - The Related Party tab shows the Current Customer Master profile such as current credit, contacts, addresses, aging, status, group, terms, price level, and recent transactions.
 - Posted invoice review and customer-facing output must not silently change because the customer master was edited later.
 
@@ -321,8 +367,8 @@ Future tabs may be added only when the data cannot reasonably fit one of these r
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Lines | Primary economic facts of the transaction. | Accountants, encoders, auditors, inventory users, tax users. | Transaction lines plus item/account/tax/dimension masters. | Line number, item/service/description, quantity or amount, UOM when relevant, price/rate, net, tax code, tax amount, total. | Discounts, withholding, dimensions, warehouse, remarks, reference, source line, audit metadata. | Row click expands detail; linked item/account/source docs open canonical routes. | Every saved line must expose created/updated facts and posting rule provenance when available. |
 | Financial | Accounting summary of computed totals. | Accountants, reviewers, finance managers. | Server-computed transaction totals and collection/payment applications. | Gross, discounts, net, VAT, total, paid/applied, balance. | Deferred/realized revenue, rounding, currency difference, expected withholding. | No duplicate header KPIs beyond detail breakdown. | Must state when values are untracked/unavailable rather than fabricated. |
-| GL Impact | Debit/credit effect and journal linkage. | Accountants, auditors, approvers. | Posting engine, preview RPC, journal entries, chart of accounts. | Account code/name, description, debit, credit, source, posting rule, journal link, balanced state. | Dimensions, created-by-rule, branch, project, cost center. | Account opens ledger/detail; JE opens Journal Entry/Accounting Trace. | Must come from authoritative posting preview/posted JE; never client-only accounting logic. |
-| Tax Impact | Tax ledger entries and compliance linkage. | Tax users, accountants, auditors. | Tax engine, tax detail entries, VAT/ATC/tax code masters. | Tax type, VAT/ATC, base, rate, amount, status, source rule. | Recoverable/payable split, BIR return, SAWT/QAP/2307 linkage. | Tax ledger entry opens tax detail where available; reports link to tax reviews. | Must clearly mark draft estimates and deferred tax types. |
+| GL Impact | Debit/credit effect and journal linkage. | Accountants, auditors, approvers. | Posting engine, preview RPC, journal entries, chart of accounts. | Account code/name, description, debit, credit, source, journal status, balanced state. | Posting rule, dimensions, created-by-rule, branch, project, cost center in expandable detail. | Account opens ledger/detail; JE opens Journal Entry/Accounting Trace. | Must come from authoritative posting preview/posted JE; never client-only accounting logic. |
+| Tax Impact | Tax ledger entries and compliance linkage. | Tax users, accountants, auditors. | Tax engine, tax detail entries, VAT/ATC/tax code masters. | Tax type, VAT/ATC, base, rate, amount, status, tax source. | Recoverable/payable split, BIR return, SAWT/QAP/2307 linkage. | Tax ledger entry opens tax detail where available; reports link to tax reviews. | Must clearly mark draft estimates and deferred tax types. |
 | Validation | Posting readiness and blockers. | Accountants, approvers, support. | Readiness hooks, server validation rules, posting RPC requirements. | Balanced, period open, branch active, series valid, tax valid, approval passed, line presence. | Engine version, hash, inventory/cost posted. | Blocker labels should guide user to the setup/document area that fixes them. | Must mirror server-side validation definitions; no drift. |
 | Workflow | Lifecycle stage. | Encoders, approvers, accountants. | Document status fields and workflow instances. | Draft/approved/posted/paid/voided stage state. | Stage actor/date when stored. | Toolbar actions represent permitted transitions; history belongs here/Approval, not header. | State changes must be reflected in Audit. |
 | Approval | Authorization history. | Approvers, auditors, accountants. | Approval instances/workflow tables. | Level, approver, role, action/status, date. | Remarks, electronic signature, delegation. | Approver/user links when available. | Must show no-workflow empty state compactly and truthfully. |
@@ -356,6 +402,8 @@ The Lines tab is the most important daily-use tab. It must behave like an enterp
 - Global visible-column filter.
 - CSV export of visible rows/columns.
 - Refresh hook supplied by the owning page.
+
+Line lookups must follow the enterprise lookup standard. Item and service lookups must show full codes and descriptions, use a scrollable max-height dropdown, support keyboard navigation, and never be clipped by grid overflow.
 
 ### Saved views
 
@@ -540,6 +588,21 @@ Rules:
 - Do not hide missing stages silently.
 - Chains must support upstream and downstream navigation.
 
+### Transaction source pattern
+
+Transactions may optionally be created from a governed source document without making the source mandatory.
+
+Supported source patterns include:
+
+- Quotation.
+- Sales Order.
+- Purchase Order.
+- Vendor Bill.
+- Delivery Receipt.
+- Service Order, future.
+
+When a selected party has open source documents, the form may offer a compact source prompt. The user must be able to continue with an empty standalone transaction or convert from a source document. Never force document chaining.
+
 Sales example:
 
 ```text
@@ -623,8 +686,21 @@ Rules:
 - No decorative widgets.
 - Cards remain white.
 - Workspace background uses a 2-3% tint of the company accent color.
-- Header uses the company-selected accent color.
-- Tab strip uses a very light accent tint.
+- Transaction headers use a subtle module-family background tint with a bottom border, rounded corners, and enough contrast for status badges and actions.
+- Transaction tabs use the same color family as the header; active tabs are clearly prominent and inactive tabs visually recede.
+- Document toolbar, header cards, tab navigation, and line workspace must remain visually distinguishable through subtle surface differences, spacing, borders, and light elevation.
+
+Module-family defaults:
+
+- Sales: light blue.
+- Purchase: light green.
+- Journal: light amber.
+- Inventory: light purple.
+- Banking: light teal.
+
+Use light tints only, approximately 3-6% visual intensity. Do not use bright fills or multiple saturated colors in the same workspace.
+
+PXL Transaction Workspace Design System v1 is now the platform visual standard. The Sales Invoice Transaction Workspace is the reference implementation. Future transaction workspaces must reuse the shared tokens and components documented in `PXL_DESIGN_SYSTEM.md`, `PXL_TRANSACTION_WORKSPACE_DESIGN_STANDARD.md`, `PXL_TYPOGRAPHY_STANDARD.md`, `PXL_COLOR_SYSTEM.md`, `PXL_COMPONENT_LIBRARY.md`, `PXL_TABLE_STANDARD.md`, `PXL_CARD_STANDARD.md`, `PXL_BUTTON_STANDARD.md`, `PXL_FORM_STANDARD.md`, and `PXL_TAB_STANDARD.md`.
 
 ### Typography
 
@@ -635,6 +711,8 @@ Strong emphasis is limited to:
 - Section titles.
 - Active tab.
 - Status badges.
+
+Active tabs must clearly indicate the current workspace. Inactive tabs should visually recede while remaining readable and keyboard-accessible.
 
 Most labels and values use regular or medium weight. Hierarchy comes from size, spacing, color, alignment, and structure rather than excessive bolding.
 
@@ -669,7 +747,7 @@ All tables use the same design system:
 Empty states must be concise and professional:
 
 - “No approval workflow configured.”
-- “No attachments linked to this invoice.”
+- “No attachments linked.”
 - “No VAT ledger rows for this document.”
 - “Customer master record unavailable.”
 
@@ -709,13 +787,13 @@ Current reusable components and intended responsibilities:
 | Smart Grid / Saved Views | `src/components/document/LineGrid.tsx` | Enterprise table framework, saved views, chooser, resize/order/pin/density/filter/export. |
 | Column Chooser | `LineGrid.tsx` | Grouped column visibility and saved view controls. |
 | Line Detail Panel | `src/components/document/LineDetailPanel.tsx` | Expandable row detail sections. |
-| Financial Summary | `src/components/document/FinancialSummaryPanel.tsx` | Per-document computed financial summary. |
+| Financial Summary / Detail | `src/components/document/FinancialSummaryPanel.tsx` and structured tab tables | Form summary and read-only financial detail without duplicating header KPIs. |
 | Validation Panel | `src/components/document/PostingValidationPanel.tsx` | Posting/readiness checklist. |
 | GL Impact | `src/components/GLImpactPanel.tsx` | Authoritative GL preview/posted impact and JE links. |
 | Tax Impact | `src/components/document/TaxImpactPanel.tsx` | Tax ledger view; currently VAT-safe boundary for SI. |
 | Related Documents | `src/components/document/RelatedDocumentsTab.tsx` | Upstream/downstream chain skeleton and links. |
 | Workflow Timeline | `DocumentLayout.tsx` (`WorkflowStrip`) | Compact lifecycle visualization inside Workflow tab. |
-| Audit Timeline | `src/components/ui/shared.tsx` (`AuditTrailSection`) | System audit log table. |
+| Audit Timeline | `src/components/ui/shared.tsx` (`AuditTrailSection`) | System audit log table; read-only views may hide raw user IDs as primary labels when display names are unavailable. |
 | ERP Section Header / table primitives | `src/components/document/ErpSection.tsx` | Shared section headers, table classes, compact empty states. |
 | Attachment Viewer | target component | Future governed attachment table/preview/download/OCR wrapper. |
 | Activity Feed | target component | Future semantic event stream renderer. |
@@ -856,20 +934,20 @@ The implementation references below describe the current app state; the pilot st
 - Page: `src/pages/SalesInvoiceDocumentPage.tsx`.
 - Shell: `DocumentLayout`.
 - Register routes non-draft rows into this workspace.
-- Draft create/edit still uses the register editor until `/sales-invoices/new` and `/sales-invoices/:id/edit` consolidation is implemented.
+- Draft create/edit uses the canonical routed form workspace at `/sales-invoices/new` and `/sales-invoices/:id/edit`.
 
 ### Form standard status
 
 - Canonical create route target: `/sales-invoices/new`.
 - Canonical draft edit route target: `/sales-invoices/:id/edit`.
 - Product target: compact header, three-card band, one-line tabs, entry-focused lines, compact live summary, GL/tax preview, and readiness.
-- Current gap: routed create/edit consolidation remains pending.
+- Current implementation: routed create/edit consolidation is active for the canonical Sales Invoice form workspace.
 
 ### View standard status
 
 - Canonical view route target: `/sales-invoices/:id`.
 - Product target: document-of-record workspace for status, monetary position, posted GL truth, posted tax truth, collection state, document trace, and audit evidence.
-- Current implementation is the saved-document reference but still needs future alignment for all approved view-standard details.
+- Current implementation is the saved-document reference for the approved read-only transaction view pattern. Remaining boundaries are data-source coverage items such as attachment/OCR storage, richer activity events, historical snapshot completeness, and governed withholding certificate evidence.
 
 ### Header implementation
 
@@ -884,9 +962,9 @@ The implementation references below describe the current app state; the pilot st
 
 ### Primary cards
 
-- Document Information: Invoice Date, Due Date, Branch, Currency, Payment Terms, Reference.
-- Customer Information: invoice snapshot essentials such as Customer link/name, Customer Code, TIN, TIN Branch Code when stored, VAT Classification, and Business Style when useful.
-- Sales Context: Salesperson, Project, Cost Center, Department.
+- Document Information: Invoice Date, Due Date, Branch, Currency, Payment Terms, External Reference, and Posting Date when applicable.
+- Customer Information: invoice snapshot essentials such as Customer link/name, Customer Code, TIN, TIN Branch when stored, VAT Classification, and Business Style when useful.
+- Sales Context: configured operational dimensions only, such as Account Owner, Salesperson, Department, Project, Cost Center, Business Unit, Location, Campaign, or Lead Source.
 
 ### Tabs
 
@@ -909,10 +987,9 @@ Sales Invoice currently implements:
 
 ### Known boundaries in the reference
 
-- Draft create/edit route consolidation remains pending.
+- Create/edit route consolidation is active for the canonical Sales Invoice form workspace.
 - Customer snapshot coverage must be confirmed against available fields; live customer master data must not be treated as historical invoice snapshot.
-- Tax Impact must distinguish Expected CWT from Actual CWT Recognized and 2307 Status.
-- Tax Impact is limited by authoritative tax-detail and withholding/certificate sources that are available to the view.
+- Tax Impact distinguishes Expected CWT from Actual CWT Recognized; 2307/certificate linkage remains limited to authoritative sources available to the view.
 - Attachment/OCR storage is not configured.
 - Semantic activity event stream coverage varies by source.
 - Categorized notes are not yet persisted as separate note entities.

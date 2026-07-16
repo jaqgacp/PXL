@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { formatPhTinInput, isValidPhTin, normalizePhTin, phTinMatches, PH_TIN_PLACEHOLDER } from '@/lib/philippines'
 
 type Department = { id: string; department_name: string }
 type Branch = { id: string; branch_name: string }
@@ -74,7 +75,7 @@ export default function EmployeesPage() {
 
   const openEdit = (emp: Employee) => {
     const { department_name: _department_name, ...rest } = emp
-    setForm(rest); setEditId(emp.id); setError(''); setActiveTab('info'); setModal('edit')
+    setForm({ ...rest, tin: rest.tin ? normalizePhTin(rest.tin) : '' }); setEditId(emp.id); setError(''); setActiveTab('info'); setModal('edit')
   }
 
   const set = (field: keyof typeof BLANK, value: string | boolean) =>
@@ -84,6 +85,7 @@ export default function EmployeesPage() {
     if (!companyId) return
     if (!form.last_name.trim() || !form.first_name.trim()) { setError('Last name and first name are required'); return }
     if (!form.hire_date) { setError('Hire date is required'); return }
+    if (form.tin.trim() && !isValidPhTin(form.tin)) { setError(`TIN must use ${PH_TIN_PLACEHOLDER}`); return }
     setSaving(true); setError('')
 
     const payload = {
@@ -104,7 +106,7 @@ export default function EmployeesPage() {
       birth_date: form.birth_date || null,
       gender: form.gender || null,
       civil_status: form.civil_status || null,
-      tin: form.tin.trim() || null,
+      tin: form.tin.trim() ? normalizePhTin(form.tin) : null,
       sss_no: form.sss_no.trim() || null,
       philhealth_no: form.philhealth_no.trim() || null,
       pagibig_no: form.pagibig_no.trim() || null,
@@ -136,7 +138,7 @@ export default function EmployeesPage() {
     const q = search.toLowerCase()
     return !q || e.last_name.toLowerCase().includes(q) || e.first_name.toLowerCase().includes(q) ||
       e.employee_number.toLowerCase().includes(q) || (e.department_name ?? '').toLowerCase().includes(q) ||
-      (e.tin ?? '').includes(q)
+      phTinMatches(e.tin, search)
   })
 
   const fullName = (e: Employee) => [e.last_name, e.first_name, e.middle_name].filter(Boolean).join(', ')
@@ -201,7 +203,7 @@ export default function EmployeesPage() {
                     </span>
                   </td>
                   <td className="px-3 py-2 font-mono text-gray-500">{e.hire_date}</td>
-                  <td className="px-3 py-2 font-mono text-gray-500">{e.tin || '—'}</td>
+                  <td className="px-3 py-2 font-mono text-gray-500">{e.tin ? normalizePhTin(e.tin) : '—'}</td>
                   <td className="px-3 py-2">
                     <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-medium ${e.is_active ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                       {e.is_active ? 'Active' : 'Inactive'}
@@ -374,14 +376,14 @@ export default function EmployeesPage() {
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { field: 'tin', label: 'TIN (BIR)', placeholder: '000-000-000-000' },
+                      { field: 'tin', label: 'TIN (BIR)', placeholder: PH_TIN_PLACEHOLDER },
                       { field: 'sss_no', label: 'SSS Number', placeholder: '00-0000000-0' },
                       { field: 'philhealth_no', label: 'PhilHealth Number', placeholder: '00-000000000-0' },
                       { field: 'pagibig_no', label: 'Pag-IBIG / HDMF', placeholder: '0000-0000-0000' },
                     ].map(({ field, label, placeholder }) => (
                       <div key={field}>
                         <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
-                        <input value={(form as any)[field]} onChange={e => set(field as any, e.target.value)}
+                        <input value={(form as any)[field]} onChange={e => set(field as any, field === 'tin' ? formatPhTinInput(e.target.value) : e.target.value)}
                           placeholder={placeholder}
                           className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-gray-900" />
                       </div>

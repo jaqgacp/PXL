@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditEvidenceBlock, StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 
 type BankRef = { id: string; bank_name: string; account_number: string }
 type COARef = { id: string; account_code: string; account_name: string }
@@ -171,7 +172,7 @@ export default function BankAdjustmentsPage() {
   const ro = mode === 'view'
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-2">
+      <div className={transactionHeaderClass('banking')}>
         <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
         <span className="text-gray-300">|</span>
         <span className="text-sm font-semibold text-gray-700">{form?.ba_number || 'New Bank Adjustment'}</span>

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { normalizePhTin } from '@/lib/philippines'
 
 type POStatus = 'draft' | 'approved' | 'partially_received' | 'fully_received' | 'cancelled'
 
@@ -98,7 +100,7 @@ export default function PurchaseOrdersPage() {
   const selectSupplier = (id: string) => {
     const s = suppliers.find(x => x.id === id)
     if (!s) return
-    setEditPO(prev => ({ ...prev, supplier_id: s.id, supplier_name_snapshot: s.registered_name, supplier_tin_snapshot: s.tin, delivery_address: s.registered_address, payment_terms_id: s.default_terms_id || '' }))
+    setEditPO(prev => ({ ...prev, supplier_id: s.id, supplier_name_snapshot: s.registered_name, supplier_tin_snapshot: normalizePhTin(s.tin), delivery_address: s.registered_address, payment_terms_id: s.default_terms_id || '' }))
   }
 
   const selectItem = (idx: number, id: string) => {
@@ -166,7 +168,7 @@ export default function PurchaseOrdersPage() {
 
   if (mode !== 'list') return (
     <div className="space-y-4" ref={listRef}>
-      <div className="flex items-center justify-between">
+      <div className={`${transactionHeaderClass('purchase')} justify-between`}>
         <div>
           <h2 className="text-base font-semibold text-gray-900">{editPO?.id ? (readOnly ? 'Purchase Order' : 'Edit PO') : 'New Purchase Order'}</h2>
           {editPO?.po_number && <p className="text-xs text-gray-500 mt-0.5">{editPO.po_number} · <StatusBadge status={STATUS_COLORS[editPO.status as string] || 'draft'} label={editPO.status as string} /></p>}

@@ -6,6 +6,8 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { ReportTraceLink } from '@/components/AccountingTraceLink'
+import { formatPhTinInput, normalizePhTin } from '@/lib/philippines'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Mode = 'list' | 'new'
@@ -151,7 +153,7 @@ export default function CashSalesPage() {
   const selectCustomer = (cid: string) => {
     setFCustomer(cid)
     const c = customers.find(x => x.id === cid)
-    if (c) { setFCustomerName(c.registered_name); setFCustomerTIN(c.tin || ''); setFCustomerAddr(c.address || '') }
+    if (c) { setFCustomerName(c.registered_name); setFCustomerTIN(normalizePhTin(c.tin)); setFCustomerAddr(c.address || '') }
   }
 
   const updateLine = (key: string, patch: Partial<Line>) => {
@@ -373,7 +375,7 @@ export default function CashSalesPage() {
   return (
     <div>
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3 flex-wrap sticky top-0 z-10">
+      <div className={`${transactionHeaderClass('sales')} sticky top-0 z-10`}>
         <button onClick={() => setMode('list')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M15 18l-6-6 6-6" /></svg>
           Cash Sales
@@ -411,7 +413,7 @@ export default function CashSalesPage() {
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">TIN</label>
-              <input value={fCustomerTIN} onChange={e => setFCustomerTIN(e.target.value)} className={inp} />
+              <input value={fCustomerTIN} onChange={e => setFCustomerTIN(formatPhTinInput(e.target.value))} className={inp} placeholder="000-000-000-00000" />
             </div>
             <div>
               <label className="block text-xs text-gray-500 mb-1">Payment Mode</label>

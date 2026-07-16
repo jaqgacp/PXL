@@ -5,6 +5,8 @@ import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { normalizePhTin } from '@/lib/philippines'
 
 // ── Types ─────────────────────────────────────────────────────
 type PVStatus = 'draft' | 'posted' | 'cancelled'
@@ -244,7 +246,7 @@ export default function PaymentVouchersPage() {
   const pickSupplier = async (id: string) => {
     const s = suppliers.find(x => x.id === id)
     if (!s) return
-    setEditPV(v => ({ ...v, supplier_id: id, supplier_name_snapshot: s.registered_name, supplier_tin_snapshot: s.tin }))
+    setEditPV(v => ({ ...v, supplier_id: id, supplier_name_snapshot: s.registered_name, supplier_tin_snapshot: normalizePhTin(s.tin) }))
     setLines([newLine()])
     await loadOpenBills(id)
   }
@@ -528,7 +530,7 @@ export default function PaymentVouchersPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-2 flex-wrap">
+      <div className={transactionHeaderClass('purchase')}>
         <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
         <span className="text-gray-300">|</span>
         <span className="text-sm font-semibold text-gray-700">{editPV?.voucher_number || 'New Payment Voucher'}</span>

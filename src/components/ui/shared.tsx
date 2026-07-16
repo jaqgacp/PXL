@@ -21,7 +21,7 @@ export function StatusBadge({ status, label }: { status: string; label?: string 
   const cls = STATUS_STYLES[status] || 'bg-gray-100 text-gray-600'
   const text = label || (status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' '))
   return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${cls}`}>
+    <span className={`pxl-status-badge inline-flex items-center px-2 py-0.5 ${cls}`}>
       {text}
     </span>
   )
@@ -52,7 +52,7 @@ export function EmptyState({ title, description, action }: {
   title: string; description?: string; action?: React.ReactNode
 }) {
   return (
-    <div className="text-center py-16">
+    <div className="pxl-empty-state py-16">
       <p className="text-base font-medium text-gray-500">{title}</p>
       {description && <p className="text-sm mt-1 text-gray-400">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
@@ -63,8 +63,8 @@ export function EmptyState({ title, description, action }: {
 // ── FormSection ───────────────────────────────────────────────
 export function FormSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-      <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-100">
+    <div className="pxl-transaction-card space-y-4 p-6">
+      <h2 className="pxl-section-title border-b border-[var(--pxl-border-subtle)] pb-2">
         {title}
       </h2>
       {children}
@@ -81,16 +81,16 @@ export function ConfirmDialog({ open, onClose, onConfirm, title, message, confir
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-md p-6 z-10">
-        <h2 className="text-base font-semibold text-gray-900 mb-2">{title}</h2>
-        <p className="text-sm text-gray-600 mb-6">{message}</p>
+      <div className="pxl-dialog relative z-10 w-full max-w-md p-6">
+        <h2 className="pxl-workspace-title mb-2">{title}</h2>
+        <p className="pxl-body-text mb-6 text-gray-600">{message}</p>
         <div className="flex justify-end gap-2">
           <button onClick={onClose}
-            className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">
+            className="pxl-button pxl-button--neutral">
             Cancel
           </button>
           <button onClick={onConfirm}
-            className={`px-4 py-2 rounded-md text-sm font-medium text-white ${danger ? 'bg-red-600 hover:bg-red-700' : 'bg-gray-900 hover:bg-gray-800'}`}>
+            className={`pxl-button ${danger ? 'pxl-button--danger' : 'pxl-button--primary'}`}>
             {confirmLabel}
           </button>
         </div>
@@ -116,19 +116,19 @@ export function DataTable<T extends Record<string, unknown>>({
 }) {
   if (loading) {
     return (
-      <div className="text-center py-16 text-sm text-gray-400">Loading...</div>
+      <div className="pxl-loading-state">Loading...</div>
     )
   }
   if (data.length === 0) {
     return <EmptyState title={emptyTitle} description={emptyDescription} />
   }
   return (
-    <table className="w-full text-sm">
+    <table className="pxl-data-grid w-full">
       <thead>
-        <tr className="bg-gray-50 border-b border-gray-200">
+        <tr className="border-b border-[var(--pxl-border-medium)]">
           {columns.map(col => (
             <th key={col.key}
-              className={`text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide ${col.className || ''}`}>
+              className={`px-4 py-3 text-left ${col.className || ''}`}>
               {col.label}
             </th>
           ))}
@@ -138,7 +138,7 @@ export function DataTable<T extends Record<string, unknown>>({
         {data.map((row, i) => (
           <tr key={String(row[keyField]) || i}
             onClick={() => onRowClick?.(row)}
-            className={`border-b border-gray-100 transition-colors ${i % 2 === 1 ? 'bg-gray-50/50' : ''} ${onRowClick ? 'hover:bg-gray-50 cursor-pointer' : 'hover:bg-gray-50'}`}>
+            className={`border-b border-[var(--pxl-border-subtle)] transition-colors ${i % 2 === 1 ? 'bg-gray-50/50' : ''} ${onRowClick ? 'cursor-pointer' : ''}`}>
             {columns.map(col => (
               <td key={col.key} className={`px-4 py-3 ${col.className || ''}`}>
                 {col.render ? col.render(row) : String(row[col.key] ?? '—')}
@@ -165,31 +165,31 @@ export function LookupDialog({ open, onClose, onSelect, title, columns, data, se
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-lg shadow-xl border border-gray-200 w-full max-w-2xl z-10 flex flex-col max-h-[80vh]">
+      <div className="pxl-dialog relative z-10 flex max-h-[80vh] w-full max-w-2xl flex-col">
         <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">{title}</h2>
+          <h2 className="pxl-section-title">{title}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-700 text-lg leading-none">×</button>
         </div>
         <div className="px-4 py-2 border-b border-gray-100">
           <input value={q} onChange={e => setQ(e.target.value)} autoFocus
-            className="w-full border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
+            className="pxl-input w-full"
             placeholder="Search..." />
         </div>
         <div className="overflow-y-auto flex-1">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-gray-50 border-b border-gray-200">
+          <table className="pxl-data-grid w-full">
+            <thead className="sticky top-0 border-b border-[var(--pxl-border-medium)]">
               <tr>
                 {columns.map(c => (
-                  <th key={c.key} className="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase">{c.label}</th>
+                  <th key={c.key} className="px-4 py-2 text-left">{c.label}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0
-                ? <tr><td colSpan={columns.length} className="text-center py-8 text-gray-400 text-sm">No results</td></tr>
+                ? <tr><td colSpan={columns.length} className="pxl-empty-state py-8">No results</td></tr>
                 : filtered.map((row, i) => (
                   <tr key={i} onClick={() => { onSelect(row); onClose() }}
-                    className="border-b border-gray-100 hover:bg-blue-50 cursor-pointer">
+                    className="cursor-pointer border-b border-[var(--pxl-border-subtle)]">
                     {columns.map(c => (
                       <td key={c.key} className="px-4 py-2">{String(row[c.key] ?? '—')}</td>
                     ))}
@@ -208,7 +208,17 @@ export function LookupDialog({ open, onClose, onSelect, title, columns, data, se
 }
 
 // ── AuditTrailSection ─────────────────────────────────────────
-export function AuditTrailSection({ tableName, recordId, initiallyExpanded = false }: { tableName: string; recordId: string; initiallyExpanded?: boolean }) {
+export function AuditTrailSection({
+  tableName,
+  recordId,
+  initiallyExpanded = false,
+  hideRawUserIds = false,
+}: {
+  tableName: string
+  recordId: string
+  initiallyExpanded?: boolean
+  hideRawUserIds?: boolean
+}) {
   const [logs, setLogs] = useState<Array<{
     id: string; action: string; changed_by: string | null; changed_at: string
     ip_address: string | null; user_agent: string | null; old_data: unknown; new_data: unknown
@@ -282,7 +292,13 @@ export function AuditTrailSection({ tableName, recordId, initiallyExpanded = fal
                           {log.action}
                         </span>
                       </td>
-                      <td className="px-2 py-1.5 text-gray-600 font-mono">{log.changed_by || '—'}</td>
+                      <td className="px-2 py-1.5 text-gray-600">
+                        {log.changed_by
+                          ? hideRawUserIds
+                            ? <span title={log.changed_by}>Recorded user</span>
+                            : <span className="font-mono">{log.changed_by}</span>
+                          : '—'}
+                      </td>
                       <td className="px-2 py-1.5 text-gray-500 font-mono">{log.ip_address || '—'}</td>
                       <td className="px-2 py-1.5 text-gray-500 max-w-48 truncate" title={log.user_agent || ''}>{log.user_agent || '—'}</td>
                       <td className="px-2 py-1.5 text-gray-500 max-w-64 truncate" title={changedFields(log.old_data, log.new_data)}>{changedFields(log.old_data, log.new_data)}</td>

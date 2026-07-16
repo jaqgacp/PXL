@@ -1,20 +1,20 @@
 /* eslint-disable react-refresh/only-export-components -- visual class constants are shared with these small presentation components. */
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 
 // Shared presentation primitives for transaction workspace tabs.
 // These are intentionally visual-only: no data fetching, routing, or business behavior.
 
-export const ERP_SECTION = 'bg-white border border-gray-200 rounded'
+export const ERP_SECTION = 'pxl-transaction-card'
 export const ERP_SECTION_PAD = `${ERP_SECTION} p-3`
-export const ERP_TABLE = 'w-full text-xs'
-export const ERP_TABLE_WRAP = 'overflow-x-auto border border-gray-200 rounded'
-export const ERP_THEAD = 'bg-gray-50 border-b border-gray-200'
-export const ERP_TH = 'px-2 py-1.5 text-[10px] font-medium uppercase tracking-wide text-gray-500 whitespace-nowrap'
-export const ERP_TD = 'px-2 py-1.5 text-xs text-gray-700'
+export const ERP_TABLE = 'pxl-data-grid w-full'
+export const ERP_TABLE_WRAP = 'overflow-x-auto rounded border border-[var(--pxl-border-medium)]'
+export const ERP_THEAD = 'border-b border-[var(--pxl-border-medium)]'
+export const ERP_TH = 'px-2 py-1.5 whitespace-nowrap'
+export const ERP_TD = 'px-2 py-1.5 pxl-body-text'
 export const ERP_TD_NUM = `${ERP_TD} text-right font-mono tabular-nums`
-export const ERP_EMPTY_CELL = 'px-3 py-4 text-center text-xs text-gray-400'
-export const ERP_ROW_HOVER = 'hover:bg-gray-50'
-export const ERP_TOTAL_ROW = 'border-t border-gray-200 bg-gray-50'
+export const ERP_EMPTY_CELL = 'pxl-empty-state'
+export const ERP_ROW_HOVER = 'hover:bg-[var(--pxl-surface-table-hover)]'
+export const ERP_TOTAL_ROW = 'border-t border-[var(--pxl-border-strong)] bg-[var(--pxl-surface-table-selected)]'
 
 export function ErpSectionHeader({
   title,
@@ -30,11 +30,11 @@ export function ErpSectionHeader({
   return (
     <div className={`flex items-start justify-between gap-3 ${className}`}>
       <div className="min-w-0">
-        <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-700">
+        <div className="pxl-section-title">
           {title}
         </div>
         {description && (
-          <div className="mt-0.5 text-[11px] leading-snug text-gray-500">
+          <div className="pxl-caption mt-1 leading-snug">
             {description}
           </div>
         )}
@@ -46,8 +46,62 @@ export function ErpSectionHeader({
 
 export function CompactEmptyState({ children }: { children: ReactNode }) {
   return (
-    <div className="px-3 py-4 text-center text-xs text-gray-400">
+    <div className="pxl-empty-state">
       {children}
     </div>
+  )
+}
+
+export function TransactionPanel({
+  title,
+  description,
+  badge,
+  actions,
+  children,
+  collapsible = false,
+  defaultCollapsed = false,
+  className = '',
+  contentClassName = 'p-4',
+}: {
+  title: string
+  description?: ReactNode
+  badge?: ReactNode
+  actions?: ReactNode
+  children: ReactNode
+  collapsible?: boolean
+  defaultCollapsed?: boolean
+  className?: string
+  contentClassName?: string
+}) {
+  const [collapsed, setCollapsed] = useState(defaultCollapsed)
+
+  return (
+    <section className={`${ERP_SECTION} ${className}`}>
+      <div className="flex items-start justify-between gap-3 border-b border-[var(--pxl-border-subtle)] px-4 py-3">
+        <div className="min-w-0">
+          {collapsible ? (
+            <button
+              type="button"
+              onClick={() => setCollapsed(open => !open)}
+              className="pxl-section-title flex items-center gap-2 text-left"
+              aria-expanded={!collapsed}
+            >
+              <span aria-hidden>{collapsed ? '▸' : '▾'}</span>
+              <span>{title}</span>
+            </button>
+          ) : (
+            <div className="pxl-section-title">{title}</div>
+          )}
+          {description && <div className="pxl-caption mt-1 leading-snug">{description}</div>}
+        </div>
+        {(badge || actions) && (
+          <div className="flex shrink-0 items-center gap-2">
+            {badge}
+            {actions}
+          </div>
+        )}
+      </div>
+      {!collapsed && <div className={contentClassName}>{children}</div>}
+    </section>
   )
 }

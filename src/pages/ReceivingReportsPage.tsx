@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, DateCell } from '@/components/ui/shared'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 
 type RRStatus = 'draft' | 'received' | 'cancelled'
 
@@ -149,7 +150,7 @@ export default function ReceivingReportsPage() {
 
   if (mode !== 'list') return (
     <div className="space-y-4" ref={listRef}>
-      <div className="flex items-center justify-between">
+      <div className={`${transactionHeaderClass('purchase')} justify-between`}>
         <div>
           <h2 className="text-base font-semibold text-gray-900">{editRR?.id ? (readOnly ? 'Receiving Report' : 'Edit RR') : 'New Receiving Report'}</h2>
           {editRR?.rr_number && <p className="text-xs text-gray-500 mt-0.5">{editRR.rr_number} · <StatusBadge status={STATUS_COLORS[editRR.status as string] || 'draft'} label={editRR.status as string} /></p>}

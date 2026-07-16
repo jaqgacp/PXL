@@ -9,10 +9,11 @@ Canonical workspace standards now sit above generic UI guidance for their domain
 
 - Transaction pages are governed by `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`.
 - Report pages are governed by `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md`.
+- Visual tokens, typography, color, cards, buttons, forms, tabs, tables, dialogs, states, and future dark-mode readiness are governed by `docs/PXL/PXL_DESIGN_SYSTEM.md` and the PXL component standards.
 
 Use this document for shared visual and interaction principles. Use the workspace standards for page architecture, ownership boundaries, reusable components, and rollout rules.
 
-Active gate: `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` now controls sequencing. Do not create additional UI standards, dashboards, report pilots, or transaction workspace rollouts until **PXL Accounting Core Ready** is cleared.
+Active gate: `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` controls functional rollout sequencing. The Sales Invoice Transaction Workspace remains the approved visual reference implementation for the PXL Design System.
 
 Posting behavior is governed by `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md`; UI screens display and explain accounting behavior but must not redefine it.
 
@@ -488,7 +489,7 @@ Reason: [specific cause in plain language].
 
 | Bad | Good |
 | :--- | :--- |
-| `Error 500` | `Cannot create Company. Reason: TIN '123-456-789-000' already exists on "ABC Corp".` |
+| `Error 500` | `Cannot create Company. Reason: TIN '123-456-789-00000' already exists on "ABC Corp".` |
 | `Validation error` | `Cannot post Journal Entry. Reason: Fiscal Period June 2026 is closed. Contact your controller to unlock it.` |
 | `Failed` | `Cannot save Supplier. Reason: "Email" must be a valid email address.` |
 | `Duplicate entry` | `Cannot save Item. Reason: Item Code "RM-001" already exists. Use a different code.` |
@@ -559,7 +560,7 @@ Name: ABC Corp
 
 **Good (ERP pattern):**
 ```
-Customer: ABC Corp          TIN: 123-456-789-000
+Customer: ABC Corp          TIN: 123-456-789-00000
 Tax Type: VAT               Branch: Makati
 Status:  Active             Outstanding: ₱1,245,000
 Last Invoice: INV-2026-0542 (2026-06-20)

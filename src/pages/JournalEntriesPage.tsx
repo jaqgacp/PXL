@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────
 type JEStatus = 'draft' | 'posted' | 'reversed'
@@ -359,7 +360,7 @@ export default function JournalEntriesPage() {
   return (
     <div className="flex flex-col h-full">
       {reversalModal}
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-2 flex-wrap">
+      <div className={transactionHeaderClass('journal')}>
         <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
         <span className="text-gray-300">|</span>
         <span className="text-sm font-semibold text-gray-700">{editJE?.je_number || 'New Manual Journal Entry'}</span>

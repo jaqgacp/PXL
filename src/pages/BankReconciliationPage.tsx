@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { TablesInsert } from '@/lib/database.types'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 
 type BankRef = { id: string; bank_name: string; account_number: string; account_name: string; gl_account_id: string; opening_balance: number }
 type Recon = {
@@ -201,7 +202,7 @@ export default function BankReconciliationPage() {
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i)
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-2">
+      <div className={transactionHeaderClass('banking')}>
         <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
         <span className="text-gray-300">|</span>
         <span className="text-sm font-semibold text-gray-700">Bank Reconciliation</span>

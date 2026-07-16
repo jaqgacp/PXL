@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { normalizePhTin } from '@/lib/philippines'
 
 type SDMStatus = 'draft' | 'sent' | 'acknowledged' | 'cancelled'
 
@@ -111,7 +113,7 @@ export default function SupplierDebitMemosPage() {
 
   if (mode !== 'list') return (
     <div className="space-y-4" ref={listRef}>
-      <div className="flex items-center justify-between">
+      <div className={`${transactionHeaderClass('purchase')} justify-between`}>
         <div>
           <h2 className="text-base font-semibold text-gray-900">{editSDM?.id ? (readOnly ? 'Debit Memo to Supplier' : 'Edit Debit Memo') : 'New Debit Memo to Supplier'}</h2>
           {editSDM?.sdm_number && <p className="text-xs text-gray-500 mt-0.5">{editSDM.sdm_number} · <StatusBadge status={STATUS_COLORS[editSDM.status as string] || 'draft'} label={editSDM.status as string} /></p>}
@@ -123,7 +125,7 @@ export default function SupplierDebitMemosPage() {
         <div className="grid grid-cols-3 gap-3">
           <div><label className="block text-xs font-medium text-gray-700 mb-1">DM Date *</label><input type="date" value={editSDM?.dm_date || ''} disabled={readOnly} onChange={e => setEditSDM(p => ({ ...p, dm_date: e.target.value }))} className={inp} /></div>
           <div className="col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">Supplier *</label>
-            <select value={editSDM?.supplier_id || ''} disabled={readOnly} onChange={e => { const s = suppliers.find(x => x.id === e.target.value); setEditSDM(p => ({ ...p, supplier_id: e.target.value, supplier_name_snapshot: s?.registered_name || '', supplier_tin_snapshot: s?.tin || '' })) }} className={inp + ' w-full'}><option value="">— Select supplier —</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}</select>
+            <select value={editSDM?.supplier_id || ''} disabled={readOnly} onChange={e => { const s = suppliers.find(x => x.id === e.target.value); setEditSDM(p => ({ ...p, supplier_id: e.target.value, supplier_name_snapshot: s?.registered_name || '', supplier_tin_snapshot: s?.tin ? normalizePhTin(s.tin) : '' })) }} className={inp + ' w-full'}><option value="">— Select supplier —</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}</select>
           </div>
           <div className="col-span-3"><label className="block text-xs font-medium text-gray-700 mb-1">Reason for Debit Memo *</label><textarea value={editSDM?.reason || ''} disabled={readOnly} onChange={e => setEditSDM(p => ({ ...p, reason: e.target.value }))} rows={2} className={inp + ' w-full resize-none'} /></div>
         </div>

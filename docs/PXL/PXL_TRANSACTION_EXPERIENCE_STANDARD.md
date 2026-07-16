@@ -4,6 +4,10 @@ Status: DESIGN BLUEPRINT subordinate to `PXL_STANDARD_TRANSACTION_WORKSPACE.md`,
 
 Active sequencing gate: `PXL_ACCOUNTING_CORE_READINESS.md` (DEC-017). Transaction-experience rollout remains reference-only during accounting-core hardening unless a task explicitly targets UX standardization.
 
+Rollout framework: future transaction workspace implementations must start from `PXL_TRANSACTION_WORKSPACE_MANIFEST.md`, `PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`, `PXL_TRANSACTION_DEFINITION_SCHEMA.md`, and `src/lib/transactionWorkspaceRollout.ts`. The Sales Invoice create/edit workspace and Sales Invoice read-only view are the approved structural references; other documents inherit the shell and components, not Sales Invoice-specific business content.
+
+Completeness gate: the Sales Invoice reference pair is governed by the Sales Invoice functional, field, dimension, GL, posting, and tax mappings. A future transaction rollout must copy the source-backed pattern, not unresolved Sales Invoice gaps.
+
 ## 1. Purpose and Normative Status
 
 Every accounting document in PXL must eventually expose enough accounting, tax, audit, workflow, and operational information to satisfy accountants, approvers, collections users, tax reviewers, support teams, and auditors while remaining capturable by non-accountants.
@@ -17,9 +21,11 @@ Precedence when documents disagree:
 3. `PXL_SALES_INVOICE_UX_STANDARD.md` governs Sales Invoice create and draft-edit UX.
 4. `PXL_SALES_INVOICE_VIEW_UX_STANDARD.md` governs Sales Invoice saved-document view, approval, posted, collection, audit, void, and reversal UX.
 5. `PXL_STANDARD_TRANSACTION_WORKSPACE.md` governs reusable transaction-workspace architecture.
-6. This document governs detailed implementation-level experience patterns and maturity tracking.
-7. `UI_UX_PRINCIPLES.md` defines broad visual/interaction principles.
-8. `PXL_PRODUCT_BACKLOG.md` holds feature-level rollout planning.
+6. `PXL_TRANSACTION_WORKSPACE_MANIFEST.md` and `PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md` govern rollout selection, implementation workflow, validation, and status updates.
+7. `PXL_TRANSACTION_DEFINITION_SCHEMA.md` and `src/lib/transactionWorkspaceRollout.ts` define the typed transaction-definition model.
+8. This document governs detailed implementation-level experience patterns and maturity tracking.
+9. `UI_UX_PRINCIPLES.md` defines broad visual/interaction principles.
+10. `PXL_PRODUCT_BACKLOG.md` holds feature-level rollout planning.
 
 When the Sales Invoice pilot standards conflict with older implementation guidance in this document, the approved Sales Invoice pilot standards govern. This document must be updated rather than interpreted as an exception.
 
@@ -43,6 +49,7 @@ Both modes share:
 - Existing PXL component architecture
 - No permanent right sidebar
 - Truthful unavailable states
+- Source-backed field presentation
 
 Mode priority differs:
 
@@ -91,6 +98,18 @@ Header owns:
 - Header toolbar
 - Optional compact readiness indicator
 
+Header and tab coloring is system-wide:
+
+- Sales workspaces use a light blue tint.
+- Purchase workspaces use a light green tint.
+- Journal workspaces use a light amber tint.
+- Inventory workspaces use a light purple tint.
+- Banking and payment workspaces use a light teal tint.
+
+The tint must be subtle, professional, and consistent with `PXL_STANDARD_TRANSACTION_WORKSPACE.md`. Use the color family to establish workspace hierarchy, not to indicate business status.
+
+PXL Transaction Workspace Design System v1 is the shared visual baseline. The Sales Invoice Transaction Workspace is the reference implementation for reusable transaction tokens, typography, colors, cards, buttons, tabs, tables, forms, empty states, loading states, dialogs, and future collapsible panels. New transaction families must inherit the design system rather than creating page-specific styling.
+
 Three-card band owns:
 
 1. Document Information
@@ -131,6 +150,7 @@ Create/Edit priorities:
 - Preserve unsaved changes.
 - Prevent duplicate saves/posts.
 - Respect controlled overrides and provenance.
+- Use enterprise lookup controls for master-data selection.
 
 Normal Sales Invoice target:
 
@@ -192,6 +212,8 @@ Editable form grid:
 - Controlled overrides with provenance
 - Live calculations
 - Unsaved-change preservation
+
+Item/service lookup must show full item code and description, UOM where available, future available quantity only when authoritative, and a scrollable dropdown that is not clipped by parent containers.
 
 Read-only view grid:
 
@@ -256,6 +278,25 @@ Typical sources:
 | Number series | Document number at save/reservation through governed process |
 | Compliance profile | Which tax fields/tabs are applicable |
 
+Lookup controls:
+
+- Customer, Supplier, Item, Employee, Project, Cost Center, Location, and GL Account selectors use the same enterprise lookup behavior.
+- Clicking inside the field or dropdown icon opens the list.
+- Typing filters in real time.
+- Arrow keys navigate.
+- Enter selects.
+- Escape closes.
+- Dropdowns must render above surrounding containers and must not be clipped by grid or card overflow.
+- Recent selections may be added later without changing the contract.
+
+Customer and party TIN display:
+
+- Full TIN values display as `XXX-XXX-XXX-XXXXX`.
+- The first 9 digits are the taxpayer number.
+- `TIN Branch`, when shown separately, is exactly 5 digits.
+- Do not display or persist 3-digit or 4-digit branch identifiers.
+- Follow `PXL_PHILIPPINE_TIN_STANDARD.md` for UI, search, storage, import/export, API, reporting, and future BIR modules.
+
 Customer or party change after lines exist must use controlled refresh options:
 
 1. Refresh terms and customer defaults only.
@@ -267,6 +308,23 @@ Customer or party change after lines exist must use controlled refresh options:
 Do not silently replace manually entered prices, approved discounts, manual tax overrides, account overrides, user-entered descriptions, or existing source-document values.
 
 Preserve provenance for price source, tax source, account source, dimension source, and manual overrides.
+
+## 9.1 Optional Source Conversion Pattern
+
+Create/Edit mode must allow standalone transaction entry.
+
+When a selected party has open source documents, the form may offer a compact optional prompt with source document number, date, remaining amount, status, and action.
+
+Supported source documents include:
+
+- Quotation
+- Sales Order
+- Purchase Order
+- Vendor Bill
+- Delivery Receipt
+- Service Order, future
+
+Users must be able to continue with an empty transaction or convert from a source document. Never force chaining.
 
 ## 10. View-Mode Data Sourcing
 
@@ -328,6 +386,25 @@ Financial tab rows may include:
 - Revenue recognition, deferred revenue, COGS, or margin only when authoritative
 
 Do not fabricate profitability, costing, revenue-recognition, or FX values.
+
+## 11.1 VAT Price Basis
+
+VAT Price Basis is a reusable transaction component.
+
+Supported values:
+
+- VAT Exclusive
+- VAT Inclusive
+
+Future transactions must use the same behavior when applicable:
+
+- Quotation
+- Sales Order
+- Purchase Order
+- Vendor Bill
+- Purchase Invoice
+- Credit Memo
+- Debit Memo
 
 ## 12. GL Impact Standard
 
@@ -537,11 +614,14 @@ Track form and view separately.
 
 | Area | Target | Current status note |
 | --- | --- | --- |
-| Sales Invoice Form UX | Canonical create/draft-edit standard in `PXL_SALES_INVOICE_UX_STANDARD.md` | Approved; routed create/edit consolidation remains a future implementation task |
-| Sales Invoice View UX | Canonical saved-document view standard in `PXL_SALES_INVOICE_VIEW_UX_STANDARD.md` | Approved; current saved-document page is the implementation reference with known gaps |
+| Sales Invoice Form UX | Canonical create/draft-edit standard in `PXL_SALES_INVOICE_UX_STANDARD.md` | Approved; current create/edit workspace is the editable reference implementation |
+| Sales Invoice View UX | Canonical saved-document view standard in `PXL_SALES_INVOICE_VIEW_UX_STANDARD.md` | Approved; current saved-document page is the read-only reference implementation with data-source boundaries |
+| Transaction Definition Schema | Typed transaction workspace rollout model | Implemented in `src/lib/transactionWorkspaceRollout.ts` and documented in `PXL_TRANSACTION_DEFINITION_SCHEMA.md` |
+| Transaction Workspace Manifest | Rollout sequence, statuses, blockers, and next candidate | Implemented in `PXL_TRANSACTION_WORKSPACE_MANIFEST.md`; Sales Order is the next eligible candidate after explicit instruction |
+| Transaction Workspace Rollout Playbook | One-transaction-at-a-time implementation workflow and validation checklist | Implemented in `PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md` |
 | Core transaction views | Reuse Sales Invoice View architecture | Adopt-on-touch after accounting-core gate |
 | Core transaction forms | Reuse Sales Invoice Form architecture | Adopt-on-touch after accounting-core gate |
-| Related Party profile | Structured current master profile | Needs shared profile component or disciplined page-local implementation before extraction |
+| Related Party profile | Structured current master profile | Implemented in Sales Invoice view as the page-local reference; extract shared component when reused |
 | Attachments | Governed attachment table | Depends on attachment storage/source availability |
 | Activity | Operational stream | Depends on transaction events plus email/API/notification sources |
 | System metadata | Useful existing technical metadata only | Do not add fields solely for display |

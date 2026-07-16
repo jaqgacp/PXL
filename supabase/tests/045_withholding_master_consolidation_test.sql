@@ -69,7 +69,7 @@ SELECT lives_ok(
     VALUES (
       '33333333-3333-3333-3333-333333333245',
       '22222222-2222-2222-2222-222222222245',
-      'CUST-WHT-ONE', 'Customer CWT Corp', '123-456-789-245',
+      'CUST-WHT-ONE', 'Customer CWT Corp', '123-456-789-00245',
       'vat_registered', 'Customer HQ', 'Customer HQ',
       false, (SELECT id FROM atc_codes WHERE code = 'WC158'),
       auth.uid(), auth.uid()

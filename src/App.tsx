@@ -251,6 +251,8 @@ export default function App() {
             <Route path="/tax-calendar" element={<TaxCalendarPage />} />
             <Route path="/bir-form-config" element={<BIRFormConfigPage />} />
             <Route path="/sales-invoices" element={<SalesInvoicePage />} />
+            <Route path="/sales-invoices/new" element={<SalesInvoicePage />} />
+            <Route path="/sales-invoices/:id/edit" element={<SalesInvoicePage />} />
             <Route path="/sales-invoices/:id" element={<SalesInvoiceDocumentPage />} />
             <Route path="/receipts" element={<ReceiptsPage />} />
             <Route path="/credit-memos" element={<CreditMemosPage />} />

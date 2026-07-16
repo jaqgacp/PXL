@@ -5,6 +5,8 @@ import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { normalizePhTin } from '@/lib/philippines'
 
 // ── Types ─────────────────────────────────────────────────────
 type VBStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
@@ -232,7 +234,7 @@ export default function VendorBillsPage() {
     const daysToAdd = s.payment_terms?.days_to_due
     const due = daysToAdd ? new Date(Date.now() + daysToAdd * 86400000).toISOString().split('T')[0] : undefined
     setEditVB(v => ({ ...v, supplier_id: id, supplier_name_snapshot: s.registered_name,
-      supplier_tin_snapshot: s.tin, payment_terms_id: s.default_terms_id || '', due_date: due || v?.due_date,
+      supplier_tin_snapshot: normalizePhTin(s.tin), payment_terms_id: s.default_terms_id || '', due_date: due || v?.due_date,
       rr_id: receivingReports.some(rr => rr.id === v?.rr_id && rr.supplier_id === id) ? v?.rr_id : null }))
   }
 
@@ -249,7 +251,7 @@ export default function VendorBillsPage() {
       rr_id: rr.id,
       supplier_id: supplier.id,
       supplier_name_snapshot: supplier.registered_name,
-      supplier_tin_snapshot: supplier.tin,
+      supplier_tin_snapshot: normalizePhTin(supplier.tin),
       payment_terms_id: supplier.default_terms_id || v?.payment_terms_id || '',
     }))
   }
@@ -528,7 +530,7 @@ export default function VendorBillsPage() {
   return (
     <div className="flex flex-col h-full">
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-2 flex-wrap">
+      <div className={transactionHeaderClass('purchase')}>
         <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
         <span className="text-gray-300">|</span>
         <span className="text-sm font-semibold text-gray-700">{editVB?.bill_number || 'New Vendor Bill'}</span>

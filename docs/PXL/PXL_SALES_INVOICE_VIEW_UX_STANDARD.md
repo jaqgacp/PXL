@@ -2,7 +2,7 @@
 
 **Status: Approved**
 
-Date: 2026-07-14  
+Date: 2026-07-15
 Scope: Existing Sales Invoice review, approval, posted-document view, collection monitoring, void/reversal review, drilldown, and audit UX  
 Document type: Product and UX standard only  
 Implementation boundary: This document does not implement code, modify components, change routes, edit database schemas, create migrations, change accounting logic, change tax logic, change posting logic, change permissions or RLS, refactor pages, or add unsupported fields.
@@ -10,6 +10,8 @@ Implementation boundary: This document does not implement code, modify component
 ## 1. Purpose and Scope
 
 The Sales Invoice View is the canonical document-of-record workspace for an existing invoice.
+
+Implementation reference: the Sales Invoice create/edit form is the canonical editable workspace; the Sales Invoice view at `/sales-invoices/:id` is the canonical read-only workspace. Both must use the same PXL Transaction Workspace Design System, but the view presents values, links, tables, status chips, workflow evidence, and governed actions instead of editable form inputs.
 
 It governs:
 
@@ -210,19 +212,15 @@ Do not fabricate values or create decorative empty panels.
 
 ## 6. Current View Problems Identified
 
-Current Sales Invoice review has useful foundations, including a routed saved-document page, header actions, lines, GL impact, tax impact, validation, workflow, approval, audit, related documents, related party, and system-oriented details.
+Current Sales Invoice review is the approved read-only reference implementation for future transaction views. It includes the routed saved-document page, labeled header navigation, status-aware actions, read-only information panels, one-line tab order, line grid with saved views and row inspector, financial detail table, GL Impact, Tax Impact, Validation, Workflow, Approval, Audit, Related Docs, Related Party, Attachments, Activity, Notes, and System metadata.
 
-Remaining view-standard risks to resolve during future implementation:
+Implementation boundaries that remain governed by available data sources:
 
-- The saved-document view and create/edit experience are not yet fully separated by canonical route behavior.
-- View mode can inherit form-era assumptions unless the design explicitly avoids disabled-form presentation.
-- Customer snapshot and current customer master facts must remain visibly distinct.
-- Related Party must be structured and collapsible, not a large pile of cards.
-- Workflow and Approval need separate responsibilities, while allowing an initial combined surface when workflow maturity is simple.
-- System metadata must show only existing useful fields.
-- Expected CWT and actual CWT/2307 evidence must remain distinct.
-- GL and Tax Impact must distinguish preview from posted truth.
-- Missing sources must be shown truthfully, not filled with invented values.
+- Customer snapshot fields must remain distinct from current customer master fields when historical snapshot coverage is incomplete.
+- Attachment/OCR storage must show truthful unavailable states until governed storage is configured.
+- Activity event richness depends on available transaction events, email, workflow, and integration sources.
+- 2307/certificate evidence must not be invented; Expected CWT and Actual CWT Recognized remain separate.
+- GL and Tax Impact must continue to distinguish Posting Preview from posted authoritative truth.
 
 ## 7. Canonical Route and View Model
 
@@ -415,7 +413,7 @@ Fields:
 - Customer Code
 - Registered Name, when different
 - TIN
-- TIN Branch Code
+- TIN Branch
 - VAT Classification
 - Business Style, when relevant
 
@@ -456,7 +454,7 @@ Possible fields:
 - Trade or business name used
 - Customer code
 - TIN used
-- TIN branch code used
+- TIN Branch used
 - VAT classification used
 - Billing address used
 - Delivery address used
@@ -1031,7 +1029,7 @@ Summary uses a two-column field table:
 Tax and Registration uses a two-column field table:
 
 - Current TIN
-- Current TIN Branch Code
+- Current TIN Branch
 - Current VAT Classification
 - Current Withholding Status
 - Default ATC
@@ -1471,6 +1469,20 @@ The Sales Invoice View UX standard is successful when:
 33. The general transaction standards correctly summarize both pilot standards.
 34. The Sales Invoice view can serve as the pilot for future transaction views.
 35. No accounting, tax, or lifecycle rule is invented by UX documentation.
+36. Every business field shown in the primary view has an entered, inherited, computed, posted, or generated source documented in the Sales Invoice field, dimension, GL, and tax mappings.
+37. Unsupported dimension, inventory, COGS, and margin fields are not presented as ordinary source-backed values.
+
+### 34.1 Completeness Audit Alignment
+
+The view workspace must follow the current Sales Invoice completeness maps:
+
+- `PXL_SALES_INVOICE_FUNCTIONAL_SPECIFICATION.md`
+- `PXL_SALES_INVOICE_FIELD_MAPPING.md`
+- `PXL_SALES_INVOICE_DIMENSION_MAPPING.md`
+- `PXL_SALES_INVOICE_GL_MAPPING.md`
+- `PXL_SALES_INVOICE_TAX_MAPPING.md`
+
+The current Sales Invoice view may show Branch because it is stored on the invoice and propagated to journal lines. It must not show Department, Cost Center, Project, Warehouse, Location, Functional Entity, Salesperson, Inventory Cost, COGS, Gross Profit, or Gross Margin as authoritative values until those fields are captured, derived, posted, and tested.
 
 ## 35. Rollout Rules for Future Transaction Views
 

@@ -2,10 +2,14 @@
 
 Status: Active production-readiness phase
 Milestone: **PXL Accounting Core Ready**
-Last updated: 2026-07-14
+Last updated: 2026-07-15
 Authority: User directive 2026-07-13; DEC-017; DEC-018
 
 This document is the active production-readiness control plan for PXL's accounting core. The Sales Invoice Workspace and Report Workspace standards are documented. Do not create additional UI standards, roll out additional transaction workspaces, implement report pilots, or build dashboards until this accounting core readiness phase is explicitly cleared.
+
+2026-07-15 note: the Transaction Workspace Rollout Framework (`PXL_TRANSACTION_WORKSPACE_MANIFEST.md`, `PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`, `PXL_TRANSACTION_DEFINITION_SCHEMA.md`, and `src/lib/transactionWorkspaceRollout.ts`) is foundation/planning work only. It does not clear the gate for implementing additional transaction pages. Future rollout to Sales Order or any later transaction still requires an explicit instruction and dependency review.
+
+2026-07-15 Sales Invoice completeness note: PXL-AUD-053 is now an active accounting-core readiness item. Sales Invoice remains the structural form/view reference, but it is not fully validated as the gold-standard transaction until dimensions beyond Branch, VAT Price Basis persistence, inventory/COGS posting, and source-backed reporting/view mappings are complete or formally excluded by policy.
 
 The objective is not feature expansion. The objective is to make sure every future transaction family can rely on one unified accounting, posting, tax, master-data, audit, and traceability engine.
 

@@ -59,6 +59,8 @@ export type DocumentTab = {
   badge?: React.ReactNode
 }
 
+type TransactionVisualStandard = 'transactionV1'
+
 // ── WorkflowStrip ─────────────────────────────────────────────
 // Visual document lifecycle (Draft → Approved → Posted → …). The
 // current step is highlighted; prior steps read as completed.
@@ -155,15 +157,15 @@ function DocumentToolbar({ actions, inverse = false }: { actions: ToolbarAction[
   }, [menuPosition?.placement, openMore, updateMenuPosition])
 
   const btnCls = (a: ToolbarAction) => {
-    const base = 'px-2.5 py-1 rounded text-xs font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed'
+    const base = 'pxl-button'
     if (inverse) {
       if (a.variant === 'primary') return `${base} bg-white text-gray-900 hover:bg-gray-100 shadow-sm`
       if (a.variant === 'danger') return `${base} border border-red-200/60 bg-red-950/20 text-red-50 hover:bg-red-950/35`
       return `${base} border border-white/30 bg-white/10 text-white hover:bg-white/20`
     }
-    if (a.variant === 'primary') return `${base} bg-gray-900 text-white hover:bg-gray-800 disabled:hover:bg-gray-900`
-    if (a.variant === 'danger') return `${base} border border-red-300 text-red-700 hover:bg-red-50`
-    return `${base} border border-gray-300 text-gray-700 hover:bg-gray-50`
+    if (a.variant === 'primary') return `${base} pxl-button--primary`
+    if (a.variant === 'danger') return `${base} pxl-button--danger`
+    return `${base} pxl-button--neutral`
   }
 
   return (
@@ -178,15 +180,15 @@ function DocumentToolbar({ actions, inverse = false }: { actions: ToolbarAction[
           <button
             ref={triggerRef}
             onClick={() => setOpenMore(o => !o)}
-            className={`px-2.5 py-1 rounded text-xs font-medium ${inverse
+            className={`pxl-button ${inverse
               ? 'border border-white/30 bg-white/10 text-white hover:bg-white/20'
-              : 'border border-gray-300 text-gray-700 hover:bg-gray-50'}`}>
+              : 'pxl-button--neutral'}`}>
             More ▾
           </button>
           {openMore && menuPosition && createPortal(
             <div
               ref={menuRef}
-              className="fixed w-56 overflow-y-auto rounded border border-gray-200 bg-white py-1 shadow-xl ring-1 ring-black/10 z-[9999]"
+              className="pxl-dialog fixed z-[9999] w-56 overflow-y-auto py-1"
               style={{
                 top: menuPosition.top,
                 left: menuPosition.left,
@@ -199,7 +201,7 @@ function DocumentToolbar({ actions, inverse = false }: { actions: ToolbarAction[
                   onClick={() => { setOpenMore(false); a.onClick() }}
                   disabled={a.disabled}
                   title={a.title}
-                  className={`w-full text-left px-3 py-1.5 text-xs disabled:opacity-40 disabled:cursor-not-allowed ${
+                  className={`w-full px-3 py-2 text-left text-xs disabled:cursor-not-allowed disabled:opacity-40 ${
                     a.variant === 'danger' ? 'text-red-700 hover:bg-red-50' : 'text-gray-700 hover:bg-gray-50'}`}>
                   {a.label}
                 </button>
@@ -229,13 +231,13 @@ function HeaderStateChip({ label, value, tone = 'neutral', title }: {
   title?: string
 }) {
   const dot =
-    tone === 'success' ? 'bg-green-400' :
-    tone === 'warning' ? 'bg-orange-400' :
-    tone === 'error' ? 'bg-red-400' :
-    tone === 'info' ? 'bg-blue-400' :
-    'bg-white/45'
+    tone === 'success' ? 'bg-green-500' :
+    tone === 'warning' ? 'bg-orange-500' :
+    tone === 'error' ? 'bg-red-500' :
+    tone === 'info' ? 'bg-blue-500' :
+    'bg-gray-400'
   return (
-    <span title={title || label} className="inline-flex items-center gap-1.5 rounded border border-white/15 bg-white/8 px-2 py-0.5 text-[10px] font-medium text-white/90">
+    <span title={title || label} className="inline-flex items-center gap-1.5 rounded border border-gray-200 bg-white/80 px-2 py-0.5 text-[10px] font-medium text-gray-700 shadow-sm">
       <span className={`h-1.5 w-1.5 rounded-full ${dot}`} aria-hidden />
       <span className="truncate">{value}</span>
     </span>
@@ -248,18 +250,20 @@ function HeaderStateChip({ label, value, tone = 'neutral', title }: {
 // labels truncate before the bar can overflow. The canonical twelve-tab
 // set therefore remains one line with no arrows or horizontal scrollbar.
 export function TransactionTabsBar({
-  tabs, activeKey, onChange,
+  tabs, activeKey, onChange, visualStandard,
 }: {
   tabs: DocumentTab[]
   activeKey: string
   onChange: (key: string) => void
+  visualStandard?: TransactionVisualStandard
 }) {
   const visible = tabs.filter(t => !t.hidden)
+  const isTransactionV1 = visualStandard === 'transactionV1'
   return (
     <div
-      className="flex items-stretch w-full min-w-0 px-1"
+      className={`${isTransactionV1 ? 'pxl-transaction-tabs' : ''} flex w-full min-w-0 items-stretch px-1`}
       role="tablist"
-      style={{ backgroundColor: 'color-mix(in srgb, var(--transaction-accent, #14532d) 5%, white)' }}>
+      style={isTransactionV1 ? undefined : { backgroundColor: 'color-mix(in srgb, var(--transaction-accent, #14532d) 5%, white)' }}>
       {visible.map(t => {
         const on = t.key === activeKey
         return (
@@ -269,11 +273,13 @@ export function TransactionTabsBar({
             aria-selected={on}
             onClick={() => onChange(t.key)}
             title={t.label}
-            style={on ? { borderColor: 'var(--transaction-accent, #111827)', color: 'var(--transaction-accent, #111827)' } : undefined}
-            className={`flex-1 min-w-0 px-1.5 py-2 text-[11px] leading-none whitespace-nowrap border-b-2 transition-colors ${
-              on
-                ? 'font-semibold'
-                : 'border-transparent text-gray-500 font-medium hover:text-gray-800 hover:bg-white/60'}`}>
+            style={!isTransactionV1 && on ? { borderColor: 'var(--transaction-accent, #111827)', color: 'var(--transaction-accent, #111827)' } : undefined}
+            className={`${isTransactionV1 ? `pxl-transaction-tab ${on ? 'pxl-transaction-tab--active' : 'pxl-transaction-tab--inactive'}` : ''} min-w-0 flex-1 whitespace-nowrap border-b-2 px-2 py-2 leading-none transition-colors ${
+              isTransactionV1
+                ? ''
+                : on
+                  ? 'font-semibold'
+                  : 'border-transparent text-gray-500 font-medium hover:text-gray-800 hover:bg-white/60'}`}>
             <span className="block truncate">{t.label}</span>
             {t.badge != null && (
               <span className="sr-only"> ({t.badge})</span>
@@ -323,7 +329,9 @@ export function DocumentLayout({
   tabs,
   footer,
   accentColor = '#14532d',
+  visualStandard,
   onBack,
+  backLabel,
   activeTabKey,
   onTabChange,
 }: {
@@ -346,7 +354,9 @@ export function DocumentLayout({
   footer?: React.ReactNode
   /** Company-controlled transaction accent. Cards remain white; the shell uses a 3% tint. */
   accentColor?: string
+  visualStandard?: TransactionVisualStandard
   onBack?: () => void
+  backLabel?: string
   activeTabKey?: string
   onTabChange?: (key: string) => void
 }) {
@@ -355,50 +365,54 @@ export function DocumentLayout({
   const activeKey = activeTabKey ?? internalTab
   const setActive = (k: string) => { if (onTabChange) onTabChange(k); else setInternalTab(k) }
   const activeTab = visibleTabs.find(t => t.key === activeKey) ?? visibleTabs[0]
+  const isTransactionV1 = visualStandard === 'transactionV1'
 
   const workspaceStyle = {
     '--transaction-accent': accentColor,
-    backgroundColor: 'color-mix(in srgb, var(--transaction-accent) 3%, white)',
+    '--pxl-transaction-accent': accentColor,
+    backgroundColor: isTransactionV1 ? undefined : 'color-mix(in srgb, var(--transaction-accent) 3%, white)',
   } as React.CSSProperties
   const headerStyle = {
-    backgroundColor: 'color-mix(in srgb, var(--transaction-accent) 78%, #111827)',
+    backgroundColor: isTransactionV1 ? undefined : 'color-mix(in srgb, var(--transaction-accent) 5%, white)',
+    borderColor: isTransactionV1 ? undefined : 'color-mix(in srgb, var(--transaction-accent) 16%, #e5e7eb)',
   } as React.CSSProperties
 
   return (
-    <section className="space-y-2 rounded-md p-2" style={workspaceStyle} aria-label={`${title} workspace`}>
+    <section className={`${isTransactionV1 ? 'pxl-transaction-workspace pxl-transaction-workspace--sales' : ''} space-y-3 rounded-md p-3`} style={workspaceStyle} aria-label={`${title} workspace`}>
       {/* Document header: identity, status, primary metrics, and actions live here once. */}
-      <header className="rounded text-white shadow-sm overflow-hidden" style={headerStyle}>
-        <div className="px-3 py-2 flex flex-col xl:flex-row xl:items-center gap-2.5">
-          <div className="flex items-start gap-2.5 min-w-0 xl:w-[37%]">
+      <header className={`${isTransactionV1 ? 'pxl-transaction-header' : 'shadow-sm'} overflow-hidden rounded-lg border-b text-gray-900`} style={headerStyle}>
+        <div className="flex flex-col gap-4 px-4 py-3 xl:flex-row xl:items-center">
+          <div className="flex min-w-0 items-start gap-4 xl:w-[40%]">
             {onBack && (
-              <button onClick={onBack} className="mt-0.5 text-white/60 hover:text-white" title={`Back to ${title}s`} aria-label={`Back to ${title}s`}>
-                ←
+              <button onClick={onBack} className="pxl-button pxl-button--text mt-0.5 h-8 px-2" title={`Back to ${backLabel || `${title}s`}`} aria-label={`Back to ${backLabel || `${title}s`}`}>
+                <span aria-hidden>←</span>
+                <span className="ml-1 hidden sm:inline">{backLabel || `${title}s`}</span>
               </button>
             )}
             <div className="min-w-0">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/55">{title}</div>
-              <div className="flex items-center gap-1.5 mt-0.5 min-w-0 flex-wrap">
-                <h1 className="text-lg leading-tight font-semibold tracking-tight truncate">
+              <div className="pxl-header-metric-label">{title}</div>
+              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2.5">
+                <h1 className="pxl-document-number truncate">
                   {documentNo || `Unsaved ${title}`}
                 </h1>
                 {status && <HeaderStateChip value={statusLabel || status} tone={statusTone(status)} label="Document status" />}
                 {meta.map((f, i) => <HeaderStateChip key={i} value={f.value} tone={f.tone} label={f.label} />)}
               </div>
               {identity && (
-                <div className="mt-0.5 flex items-center gap-2 min-w-0">
-                  <span className="text-xs font-medium text-white/90 truncate">{identity.name}</span>
-                  {identity.secondary && <span className="text-[11px] font-mono text-white/60 truncate">{identity.secondary}</span>}
+                <div className="mt-2 flex min-w-0 items-center gap-3">
+                  <span className="pxl-customer-link truncate">{identity.name}</span>
+                  {identity.secondary && <span className="pxl-caption truncate font-mono">{identity.secondary}</span>}
                 </div>
               )}
             </div>
           </div>
 
           {metrics.length > 0 && (
-            <dl className="grid grid-cols-3 gap-0 min-w-0 xl:flex-1 border-y xl:border-y-0 xl:border-x border-white/15">
+            <dl className="grid min-w-0 grid-cols-3 gap-3 border-y border-[var(--pxl-border-medium)] py-2 xl:flex-1 xl:border-x xl:border-y-0 xl:px-4 xl:py-0">
               {metrics.map(metric => (
-                <div key={metric.label} className="px-2.5 py-0.5 xl:py-0 min-w-0 xl:text-right">
-                  <dt className="text-[9px] font-semibold uppercase tracking-wider text-white/50 truncate">{metric.label}</dt>
-                  <dd className={`mt-0.5 font-mono tabular-nums truncate ${metric.emphasis ? 'text-base font-semibold text-white' : 'text-sm font-medium text-white/90'}`}>
+                <div key={metric.label} className="min-w-0 xl:text-right">
+                  <dt className="pxl-header-metric-label truncate">{metric.label}</dt>
+                  <dd className={`mt-1 font-mono tabular-nums truncate ${metric.emphasis ? 'pxl-header-metric-value' : 'text-sm font-semibold text-gray-800'}`}>
                     {metric.value}
                   </dd>
                 </div>
@@ -406,7 +420,7 @@ export function DocumentLayout({
             </dl>
           )}
 
-          {actions.length > 0 && <div className="xl:ml-auto shrink-0"><DocumentToolbar actions={actions} inverse /></div>}
+          {actions.length > 0 && <div className="shrink-0 xl:ml-auto"><DocumentToolbar actions={actions} /></div>}
         </div>
       </header>
 
@@ -416,16 +430,16 @@ export function DocumentLayout({
       {/* Full-width compact tab bar — 12 tabs on one row, no horizontal
           scroll at 1920×1080 (it spans the whole content width, not the
           narrower content column beside the sidebar). */}
-      <div className="border border-gray-200 rounded overflow-hidden">
-        <TransactionTabsBar tabs={tabs} activeKey={activeKey} onChange={setActive} />
+      <div className={`${isTransactionV1 ? 'border-[var(--pxl-border-strong)]' : 'border-gray-200'} overflow-hidden rounded border`}>
+        <TransactionTabsBar tabs={tabs} activeKey={activeKey} onChange={setActive} visualStandard={visualStandard} />
       </div>
 
       {/* Active tab content */}
-      <div className="min-w-0 w-full bg-white border border-gray-200 rounded px-3 py-2.5" role="tabpanel">
+      <div className={`min-w-0 w-full rounded border bg-white px-3 py-2.5 ${isTransactionV1 ? 'border-[var(--pxl-border-medium)] shadow-[var(--pxl-shadow-card)]' : 'border-gray-200'}`} role="tabpanel">
         {activeTab?.content}
       </div>
 
-      {footer && <footer className="px-1 text-[10px] text-gray-500">{footer}</footer>}
+      {footer && <footer className="pxl-caption px-1">{footer}</footer>}
     </section>
   )
 }

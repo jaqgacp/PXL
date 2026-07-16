@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditEvidenceBlock, StatusBadge, DateCell } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 
 type ReturnStatus = 'draft' | 'shipped' | 'completed' | 'cancelled'
 
@@ -135,7 +136,7 @@ export default function PurchaseReturnsPage() {
 
   if (mode !== 'list') return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className={`${transactionHeaderClass('purchase')} justify-between`}>
         <div>
           <h2 className="text-base font-semibold text-gray-900">{editReturn?.id ? (readOnly ? 'Purchase Return' : 'Edit Return') : 'New Purchase Return'}</h2>
           {editReturn?.return_number && <p className="text-xs text-gray-500 mt-0.5">{editReturn.return_number} · <StatusBadge status={STATUS_COLORS[editReturn.status as string] || 'draft'} label={editReturn.status as string} /></p>}

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
+import { transactionHeaderClass, transactionSegmentButtonClass } from '@/lib/transactionWorkspace'
 
 type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
 type Department = { id: string; department_name: string }
@@ -100,12 +101,12 @@ export default function GoodsIssuePage() {
 
   return (
     <div>
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3">
+      <div className={transactionHeaderClass('inventory')}>
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Goods Issue</span>
         <div className="ml-auto flex gap-1">
           {(['new','history'] as const).map(t => (
             <button key={t} onClick={() => setTab(t)}
-              className={`px-3 py-1 rounded text-xs font-medium ${tab === t ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-900'}`}>
+              className={transactionSegmentButtonClass('inventory', tab === t)}>
               {t === 'new' ? 'New Issue' : 'History'}
             </button>
           ))}

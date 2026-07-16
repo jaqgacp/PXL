@@ -5,6 +5,8 @@ import { AuditEvidenceBlock, StatusBadge, AmountCell, DateCell } from '@/compone
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { normalizePhTin } from '@/lib/philippines'
 
 type VCStatus = 'draft' | 'open' | 'applied' | 'cancelled'
 
@@ -104,7 +106,7 @@ export default function VendorCreditsPage() {
   const selectSupplier = (id: string) => {
     const s = suppliers.find(x => x.id === id)
     if (!s) return
-    setEditVC(p => ({ ...p, supplier_id: s.id, supplier_name_snapshot: s.registered_name, supplier_tin_snapshot: s.tin }))
+    setEditVC(p => ({ ...p, supplier_id: s.id, supplier_name_snapshot: s.registered_name, supplier_tin_snapshot: normalizePhTin(s.tin) }))
   }
 
   const updateLine = (idx: number, patch: Partial<VCLine>) => {
@@ -248,7 +250,7 @@ export default function VendorCreditsPage() {
 
   if (mode !== 'list') return (
     <div className="space-y-4" ref={listRef}>
-      <div className="flex items-center justify-between">
+      <div className={`${transactionHeaderClass('purchase')} justify-between`}>
         <div>
           <h2 className="text-base font-semibold text-gray-900">{editVC?.id ? (readOnly ? 'Vendor Credit' : 'Edit Vendor Credit') : 'New Vendor Credit'}</h2>
           {editVC?.vc_number && <p className="text-xs text-gray-500 mt-0.5">{editVC.vc_number} · <StatusBadge status={STATUS_COLORS[editVC.status as string] || 'draft'} label={editVC.status as string} /></p>}

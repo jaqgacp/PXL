@@ -1,6 +1,24 @@
 # AI Handoff
 
-Last updated: 2026-07-14 (session 100 - PXL-AUD-045/PXL-AUD-050 completed and hosted synced)
+Last updated: 2026-07-15 (Transaction Workspace Rollout Framework foundation)
+
+## Current Session - Transaction Workspace Rollout Framework
+
+The PXL Transaction Workspace Rollout Framework foundation was created without rolling out another transaction page. New control artifacts:
+
+- `src/lib/transactionWorkspaceRollout.ts`
+- `docs/PXL/PXL_TRANSACTION_WORKSPACE_STANDARD.md`
+- `docs/PXL/PXL_TRANSACTION_WORKSPACE_MANIFEST.md`
+- `docs/PXL/PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`
+- `docs/PXL/PXL_TRANSACTION_DEFINITION_SCHEMA.md`
+
+Related standards updated: `PXL_STANDARD_TRANSACTION_WORKSPACE.md`, `PXL_TRANSACTION_EXPERIENCE_STANDARD.md`, `PXL_DESIGN_SYSTEM.md`, `PXL_TRANSACTION_WORKSPACE_DESIGN_STANDARD.md`, `PXL_COMPONENT_LIBRARY.md`, `PXL_TRANSACTION_MATRIX.md`, and `PXL_ACCOUNTING_CORE_READINESS.md`.
+
+Sales Invoice remains the implemented create/edit and read-only view reference pair. Sales Invoice is not marked fully validated/approved-reference in the manifest because full fixture validation across all requested form/view states has not been recorded. Sales Order is the recommended next rollout candidate, but must not be implemented until a future explicit instruction says:
+
+`Implement the next eligible transaction workspace from the approved PXL Transaction Workspace Manifest and Rollout Playbook.`
+
+The DEC-017 accounting-core gate still applies; the new framework is planning/control infrastructure, not permission to roll out additional transaction pages automatically.
 
 ## Active Priority (session 100 - remaining audit items closed)
 

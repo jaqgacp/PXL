@@ -23,6 +23,8 @@ export type RelatedDocRow = {
   date?: string | null
   status?: string | null
   amount?: number | null
+  appliedAmount?: number | null
+  openBalance?: number | null
   /** Route to open the existing document; makes the number a link. */
   href?: string | null
   /** Allowed create action when the stage is missing but valid (e.g. "Create Receipt"). */
@@ -42,6 +44,11 @@ export function RelatedDocumentsTab({ rows, emptyLabel = 'No related documents.'
   emptyLabel?: string
 }) {
   const navigate = useNavigate()
+  const relationContext = (row: RelatedDocRow) => {
+    if (row.direction === 'upstream') return row.relationship || 'Created from'
+    if (row.direction === 'downstream') return row.relationship || 'Applied to'
+    return 'Current document'
+  }
 
   return (
     <div className="bg-white border border-gray-200 rounded p-3 space-y-2">
@@ -57,8 +64,8 @@ export function RelatedDocumentsTab({ rows, emptyLabel = 'No related documents.'
           <table className={ERP_TABLE}>
             <thead className={ERP_THEAD}>
               <tr>
-                {['Relationship', 'Type', 'Document No.', 'Date', 'Status', 'Amount', 'Direction', 'Action'].map((h, i) => (
-                  <th key={h} className={`${ERP_TH} ${i === 5 ? 'text-right' : 'text-left'}`}>{h}</th>
+                {['Relationship', 'Document Type', 'Document Number', 'Date', 'Status', 'Amount', 'Applied Amount', 'Open Balance', 'Created From / Applied To', 'Direction', 'Action'].map((h, i) => (
+                  <th key={h} className={`${ERP_TH} ${i >= 5 && i <= 7 ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -83,6 +90,9 @@ export function RelatedDocumentsTab({ rows, emptyLabel = 'No related documents.'
                     <td className={`${ERP_TD} text-gray-600 whitespace-nowrap`}>{r.date ? <DateCell date={r.date} /> : '—'}</td>
                     <td className={ERP_TD}>{r.status ? <StatusBadge status={r.status} /> : <span className="text-gray-300">—</span>}</td>
                     <td className={ERP_TD_NUM}>{r.amount != null ? <AmountCell amount={r.amount} /> : <span className="text-gray-300">—</span>}</td>
+                    <td className={ERP_TD_NUM}>{r.appliedAmount != null ? <AmountCell amount={r.appliedAmount} /> : <span className="text-gray-300">—</span>}</td>
+                    <td className={ERP_TD_NUM}>{r.openBalance != null ? <AmountCell amount={r.openBalance} /> : <span className="text-gray-300">—</span>}</td>
+                    <td className={`${ERP_TD} text-gray-500 whitespace-nowrap`}>{relationContext(r)}</td>
                     <td className="px-2 py-1.5 text-[11px] text-gray-400 whitespace-nowrap">{DIRECTION_LABEL[r.direction]}</td>
                     <td className={`${ERP_TD} whitespace-nowrap`}>
                       {exists && r.href ? (

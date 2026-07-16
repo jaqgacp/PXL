@@ -1038,6 +1038,23 @@ Scenario: a VAT sales invoice has 10,000 VAT-exclusive income and the customer d
 | 4 | Approve and post the SI | Both lifecycle transitions succeed. |
 | 5 | Save and post an OR applying 11,000 cash plus 200 CWT to the SI | The receipt line and CWT tax detail carry WC140, base 10,000, and CWT 200; AR is cleared by cash plus CWT. |
 
+## SALES-INVOICE-COMPLETENESS-001 - Sales Invoice VAT Basis, Dimensions, Inventory, and Void Restoration
+
+Status: Executed Passing (session 101, 2026-07-15) in `supabase/tests/054_sales_invoice_completeness_test.sql`, 18 assertions. Related finding: PXL-AUD-053.
+
+Scenario: a VAT-inclusive Sales Invoice contains one inventory item line and one service line, with Department, Cost Center, Warehouse, Salesperson, and Account Owner sourced from governed master data.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Save the SI with VAT Price Basis = VAT Inclusive | The invoice persists `vat_price_basis = inclusive`; server-computed net/VAT/gross totals are 1,500 / 180 / 1,680. |
+| 2 | Inspect line values | The inventory line is 1,000 net + 120 VAT = 1,120 gross; the service line is 500 net + 60 VAT = 560 gross. |
+| 3 | Inspect dimensions | Header stores Department, Cost Center, Warehouse, Salesperson, and Account Owner; inventory line inherits warehouse, while the service line does not automatically receive warehouse context. |
+| 4 | Approve and post the SI | Posting succeeds through the governed RPC. |
+| 5 | Inspect GL impact | JE includes DR AR 1,680; CR product revenue 1,000; CR service revenue 500; CR output VAT 180; DR COGS 600; CR Inventory 600, and remains balanced. |
+| 6 | Inspect inventory evidence | Inventory line stores unit cost 600, inventory cost 600, and an inventory transaction link; service line has no inventory evidence. |
+| 7 | Inspect stock and tax ledger | Stock falls from 5 units / 3,000 cost to 4 units / 2,400 cost; tax detail stores VAT base 1,500, VAT 180, and normalized customer TIN. |
+| 8 | Void the posted SI | Void creates a reversal journal, restores stock to 5 units / 3,000 cost, and writes an `SI_VOID` inventory restoration transaction. |
+
 ## CM-VC-OVERAPPLY-001 - Over-Apply Guards Net Applied Credit Memos / Vendor Credits
 
 Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/035_cm_vc_aware_overapply_test.sql`, 6 assertions. Related findings: PXL-AUD-039.

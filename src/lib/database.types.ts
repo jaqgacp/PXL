@@ -8990,77 +8990,148 @@ export type Database = {
       }
       sales_invoice_lines: {
         Row: {
+          cogs_account_id: string | null
           company_id: string
+          cost_center_id: string | null
           created_at: string
           created_by: string | null
+          department_id: string | null
           description: string
           discount_amount: number
           discount_percent: number
           id: string
+          inventory_account_id: string | null
+          inventory_cost: number | null
+          inventory_transaction_id: string | null
           item_id: string | null
           line_number: number
           net_amount: number
           quantity: number
+          remarks: string | null
           revenue_account_id: string | null
           sales_invoice_id: string
+          salesperson_id: string | null
+          source_document_type: string | null
+          source_line_id: string | null
           total_amount: number
+          unit_cost: number | null
           unit_price: number
           uom_id: string | null
           updated_at: string
           updated_by: string | null
           vat_amount: number
           vat_code_id: string | null
+          warehouse_id: string | null
         }
         Insert: {
+          cogs_account_id?: string | null
           company_id: string
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
+          department_id?: string | null
           description: string
           discount_amount?: number
           discount_percent?: number
           id?: string
+          inventory_account_id?: string | null
+          inventory_cost?: number | null
+          inventory_transaction_id?: string | null
           item_id?: string | null
           line_number: number
           net_amount?: number
           quantity?: number
+          remarks?: string | null
           revenue_account_id?: string | null
           sales_invoice_id: string
+          salesperson_id?: string | null
+          source_document_type?: string | null
+          source_line_id?: string | null
           total_amount?: number
+          unit_cost?: number | null
           unit_price?: number
           uom_id?: string | null
           updated_at?: string
           updated_by?: string | null
           vat_amount?: number
           vat_code_id?: string | null
+          warehouse_id?: string | null
         }
         Update: {
+          cogs_account_id?: string | null
           company_id?: string
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
+          department_id?: string | null
           description?: string
           discount_amount?: number
           discount_percent?: number
           id?: string
+          inventory_account_id?: string | null
+          inventory_cost?: number | null
+          inventory_transaction_id?: string | null
           item_id?: string | null
           line_number?: number
           net_amount?: number
           quantity?: number
+          remarks?: string | null
           revenue_account_id?: string | null
           sales_invoice_id?: string
+          salesperson_id?: string | null
+          source_document_type?: string | null
+          source_line_id?: string | null
           total_amount?: number
+          unit_cost?: number | null
           unit_price?: number
           uom_id?: string | null
           updated_at?: string
           updated_by?: string | null
           vat_amount?: number
           vat_code_id?: string | null
+          warehouse_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sales_invoice_lines_cogs_account_id_fkey"
+            columns: ["cogs_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sales_invoice_lines_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_inventory_account_id_fkey"
+            columns: ["inventory_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -9092,6 +9163,13 @@ export type Database = {
             referencedColumns: ["invoice_id"]
           },
           {
+            foreignKeyName: "sales_invoice_lines_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_invoice_lines_uom_id_fkey"
             columns: ["uom_id"]
             isOneToOne: false
@@ -9105,14 +9183,23 @@ export type Database = {
             referencedRelation: "vat_codes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sales_invoice_lines_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sales_invoices: {
         Row: {
+          account_owner_id: string | null
           approved_at: string | null
           approved_by: string | null
           branch_id: string
           company_id: string
+          cost_center_id: string | null
           created_at: string
           created_by: string | null
           currency_code: string
@@ -9124,6 +9211,7 @@ export type Database = {
           cwt_atc_code_id: string | null
           cwt_tax_base: number | null
           date: string
+          department_id: string | null
           due_date: string | null
           fiscal_period_id: string | null
           id: string
@@ -9134,6 +9222,7 @@ export type Database = {
           posted_at: string | null
           posted_by: string | null
           reference: string | null
+          salesperson_id: string | null
           si_number: string
           status: string
           total_amount: number
@@ -9143,13 +9232,17 @@ export type Database = {
           total_zero_rated_amount: number
           updated_at: string
           updated_by: string | null
+          vat_price_basis: string
           void_reason_id: string | null
+          warehouse_id: string | null
         }
         Insert: {
+          account_owner_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
           branch_id: string
           company_id: string
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
           currency_code?: string
@@ -9161,6 +9254,7 @@ export type Database = {
           cwt_atc_code_id?: string | null
           cwt_tax_base?: number | null
           date?: string
+          department_id?: string | null
           due_date?: string | null
           fiscal_period_id?: string | null
           id?: string
@@ -9171,6 +9265,7 @@ export type Database = {
           posted_at?: string | null
           posted_by?: string | null
           reference?: string | null
+          salesperson_id?: string | null
           si_number: string
           status?: string
           total_amount?: number
@@ -9180,13 +9275,17 @@ export type Database = {
           total_zero_rated_amount?: number
           updated_at?: string
           updated_by?: string | null
+          vat_price_basis?: string
           void_reason_id?: string | null
+          warehouse_id?: string | null
         }
         Update: {
+          account_owner_id?: string | null
           approved_at?: string | null
           approved_by?: string | null
           branch_id?: string
           company_id?: string
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
           currency_code?: string
@@ -9198,6 +9297,7 @@ export type Database = {
           cwt_atc_code_id?: string | null
           cwt_tax_base?: number | null
           date?: string
+          department_id?: string | null
           due_date?: string | null
           fiscal_period_id?: string | null
           id?: string
@@ -9208,6 +9308,7 @@ export type Database = {
           posted_at?: string | null
           posted_by?: string | null
           reference?: string | null
+          salesperson_id?: string | null
           si_number?: string
           status?: string
           total_amount?: number
@@ -9217,9 +9318,18 @@ export type Database = {
           total_zero_rated_amount?: number
           updated_at?: string
           updated_by?: string | null
+          vat_price_basis?: string
           void_reason_id?: string | null
+          warehouse_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sales_invoices_account_owner_id_fkey"
+            columns: ["account_owner_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sales_invoices_branch_id_fkey"
             columns: ["branch_id"]
@@ -9232,6 +9342,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
             referencedColumns: ["id"]
           },
           {
@@ -9249,6 +9366,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_invoices_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_invoices_fiscal_period_id_fkey"
             columns: ["fiscal_period_id"]
             isOneToOne: false
@@ -9263,10 +9387,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_invoices_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "employees"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_invoices_void_reason_id_fkey"
             columns: ["void_reason_id"]
             isOneToOne: false
             referencedRelation: "void_reason_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -13366,6 +13504,11 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_format_ph_tin: {
+        Args: { p_default_branch?: string; p_value: string }
+        Returns: string
+      }
+      fn_format_ph_tin_branch: { Args: { p_value: string }; Returns: string }
       fn_general_ledger_report: {
         Args: {
           p_account_id?: string
@@ -13562,6 +13705,7 @@ export type Database = {
         Args: { p_hint: string }
         Returns: string
       }
+      fn_ph_tin_digits: { Args: { p_value: string }; Returns: string }
       fn_post_amortization_entry: {
         Args: { p_entry_id: string }
         Returns: string
@@ -13704,6 +13848,10 @@ export type Database = {
           p_source_doc_id: string
           p_source_doc_type: string
         }
+        Returns: Json
+      }
+      fn_preview_sales_invoice_gl_impact: {
+        Args: { p_invoice_id: string; p_posting_date?: string }
         Returns: Json
       }
       fn_qap_2307_reconciliation: {

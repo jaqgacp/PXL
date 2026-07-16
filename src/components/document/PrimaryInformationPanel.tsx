@@ -26,11 +26,11 @@ export type InfoGroup = {
 function Field({ field }: { field: InfoField }) {
   return (
     <div className={field.wide ? 'sm:col-span-2' : ''} title={field.provenance}>
-      <div className="text-[9px] uppercase tracking-wide text-gray-400 leading-tight">
+      <div className="pxl-field-label leading-tight">
         {field.label}
         {field.provenance && <span className="ml-1 text-gray-300" aria-hidden>·</span>}
       </div>
-      <div className="text-[11px] text-gray-800 mt-0.5 leading-snug break-words">{field.value ?? '—'}</div>
+      <div className="pxl-body-text mt-1 leading-snug break-words">{field.value ?? '—'}</div>
     </div>
   )
 }
@@ -42,10 +42,10 @@ export function PrimaryInformationPanel({ groups }: { groups: InfoGroup[] }) {
     groups.length === 3 ? 'xl:grid-cols-3' :
     'xl:grid-cols-4'
   return (
-    <div className={`grid grid-cols-1 md:grid-cols-2 ${columns} gap-2 items-stretch`}>
+    <div className={`grid grid-cols-1 md:grid-cols-2 ${columns} gap-3 items-stretch`}>
       {groups.map(group => (
-        <section key={group.key} className="bg-white border border-gray-200 rounded p-2 min-w-0">
-          <div className="text-[9px] font-semibold uppercase tracking-widest text-gray-500 pb-1.5 mb-1.5 border-b border-gray-100 leading-tight">
+        <section key={group.key} className="pxl-transaction-card min-w-0 p-4">
+          <div className="pxl-section-title mb-3 border-b border-gray-100 pb-2">
             {group.title}
           </div>
           {group.content ?? (

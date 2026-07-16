@@ -1,7 +1,7 @@
 # PXL Sales Invoice Form UX Standard
 
 Status: Approved  
-Date: 2026-07-14  
+Date: 2026-07-15
 Scope: Canonical Sales Invoice creation and draft-edit UX standard  
 Document type: Product and UX standard only  
 Implementation boundary: This document does not implement code, edit database schemas, change accounting logic, change tax logic, change posting logic, change routes or components, create migrations, invent missing master data, or start a refactor.
@@ -172,6 +172,30 @@ Use clear values:
 - No workflow configured
 - No attachments linked
 
+### 4.7 Hide Technical Implementation Details From Normal Users
+
+The primary transaction workspace must use business terminology, not implementation terminology.
+
+Do not show technical values to normal users or normal accountants, including:
+
+- Database identifiers
+- Raw UUIDs
+- RPC names
+- Configuration keys
+- Internal rule identifiers
+- Internal source-table names
+- Implementation metadata
+
+Use business-friendly labels instead:
+
+| Technical value | Business label |
+| --- | --- |
+| `company_accounting_config.ar_account_id` | Default Accounts Receivable Account |
+| `company_accounting_config.vat_payable_account_id` | Default VAT Payable Account |
+| `document_line_account` | Revenue Account from Item |
+
+If implementation tracing is required, place it in expandable row details or the System tab for support, diagnostics, administrators, auditors, or developers. It must not clutter the normal transaction workspace.
+
 ## 5. Current Design Problems
 
 Current Sales Invoice implementation already contains important foundations, including a saved-document workspace, GL impact visibility, audit evidence, line editing, expected CWT calculation, and server-side validation. The standard must correct the remaining UX and architecture issues before the Sales Invoice becomes the canonical pilot.
@@ -256,6 +280,102 @@ Recommended status chips:
 - Collection: Open, Partially Paid, Paid, Overpaid
 - Lock: Editable, Frozen, Locked
 
+Header metrics:
+
+- Invoice Total and Expected Net Collectible should be visually stronger than secondary labels.
+- Do not abbreviate Expected Net Collectible as Expected Net.
+- Use weight, spacing, and alignment to create hierarchy.
+- Do not significantly increase type size.
+- Monetary values must use tabular numbers.
+
+Sales Invoice inherits the system-wide transaction workspace coloring standard:
+
+- Header uses the Sales family subtle light-blue tint.
+- Tab navigation uses the same color family.
+- Active tabs must be visibly stronger than inactive tabs.
+- Use light tint, spacing, a bottom border, and subtle elevation to separate the header, cards, tabs, and line workspace.
+- Do not use bright colors or status colors as navigation background.
+
+### PXL Transaction Workspace Design System v1
+
+The Sales Invoice Transaction Workspace is the approved reference implementation for the PXL Transaction Workspace Design System. Future transaction forms and views must inherit the shared standards in:
+
+- `PXL_DESIGN_SYSTEM.md`
+- `PXL_TRANSACTION_WORKSPACE_DESIGN_STANDARD.md`
+- `PXL_TYPOGRAPHY_STANDARD.md`
+- `PXL_COLOR_SYSTEM.md`
+- `PXL_COMPONENT_LIBRARY.md`
+- `PXL_TABLE_STANDARD.md`
+- `PXL_CARD_STANDARD.md`
+- `PXL_BUTTON_STANDARD.md`
+- `PXL_FORM_STANDARD.md`
+- `PXL_TAB_STANDARD.md`
+
+Principles:
+
+- Use Oracle NetSuite as visual inspiration for weight, contrast, readability, and hierarchy, without copying its layout or pixels.
+- Preserve the approved PXL transaction architecture.
+- Improve visual maturity through contrast, spacing, borders, typography, and restrained color, not decoration.
+- Implement reusable tokens and components, not page-specific CSS.
+
+Sales Invoice reference palette:
+
+- Header: deep desaturated blue-gray tint.
+- Tab Container: light blue-gray with stronger borders.
+- Borders: medium gray-blue.
+- Primary Text: `#1F2937`.
+- Secondary Text: `#4B5563`.
+- Muted Text: `#6B7280`.
+- Success: professional green.
+- Warning: professional amber.
+- Error: professional red.
+
+Header rules:
+
+- Header background must be darker than the generic transaction tint while remaining clean and unsaturated.
+- Header must have a stronger bottom border and subtle shadow.
+- Header labels, metadata, metrics, and customer link must remain readable.
+- Action button hierarchy remains unchanged.
+
+Tab rules:
+
+- The tab container uses a darker neutral blue-gray background.
+- Active tab uses white surface, dark charcoal text, semi-bold weight, and a clear top or bottom emphasis.
+- Inactive tabs remain readable with dark gray text.
+- Hover state uses a subtle blue-gray fill.
+- Avoid white text in tabs.
+
+Typography rules:
+
+- Use one enterprise UI font stack: Inter, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif.
+- Workspace Title / Document Number: 20px, semi-bold.
+- Customer Name: 16px, semi-bold, brand-colored, clickable.
+- Section Headings: 14px, semi-bold, uppercase.
+- Tab Labels: 13px, medium.
+- Field Labels: 12px, medium.
+- Body and table cells: 13px, regular.
+- Captions: 11px, regular.
+- Totals: 18px, bold, tabular numbers.
+- Buttons and status badges: medium.
+- Use consistent line heights and no negative letter spacing.
+
+Reusable implementation:
+
+- Tokens live in `src/index.css`.
+- Workspace helpers live in `src/lib/transactionWorkspace.ts`.
+- Shared document primitives live in `src/components/document`.
+- Shared UI atoms live in `src/components/ui`.
+- Sales Invoice must not carry its own private visual standard.
+
+Table rules:
+
+- Line table header row is slightly darker than the card background.
+- Table borders are stronger but still subtle.
+- Row hover uses a restrained blue-gray highlight.
+- Text columns align left.
+- Numeric columns align right and use tabular numbers.
+- Totals use a stronger background and semi-bold values.
+
 The header must not permanently include:
 
 - Full workflow path
@@ -309,6 +429,11 @@ Rules:
 - Show no more than three prominent actions plus More.
 - Actions are status-aware.
 - Actions are permission-aware.
+- Visual emphasis must match business importance:
+  - Primary: Post
+  - Secondary: Submit
+  - Neutral: Save Draft
+  - Text: Cancel
 - Destructive actions require confirmation and a reason where applicable.
 - Posted and frozen documents do not expose normal edit actions.
 - Disabled actions explain why they are unavailable.
@@ -324,6 +449,16 @@ Use exactly three compact cards:
 
 Do not add a fourth card and do not create a permanent sidebar summary. All three cards must use the same spacing, label style, alignment, and density. They must not become mini dashboards.
 
+Card visual guidance:
+
+- Document Information uses a neutral surface.
+- Customer Information may use a very subtle brand tint.
+- Sales Context may use a very subtle neutral accent.
+- Avoid strong colors and decorative graphics.
+- Use whitespace rather than borders to create separation.
+- Use comfortable enterprise spacing: 16-20px internal padding, consistent field spacing, and consistent vertical rhythm.
+- Avoid compressed cards.
+
 ### Card 1: Document Information
 
 Fields:
@@ -333,9 +468,8 @@ Fields:
 - Branch
 - Currency
 - Payment Terms
-- Customer Reference
 - External Reference
-- Price Basis, when applicable
+- VAT Price Basis
 
 Behavior:
 
@@ -344,6 +478,12 @@ Behavior:
 - Currency defaults from customer or company.
 - Payment terms default from customer.
 - Due date computes from invoice date and terms.
+- External Reference captures a customer, vendor, logistics, contract, or other outside document reference.
+- External Reference placeholder examples include `Customer PO`, `Supplier Invoice`, `Delivery Receipt`, `Contract`, and `Other External Reference`.
+- VAT Price Basis allows prices to be encoded as VAT Exclusive or VAT Inclusive.
+- VAT Price Basis should default from company, customer, transaction type, or document policy where authoritative.
+- Changing VAT Price Basis recomputes Net Amount, VAT, Gross Amount, and Expected Net Collectible without changing the entered commercial price.
+- VAT Price Basis is part of the document and should later be reused by Quotation, Sales Order, Purchase Order, Vendor Bill, Purchase Invoice, Credit Memo, Debit Memo, and purchase workflows.
 - Posting period derives from invoice date and fiscal calendar.
 - Closed periods produce blocking validation.
 - Number series remains hidden unless the governed exception applies.
@@ -357,7 +497,7 @@ Fields:
 - Customer Lookup
 - Customer Code
 - TIN
-- TIN Branch Code
+- TIN Branch
 - VAT Classification
 - Business Style, only when useful
 
@@ -365,37 +505,86 @@ Behavior:
 
 - Customer lookup is the only primary manual customer action.
 - All other displayed values are derived or snapshot values.
+- Customer Code, TIN, TIN Branch, and VAT Classification should use a balanced two-column grid with equal column widths.
+- TIN displays the full PXL Philippine TIN format, such as `203-455-789-00000`.
+- TIN Branch, when shown separately, displays the 5-digit branch code, such as `00000`.
+- Never display or persist 3-digit or 4-digit branch identifiers.
+- Follow `PXL_PHILIPPINE_TIN_STANDARD.md` for UI, search, storage, import/export, API, reporting, and future BIR modules.
+- Use consistent spacing and vertical rhythm across readonly customer facts.
+- Readonly fields must look readonly without looking disabled.
 - Customer master changes occur through the Customer master, not through normal invoice entry.
 - The card remains concise.
 - Full current master information belongs in Related Party.
 
 ### Card 3: Sales Context
 
-Fields when configured and applicable:
+Purpose:
 
+Sales Context identifies internal operational ownership and reporting dimensions for the transaction. It answers who inside the organization owns or is responsible for the transaction.
+
+It must not duplicate customer information, tax information, payment information, branch identity, accounting impact, or audit data.
+
+Supported and future dimensions may include:
+
+- Account Owner
 - Salesperson
-- Project
 - Department
+- Project
 - Cost Center
-- Location
 - Business Unit
+- Location
+- Campaign, future CRM
+- Lead Source, future CRM
 
 Behavior:
 
-- Default from customer, user, branch, project, or company setup.
+- Account Owner is the preferred operational owner field. It identifies the internal employee responsible for the customer relationship and should be selected from Employee Master. It is not necessarily the encoder, creator, or approver.
+- Future implementations may inherit Account Owner automatically from Customer Master when that relationship is governed.
+- Default configured dimensions from customer, employee, user, branch, project, campaign, lead source, or company setup where authoritative.
 - Header defaults flow to lines.
 - Line overrides require appropriate permissions or business rules.
 - Override indicators appear when a line differs from the header.
-- Do not show dimensions that do not exist or are not enabled.
+- Show only configured dimensions.
+- When dimensions are enabled for the company and document type, display editable selectors.
+- When dimensions are disabled, hide them completely.
+- Hide dimensions that do not exist or are not enabled.
+- Do not display placeholder rows.
+- Do not display instructional paragraphs inside the card.
+- If no operational dimensions are assigned, show: `No operational dimensions assigned.`
+
+Sales Context is the Sales Invoice presentation of the reusable Dimension Context (`DimensionContext`) component. The component stays standardized; only the available dimensions change.
+
+Examples:
+
+- Sales Invoice
+- Purchase Invoice
+- Vendor Bill
+- Customer Payment
+- Journal Entry
+- Inventory Adjustment
+- Expense
+- Cash Receipt
 
 Do not include in Sales Context:
 
-- Customer contacts
-- Customer tax profile
+- Customer Name
+- Customer Code
+- TIN
+- VAT Classification
+- Payment Terms
+- Branch Code
+- Customer Address
+- Business Style
+- Credit Limit
+- Outstanding AR
+- Customer Group
+- Tax Profile
 - Sales Order or Delivery Receipt links
 - Payment links
+- Customer contacts
 - Audit data
-- Hardcoded CRM fields
+- Accounting information
+- Hardcoded or unsupported CRM fields
 - Unsupported master-data values
 
 Source Sales Orders, Delivery Receipts, and payment links belong in Related Docs.
@@ -434,8 +623,8 @@ Typical intentional header inputs:
 1. Customer
 2. Invoice date, only when different from default
 3. Branch, only when different from default
-4. Customer or external reference, when applicable
-5. Optional transaction context not safely defaulted
+4. External Reference, when applicable
+5. Optional VAT Price Basis or Dimension Context field not safely defaulted, such as an explicit VAT Price Basis selection, Account Owner, Department, Project, or Cost Center
 
 Line-level business inputs typically include:
 
@@ -455,11 +644,11 @@ Five is the normal target. Fifteen is the maximum guardrail, not the target.
 
 | Trigger | Auto-populate, recompute, or revalidate |
 | --- | --- |
-| Customer selected | Customer code, registered name snapshot, TIN snapshot, TIN branch code, VAT classification, payment terms, due date, currency, price level, credit data, withholding status, default ATC, billing/delivery address, default salesperson, dimensions, AR account, tax profile |
+| Customer selected | Customer code, registered name snapshot, TIN snapshot, TIN Branch, VAT classification, payment terms, due date, currency, price level, credit data, withholding status, default ATC, billing/delivery address, account owner when governed, default salesperson, dimensions, AR account, tax profile |
 | Invoice date changed | Due date, posting period, period-lock validation, tax-code effective-date validation, ATC effective-date validation |
 | Branch changed | Active branch validation, number-series readiness, posting-config readiness, period validation |
 | Item or service selected | Item code, description, UOM, price, VAT code, VAT rate, revenue account, inventory account, COGS account, warehouse, dimension defaults, tax treatment, item type |
-| Quantity, price, or discount changed | Net amount, VAT amount, gross amount, invoice total, expected CWT base/amount, expected net collectible, GL preview, tax preview, validations |
+| Quantity, price, discount, or VAT Price Basis changed | Net amount, VAT amount, gross amount, invoice total, expected CWT base/amount, Expected Net Collectible, GL preview, tax preview, validations |
 | VAT code changed by authorized user | VAT rate, VAT amount, tax preview, validation, override marker, audit event |
 | Account override by authorized user | GL preview, validation, override marker, required reason, audit event |
 | Customer changed after lines exist | Controlled refresh policy, preserving manual overrides and source-document values |
@@ -473,6 +662,8 @@ Five is the normal target. Fifteen is the maximum guardrail, not the target.
 | Customer name | Invoice snapshot / header context | Header link, Customer Information card, Related Party summary |
 | Customer tax snapshot | Invoice snapshot | Customer Information card only |
 | Current customer profile | Customer master / Related Party | Related Party tab only |
+| Account Owner | Employee Master / governed customer ownership source | Sales Context only |
+| Operational dimensions | Dimension Context / governed setup | Sales Context and line override indicators only |
 | Invoice total | Financial computation | Header metric and compact live summary |
 | Collected amount | Collection applications | Header metric and Financial tab |
 | Balance due | Collection applications | Header metric and Financial tab |
@@ -506,13 +697,13 @@ Typical snapshot fields include:
 - Trade or business name used
 - Customer code
 - TIN
-- TIN branch code
+- TIN Branch
 - VAT classification
 - Billing address used
 - Delivery address used, when applicable
 - Payment terms used
 - Currency used
-- Price basis used
+- VAT Price Basis used
 - Tax treatment used
 
 Relevant UI labels must use `Invoice Snapshot` where historical facts are being shown.
@@ -550,10 +741,9 @@ Keep these in the primary create/edit surface:
 - Currency as defaulted read-only unless multi-currency behavior requires selection
 - Payment Terms as defaulted with controlled override
 - Due Date as computed read-only
-- Customer Reference
 - External Reference
-- Price Basis, when applicable
-- Sales Context fields when configured
+- VAT Price Basis
+- Sales Context / Dimension Context fields when configured, including Account Owner as the preferred business ownership field
 - Invoice lines
 - Compact live financial summary
 - Optional terms, message, and internal notes as collapsed sections
@@ -604,6 +794,9 @@ Show fields only when relevant:
 | Cost Center | Cost-center dimension is configured or required |
 | Project | Project tracking is configured or required |
 | Business Unit | Business-unit dimension exists and applies |
+| Account Owner | Employee Master ownership is configured or inherited from Customer Master |
+| Campaign | CRM campaign dimension exists and applies |
+| Lead Source | CRM lead-source dimension exists and applies |
 | Foreign currency details | Currency is not PHP or FX is configured |
 | Account override | User has accounting override permission |
 | Advanced tax override | User has tax override permission |
@@ -626,25 +819,40 @@ The lookup must allow search by:
 - Contact
 - Address, where practical
 
+Enterprise lookup behavior:
+
+- Clicking inside the Customer field immediately opens the searchable customer list.
+- Typing filters the list in real time.
+- Arrow keys navigate results.
+- Enter selects the highlighted result.
+- Escape closes the list.
+- Clicking the dropdown icon opens the list.
+- A clear affordance must make the field obviously searchable.
+
 The lookup should show concise columns:
 
 - Customer Code
 - Customer Name
 - TIN
+- TIN Branch
 - VAT Classification
 - Status
 - Outstanding Balance
 
 After customer selection:
 
-1. Load customer defaults.
-2. Recalculate payment terms and due date.
-3. Load tax treatment.
-4. Load price level when governed.
-5. Load credit information.
-6. Load default dimensions.
-7. Revalidate the document.
-8. Recompute applicable line prices and taxes when appropriate.
+1. Refresh Customer Snapshot.
+2. Refresh TIN.
+3. Refresh TIN Branch.
+4. Refresh VAT Classification.
+5. Refresh Business Style.
+6. Load Default Terms when allowed.
+7. Load Customer tax profile.
+8. Load Expected Withholding profile.
+9. Load Account Owner when governed.
+10. Load Sales Context defaults when governed.
+11. Revalidate the document.
+12. Recompute applicable line prices and taxes when appropriate.
 
 ### Customer Change Policy
 
@@ -681,6 +889,28 @@ Do not silently replace:
 
 The UX must visibly identify refreshed and overridden fields where appropriate.
 
+### Sales Order Source Suggestion
+
+Standalone Sales Invoice encoding must always remain available.
+
+When the selected customer has open Sales Orders, the form should offer a compact optional source prompt:
+
+`This customer has open Sales Orders.`
+
+Show:
+
+- Sales Order Number
+- Date
+- Remaining Amount
+- Status
+
+Allow the user to:
+
+- Create empty invoice
+- Convert from Sales Order
+
+Never force document chaining. Source conversion is a convenience workflow, not a requirement for Sales Invoice creation.
+
 ## 19. Line Grid Standard
 
 The Lines tab is the primary operational surface and should occupy most available width. The line grid must feel like an enterprise accounting worksheet.
@@ -710,6 +940,31 @@ Required capabilities:
 - Row expansion for advanced details
 - CSV export in review mode
 - Clear validation at row and cell level
+
+Item lookup behavior:
+
+- The dropdown must render above surrounding containers and must not be clipped by cards, tabs, or grid overflow.
+- Use a maximum height with internal scrolling.
+- Show full item code.
+- Show full item description.
+- Show UOM when available.
+- Show available quantity only when future inventory availability is authoritative.
+- Typing filters quickly.
+- Arrow keys navigate results.
+- Enter selects.
+- Escape closes.
+
+Enterprise table design:
+
+- Use sticky headers and sticky totals for long invoices.
+- Use subtle alternating row shading where it improves scanning.
+- Preserve a clear hover state.
+- Use subtle row and column separators.
+- Keep row height consistent.
+- Right-align and tabular-align numeric values.
+- Use compact density without making rows feel cramped.
+- Support column resizing where table width or user role requires it.
+- Support saved views for recurring work patterns.
 
 Recommended default columns:
 
@@ -742,13 +997,19 @@ Optional or hidden-by-default columns:
 - COGS Account
 - Price Source
 - Tax Source
-- Posting Rule
-- Customer Reference
+- Account Source Explanation
+- External Reference
 - Line Remarks
 - Source Document
 - Source Line
-- Created By
-- Modified By
+
+Advanced troubleshooting details belong in expandable row detail, not normal grid columns:
+
+- Posting Rule
+- Created By Rule
+- Configuration Source
+- Rule Identifier
+- Implementation Metadata
 - Internal ID
 
 Saved views:
@@ -858,31 +1119,52 @@ All amounts must update as the user edits the invoice. Production server logic r
 
 Purpose: present complete computed financial and collection detail.
 
-Use one structured table:
+Use grouped financial sections instead of one long flat list. Each group may use the same columns: Financial Component, Basis or Explanation, and Amount.
 
-| Financial Component | Basis or Explanation | Amount |
-| --- | --- | --- |
-| Gross line amount | Sum of line quantity x unit price | Amount |
-| Line discounts | Line discount total | Amount |
-| Header discount | If supported | Amount |
-| Net sales | Net after discounts | Amount |
-| VATable sales | VATable base | Amount |
-| Zero-rated sales | Zero-rated base | Amount |
-| VAT-exempt sales | Exempt base | Amount |
-| Output VAT | VAT on taxable sales | Amount |
-| Other charges | If supported | Amount |
-| Invoice total | Gross invoice amount | Amount |
-| Expected CWT | Informational estimate when applicable | Amount |
-| Expected net collectible | Invoice total less expected CWT | Amount |
-| Amount collected | Authoritative collection records | Amount |
-| Payment applications | Applied receipts/payments | Amount |
-| Balance due | Computed from authoritative applications | Amount |
-| Rounding difference | If stored or authoritative | Amount |
-| Foreign exchange difference | If stored or authoritative | Amount |
-| Revenue recognized | If supported by governed recognition data | Amount |
-| Deferred revenue | If supported by governed recognition data | Amount |
-| COGS | If authoritative cost data exists | Amount |
-| Gross margin | If authoritative cost data exists | Amount |
+Recommended groups:
+
+### Revenue
+
+- Gross line amount
+- Line discounts
+- Header discount, if supported
+- Net sales
+- Revenue recognized, if supported by governed recognition data
+- Deferred revenue, if supported by governed recognition data
+- COGS, if authoritative cost data exists
+- Gross margin, if authoritative cost data exists
+
+### Taxes
+
+- VATable sales
+- Zero-rated sales
+- VAT-exempt sales
+- Output VAT
+- Other charges, if supported
+
+### Invoice Summary
+
+- Invoice total
+- Rounding difference, if stored or authoritative
+- Foreign exchange difference, if stored or authoritative
+
+### Collections
+
+- Amount collected
+- Payment applications
+
+Empty state:
+
+`No payment applications recorded.`
+
+### Expected Withholding
+
+- Expected CWT, when applicable
+- Expected Net Collectible
+
+### Balance
+
+- Balance due
 
 Only show values that are authoritative or clearly labeled previews. Do not fabricate COGS, margin, revenue-recognition, or FX values when the necessary source data does not exist.
 
@@ -890,7 +1172,7 @@ Only show values that are authoritative or clearly labeled previews. Do not fabr
 
 The GL Impact tab is the accounting truth view. Do not display GL information in scattered cards.
 
-Use one authoritative table with columns such as:
+Use one authoritative default table with business-readable columns:
 
 - GL Account
 - Account Name
@@ -898,13 +1180,9 @@ Use one authoritative table with columns such as:
 - Debit
 - Credit
 - Source
-- Posting Rule
-- Branch
-- Department
-- Cost Center
-- Project
-- Journal Entry
-- Status
+- Journal Status
+
+The Source column should use business descriptions such as `Revenue Account from Item`, `Default Accounts Receivable Account`, or `Tax Account from VAT Code`. It must not show configuration keys, table names, or internal rule identifiers.
 
 Top summary:
 
@@ -913,7 +1191,8 @@ Top summary:
 - Fiscal Period
 - Branch
 - Journal Entry
-- Balanced Status
+- Preview Balanced, when showing draft GL preview
+- Posted Balanced, when showing posted journal entry data
 
 Bottom summary:
 
@@ -926,21 +1205,27 @@ Required corrections:
 - Do not display raw UUIDs as Branch values.
 - Do not expose internal IDs in normal table columns.
 - Do not show vague implementation text such as `document or module posting rule` when a clear business explanation can be provided.
+- Do not show implementation values such as `company_accounting_config.ar_account_id` or `document_line_account` in the default accountant view.
 - Keep technical posting provenance inside expandable detail or System.
 - Posted GL must come from the authoritative journal entry.
 - Draft GL must be clearly labeled as a preview.
 - Client-only GL calculations must never become production truth.
 - Account and journal links must open canonical workspaces.
 
-Possible row detail:
+Move these to expandable row detail:
+
+- Posting Rule
+- Created By Rule
+- Configuration Source
+- Rule Identifier
+- Implementation Metadata
+
+Possible additional row detail:
 
 - Account determination source
-- Posting engine rule
 - Source line
 - Tax source
-- Configuration source
 - Internal IDs
-- Created-by-rule metadata
 
 Keep the primary table readable for accountants.
 
@@ -959,7 +1244,7 @@ Recommended columns:
 - Tax Treatment
 - Ledger Status
 - Return or Report
-- Source Rule
+- Tax Source
 
 Possible tax types:
 
@@ -1046,7 +1331,7 @@ Recommended checks:
 - All posting accounts determined
 - All required dimensions assigned
 - Inventory availability valid, when applicable
-- Document balanced
+- GL preview balanced
 - Credit limit check
 - Approval requirements satisfied
 - User permitted to perform action
@@ -1092,7 +1377,7 @@ The architecture must remain capable of separating them later without redesignin
 
 When no approval workflow exists, show:
 
-`No approval workflow is configured for this transaction.`
+`No approval workflow configured.`
 
 Do not display empty decorative tabs.
 
@@ -1134,6 +1419,10 @@ Possible events:
 - Restored
 
 Do not repeat audit information in the header or information cards. Audit records must be immutable where required.
+
+Empty state:
+
+`No audit events available.`
 
 ## 30. Related Documents
 
@@ -1185,6 +1474,10 @@ Rules:
 - A secondary visual flow may be used only as a supplemental view.
 - The table remains authoritative.
 
+Empty state:
+
+`No related documents found.`
+
 ## 31. Related Party
 
 The Related Party tab contains the full customer profile relevant to the transaction, but it must not recreate the same scattered and overwhelming problem inside one large tab.
@@ -1227,7 +1520,7 @@ Suggested contents:
 ### Tax And Registration
 
 - TIN
-- TIN branch code
+- TIN Branch
 - VAT classification
 - Withholding status
 - Default ATC
@@ -1304,7 +1597,7 @@ Do not pretend attachment or OCR functionality exists when storage integration h
 
 Empty state:
 
-`No attachments are linked to this invoice.`
+`No attachments linked.`
 
 ## 33. Activity
 
@@ -1390,11 +1683,15 @@ Rule:
 
 Do not create database fields simply to make the System tab look complete. Hide fields that are meaningless to users or expose implementation details without practical value.
 
+Do not repeat fields already shown in Document Information unless the System tab version provides additional technical value, such as source-of-truth tracing, integration diagnosis, number-series troubleshooting, or support evidence.
+
+Technical identifiers, RPC names, configuration keys, and internal rule identifiers belong only here or in controlled expandable diagnostic details. They must not appear in the normal primary workspace.
+
 ## 36. Create, Edit, Approved, Posted, Voided, And Reversed Behavior
 
 ### Create
 
-The user primarily interacts with Customer, Invoice Date when needed, Branch when needed, Reference, invoice lines, optional dimensions, optional terms or notes, and save or submit action.
+The user primarily interacts with Customer, Invoice Date when needed, Branch when needed, External Reference, VAT Price Basis, invoice lines, optional dimensions, optional terms or notes, and save or submit action.
 
 Everything else defaults, derives, or computes.
 
@@ -1471,6 +1768,7 @@ Use:
 - Thin neutral borders
 - White content surfaces
 - Very subtle company accent tint
+- Comfortable enterprise spacing
 - Compact uppercase table headers
 - Right-aligned monetary values
 - Tabular numbers
@@ -1478,7 +1776,69 @@ Use:
 - Sticky table headers
 - Subtle totals rows
 - Clear status chips
-- Color only for state, warnings, errors, success, and links
+- Sales-family light-blue transaction header and tab tint
+- Color otherwise appears only for state, warnings, errors, success, and links
+
+Typography hierarchy:
+
+- Section titles use 600-700 weight.
+- Field labels use 500 weight.
+- Field values use 400 weight.
+- Table headers use 600 weight.
+- Numeric values use tabular numbers.
+- Totals use 600-700 weight.
+
+Semantic color roles:
+
+- Primary Navigation: dark navy
+- Brand Accent: burgundy
+- Success: green
+- Warning: orange
+- Error or Danger: red
+- Neutral: gray
+
+Rules:
+
+- Do not use multiple saturated colors simultaneously.
+- Navigation color must not represent business status.
+- Status must communicate state semantically and must not rely on color alone.
+
+Design system alignment:
+
+All future transaction forms should inherit the same transaction design tokens:
+
+- Primary Color
+- Brand Accent
+- Success
+- Warning
+- Danger
+- Neutral Scale
+- Border Color
+- Surface Color
+- Table Header
+- Hover State
+- Selected State
+- Focus State
+
+Sales Invoice remains the pilot implementation for all PXL transaction forms.
+
+Empty states:
+
+- Use concise enterprise messages.
+- Avoid long instructional paragraphs inside empty cards or panels.
+- Example: `No operational dimensions assigned.`
+- Example: `No approval workflow configured.`
+- Example: `No attachments linked.`
+- Example: `No audit events available.`
+- Example: `No related documents found.`
+- Example: `No payment applications recorded.`
+
+Readonly business fields:
+
+- Do not style readonly business fields as disabled controls.
+- Preserve contrast and readability.
+- Use a dedicated readonly style with subtle surface treatment, clear labels, and no active input affordance.
+- Disabled styling is reserved for controls that cannot currently be used.
 
 Avoid:
 
@@ -1555,6 +1915,8 @@ Suggested targets under normal conditions:
 - Retry behavior does not create duplicate records.
 - Tab changes preserve current form state.
 - Customer selection does not reload the full page.
+- Customer, item, warehouse, department, cost center, salesperson, VAT basis, GL preview, and tax preview changes preserve unrelated unsaved draft fields.
+- Draft initialization follows `PXL_TRANSACTION_DRAFT_STATE_STANDARD.md` and runs only for new document, first draft load, explicit record switch, or explicit reset/discard.
 
 Treat these as product UX targets, not guaranteed infrastructure service-level agreements unless formally adopted elsewhere.
 
@@ -1566,6 +1928,7 @@ Use and extend existing canonical PXL component names and responsibilities where
 
 - `DocumentLayout`
 - `PrimaryInformationPanel`
+- `DimensionContext`, when available or introduced through the shared transaction architecture
 - `LineGrid`
 - `LineDetailPanel`
 - `FinancialSummaryPanel`
@@ -1575,6 +1938,8 @@ Use and extend existing canonical PXL component names and responsibilities where
 - `RelatedDocumentsTab`
 - `WorkflowStrip`
 - Shared audit and ERP table primitives
+
+Sales Context is the Sales Invoice use of the standardized `DimensionContext` responsibility. Future transaction forms should reuse the same component contract and vary only the configured dimensions.
 
 Do not casually replace these with parallel names such as:
 
@@ -1600,10 +1965,12 @@ Before implementation, identify and confirm:
 - Customer lookup fields for trade name, contact, and address search.
 - Required Invoice Snapshot fields not yet preserved by schema.
 - Current Customer Master fields and their authoritative source.
+- Employee Master source for Account Owner and whether Customer Master can govern default ownership inheritance.
+- Default VAT Price Basis source and allowed override policy for each transaction family.
 - Authoritative customer credit calculation source, including available credit and outstanding AR.
 - Authoritative collection status source for Open, Partially Paid, Paid, and Overpaid.
 - Customer-specific pricing, price level, and price-source rules if not already governed.
-- Salesperson, project, department, cost center, location, and business unit fields on SI header or lines where intended.
+- Salesperson, account owner, project, department, cost center, location, business unit, campaign, and lead-source dimensions on SI header or lines where intended.
 - Warehouse and inventory allocation fields for inventory Sales Invoice lines.
 - Account-determination hierarchy for sales lines, including override permissions and reason capture.
 - Tax-code and ATC effective-date source for document-date validation in the UI.
@@ -1619,6 +1986,25 @@ Before implementation, identify and confirm:
 - Existing System tab metadata that provides real operational value.
 
 Do not invent missing master data. If a source does not exist, show `Not configured`, `Not linked`, `Not recorded`, or another truthful unavailable state.
+
+### 42.1 Completeness Audit Source Maps
+
+The Sales Invoice workspace must stay synchronized with these source maps before it can be treated as a validated gold-standard transaction:
+
+- `PXL_SALES_INVOICE_FUNCTIONAL_SPECIFICATION.md`
+- `PXL_SALES_INVOICE_TRANSACTION_DEFINITION.md`
+- `PXL_SALES_INVOICE_FIELD_MAPPING.md`
+- `PXL_SALES_INVOICE_DIMENSION_MAPPING.md`
+- `PXL_SALES_INVOICE_POSTING_SPECIFICATION.md`
+- `PXL_SALES_INVOICE_GL_MAPPING.md`
+- `PXL_SALES_INVOICE_TAX_MAPPING.md`
+
+Current audit result:
+
+- Branch, Department, Cost Center, Salesperson, Account Owner, and default/inventory-line Warehouse are source-backed where their governed master data is configured.
+- VAT Price Basis is persisted and supports VAT Exclusive and VAT Inclusive server-side recomputation.
+- Inventory Cost, COGS, Gross Profit, and Gross Margin are authoritative only when backed by posted inventory-item valuation and COGS/Inventory journal evidence.
+- Project, Location, Functional Entity, Business Unit, Campaign, and Lead Source must not appear as normal Sales Invoice business facts until governed master data and documented posting/reporting rules exist.
 
 ## 43. Acceptance Checklist
 
@@ -1653,7 +2039,17 @@ The revised Sales Invoice UX standard is successful when:
 27. Unsaved changes are protected.
 28. Failed saves preserve user-entered work.
 29. Posted documents remain read-only except for governed downstream actions.
-30. The same architecture can be reused across future transaction families.
+30. Technical identifiers, configuration keys, RPC names, and implementation metadata do not appear in the normal primary workspace.
+31. GL Impact defaults to business-readable columns, with technical provenance moved to row detail or System.
+32. VAT Price Basis is treated as a standard document field and uses VAT Exclusive or VAT Inclusive terminology.
+33. Financial tab content is grouped into Revenue, Taxes, Invoice Summary, Collections, Expected Withholding, and Balance where applicable.
+34. Readonly business fields remain readable and do not look like disabled controls.
+35. Sales Context contains only operational ownership and reporting dimensions, not duplicated customer, tax, payment, branch, accounting, or audit information.
+36. Sales Context hides unconfigured dimensions, shows no placeholder rows, and uses a concise empty state.
+37. Account Owner is treated as business ownership from Employee Master or a governed customer ownership source.
+38. Semantic status colors, typography hierarchy, and transaction design tokens are consistent.
+39. The same architecture, including Dimension Context, can be reused across future transaction families.
+40. Sales Invoice uses the system-wide Philippine TIN standard: `XXX-XXX-XXX-XXXXX`.
 
 ## 44. Rollout Rules For Future Transaction Forms
 
@@ -1663,6 +2059,7 @@ Rules:
 
 - Reuse the same compact document header model.
 - Reuse the same three-card information band.
+- Reuse the same Dimension Context component; only the available dimensions should change by transaction type.
 - Keep actions in the header toolbar only.
 - Keep tabs one-line and responsibility-based.
 - Keep line or detail records table-first.
@@ -1678,6 +2075,8 @@ Rules:
 - Do not create permanent sidebars that duplicate content.
 - Do not ask users to re-enter master data.
 - Do not hide incomplete accounting or tax rules behind UI.
+- Inherit the shared transaction design tokens and semantic color roles.
+- Use concise enterprise empty states instead of long instructional paragraphs.
 - Show truthful unavailable states for unsupported or unconfigured features.
 - Reuse and extend existing PXL shared transaction components before proposing new ones.
 

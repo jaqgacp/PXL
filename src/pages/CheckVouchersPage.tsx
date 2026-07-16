@@ -6,6 +6,8 @@ import { GLImpactPanel } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { ReportTraceLink } from '@/components/AccountingTraceLink'
+import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { formatPhTinInput, isValidPhTin, normalizePhTin, PH_TIN_PLACEHOLDER } from '@/lib/philippines'
 
 type BankRef = { id: string; bank_name: string; account_number: string }
 type COARef = { id: string; account_code: string; account_name: string }
@@ -84,7 +86,7 @@ export default function CheckVouchersPage() {
 
   const openNew = () => { setForm({ company_id: companyId, branch_id: branchId || null, voucher_date: today(), check_date: today(), status: 'draft', total_ewt_amount: 0 }); setLines([newLine()]); setBaseTouched(false); setError(''); setMode('edit') }
   const openRow = async (r: CV) => {
-    setForm({ ...r }); setBaseTouched(r.ewt_tax_base != null); setError('')
+    setForm({ ...r, payee_tin: r.payee_tin ? normalizePhTin(r.payee_tin) : null }); setBaseTouched(r.ewt_tax_base != null); setError('')
     const { data } = await supabase.from('check_voucher_lines').select('*').eq('cv_id', r.id).order('line_number')
     const mapped: CVLine[] = (data || []).map((l) => {
       const row = l as { id: string; expense_account_id: string; description: string; amount: number }
@@ -109,7 +111,7 @@ export default function CheckVouchersPage() {
   }
   const pickSupplier = (id: string) => {
     const s = suppliers.find(x => x.id === id)
-    setForm(f => ({ ...f, supplier_id: id || null, ...(s ? { payee: s.registered_name, payee_tin: s.tin } : {}) }))
+    setForm(f => ({ ...f, supplier_id: id || null, ...(s ? { payee: s.registered_name, payee_tin: normalizePhTin(s.tin) } : {}) }))
   }
 
   const requiredConfig = useMemo<ConfigField[]>(() => [], [])
@@ -131,6 +133,7 @@ export default function CheckVouchersPage() {
     if (netCheck <= 0) { setError('Net check amount must be greater than zero'); return }
     if (ewt > 0 && !form.atc_code_id) { setError('An ATC code is required when EWT is withheld'); return }
     if (ewt > 0 && !form.supplier_id) { setError('A supplier is required when EWT is withheld (Form 2307 traceability)'); return }
+    if (form.payee_tin && !isValidPhTin(form.payee_tin)) { setError(`Payee TIN must use ${PH_TIN_PLACEHOLDER}`); return }
     if (varianceNeeded && !form.ewt_variance_reason) { setError(`EWT ${fmt(ewt)} does not match the ATC rate on base ${fmt(ewtBase ?? 0)} (expected ${fmt(expectedEwt ?? 0)}). Select a variance reason.`); return }
     setSaving(true); setError('')
     try {
@@ -139,7 +142,7 @@ export default function CheckVouchersPage() {
         company_id: companyId, branch_id: form.branch_id || branchId || null,
         voucher_date: form.voucher_date || today(), bank_account_id: form.bank_account_id,
         check_number: form.check_number, check_date: form.check_date || today(),
-        payee: form.payee, payee_tin: form.payee_tin || null,
+        payee: form.payee, payee_tin: form.payee_tin ? normalizePhTin(form.payee_tin) : null,
         supplier_id: form.supplier_id || null,
         total_gross_amount: totalGross, total_ewt_amount: ewt,
         atc_code_id: form.atc_code_id || null, ewt_rate: form.ewt_rate ?? null,
@@ -263,7 +266,7 @@ export default function CheckVouchersPage() {
   const ro = mode === 'view'
   return (
     <div className="flex flex-col h-full">
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-2">
+      <div className={transactionHeaderClass('banking')}>
         <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
         <span className="text-gray-300">|</span>
         <span className="text-sm font-semibold text-gray-700">{form?.cv_number || 'New Check Voucher'}</span>
@@ -285,7 +288,7 @@ export default function CheckVouchersPage() {
           <Field label="Supplier (required if EWT)"><select disabled={ro} className={inputCls} value={form?.supplier_id || ''} onChange={e => pickSupplier(e.target.value)}>
             <option value="">—</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.supplier_code} — {s.registered_name}</option>)}</select></Field>
           <Field label="Payee *"><input disabled={ro} className={inputCls} value={form?.payee || ''} onChange={e => setForm(f => ({ ...f, payee: e.target.value }))} /></Field>
-          <Field label="Payee TIN"><input disabled={ro} className={inputCls} value={form?.payee_tin || ''} onChange={e => setForm(f => ({ ...f, payee_tin: e.target.value }))} /></Field>
+          <Field label="Payee TIN"><input disabled={ro} className={inputCls} value={form?.payee_tin || ''} onChange={e => setForm(f => ({ ...f, payee_tin: formatPhTinInput(e.target.value) }))} placeholder={PH_TIN_PLACEHOLDER} /></Field>
           <Field label="ATC Code (if EWT)"><select disabled={ro} className={inputCls} value={form?.atc_code_id || ''} onChange={e => pickAtc(e.target.value)}>
             <option value="">—</option>{atcCodes.map(a => <option key={a.id} value={a.id}>{a.code} — {a.description}</option>)}</select></Field>
           <Field label="EWT Rate (%)"><input type="number" disabled className={inputCls} value={form?.ewt_rate ?? ''} readOnly /></Field>
