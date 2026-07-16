@@ -26,6 +26,10 @@ BEGIN
     RETURN '00000';
   END IF;
 
+  IF length(v_digits) > 5 AND v_digits ~ '^0+$' THEN
+    RETURN '00000';
+  END IF;
+
   IF length(v_digits) > 5 THEN
     RAISE EXCEPTION 'TIN Branch must be exactly 5 digits after normalization';
   END IF;
@@ -57,6 +61,9 @@ BEGIN
   ELSIF length(v_digits) > 9 AND length(v_digits) < 14 THEN
     v_taxpayer := substr(v_digits, 1, 9);
     v_branch := lpad(substr(v_digits, 10), 5, '0');
+  ELSIF length(v_digits) > 14 AND substr(v_digits, 10) ~ '^0+$' THEN
+    v_taxpayer := substr(v_digits, 1, 9);
+    v_branch := '00000';
   ELSE
     RAISE EXCEPTION 'Philippine TIN must be 9 taxpayer digits plus 5 branch digits';
   END IF;
