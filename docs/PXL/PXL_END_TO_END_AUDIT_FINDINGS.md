@@ -93,6 +93,14 @@ Status values: `Open` (not started), `In Progress` (scoped fixes landed, work re
 | PXL-AUD-051 | Medium | Retested Passed | Closed 2026-07-12: JE/FA/SDM/PRT added to the registry, DebitMemosPage reads DM-S, and all eight branch-less numbering callers now pass the transaction branch; test 030 guards registry coverage and a real FA/JE numbering path. |
 | PXL-AUD-052 | Medium | Retested Passed | Fixed 2026-07-10: Cash Purchase item lookup queried non-existent columns (`units_of_measure.uom_name`, `items.purchase_account_id`), so the item picker always loaded empty; select realigned to `uom_code` and aliased `purchase_expense_account_id`. |
 | PXL-AUD-053 | High | In Progress | Sales Invoice source-backed completeness and draft-state preservation slices implemented; keep open for Project/Location/Functional Entity master decisions plus full view-state/report/API/export validation before marking Sales Invoice `VALIDATED` or `APPROVED_REFERENCE`. |
+| PXL-AUD-054 | Critical | Retested Passed | Stock transfer posting now enforces source-warehouse availability before mutating stock; canonical demo regression test covers valid transfer and blocked over-transfer. |
+| PXL-AUD-055 | Critical | Open | Remove client-exposed service-role credentials from Vite environment, rotate the exposed key, and add a build/static check that forbids `VITE_*SERVICE*ROLE*` secrets. |
+| PXL-AUD-056 | High | Open | Resolve hosted Supabase environment safety/deployment blockers before any migration push: prove non-production, provide DB password or db-url, and reconcile held-out out-of-order migrations. |
+| PXL-AUD-057 | High | Open | Make canonical seeded transactions visible and traceable in the application pages; browser audit shows many populated transaction/report tables are missing from their routes. |
+| PXL-AUD-058 | Medium | Retested Passed | Local canonical UI login now works after auth seed fields and Vite dev CSP were corrected; keep the browser audit script as a regression probe. |
+| PXL-AUD-059 | High | Open | Close or explicitly defer unexercised application-table coverage; 79 of 148 public tables are empty after the canonical seed, including several active workflow/compliance modules. |
+| PXL-AUD-060 | Medium | Open | Associate login labels with their inputs and review form accessibility patterns; the login screen required CSS selectors instead of label-based automation. |
+| PXL-AUD-061 | High | Open | Make the full pgTAP regression suite deterministic against the documented reset state or clearly split canonical-seed tests from fresh-schema tests. |
 
 ## Production Readiness Gate
 
@@ -105,7 +113,7 @@ PXL is production-ready when all of the following hold. Re-check this gate at th
 5. Hosted Supabase is in sync (`supabase migration list --linked` shows no pending migrations).
 6. Production Readiness Scores below have been re-assessed after the last Critical fix.
 
-Standing (2026-07-15, Sales Invoice completeness audit): 72 Retested Passed / 1 In Progress / 0 Open (73 findings). PXL-AUD-053 records that Sales Invoice is visually and structurally mature and now has a tested source-backed slice for VAT Price Basis, supported dimensions, and inventory/COGS, but it is not yet fully validated as the gold-standard transaction because Project/Location/Functional Entity masters, broader view-state fixtures, reporting/API/export mappings, and source-chain validation remain incomplete. DEC-017 still governs sequencing: the active milestone is **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READINESS.md`). `PXL_ACCOUNTING_RULES_MATRIX.md` is the governed posting-behavior reference for future fixes and rollout.
+Standing (2026-07-16, Phase 2 canonical demo product audit): 74 Retested Passed / 1 In Progress / 6 Open (81 findings). PXL-AUD-055 is a Critical security blocker because a service-role credential is exposed through a Vite client environment variable. PXL-AUD-056 blocks hosted migration deployment until the target is proven non-production and migration drift is reconciled. PXL-AUD-057 and PXL-AUD-059 show that the canonical dataset exists in database truth but is not yet a complete product-visible regression environment. PXL-AUD-061 records that the full pgTAP suite is not yet deterministic against the canonical seeded state. PXL-AUD-053 remains the Sales Invoice gold-standard residual. DEC-017 still governs sequencing: the active milestone is **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READINESS.md`). `PXL_ACCOUNTING_RULES_MATRIX.md` is the governed posting-behavior reference for future fixes and rollout.
 
 ### New Finding Detail - PXL-AUD-053
 
@@ -123,6 +131,171 @@ Standing (2026-07-15, Sales Invoice completeness audit): 72 Retested Passed / 1 
 | Remaining Work | Add governed Project/Location/Functional Entity masters before exposing those dimensions; enrich user display names; validate the complete view-state matrix, source-chain SO/DR relationships, imports/exports/API/PDF/report mappings, FIFO/specific-identification fixtures, and management-reporting outputs. |
 | Test Performed | `supabase db reset --local --no-seed` with documented held-out drafts excluded and restored; `supabase test db --local supabase/tests/054_sales_invoice_completeness_test.sql` passed 22/22; `npm run test:sales-invoice-draft-state`; `npm run gen:types`; `npm run lint`; `npm run build`. |
 | Fix Session Size | Large |
+
+### New Finding Detail - PXL-AUD-054
+
+| Field | Value |
+| --- | --- |
+| Status | Retested Passed |
+| Severity | Critical |
+| Area | Inventory control / warehouse transfer posting / negative inventory prevention |
+| Issue | Stock transfer posting consumed source-warehouse quantity before validating warehouse-level availability. A transfer greater than source stock could drive `stock_balances.qty_on_hand` below zero even when the canonical demo and PXL control rules require negative inventory to be disabled. |
+| Expected Behavior | Every stock transfer must lock and validate the source warehouse/item balance before mutating stock, cost, inventory-movement rows, or journal evidence. Item-level stock elsewhere must not authorize stock from another warehouse. |
+| Current Behavior | `fn_post_stock_transfer_source_locked_impl` now calls `fn_ensure_stock_balance`, locks the source `stock_balances` row `FOR UPDATE`, compares `qty_on_hand` against `qty_transferred`, and raises `Insufficient stock for transfer item ...` before any stock/cost/JE mutation when the source warehouse is short. |
+| Root Cause | The transfer poster ensured balance rows existed and then decremented the source balance, but it did not perform the same source availability check that Sales Invoice and negative adjustment posting already perform. |
+| Files Affected | `supabase/migrations/20260716000001_stock_transfer_availability_guard.sql`; `supabase/tests/055_canonical_demo_dataset_test.sql`; `supabase/seeds/canonical_demo_seed.sql`; `docs/PXL/PXL_CANONICAL_DEMO_DATASET.md`; `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`; `docs/PXL/PXL_TRANSACTION_MATRIX.md`. |
+| Fix Applied This Session | Added a warehouse-level source-stock guard to the stock transfer posting implementation. The same migration adds a narrow `pxl.allow_demo_reset = 'on'` bypass to existing immutability guards so the canonical development reset can delete posted demo rows without weakening normal production behavior or disabling triggers. |
+| Remaining Work | Broader inventory edge cases remain to be expanded beyond the canonical regression: inactive warehouse/item, downstream dependency voids, physical-count flows, and inventory GL valuation reports. |
+| Test Performed | Rollback dry-runs proved the seed and reset are executable; after the local canonical reset+seed, `supabase test db --local supabase/tests/055_canonical_demo_dataset_test.sql` passed 34/34 assertions, including valid transfer, blocked over-transfer, approval-time SI oversell blocking, VAT price basis, CWT timing, stock balances, and journal balance. The same file skips cleanly when the canonical seed is absent. |
+| Fix Session Size | Medium |
+
+### New Finding Detail - PXL-AUD-055
+
+| Field | Value |
+| --- | --- |
+| Status | Open |
+| Severity | Critical |
+| Area | Security / client secret exposure / environment configuration |
+| Issue | The local app environment includes a service-role credential in a `VITE_` variable. Vite exposes all `VITE_` variables to browser code, so a service-role credential is visible to any user who can load the dev bundle. |
+| Reproduction / Evidence | With the local app running, the served `src/lib/supabase.ts` module includes `import.meta.env` with `VITE_SUPABASE_SERVICE_ROLE_KEY`. The application code currently uses only URL and anon key, but the credential is still bundled because of the prefix. The value is intentionally not copied into this document. |
+| Expected Behavior | Service-role credentials must never be present in browser-visible environment variables, source maps, static assets, logs, or client bundles. Only anon/public keys should be exposed to the frontend. |
+| Actual Behavior | A service-role credential is available in the browser-visible Vite environment. |
+| Business Impact | Any demo, preview, or production-like deployment with this variable can bypass normal product permissions if the key is valid. |
+| Accounting Impact | A leaked service role can mutate or delete accounting records outside governed RPCs, invalidating audit evidence. |
+| Inventory Impact | A leaked service role can bypass inventory availability, movement, and immutability controls. |
+| Tax Impact | A leaked service role can alter tax detail, returns, and compliance evidence. |
+| Security Impact | Critical RLS bypass and privilege-escalation risk. Rotate the exposed service-role key after removal. |
+| Likely Root Cause | Frontend and server Supabase credentials are stored together and the service-role variable uses the Vite public-prefix convention. |
+| Files / Surfaces | `.env.local` local configuration; Vite client bundle; `src/lib/supabase.ts` by environment injection. |
+| Recommended Implementation | Remove all `VITE_*SERVICE*ROLE*` variables; move server-only secrets to non-Vite names loaded only in server/CI contexts; rotate the exposed service-role key; add a CI/static check that fails on `VITE_SUPABASE_SERVICE_ROLE_KEY`, `service_role`, or JWTs with `role=service_role` in frontend bundles and env files. |
+| Regression Tests | Add a build/static test that scans `dist`, served dev modules, and committed env examples for service-role tokens or forbidden env names. |
+| Retest Plan | Run the app and verify `curl http://127.0.0.1:5173/src/lib/supabase.ts` no longer exposes a service-role variable; build and scan `dist`; verify normal login/data access still uses anon auth. |
+
+### New Finding Detail - PXL-AUD-056
+
+| Field | Value |
+| --- | --- |
+| Status | Open |
+| Severity | High |
+| Area | Deployment / Supabase migration governance / environment safety |
+| Issue | Hosted migration push could not be completed safely or technically. The supplied command uses an unsupported CLI flag, the linked database requires DB password or db-url for migration inspection/push, and the dry run reports held-out local migrations that would be inserted before the remote database's latest migration. The hosted project is named `PXL`, but no metadata proved it is non-production. |
+| Reproduction / Evidence | `supabase projects list` identifies project ref `bskjkogijpbhukjkagfj`, host `db.bskjkogijpbhukjkagfj.supabase.co`, status healthy, name `PXL`. `supabase db push --project-ref bskjkogijpbhukjkagfj` fails with `Unrecognized flag: --project-ref`. `supabase migration list --linked` fails without `SUPABASE_DB_PASSWORD`. `supabase db push --dry-run --linked` reports local migrations `20260710000004_atc_document_date_versioning.sql` and `20260710000005_cas_numbering_void_dat_controls.sql` would need `--include-all` before later remote history. |
+| Expected Behavior | Migration push should target a proven non-production environment, use supported Supabase CLI flags, show a clean migration plan, and apply only validated migrations in order. |
+| Actual Behavior | No hosted migration was applied. Safety confirmation is incomplete, and migration history is blocked by older held-out files. |
+| Business Impact | The canonical regression dataset and latest inventory guard cannot be trusted as deployed until hosted migration state is reconciled. |
+| Accounting Impact | Out-of-order or held-out migrations can leave accounting, CAS numbering, ATC, and posting functions inconsistent between local QA and hosted app. |
+| Inventory Impact | The stock-transfer availability guard remains local unless pushed through a clean migration path. |
+| Tax Impact | Held-out ATC/CAS migrations may affect tax-code effective dating and statutory export controls. |
+| Security Impact | Pushing to an unproven production environment would violate the reset/migration safety gate. |
+| Likely Root Cause | CLI command shape was incorrect for the installed Supabase CLI; linked DB password was not supplied; previously held-out migrations remain in the local migrations directory before the remote head. |
+| Files / Surfaces | Supabase project `bskjkogijpbhukjkagfj`; `supabase/.temp/project-ref`; `supabase/migrations/20260710000004_atc_document_date_versioning.sql`; `supabase/migrations/20260710000005_cas_numbering_void_dat_controls.sql`; `supabase/migrations/20260716000001_stock_transfer_availability_guard.sql`. |
+| Recommended Implementation | Add an explicit environment classification for the hosted project; provide `SUPABASE_DB_PASSWORD` or a non-production `--db-url`; decide whether the held-out `20260710000004`/`00005` migrations are valid, superseded, or should be removed from the push path; run `supabase migration list --linked`; use `supabase db push --linked` only after a clean dry run. Do not use `--include-all` until the held-out migrations pass fresh replay and focused tests. |
+| Regression Tests | Add a deployment checklist that captures project ref, host, DB name, branch, user, migration dry run, and non-production proof before any hosted push. |
+| Retest Plan | Re-run migration list and dry-run with DB credentials against a confirmed non-production project, then apply and verify remote migration history includes the intended stock-transfer guard only after all predecessors are reconciled. |
+
+### New Finding Detail - PXL-AUD-057
+
+| Field | Value |
+| --- | --- |
+| Status | Open |
+| Severity | High |
+| Area | Website verification / canonical dataset visibility / route-level product readiness |
+| Issue | The canonical dataset is visible in selectors and core setup/master data pages, but many seeded transaction and report references are not visible on their application routes even though database rows exist. The app therefore is not yet a permanent product-visible regression environment. |
+| Reproduction / Evidence | `scripts/audit_canonical_ui.mjs` logged in as `demo.admin@pxl.local`, selected `ABC Trading Corporation`, and probed setup, master-data, sales, purchasing, inventory, banking, accounting, compliance, and reports. Visible examples: company selector, branch selector, customers, suppliers, items, warehouses, sales order `TEST-SO-OPEN-PARTIAL`, payment voucher `TEST-PV-PARTIAL`, journal entry opening balance, GL accounts. Missing examples: sales invoices `TEST-SI-STANDALONE`/`TEST-SI-VAT-INCLUSIVE`, receipt `TEST-OR-SI-STANDALONE`, purchase order `TEST-PO-PARTIAL-RECEIPT`, vendor bill `TEST-VB-PARTIAL-PAYMENT`, stock balances/movements/transfers/adjustments, bank accounts, trial balance rows, AR/AP aging rows, EWT summary. Partial examples: departments show `Finance` but not `CC-FIN`; number series show `SI`/`OR` but not `VB`/`PV`; tax review pages show report headings but not seeded source documents. |
+| Expected Behavior | Every canonical seed reference intended for implementation QA should be findable from the relevant screen and drillable to source, journal, tax detail, inventory movement, subledger, payment, and report evidence. |
+| Actual Behavior | Database truth and UI visibility diverge across several modules. Some pages show only route chrome or headings, and some pages filter out seeded rows by branch, period, status, query shape, or missing UI binding. |
+| Business Impact | Implementation consultants cannot use the app alone to demonstrate or validate seeded workflows. |
+| Accounting Impact | Posted SIs, VBs, receipts, aging, and TB evidence cannot be consistently reviewed from UI. |
+| Inventory Impact | Stock-balance and inventory movement evidence is not visible from inventory screens. |
+| Tax Impact | VAT/EWT source-document traceability is incomplete in UI review pages. |
+| Security Impact | Not directly a security defect, but it weakens user-facing evidence of RLS/company isolation and permission behavior. |
+| Likely Root Cause | Route queries and UI tables have not all been aligned with the canonical business-reference fields, selected branch/period context, source-document trace APIs, or the canonical seed's posted statuses. |
+| Files / Surfaces | `scripts/audit_canonical_ui.mjs`; transaction pages for SI/OR/PO/VB/inventory/banking/aging/compliance; report pages; source-trace routes. |
+| Recommended Implementation | For each missing route, compare the page query/filter against the seeded rows and expected business reference; add route-level empty-state diagnostics that say whether rows are hidden by company, branch, period, status, or permissions; surface canonical business references and drillbacks in list columns; add Playwright assertions for the canonical dataset. |
+| Regression Tests | Convert `scripts/audit_canonical_ui.mjs` into a CI-capable Playwright smoke test with expected visible tokens per module once each route is fixed. |
+| Retest Plan | Run the local canonical reset/seed, start the app against local Supabase, run the audit script, and require every intended canonical token to be visible or explicitly classified as a documented feature gap. |
+
+### New Finding Detail - PXL-AUD-058
+
+| Field | Value |
+| --- | --- |
+| Status | Retested Passed |
+| Severity | Medium |
+| Area | Local canonical UI authentication / seed compatibility / development CSP |
+| Issue | The local canonical app initially could not log in with seeded demo users: browser login showed `Failed to fetch`, and direct Auth password grant initially returned a GoTrue schema scan error. |
+| Expected Behavior | Seeded demo users should authenticate through Supabase Auth and the browser app should be able to call the configured local Supabase URL during development. |
+| Current Behavior | Fixed locally. `auth.users` seed now hashes the shared demo password, creates matching `auth.identities`, and normalizes GoTrue token text fields to empty strings instead of null. Vite dev/preview CSP now allows the local Supabase endpoints used by canonical regression. Direct password grant returns 200 and the browser audit logs in successfully. |
+| Root Cause | The original seed inserted database-visible users without Auth identity/password material and left nullable token fields that GoTrue scans into strings. Separately, Vite's development CSP allowed hosted Supabase domains but blocked `http://127.0.0.1:54321`, causing browser fetch to fail before Auth was reached. |
+| Files Affected | `supabase/seeds/canonical_demo_seed.sql`; `vite.config.ts`; `scripts/audit_canonical_ui.mjs`. |
+| Business Impact | Without this fix, the canonical dataset could be verified only through SQL, not the application. |
+| Accounting / Inventory / Tax Impact | UI-based accounting, inventory, tax, and reconciliation walkthroughs were blocked. |
+| Security Impact | Development CSP expanded only for local Supabase endpoints; production `_headers` was not changed. Service-role exposure is tracked separately in PXL-AUD-055. |
+| Test Performed | Local reset+seed completed; direct Auth password grant for `demo.admin@pxl.local` returned HTTP 200; browser-context fetch to Auth returned HTTP 200; `scripts/audit_canonical_ui.mjs` completed login and route probing. |
+| Remaining Work | Consider creating demo users through Supabase Admin APIs in future seed tooling rather than direct `auth.*` inserts, if the project standardizes on API-backed Auth provisioning. |
+
+### New Finding Detail - PXL-AUD-059
+
+| Field | Value |
+| --- | --- |
+| Status | Open |
+| Severity | High |
+| Area | Table coverage / feature completeness / regression-scope clarity |
+| Issue | After the canonical seed, 69 of 148 public tables are populated and 79 remain empty. Several empty tables represent active or user-visible workflows, not merely future placeholders. |
+| Reproduction / Evidence | A dynamic coverage query over every `public` base table found 148 tables, 5,080 public rows, 124 company-scoped tables, 69 populated tables, and 79 empty tables. Empty active workflow examples include `approval_instances`, `delivery_receipts`, `delivery_receipt_lines`, `vendor_credits`, `vendor_credit_lines`, `vendor_credit_applications`, `purchase_returns`, `purchase_return_lines`, `physical_count_sheets`, `physical_count_sheet_lines`, `bank_reconciliations`, `bank_adjustments`, `check_vouchers`, `cash_purchases`, `petty_cash_vouchers`, fixed-asset lifecycle tables, compliance working-paper/return tables, `warehouse_item_settings`, and `withholding_remittances`. |
+| Expected Behavior | Every active application table should be classified as populated by canonical regression, automatically populated by a supported workflow, intentionally empty for a documented future feature, deprecated/unused, or requiring manual implementation testing. |
+| Actual Behavior | The table coverage picture is not yet part of the canonical dataset documentation, and multiple active modules remain unexercised by seed or UI audit. |
+| Business Impact | Product readiness can be overstated because empty tables may correspond to missing implementation paths rather than intentionally deferred modules. |
+| Accounting Impact | Empty return/reconciliation/adjustment/asset/payment tables mean accounting lifecycle breadth is incomplete. |
+| Inventory Impact | Physical count, returns, warehouse settings, and some movement families are not seeded or tested end-to-end. |
+| Tax Impact | VAT/EWT/PT/FWT return and working-paper tables remain empty; compliance export coverage cannot be assumed from core tax-detail tests alone. |
+| Security Impact | RLS/permission policies on empty active tables are not exercised by canonical regression. |
+| Likely Root Cause | The canonical seed focused on core company setup, AR/AP, inventory opening/transfer/adjustment, VAT/CWT/EWT, and reconciliation. Advanced modules still require workflow fixtures or explicit deferral decisions. |
+| Files / Surfaces | Public schema tables; canonical seed; `docs/PXL/PXL_CANONICAL_DEMO_DATASET.md`; Phase 2 coverage report. |
+| Recommended Implementation | Add a maintained table coverage matrix with purpose, owner module, populated status, expected population mechanism, UI route, RLS test status, and next action; then either seed meaningful workflow rows or mark unsupported/future tables as intentionally deferred. |
+| Regression Tests | Add a table-coverage test/report that fails only on unexpected active-table emptiness, not on intentionally deferred future modules. |
+| Retest Plan | Re-run the coverage query after each canonical seed expansion and reconcile empty active tables against docs and route-level Playwright tests. |
+
+### New Finding Detail - PXL-AUD-060
+
+| Field | Value |
+| --- | --- |
+| Status | Open |
+| Severity | Medium |
+| Area | UI accessibility / login form / automation reliability |
+| Issue | Login labels are visually present but not programmatically associated with the email/password inputs. Label-based Playwright automation and assistive technologies cannot resolve the fields by label. |
+| Reproduction / Evidence | `page.getByLabel('Email')` failed on `LoginPage`; the audit script had to fall back to `input[type="email"]` and `input[type="password"]`. |
+| Expected Behavior | Every visible form label should use `htmlFor`/`id` or an equivalent accessible-name pattern, with `autocomplete` attributes where applicable. |
+| Actual Behavior | Labels are plain text elements adjacent to inputs. |
+| Business Impact | This is not an accounting defect, but it reduces ERP usability and audit automation reliability. |
+| Accounting / Inventory / Tax Impact | None direct. It blocks efficient regression automation of those workflows from the login screen. |
+| Security Impact | None direct. |
+| Likely Root Cause | The login form was implemented visually without accessibility wiring. |
+| Files / Surfaces | `src/pages/LoginPage.tsx`. |
+| Recommended Implementation | Add stable `id` values to email/password inputs, matching `htmlFor` on labels, `name`, `autocomplete="email"` and `autocomplete="current-password"`, and an accessible error region for login failures. Review other high-traffic ERP forms for the same pattern. |
+| Regression Tests | Add a small Playwright assertion that can fill login with `getByLabel('Email')` and `getByLabel('Password')`. |
+| Retest Plan | Re-run the browser audit script using label selectors instead of CSS selectors. |
+
+### New Finding Detail - PXL-AUD-061
+
+| Field | Value |
+| --- | --- |
+| Status | Open |
+| Severity | High |
+| Area | Regression harness / canonical seed compatibility / CI reliability |
+| Issue | The focused canonical test passes, but the full `npm test` pgTAP suite is not deterministic after the canonical reset+seed state. A permanent canonical regression environment cannot rely on a suite that fails because tests assume different seed state, hard-coded fixture IDs, old TIN formats, or held-out migration behavior. |
+| Reproduction / Evidence | After local canonical reset+seed, `npm test` ran 55 files and failed. Failing files included `009_gl_reversal_visibility_test.sql` and `020_status_immutability_test.sql` due duplicate hard-coded auth user IDs; `016_wht_export_snapshots_test.sql` and `042_cash_purchase_ewt_test.sql` due TIN branch-code formatting expectations; `017_cas_export_snapshots_test.sql` and `027_cas_end_to_end_controls_test.sql` due CAS/DAT/void evidence drift; `025_posting_preview_invariants_test.sql` due missing locked-period preview rejection; `026_accounting_trace_report_routes_test.sql`, `048_withholding_trace_drilldowns_test.sql`, and `050_accounting_readiness_approval_test.sql` due current TIN check constraints and fixture values. The focused `055_canonical_demo_dataset_test.sql` passed 34/34. |
+| Expected Behavior | The repo should provide a clear green regression command for the canonical environment, or separate commands for fresh-schema pgTAP and canonical-seeded product regression with documented reset prerequisites. Tests should be idempotent and should not depend on execution leftovers from earlier files. |
+| Actual Behavior | The focused canonical regression is green, but the broad suite fails when run in the seeded permanent regression environment. |
+| Business Impact | Teams cannot use one documented command to prove the product is ready after canonical seed changes. |
+| Accounting Impact | Accounting findings can be hidden by harness failures unrelated to the change under test. |
+| Inventory Impact | Inventory regressions can be missed if the suite is already red before inventory assertions. |
+| Tax Impact | Tax/DAT/withholding fixture drift creates false positives and masks real compliance defects. |
+| Security Impact | RLS/security tests may not run cleanly after earlier tests leave committed state. |
+| Likely Root Cause | Historical pgTAP files mix transactional tests, committed fixtures, hard-coded auth IDs, hard-coded TIN text expectations, and assumptions about held-out migrations. The canonical seed introduced a persistent baseline, but the full suite has not been normalized for that baseline. |
+| Files / Surfaces | `supabase/tests/*.sql`; `package.json` test command; canonical seed/reset scripts; docs test commands. |
+| Recommended Implementation | Split test commands into fresh-schema, canonical-seeded, and held-out/experimental lanes; make auth/user fixtures idempotent or unique per file; update old TIN expectations to the governed 9-digit taxpayer + 5-digit branch format; move CAS held-out tests to the lane that includes their required migrations; document which command must be green for each release gate. |
+| Regression Tests | Add a wrapper that starts from a documented reset state and runs the intended lane with no residual fixtures. CI should publish per-lane results rather than one ambiguous red suite. |
+| Retest Plan | Run fresh-schema pgTAP from a clean reset, run canonical seed plus canonical UI audit, and run held-out CAS/ATC tests only after their migrations are intentionally included. |
 
 | Finding ID | Area | Severity | Status | Issue | Expected Behavior | Actual Behavior | Root Cause | Files Affected | Test Performed | Fix Plan | Fix Session Size |
 | ---------- | ---- | -------- | ------ | ----- | ----------------- | --------------- | ---------- | -------------- | -------------- | -------- | ---------------- |

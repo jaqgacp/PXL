@@ -1055,6 +1055,23 @@ Scenario: a VAT-inclusive Sales Invoice contains one inventory item line and one
 | 7 | Inspect stock and tax ledger | Stock falls from 5 units / 3,000 cost to 4 units / 2,400 cost; tax detail stores VAT base 1,500, VAT 180, and normalized customer TIN. |
 | 8 | Void the posted SI | Void creates a reversal journal, restores stock to 5 units / 3,000 cost, and writes an `SI_VOID` inventory restoration transaction. |
 
+## CANONICAL-DEMO-DATASET-001 - Canonical Demo Seed and Inventory Control Regression
+
+Status: Executed Passing (session 102, 2026-07-16) in `supabase/tests/055_canonical_demo_dataset_test.sql`, 34 assertions when the canonical demo seed is loaded. Related finding: PXL-AUD-054.
+
+Scenario: the canonical demo dataset is loaded after the controlled reset and validates the primary VAT trading company plus representative non-VAT, service, purchasing, inventory, tax, and accounting flows.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Load `canonical_demo_seed.sql` after `canonical_demo_reset.sql` | Five demo companies exist with supported entity/tax profiles; the primary VAT trading company has 3 branches, 5 departments, 5 cost centers, 3 warehouses, 10 customers, 10 suppliers, 9 stock items, 6 service items, approval fixtures, and core number series. |
+| 2 | Inspect VAT-exclusive and VAT-inclusive Sales Invoices | VAT-exclusive 2,000 produces 240 VAT and 2,240 gross; VAT-inclusive 1,120 persists `vat_price_basis = inclusive` and recomputes 1,000 net / 120 VAT / 1,120 gross. |
+| 3 | Inspect expected CWT versus actual CWT | Sales Invoice stores expected CWT only; Official Receipt records actual CWT, receipt line base, and `cwt_receivable` tax detail at collection time. |
+| 4 | Inspect purchasing and AP tax evidence | Posted Vendor Bill creates input VAT and EWT tax detail; partial Payment Voucher posts with the expected payment amount. |
+| 5 | Inspect inventory movements and balances | Opening inventory, SI issue, receiving report inventory receipt, transfer, and adjustments reconcile to warehouse-level stock balances with no negative quantities. |
+| 6 | Attempt invalid stock transfer | `fn_post_stock_transfer` rejects source-warehouse over-transfer before mutating stock, cost, inventory movements, or JE evidence. |
+| 7 | Attempt Sales Invoice oversell | SI can be saved, but approval readiness rejects warehouse-level oversell with an insufficient-stock error and leaves the invoice draft/unposted. |
+| 8 | Inspect accounting balance | Posted journals remain balanced at header and line level; primary VAT trading company trial-balance delta is zero. |
+
 ## CM-VC-OVERAPPLY-001 - Over-Apply Guards Net Applied Credit Memos / Vendor Credits
 
 Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/035_cm_vc_aware_overapply_test.sql`, 6 assertions. Related findings: PXL-AUD-039.

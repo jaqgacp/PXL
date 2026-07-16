@@ -1,8 +1,8 @@
 # PXL Transaction Matrix
 
-Last synced: 2026-07-14
+Last synced: 2026-07-16
 
-Findings Status Index checksum: 72 Retested Passed / 1 In Progress / 0 Open (73 findings)
+Findings Status Index checksum: 74 Retested Passed / 1 In Progress / 6 Open (81 findings)
 
 Purpose: this is the living source of truth for PXL transaction lifecycle, source chains, UX status, field-source status, and implementation maturity. Governed posting behavior is now defined in `PXL_ACCOUNTING_RULES_MATRIX.md`. Any code change that adds, removes, modifies, fixes, posts, reverses, voids, reports, validates, or re-sources a transaction field must update this file, `PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md`, and, when accounting behavior changes, `PXL_ACCOUNTING_RULES_MATRIX.md` in the same session.
 
@@ -14,7 +14,8 @@ Accounting rule authority: `PXL_ACCOUNTING_RULES_MATRIX.md` is the canonical pos
 
 Use this section first when choosing transaction work; then read the specific row and relevant addendum before editing code.
 
-- **Active priority:** Accounting core hardening and field-source control. The Sales Invoice and Report Workspace standards are documented, but rollout is paused. Start from `PXL_ACCOUNTING_CORE_READINESS.md`, `PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md`, PXL-AUD-053, and any open Critical/High accounting-tax findings before any UI or transaction expansion.
+- **Active priority:** Accounting core hardening, field-source control, and Phase 2 product-audit blockers. The Sales Invoice and Report Workspace standards are documented, but rollout is paused. Start from `PXL_ACCOUNTING_CORE_READINESS.md`, `PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md`, PXL-AUD-053, PXL-AUD-055, PXL-AUD-056, PXL-AUD-057, PXL-AUD-059, PXL-AUD-060, PXL-AUD-061, and any open Critical/High accounting-tax findings before any UI or transaction expansion.
+- **Phase 2 product-audit blockers:** PXL-AUD-055 must remove/rotate client-exposed service-role credentials before any external demo; PXL-AUD-056 must reconcile hosted migration safety and held-out migrations before pushing; PXL-AUD-057 must align canonical seeded rows with UI route visibility; PXL-AUD-059 must classify or populate empty active tables; PXL-AUD-060 tracks login/form accessibility needed for reliable UI regression; PXL-AUD-061 requires deterministic test lanes for fresh-schema, canonical-seeded, and held-out migration coverage.
 - **Current high-risk lane:** EWT/CWT core coverage is closed for the audit backlog. Source/accrual AP EWT policy, explicit withholding profile gates, cash-purchase EWT, customer-advance CWT, supplier down-payment EWT, Form 2307 issued month layout, received-certificate lifecycle, withholding drilldowns, and SI expected-CWT to OR carry-forward are now fixed (PXL-AUD-037, PXL-AUD-040, PXL-AUD-042, PXL-AUD-043, PXL-AUD-045, PXL-AUD-047, PXL-AUD-049).
 - **Strongest implemented core:** SI/OR/VB/PV have atomic save/post RPCs, guided setup readiness, exact saved-source GL preview, status-aware immutability, and pgTAP coverage. Company Setup now provides the aggregate readiness checklist.
 - **Secondary transaction caution:** GL Impact coverage now spans CM/DM/cash/CV/treasury/inventory/fixed-asset/schedule/recurring/purchase-return posting surfaces. Atomic create-and-post cash/fixed-asset forms show a labeled client estimate; report/compliance drillback, some tax validation, and reconciliation remain incomplete.

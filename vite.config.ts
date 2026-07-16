@@ -7,7 +7,7 @@ const CSP_DEV = [
   "default-src 'self'",
   "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // unsafe-eval required for Vite HMR
   "style-src 'self' 'unsafe-inline'",
-  "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://oauth2.googleapis.com",
+  "connect-src 'self' http://127.0.0.1:54321 http://localhost:54321 ws://127.0.0.1:54321 ws://localhost:54321 https://*.supabase.co wss://*.supabase.co https://accounts.google.com https://oauth2.googleapis.com",
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   "object-src 'none'",
