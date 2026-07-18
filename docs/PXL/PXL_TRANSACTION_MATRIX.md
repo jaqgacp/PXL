@@ -1,12 +1,12 @@
 # PXL Transaction Matrix
 
-Last synced: 2026-07-16
+Last synced: 2026-07-18
 
-Findings Status Index checksum: 74 Retested Passed / 1 In Progress / 6 Open (81 findings)
+Findings Status Index checksum: 79 Retested Passed / 1 In Progress / 7 Open (87 findings)
 
 Purpose: this is the living source of truth for PXL transaction lifecycle, source chains, UX status, field-source status, and implementation maturity. Governed posting behavior is now defined in `PXL_ACCOUNTING_RULES_MATRIX.md`. Any code change that adds, removes, modifies, fixes, posts, reverses, voids, reports, validates, or re-sources a transaction field must update this file, `PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md`, and, when accounting behavior changes, `PXL_ACCOUNTING_RULES_MATRIX.md` in the same session.
 
-Active gate: **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READINESS.md`, DEC-017). Do not roll out additional transaction workspaces or build new transaction types until the accounting engine, tax engine, master-data governance, lifecycle, traceability, numbering, reversal, and production-readiness gaps in that document are cleared or explicitly accepted.
+Active business-readiness gate: **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READINESS.md`, DEC-017). The strict 2026-07-18 transaction-workspace UI rollout is complete for the 41 implemented route/mode surfaces; that structural migration does not clear accounting, tax, master-data, lifecycle, traceability, numbering, reversal, Field Source Matrix, or production-readiness gates. New transaction types still require those controls.
 
 Accounting rule authority: `PXL_ACCOUNTING_RULES_MATRIX.md` is the canonical posting matrix for debit/credit behavior, account determination, tax impact, reversal/void/cancel rules, lock behavior, report impact, and test expectations.
 
@@ -14,8 +14,8 @@ Accounting rule authority: `PXL_ACCOUNTING_RULES_MATRIX.md` is the canonical pos
 
 Use this section first when choosing transaction work; then read the specific row and relevant addendum before editing code.
 
-- **Active priority:** Accounting core hardening, field-source control, and Phase 2 product-audit blockers. The Sales Invoice and Report Workspace standards are documented, but rollout is paused. Start from `PXL_ACCOUNTING_CORE_READINESS.md`, `PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md`, PXL-AUD-053, PXL-AUD-055, PXL-AUD-056, PXL-AUD-057, PXL-AUD-059, PXL-AUD-060, PXL-AUD-061, and any open Critical/High accounting-tax findings before any UI or transaction expansion.
-- **Phase 2 product-audit blockers:** PXL-AUD-055 must remove/rotate client-exposed service-role credentials before any external demo; PXL-AUD-056 must reconcile hosted migration safety and held-out migrations before pushing; PXL-AUD-057 must align canonical seeded rows with UI route visibility; PXL-AUD-059 must classify or populate empty active tables; PXL-AUD-060 tracks login/form accessibility needed for reliable UI regression; PXL-AUD-061 requires deterministic test lanes for fresh-schema, canonical-seeded, and held-out migration coverage.
+- **Active priority after workspace rollout:** Accounting core hardening, field-source control, and Phase 2/Phase 3 product-audit blockers. The standard UI shell is deployed across implemented transaction surfaces; business qualification remains governed by `PXL_ACCOUNTING_CORE_READINESS.md`, `PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md`, PXL-AUD-053, PXL-AUD-055, PXL-AUD-059, PXL-AUD-060, PXL-AUD-061, PXL-AUD-063, PXL-AUD-066, PXL-AUD-067, and open Critical/High accounting-tax findings.
+- **Phase 2/3 product-audit blockers:** PXL-AUD-055 still requires external rotation of the previously client-exposed service-role credential; the frontend static/build guard passes. PXL-AUD-057 is closed after hosted canonical UI probes passed, while PXL-AUD-059 remains open for governed coverage of implemented-looking empty modules. PXL-AUD-060 tracks login/form accessibility. PXL-AUD-061 now has a deterministic 56-file, 1,014-assertion lane; its held-out CAS failure is isolated under PXL-AUD-066. PXL-AUD-062 is closed for company selector/RLS, PXL-AUD-063 must govern broad BIR configuration policies, and PXL-AUD-067 records that the checklist measures core accounting readiness rather than complete operations.
 - **Current high-risk lane:** EWT/CWT core coverage is closed for the audit backlog. Source/accrual AP EWT policy, explicit withholding profile gates, cash-purchase EWT, customer-advance CWT, supplier down-payment EWT, Form 2307 issued month layout, received-certificate lifecycle, withholding drilldowns, and SI expected-CWT to OR carry-forward are now fixed (PXL-AUD-037, PXL-AUD-040, PXL-AUD-042, PXL-AUD-043, PXL-AUD-045, PXL-AUD-047, PXL-AUD-049).
 - **Strongest implemented core:** SI/OR/VB/PV have atomic save/post RPCs, guided setup readiness, exact saved-source GL preview, status-aware immutability, and pgTAP coverage. Company Setup now provides the aggregate readiness checklist.
 - **Secondary transaction caution:** GL Impact coverage now spans CM/DM/cash/CV/treasury/inventory/fixed-asset/schedule/recurring/purchase-return posting surfaces. Atomic create-and-post cash/fixed-asset forms show a labeled client estimate; report/compliance drillback, some tax validation, and reconciliation remain incomplete.
@@ -135,15 +135,15 @@ New transaction row (previously missing from this matrix):
 | Heavy report readiness | General Ledger; Account Detail Ledger; Trial Balance | `20260714000009_da018_heavy_report_readiness.sql` adds server-side report APIs for high-growth GL/TB surfaces: `fn_general_ledger_report` for bounded GL rows with total rows and full-period totals, `fn_gl_account_ledger_summary`/`fn_gl_account_ledger_page` for opening/period/closing/running account ledgers, and `fn_trial_balance_report` for date-range + entry-class TB aggregation. GL, Account Detail Ledger, and Trial Balance pages use these RPCs instead of broad client-side `vw_general_ledger` materialization. HEAVY-REPORT-READINESS-001 passes 18 assertions; PXL-DA-018 is Retested Passed. |
 | Matrix sync gate | `PXL_TRANSACTION_MATRIX.md`; `PXL_END_TO_END_AUDIT_FINDINGS.md`; `scripts/check_docs_consistency.sh` | PXL-DA-020 is Retested Passed. The docs-consistency gate now computes the Findings Status Index status checksum, requires this matrix to carry the exact checksum, and requires every non-passed finding ID to be referenced here. Any future finding status change or active finding added to the audit file therefore forces an intentional matrix update before CI can pass. |
 
-## Matrix UI Addendum - 2026-07-13 Final Sales Invoice Workspace
+## Historical UI Note - 2026-07-13 Sales Invoice Pilot
 
 | Transaction | Canonical workspace | Implemented UI contract | Known boundary |
 | --- | --- | --- | --- |
-| Sales Invoice | `/sales-invoices/:id` (`SalesInvoiceDocumentPage`) | Company-accent compact header + subtle workspace/tab tint; clickable Customer and Invoice Total/Collected/Balance Due; Posting/Collection/Lock chips in the header; header-only actions with portal-based More menu; exactly three information cards and no right rail; compact tabs including Workflow and Related Party; reusable saved-view line table with Default/Accounting/Tax/Audit/Inventory/Sales/Custom views, grouped column chooser, persisted order/width/density/sort/filter state, sticky pinned columns, inline detail, export, refresh, and totals; authoritative GL preview and VAT-ledger impact; validation, approval, chronological audit evidence, full related chain, attachment table state, activity, four note categories, and system metadata. | Draft create/edit and `/sales-invoices/new` still use the register form pending routed consolidation. Missing Sales/Customer/dimension fields remain unassigned until governed master-data entities/FKs/UI exist. Attachment/OCR, semantic activity, categorized-note persistence, document hash/version, and e-invoice integration are not yet stored. |
+| Sales Invoice | `/sales-invoices/:id` (`SalesInvoiceDocumentPage`) | Historical first implementation; it no longer governs UI. | Current architecture is `PXL_TRANSACTION_WORKSPACE_STANDARD.md`; PXL-AUD-053 still governs source-backed business completeness. |
 
 ## Matrix Readiness Addendum - 2026-07-13 Accounting Core Ready
 
-User directive 2026-07-13 pauses additional transaction workspace rollout until **PXL Accounting Core Ready**. The required review is documented in `PXL_ACCOUNTING_CORE_READINESS.md`.
+The 2026-07-18 strict implementation directive superseded the earlier UI-rollout pause for already implemented transaction surfaces. **PXL Accounting Core Ready** still governs business and production approval; the structural rollout must not be cited as clearing it.
 
 | Workstream | Matrix impact |
 | --- | --- |
@@ -164,16 +164,10 @@ User directive 2026-07-13 pauses additional transaction workspace rollout until 
 6. New modules must start as `Planned` or `Partial` rows before implementation is considered complete.
 7. Production readiness requires every `Implemented` accounting transaction to have verified GL impact, drill-down, drill-back, audit trail, and test scenarios.
 
-## Matrix UI Addendum - 2026-07-15 Transaction Workspace Rollout Framework
+## Matrix UI Addendum - 2026-07-18 Consolidated Transaction Workspace
 
-The Transaction Workspace rollout foundation is now governed by:
+`PXL_TRANSACTION_WORKSPACE_STANDARD.md` is the sole transaction UI architecture and `PXL_TRANSACTION_WORKSPACE_PATTERNS.md` is the sole A–E content-variation authority. Sales Invoice is one implementation, not a reference standard.
 
-- `docs/PXL/PXL_TRANSACTION_WORKSPACE_STANDARD.md`
-- `docs/PXL/PXL_TRANSACTION_WORKSPACE_MANIFEST.md`
-- `docs/PXL/PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`
-- `docs/PXL/PXL_TRANSACTION_DEFINITION_SCHEMA.md`
-- `src/lib/transactionWorkspaceRollout.ts`
+The executable inventory in `src/lib/transactionWorkspaceCoverage.ts` records 41 implemented transaction surfaces across Sales, Purchasing/AP, Inventory, Accounting, Banking/Treasury, and Fixed Assets. Every inventoried form/view mode composes the shared header, workflow, three-card band, fourteen-tab controller, content/sidebar grid, tokens, table density, responsive behavior, and theme behavior. The exported rollout matrix records routes, pattern, posting classification, adaptations, and source qualification without duplicating that registry here.
 
-The framework does not implement additional transaction pages and does not change posting, tax, workflow, permission, or database behavior. It defines how future transaction workspaces are selected, defined, implemented, validated, and documented one transaction at a time.
-
-Sales Invoice remains the implemented form/view reference pair. Sales Order is the recommended next rollout candidate after an explicit future instruction and dependency review. The manifest must be updated whenever a transaction workspace status changes.
+This UI conformance does not qualify Field Source Matrices or prove accounting, tax, inventory, security, lifecycle, RLS, permission, period-lock, or immutability behavior. PXL-AUD-053 remains active for Sales Invoice business completeness; other transactions remain transaction-matrix-only until source qualification is performed.

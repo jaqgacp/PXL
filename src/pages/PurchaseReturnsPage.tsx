@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditEvidenceBlock, StatusBadge, DateCell } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type ReturnStatus = 'draft' | 'shipped' | 'completed' | 'cancelled'
 
@@ -135,30 +135,35 @@ export default function PurchaseReturnsPage() {
   ] : []
 
   if (mode !== 'list') return (
-    <div className="space-y-4">
-      <div className={`${transactionHeaderClass('purchase')} justify-between`}>
-        <div>
-          <h2 className="text-base font-semibold text-gray-900">{editReturn?.id ? (readOnly ? 'Purchase Return' : 'Edit Return') : 'New Purchase Return'}</h2>
-          {editReturn?.return_number && <p className="text-xs text-gray-500 mt-0.5">{editReturn.return_number} · <StatusBadge status={STATUS_COLORS[editReturn.status as string] || 'draft'} label={editReturn.status as string} /></p>}
-        </div>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
-      </div>
-      {error && <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">{error}</div>}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-        <div className="grid grid-cols-3 gap-3">
-          <div><label className="block text-xs font-medium text-gray-700 mb-1">Return Date *</label><input type="date" value={editReturn?.return_date || ''} disabled={readOnly} onChange={e => setEditReturn(p => ({ ...p, return_date: e.target.value }))} className={inp} /></div>
-          <div className="col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">Reference Receiving Report *</label>
-            <select value={editReturn?.rr_id || ''} disabled={readOnly || !!editReturn?.id} onChange={e => selectRR(e.target.value)} className={inp + ' w-full'}>
-              <option value="">— Select received RR —</option>
-              {receivedRRs.map(r => <option key={r.id} value={r.id}>{r.rr_number} — {r.supplier_name_snapshot} ({r.rr_date})</option>)}
-            </select>
-          </div>
-          <div className="col-span-3"><label className="block text-xs font-medium text-gray-700 mb-1">Remarks</label><input type="text" value={editReturn?.remarks || ''} disabled={readOnly} onChange={e => setEditReturn(p => ({ ...p, remarks: e.target.value }))} className={inp + ' w-full'} /></div>
-        </div>
-      </div>
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <LegacyTransactionWorkspace title="Purchase Return" family="purchase" pattern="B" posting
+      documentNo={editReturn?.return_number} status={editReturn?.status} identity={editReturn?.supplier_name_snapshot}
+      financialFacts={[{ label: 'Quantity to Return', value: lines.reduce((sum, line) => sum + Number(line.return_qty || 0), 0), hint: 'Source-backed return quantity' }, { label: 'Estimated Return Value', value: fmt4(lines.reduce((sum, line) => sum + Number(line.return_qty || 0) * Number(line.unit_price || 0), 0)), hint: 'Quantity multiplied by source unit price' }]}
+      contextFacts={[{ label: 'Supplier', value: editReturn?.supplier_name_snapshot || 'Not selected' }, { label: 'Return Date', value: editReturn?.return_date || 'Not assigned' }, { label: 'Movement Status', value: editReturn?.status || 'draft' }]}
+      relatedFacts={[{ label: 'Source Receiving Report', value: editReturn?.rr_id || 'Not linked', hint: editReturn?.rr_id ? 'Return source' : 'No receipt selected', to: '/receiving-reports' }]}
+      sourceDocType="PR" sourceDocId={previewReturnId || editReturn?.id} auditTable="purchase_returns"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list'), hidden: readOnly },
+        { key: 'save', label: saving ? 'Saving…' : 'Save Return', onClick: save, disabled: saving, hidden: readOnly, variant: 'primary' },
+        { key: 'ship', label: 'Ship Return', onClick: () => ship(editReturn as PReturn), hidden: !readOnly || editReturn?.status !== 'draft', variant: 'primary' },
+        { key: 'complete', label: 'Complete', onClick: () => complete(editReturn as PReturn), hidden: !readOnly || editReturn?.status !== 'shipped', variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'Return Date *', card: 0, content: <input type="date" value={editReturn?.return_date || ''} disabled={readOnly} onChange={e => setEditReturn(p => ({ ...p, return_date: e.target.value }))} className={`${inp} pxl-input`} /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">{editReturn?.return_number || 'Generated on save'}</div> },
+        { key: 'supplier', label: 'Supplier', card: 1, span: 2, content: <div className="pxl-readonly-field">{editReturn?.supplier_name_snapshot || 'Select a receiving report'}</div> },
+        { key: 'rr', label: 'Reference Receiving Report *', card: 1, span: 2, content: <select value={editReturn?.rr_id || ''} disabled={readOnly || !!editReturn?.id} onChange={e => selectRR(e.target.value)} className={`${inp} pxl-input w-full`}><option value="">— Select received RR —</option>{receivedRRs.map(r => <option key={r.id} value={r.id}>{r.rr_number} — {r.supplier_name_snapshot} ({r.rr_date})</option>)}</select> },
+        { key: 'remarks', label: 'Remarks', card: 2, span: 2, content: <input type="text" value={editReturn?.remarks || ''} disabled={readOnly} onChange={e => setEditReturn(p => ({ ...p, remarks: e.target.value }))} className={`${inp} pxl-input w-full`} /> },
+        { key: 'status', label: 'Movement Status', card: 2, content: <div className="pxl-readonly-field capitalize">{editReturn?.status || 'draft'}</div> },
+      ]}
+      tabContent={{
+        validation: error ? <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div> : undefined,
+        audit: editReturn?.id ? <AuditEvidenceBlock tableName="purchase_returns" recordId={editReturn.id} facts={auditFacts} /> : undefined,
+      }}
+      onBack={() => setMode('list')} backLabel="Purchase Returns">
+    <div>
+      <div>
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Return Lines</h3>
-        <table className="w-full text-xs">
+        <table className="pxl-data-grid w-full text-xs">
           <thead><tr className="border-b border-gray-200 text-gray-500"><th className="text-left pb-2 font-medium">Description</th><th className="text-right pb-2 font-medium w-24">Max Qty</th><th className="text-right pb-2 font-medium w-28">Return Qty</th><th className="text-left pb-2 font-medium w-40">Reason</th></tr></thead>
           <tbody>
             {lines.length === 0 ? <tr><td colSpan={4} className="py-4 text-center text-gray-400">Select a Receiving Report to load lines</td></tr> :
@@ -174,11 +179,8 @@ export default function PurchaseReturnsPage() {
           </tbody>
         </table>
       </div>
-      {editReturn?.id && (
-        <AuditEvidenceBlock tableName="purchase_returns" recordId={editReturn.id} facts={auditFacts} />
-      )}
-      {!readOnly && <div className="flex justify-end gap-2"><button onClick={() => setMode('list')} className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button><button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save Return'}</button></div>}
     </div>
+    </LegacyTransactionWorkspace>
   )
 
   return (

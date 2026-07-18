@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { AppContextProvider, useAppCtx } from '@/lib/context'
+import { IMPLEMENTED_TRANSACTION_WORKSPACES } from '@/lib/transactionWorkspaceCoverage'
 import type { Session } from '@supabase/supabase-js'
 
 type SubItem = { name: string; page: string; feature?: string }
@@ -9,6 +10,7 @@ type Group = { group: string; items: SubItem[] }
 type NavItem = { label: string; groups: Group[]; page?: string; feature?: string }
 
 const s = (name: string, page = ''): SubItem => ({ name, page })
+const TRANSACTION_ROUTE_ROOTS = new Set(IMPLEMENTED_TRANSACTION_WORKSPACES.map(row => row.route.split('/').filter(Boolean)[0]))
 
 const NAV: NavItem[] = [
   { label: 'Dashboard', groups: [], page: 'dashboard' },
@@ -502,6 +504,7 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
 
   const pathSegments = location.pathname.split('/').filter(Boolean)
   const currentPage = pathSegments[0] || '' // dynamic document routes inherit their register page
+  const isTransactionRoute = TRANSACTION_ROUTE_ROOTS.has(currentPage)
   const breadcrumbSection = currentPage ? findSection(currentPage) : null
 
   const openMenu = (label: string, left = 0) => {
@@ -623,7 +626,7 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
 
       {/* Breadcrumb + main */}
       <main className="pt-16 px-6 pb-6">
-        <div className="max-w-[1600px] mx-auto">
+        <div className={isTransactionRoute ? 'w-full' : 'mx-auto max-w-[1600px]'}>
           {/* Breadcrumb */}
           {currentPage && (
             <div className="flex items-center gap-1.5 text-xs text-gray-400 mb-4">

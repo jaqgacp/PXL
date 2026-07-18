@@ -2,10 +2,10 @@
 
 Status: Official canonical reporting architecture
 Applies to: All current and future PXL ERP reports
-Sibling standard: `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`
+Sibling standard: `docs/PXL/PXL_TRANSACTION_WORKSPACE_STANDARD.md`
 Last updated: 2026-07-13
 
-This document defines the official PXL reporting architecture. It is the report-page equivalent of the Sales Invoice-based Transaction Workspace Standard. Future Accounting, Sales, Purchasing, Banking, Inventory, Fixed Assets, Tax, Compliance, Audit, and Management reports must reuse this standard instead of inventing independent report layouts.
+This document defines the official PXL reporting architecture. It is the report-page sibling of the transaction workspace architecture. Future Accounting, Sales, Purchasing, Banking, Inventory, Fixed Assets, Tax, Compliance, Audit, and Management reports must reuse this standard instead of inventing independent report layouts.
 
 This is an architecture and implementation standard. It is not a request to rebuild every report immediately.
 
@@ -45,7 +45,7 @@ PXL follows the same enterprise ERP principles used by NetSuite, SAP Business On
 
 ## 2. Relationship to transaction workspaces
 
-Transaction pages are governed by `PXL_STANDARD_TRANSACTION_WORKSPACE.md`.
+Transaction pages are governed by `PXL_TRANSACTION_WORKSPACE_STANDARD.md`.
 
 Report pages are governed by this document.
 

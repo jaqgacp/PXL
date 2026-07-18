@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 import { normalizePhTin } from '@/lib/philippines'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type SDMStatus = 'draft' | 'sent' | 'acknowledged' | 'cancelled'
 
@@ -38,7 +38,6 @@ export default function SupplierDebitMemosPage() {
   const [items, setItems] = useState<ItemRef[]>([])
   const [fStatus, setFStatus] = useState('')
   const [fSearch, setFSearch] = useState('')
-  const listRef = useRef<HTMLDivElement>(null)
   const readOnly = mode === 'view'
 
   const loadMemos = useCallback(async () => {
@@ -112,30 +111,33 @@ export default function SupplierDebitMemosPage() {
   const inp = 'border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white disabled:bg-gray-50'
 
   if (mode !== 'list') return (
-    <div className="space-y-4" ref={listRef}>
-      <div className={`${transactionHeaderClass('purchase')} justify-between`}>
-        <div>
-          <h2 className="text-base font-semibold text-gray-900">{editSDM?.id ? (readOnly ? 'Debit Memo to Supplier' : 'Edit Debit Memo') : 'New Debit Memo to Supplier'}</h2>
-          {editSDM?.sdm_number && <p className="text-xs text-gray-500 mt-0.5">{editSDM.sdm_number} · <StatusBadge status={STATUS_COLORS[editSDM.status as string] || 'draft'} label={editSDM.status as string} /></p>}
-        </div>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
-      </div>
-      {error && <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">{error}</div>}
-      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-        <div className="grid grid-cols-3 gap-3">
-          <div><label className="block text-xs font-medium text-gray-700 mb-1">DM Date *</label><input type="date" value={editSDM?.dm_date || ''} disabled={readOnly} onChange={e => setEditSDM(p => ({ ...p, dm_date: e.target.value }))} className={inp} /></div>
-          <div className="col-span-2"><label className="block text-xs font-medium text-gray-700 mb-1">Supplier *</label>
-            <select value={editSDM?.supplier_id || ''} disabled={readOnly} onChange={e => { const s = suppliers.find(x => x.id === e.target.value); setEditSDM(p => ({ ...p, supplier_id: e.target.value, supplier_name_snapshot: s?.registered_name || '', supplier_tin_snapshot: s?.tin ? normalizePhTin(s.tin) : '' })) }} className={inp + ' w-full'}><option value="">— Select supplier —</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}</select>
-          </div>
-          <div className="col-span-3"><label className="block text-xs font-medium text-gray-700 mb-1">Reason for Debit Memo *</label><textarea value={editSDM?.reason || ''} disabled={readOnly} onChange={e => setEditSDM(p => ({ ...p, reason: e.target.value }))} rows={2} className={inp + ' w-full resize-none'} /></div>
-        </div>
-      </div>
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <LegacyTransactionWorkspace title="Supplier Debit Memo" family="purchase" pattern="E" posting={false}
+      documentNo={editSDM?.sdm_number} status={editSDM?.status} identity={editSDM?.supplier_name_snapshot}
+      financialFacts={[{ label: 'Debit Memo Amount', value: fmt(grandTotal), hint: 'Supplier claim; non-posting source document' }]}
+      contextFacts={[{ label: 'Supplier', value: editSDM?.supplier_name_snapshot || 'Not selected' }, { label: 'Memo Date', value: editSDM?.dm_date || 'Not assigned' }, { label: 'Reason', value: editSDM?.reason || 'Not recorded' }]}
+      sourceDocId={editSDM?.id} auditTable="supplier_debit_memos"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list'), hidden: readOnly },
+        { key: 'save', label: saving ? 'Saving…' : 'Save', onClick: save, disabled: saving, hidden: readOnly, variant: 'primary' },
+        { key: 'send', label: 'Send to Supplier', onClick: () => sendMemo(editSDM as SDM), hidden: !readOnly || editSDM?.status !== 'draft', variant: 'primary' },
+        { key: 'acknowledge', label: 'Acknowledge', onClick: () => acknowledge(editSDM as SDM), hidden: !readOnly || editSDM?.status !== 'sent', variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'DM Date *', card: 0, content: <input type="date" value={editSDM?.dm_date || ''} disabled={readOnly} onChange={e => setEditSDM(p => ({ ...p, dm_date: e.target.value }))} className={`${inp} pxl-input`} /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">{editSDM?.sdm_number || 'Generated on save'}</div> },
+        { key: 'supplier', label: 'Supplier *', card: 1, span: 2, content: <select value={editSDM?.supplier_id || ''} disabled={readOnly} onChange={e => { const s = suppliers.find(x => x.id === e.target.value); setEditSDM(p => ({ ...p, supplier_id: e.target.value, supplier_name_snapshot: s?.registered_name || '', supplier_tin_snapshot: s?.tin ? normalizePhTin(s.tin) : '' })) }} className={`${inp} pxl-input w-full`}><option value="">— Select supplier —</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}</select> },
+        { key: 'tin', label: 'Supplier TIN', card: 1, span: 2, content: <div className="pxl-readonly-field">{editSDM?.supplier_tin_snapshot || 'Not selected'}</div> },
+        { key: 'reason', label: 'Reason for Debit Memo *', card: 2, span: 2, content: <textarea value={editSDM?.reason || ''} disabled={readOnly} onChange={e => setEditSDM(p => ({ ...p, reason: e.target.value }))} rows={2} className={`${inp} pxl-input w-full resize-none`} /> },
+      ]}
+      tabContent={{ validation: error ? <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div> : undefined }}
+      onBack={() => setMode('list')} backLabel="Supplier Debit Memos">
+    <div>
+      <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Line Items</h3>
           {!readOnly && <button onClick={() => setLines(l => [...l, newLine()])} className="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Add Line</button>}
         </div>
-        <table className="w-full text-xs">
+        <table className="pxl-data-grid w-full text-xs">
           <thead><tr className="border-b border-gray-200 text-gray-500">{['Item','Description','Qty','Unit Price','Total',!readOnly ? '' : undefined].filter(Boolean).map(h => <th key={h as string} className={`pb-2 font-medium text-left pr-2 ${h === 'Total' ? 'text-right' : ''}`}>{h}</th>)}</tr></thead>
           <tbody>
             {lines.map((l, i) => (
@@ -152,8 +154,8 @@ export default function SupplierDebitMemosPage() {
           <tfoot><tr className="border-t-2 border-gray-300 font-semibold"><td colSpan={4} className="pt-2 text-right text-xs text-gray-600 pr-2">Total Amount</td><td className="pt-2 text-right font-mono text-sm">{fmt(grandTotal)}</td></tr></tfoot>
         </table>
       </div>
-      {!readOnly && <div className="flex justify-end gap-2"><button onClick={() => setMode('list')} className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button><button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button></div>}
     </div>
+    </LegacyTransactionWorkspace>
   )
 
   return (

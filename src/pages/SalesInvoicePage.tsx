@@ -10,6 +10,14 @@ import TaxImpactPanel from '@/components/document/TaxImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { composePhTin, formatPhTinInput, getPhTinBranch, phTinDigits } from '@/lib/philippines'
 import {
+  TransactionPageHeader,
+  TransactionTabsBar,
+  TransactionWorkflowBanner,
+  type DocumentTab,
+  type ToolbarAction,
+} from '@/components/document/DocumentLayout'
+import { TransactionInfoCard, TransactionInfoCards } from '@/components/document/TransactionPrimitives'
+import {
   applySalesInvoiceItemSelection,
   computeSalesInvoiceDraftLine,
   mergeSalesInvoiceCustomerDefaults,
@@ -22,11 +30,7 @@ import {
   transactionInputClass,
   transactionReadonlyFieldClass,
   transactionSectionTitleClass,
-  transactionStickyHeaderClass,
-  transactionTabBarClass,
-  transactionTabButtonClass,
   transactionTableClass,
-  transactionWorkspaceClass,
 } from '@/lib/transactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────
@@ -164,7 +168,7 @@ type SalesOrderLineRef = {
   discount_amount: number
 }
 type FormMode = 'list' | 'new' | 'edit' | 'view'
-type FormTab = 'lines' | 'financial' | 'gl' | 'tax' | 'validation' | 'workflow' | 'related' | 'party' | 'attachments' | 'activity' | 'notes' | 'audit' | 'system'
+type FormTab = 'lines' | 'financial' | 'gl' | 'tax' | 'validation' | 'workflow' | 'approval' | 'audit' | 'related' | 'party' | 'attachments' | 'activity' | 'notes' | 'system'
 type ValidationState = 'Passed' | 'Warning' | 'Blocked' | 'Informational' | 'Not Applicable'
 
 type ValidationRow = {
@@ -903,7 +907,7 @@ export default function SalesInvoicePage() {
       const tinClause = tinSearch && tinSearch !== search.trim()
         ? `,customer_tin_snapshot.ilike.%${tinSearch}%`
         : ''
-      q = q.or(`si_number.ilike.${s},customer_name_snapshot.ilike.${s},customer_tin_snapshot.ilike.${s}${tinClause}`)
+      q = q.or(`si_number.ilike.${s},reference.ilike.${s},customer_name_snapshot.ilike.${s},customer_tin_snapshot.ilike.${s}${tinClause}`)
     }
 
     const { data, count } = await q
@@ -1755,13 +1759,30 @@ export default function SalesInvoicePage() {
     { key: 'tax', label: 'Tax Impact' },
     { key: 'validation', label: 'Validation' },
     { key: 'workflow', label: 'Workflow' },
+    { key: 'approval', label: 'Approval' },
+    { key: 'audit', label: 'Audit' },
     { key: 'related', label: 'Related Docs' },
     { key: 'party', label: 'Related Party' },
     { key: 'attachments', label: 'Attachments' },
     { key: 'activity', label: 'Activity' },
     { key: 'notes', label: 'Notes' },
-    { key: 'audit', label: 'Audit' },
     { key: 'system', label: 'System' },
+  ]
+  const formDocumentTabs: DocumentTab[] = formTabs.map(tab => ({ ...tab, content: null }))
+  const formActions: ToolbarAction[] = [
+    ...((mode === 'new' || siStatus === 'draft') && !readOnly ? [
+      { key: 'save-draft', label: saving ? 'Saving…' : 'Save Draft', onClick: () => { void save('draft') }, disabled: saving || Boolean(saveDisabledReason) },
+      { key: 'submit', label: 'Submit', onClick: () => { void save('approved') }, disabled: saving || Boolean(saveDisabledReason) },
+      { key: 'post', label: 'Post', onClick: () => { void save('posted') }, disabled: saving || Boolean(saveDisabledReason), variant: 'primary' as const },
+    ] : []),
+    ...(siStatus === 'approved' ? [
+      { key: 'return-draft', label: saving ? 'Reverting…' : 'Return to Draft', onClick: () => { void doRevertToDraft() }, disabled: saving, group: 'more' as const },
+      { key: 'post', label: 'Post', onClick: () => { void save('posted') }, disabled: saving || Boolean(saveDisabledReason), variant: 'primary' as const },
+    ] : []),
+    ...(siStatus === 'posted' ? [
+      { key: 'void', label: 'Void', onClick: () => setShowVoid(true), variant: 'danger' as const, group: 'more' as const },
+    ] : []),
+    { key: 'cancel', label: 'Cancel', onClick: () => confirmDiscardAndNavigate('/sales-invoices'), group: 'more' },
   ]
   const financialGroups = [
     {
@@ -1879,7 +1900,7 @@ export default function SalesInvoicePage() {
               <table className={`${transactionTableClass()} w-full`}>
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['SI Number','Date','Customer','TIN','Net of VAT','VAT','Total Amount','Status'].map(h => (
+                    {['SI Number','Reference','Date','Customer','TIN','Net of VAT','VAT','Total Amount','Status'].map(h => (
                       <th key={h} className="whitespace-nowrap px-4 py-2.5 text-left">{h}</th>
                     ))}
                     <th className="whitespace-nowrap px-4 py-2.5 text-right">Open</th>
@@ -1892,6 +1913,7 @@ export default function SalesInvoicePage() {
                       <tr key={si.id} onClick={() => openDocument(si)}
                         className="hover:bg-gray-50 cursor-pointer transition-colors">
                         <td className="px-4 py-2.5 font-mono font-semibold text-xs text-gray-900 whitespace-nowrap">{si.si_number}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{si.reference || '—'}</td>
                         <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap"><DateCell date={si.date} /></td>
                         <td className="px-4 py-2.5 text-xs text-gray-900 max-w-[200px] truncate">{si.customer_name_snapshot}</td>
                         <td className="px-4 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{si.customer_tin_snapshot}</td>
@@ -1938,95 +1960,55 @@ export default function SalesInvoicePage() {
     return <div className="py-16 text-center text-sm text-gray-400">Loading Sales Invoice workspace...</div>
   }
 
+  const salesOrderSourcePrompt = canEdit && openSalesOrders.length > 0 && !salesOrderPromptDismissed ? (
+    <section className={`${transactionCardClass()} p-3`}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div><div className="text-sm font-semibold text-gray-900">Open Sales Orders</div><div className="text-xs text-gray-500">Select a valid source document or continue with an empty invoice.</div></div>
+        <button type="button" onClick={() => setSalesOrderPromptDismissed(true)} className={transactionButtonClass('neutral')}>Create empty invoice</button>
+      </div>
+      <div className="overflow-x-auto rounded border border-[#c7d0db]">
+        <table className={`${transactionTableClass()} w-full text-xs`}><thead className="border-b bg-gray-50"><tr>{['Sales Order Number', 'Date', 'Remaining Amount', 'Status', 'Action'].map((label, index) => <th key={label} className={`px-3 py-2 ${index === 2 ? 'text-right' : 'text-left'}`}>{label}</th>)}</tr></thead><tbody className="divide-y divide-gray-100">{openSalesOrders.map(order => <tr key={order.id}><td className="px-3 py-2 font-mono font-semibold">{order.so_number}</td><td className="px-3 py-2"><DateCell date={order.so_date} /></td><td className="px-3 py-2 text-right font-mono">{order.currency_code} {fmt(Number(order.total_amount))}</td><td className="px-3 py-2">{order.fulfillment_status}</td><td className="px-3 py-2"><button type="button" onClick={() => void convertFromSalesOrder(order)} className={transactionButtonClass('primary')}>Convert</button></td></tr>)}</tbody></table>
+      </div>
+    </section>
+  ) : null
+
   // ── Form View ─────────────────────────────────────────────
   return (
-    <div className={transactionWorkspaceClass('sales')}>
-      <div className={transactionStickyHeaderClass('sales')}>
-        <div className="flex flex-wrap items-center gap-4 px-5 py-3">
-          <button onClick={() => confirmDiscardAndNavigate('/sales-invoices')} className={`${transactionButtonClass('text')} px-2`}>
-            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M15 18l-6-6 6-6" /></svg>
-            Sales Invoices
-          </button>
-          <div className="h-5 w-px bg-[#a8b6c6]" />
-          <div className="min-w-0">
-            <div className="pxl-header-metric-label">Sales Invoice</div>
-            <div className="pxl-document-number font-mono">{editSI?.si_number || 'NEW'}</div>
-          </div>
-          <StatusBadge status={statusToShared[siStatus]} label={siStatus.charAt(0).toUpperCase() + siStatus.slice(1)} />
-          <button type="button" onClick={() => setActiveTab('validation')}>
-            <StatusBadge status={readinessState} label={readinessLabel} />
-          </button>
-          {selectedCustomer && (
-            <Link to={`/customers?customerId=${selectedCustomer.id}`} onClick={guardUnsavedLink} className="pxl-customer-link truncate">
-              {selectedCustomer.registered_name}
-            </Link>
-          )}
-          <div className="ml-auto flex items-center gap-4">
-            <div className="hidden sm:block text-right">
-              <div className="pxl-header-metric-label">Invoice Total</div>
-              <div className="pxl-header-metric-value font-mono">{fCurrency} {fmt(totals.total_amount)}</div>
-            </div>
-            <div className="hidden lg:block text-right">
-              <div className="pxl-header-metric-label">Expected Net Collectible</div>
-              <div className="pxl-header-metric-value font-mono">{fCurrency} {fmt(expectedNetCollectible)}</div>
-            </div>
-            {error && <span className="max-w-md truncate text-xs font-medium text-red-600" title={error}>{error}</span>}
-            <button onClick={() => confirmDiscardAndNavigate('/sales-invoices')}
-              className={transactionButtonClass('text')}>
-              Cancel
-            </button>
-            {(mode === 'new' || siStatus === 'draft') && !readOnly && (
-              <>
-                <button onClick={() => save('draft')} disabled={saving || Boolean(saveDisabledReason)}
-                  title={saveDisabledReason || undefined}
-                  className={transactionButtonClass('neutral')}>
-                  {saving ? 'Saving...' : 'Save Draft'}
-                </button>
-                <button onClick={() => save('approved')} disabled={saving || Boolean(saveDisabledReason)}
-                  title={saveDisabledReason || undefined}
-                  className={transactionButtonClass('secondary')}>
-                  Submit
-                </button>
-                <button onClick={() => save('posted')} disabled={saving || Boolean(saveDisabledReason)}
-                  title={saveDisabledReason || undefined}
-                  className={transactionButtonClass('primary')}>
-                  Post
-                </button>
-              </>
-            )}
-            {siStatus === 'approved' && (
-              <>
-                <button onClick={doRevertToDraft} disabled={saving}
-                  className={transactionButtonClass('neutral')}>
-                  {saving ? 'Reverting...' : 'Return to Draft'}
-                </button>
-                <button onClick={() => save('posted')} disabled={saving || Boolean(saveDisabledReason)}
-                  title={saveDisabledReason || undefined}
-                  className={transactionButtonClass('primary')}>
-                  Post
-                </button>
-              </>
-            )}
-            {siStatus === 'posted' && (
-              <button onClick={() => setShowVoid(true)}
-                className={transactionButtonClass('danger')}>
-                Void
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+    <div className="pxl-transaction-workspace pxl-transaction-workspace--sales space-y-2 rounded-md p-2" aria-label="Sales Invoice workspace">
+      <TransactionPageHeader
+        title="Sales Invoice"
+        documentNo={editSI?.si_number}
+        status={siStatus}
+        statusLabel={siStatus.charAt(0).toUpperCase() + siStatus.slice(1)}
+        identity={selectedCustomer ? {
+          name: <Link to={`/customers?customerId=${selectedCustomer.id}`} onClick={guardUnsavedLink}>{selectedCustomer.registered_name}</Link>,
+          secondary: tinDisplay.tin || undefined,
+        } : { name: 'Customer not selected' }}
+        metrics={[
+          { label: 'Invoice Total', value: `${fCurrency} ${fmt(totals.total_amount)}`, emphasis: true },
+          { label: 'Net Collectible', value: `${fCurrency} ${fmt(expectedNetCollectible)}` },
+          { label: 'Readiness', value: readinessLabel },
+        ]}
+        meta={[{ label: 'Readiness', value: readinessLabel, tone: readinessState === 'success' ? 'success' : readinessState === 'error' ? 'error' : 'warning' }]}
+        actions={formActions}
+        onBack={() => confirmDiscardAndNavigate('/sales-invoices')}
+        backLabel="Sales Invoices"
+      />
 
-      {readiness.blockers.length > 0 && (
-        <div className="border-b border-gray-100 bg-white px-5 py-3">
-          <SetupReadinessBanner readiness={readiness} />
-        </div>
-      )}
+      <TransactionWorkflowBanner
+        steps={[
+          { key: 'draft', label: 'Draft' },
+          { key: 'approved', label: 'Approved' },
+          { key: 'posted', label: 'Posted' },
+          { key: 'paid', label: 'Paid' },
+          { key: 'cancelled', label: 'Voided' },
+        ]}
+        currentKey={siStatus}
+      />
 
-      <div className="space-y-3 px-5 py-4">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-          <section className={`${transactionCardClass()} p-4`}>
-            <div className={`${transactionSectionTitleClass()} mb-4`}>Document Information</div>
+      <div className="space-y-2">
+        <TransactionInfoCards>
+          <TransactionInfoCard title="Document Information">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className={lbl}>Invoice Date <span className="text-red-500">*</span></label>
@@ -2084,10 +2066,9 @@ export default function SalesInvoicePage() {
                 )}
               </div>
             </div>
-          </section>
+          </TransactionInfoCard>
 
-          <section className={`${transactionCardClass()} p-4`}>
-            <div className={`${transactionSectionTitleClass()} mb-4`}>Customer Information</div>
+          <TransactionInfoCard title="Customer Information">
             <div className="space-y-3">
               <div>
                 <label className={lbl}>Customer <span className="text-red-500">*</span></label>
@@ -2120,10 +2101,9 @@ export default function SalesInvoicePage() {
                 </div>
               </div>
             </div>
-          </section>
+          </TransactionInfoCard>
 
-          <section className={`${transactionCardClass()} p-4`}>
-            <div className={`${transactionSectionTitleClass()} mb-4`}>Sales Context</div>
+          <TransactionInfoCard title="Sales Context">
             {departments.length === 0 && costCenters.length === 0 && warehouses.length === 0 && employees.length === 0 ? (
               <div className="rounded border border-[#c7d0db] bg-[#f3f6f9] px-3 py-4 text-center">
                 <div className="text-xs font-medium text-gray-600">No operational dimensions assigned.</div>
@@ -2209,72 +2189,19 @@ export default function SalesInvoicePage() {
                 )}
               </div>
             )}
-          </section>
+          </TransactionInfoCard>
+        </TransactionInfoCards>
+
+        <div className="overflow-hidden rounded border border-[var(--pxl-border-strong)]">
+          <TransactionTabsBar
+            tabs={formDocumentTabs}
+            activeKey={activeTab}
+            onChange={key => setActiveTab(key as FormTab)}
+          />
         </div>
 
-        {canEdit && openSalesOrders.length > 0 && !salesOrderPromptDismissed && (
-          <section className={`${transactionCardClass()} p-3`}>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div className="text-sm font-semibold text-gray-900">This customer has open Sales Orders.</div>
-                <div className="text-xs text-gray-500">Continue with an empty invoice or use an open Sales Order as the source.</div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSalesOrderPromptDismissed(true)}
-                className={transactionButtonClass('neutral')}
-              >
-                Create empty invoice
-              </button>
-            </div>
-            <div className="overflow-x-auto rounded border border-[#c7d0db]">
-              <table className={`${transactionTableClass()} w-full text-xs`}>
-                <thead className="border-b bg-gray-50">
-                  <tr>
-                    {['Sales Order Number', 'Date', 'Remaining Amount', 'Status', 'Action'].map((h, i) => (
-                      <th key={h} className={`px-3 py-2 ${i === 2 ? 'text-right' : 'text-left'}`}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {openSalesOrders.map(so => (
-                    <tr key={so.id} className="hover:bg-gray-50">
-                      <td className="px-3 py-2 font-mono font-semibold text-gray-800">{so.so_number}</td>
-                      <td className="px-3 py-2 text-gray-600"><DateCell date={so.so_date} /></td>
-                      <td className="px-3 py-2 text-right font-mono tabular-nums text-gray-900">{so.currency_code} {fmt(Number(so.total_amount))}</td>
-                      <td className="px-3 py-2 text-gray-600">{so.fulfillment_status}</td>
-                      <td className="px-3 py-2">
-                        <button
-                          type="button"
-                          onClick={() => void convertFromSalesOrder(so)}
-                          className={transactionButtonClass('primary')}
-                        >
-                          Convert from Sales Order
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-        )}
-
-        <div className={transactionTabBarClass('sales')}>
-          <div className="flex min-w-max items-center">
-            {formTabs.map(tab => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={transactionTabButtonClass('sales', activeTab === tab.key)}
-              >
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
+        <div className="pxl-transaction-content-grid grid min-w-0 items-start gap-2 lg:grid-cols-[minmax(0,1fr)_15rem] xl:grid-cols-[minmax(0,1fr)_16rem]">
+        <div className="pxl-transaction-tab-panel min-w-0 rounded border border-[var(--pxl-border-medium)] bg-white px-2.5 py-2 shadow-[var(--pxl-shadow-card)]" id={`transaction-panel-${activeTab}`} role="tabpanel" aria-labelledby={`transaction-tab-${activeTab}`}>
         {activeTab === 'lines' && (
           <section className={`${transactionCardClass(true)}`}>
             <div className="flex items-center justify-between border-b border-[#c7d0db] px-3 py-2">
@@ -2293,7 +2220,7 @@ export default function SalesInvoicePage() {
               )}
             </div>
             <div className="max-h-[58vh] overflow-auto">
-              <table className={`${transactionTableClass()} w-full min-w-[1360px]`}>
+              <table className={`${transactionTableClass()} w-full min-w-[1800px]`}>
                 <thead className="sticky top-0 z-10 border-b bg-gray-50">
                   <tr>
                     <th className="sticky left-0 z-20 w-10 bg-[var(--pxl-surface-table-header)] px-3 py-2 text-left">#</th>
@@ -2548,6 +2475,8 @@ export default function SalesInvoicePage() {
 
         {activeTab === 'validation' && (
           <section className={`${transactionCardClass()} p-3`}>
+            {readiness.blockers.length > 0 && <div className="mb-3"><SetupReadinessBanner readiness={readiness} /></div>}
+            {error && <div className="pxl-validation-message mb-3 border border-red-200 bg-red-50 text-red-700" role="alert">{error}</div>}
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <div className={transactionSectionTitleClass()}>Validation</div>
@@ -2615,7 +2544,31 @@ export default function SalesInvoicePage() {
           </section>
         )}
 
+        {activeTab === 'approval' && (
+          <section className={`${transactionCardClass()} p-3`}>
+            <div className={`${transactionSectionTitleClass()} mb-3`}>Approval</div>
+            <div className="overflow-hidden rounded border border-gray-200">
+              <table className={`${transactionTableClass()} w-full`}>
+                <thead className="border-b border-gray-200 bg-gray-50">
+                  <tr>{['Approval Status', 'Approver', 'Submitted', 'Decision', 'Comments'].map(h => <th key={h} className="px-3 py-2 text-left">{h}</th>)}</tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td className="px-3 py-2 font-medium text-gray-800">{editSI?.approved_at ? 'Approved' : siStatus === 'draft' ? 'Not submitted' : 'No workflow configured'}</td>
+                    <td className="px-3 py-2 text-gray-500">Not recorded</td>
+                    <td className="px-3 py-2 text-gray-500">Not recorded</td>
+                    <td className="px-3 py-2 text-gray-500">{editSI?.approved_at ? formatDateTime(editSI.approved_at) : 'Not recorded'}</td>
+                    <td className="px-3 py-2 text-gray-500">No approval comments recorded.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
         {activeTab === 'related' && (
+          <div className="space-y-3">
+          {salesOrderSourcePrompt}
           <section className={`${transactionCardClass()} p-3`}>
             <div className={`${transactionSectionTitleClass()} mb-3`}>Related Documents</div>
             <div className="overflow-x-auto rounded border border-gray-200">
@@ -2659,6 +2612,7 @@ export default function SalesInvoicePage() {
               </table>
             </div>
           </section>
+          </div>
         )}
 
         {activeTab === 'party' && (
@@ -2854,6 +2808,46 @@ export default function SalesInvoicePage() {
             </div>
           </section>
         )}
+        </div>
+
+        <aside className="pxl-side-panel min-w-0 p-2.5" aria-label="Sales Invoice summary">
+          <div className="space-y-4">
+            <section className="border-b border-[var(--pxl-border-medium)] pb-4">
+              <h2 className="pxl-section-title mb-2">Balance</h2>
+              <dl className="space-y-2 text-xs">
+                <div className="flex justify-between gap-3"><dt>Invoice Total</dt><dd className="font-mono font-semibold">{fCurrency} {fmt(totals.total_amount)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Expected CWT</dt><dd className="font-mono">{fCurrency} {fmt(fCwtExpected)}</dd></div>
+                <div className="flex justify-between gap-3"><dt>Net Collectible</dt><dd className="font-mono font-semibold">{fCurrency} {fmt(expectedNetCollectible)}</dd></div>
+              </dl>
+            </section>
+            <section className="border-b border-[var(--pxl-border-medium)] pb-4">
+              <h2 className="pxl-section-title mb-2">Tax</h2>
+              <div className="flex justify-between gap-3 text-xs"><span>Output VAT</span><span className="font-mono font-semibold">{fmt(totals.total_vat_amount)}</span></div>
+            </section>
+            <section className="border-b border-[var(--pxl-border-medium)] pb-4">
+              <h2 className="pxl-section-title mb-2">GL Preview</h2>
+              <div className="space-y-1 text-xs"><div className="flex justify-between"><span>Debits</span><span className="font-mono">{fmt(combinedGlDebit)}</span></div><div className="flex justify-between"><span>Credits</span><span className="font-mono">{fmt(combinedGlCredit)}</span></div><div className="flex justify-between font-semibold"><span>Difference</span><span className="font-mono">{fmt(combinedGlDifference)}</span></div></div>
+            </section>
+            <section className="border-b border-[var(--pxl-border-medium)] pb-4">
+              <h2 className="pxl-section-title mb-2">Customer</h2>
+              <div className="text-xs font-semibold text-gray-800">{fCustomerName || 'Not selected'}</div>
+              <div className="pxl-caption mt-1 font-mono">{tinDisplay.tin || 'No TIN selected'}</div>
+            </section>
+            <section className="border-b border-[var(--pxl-border-medium)] pb-4">
+              <h2 className="pxl-section-title mb-2">Audit</h2>
+              <div className="pxl-caption">{editSI?.updated_at ? `Updated ${formatDateTime(editSI.updated_at)}` : 'Audit events begin after save.'}</div>
+            </section>
+            <section>
+              <h2 className="pxl-section-title mb-2">Quick Actions</h2>
+              <div className="grid gap-1.5">
+                <button type="button" onClick={() => setActiveTab('validation')} className="pxl-button pxl-button--neutral justify-start">Review Validation</button>
+                <button type="button" onClick={() => setActiveTab('gl')} className="pxl-button pxl-button--neutral justify-start">Review GL Impact</button>
+                <button type="button" onClick={() => setActiveTab('related')} className="pxl-button pxl-button--neutral justify-start">Related Documents</button>
+              </div>
+            </section>
+          </div>
+        </aside>
+        </div>
       </div>
 
       {/* Void Dialog */}

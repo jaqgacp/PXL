@@ -1,30 +1,9 @@
-# PXL Button Standard
+# PXL Button Standard (Superseded for Transaction Workspaces)
 
-Status: OFFICIAL BUTTON STANDARD
+**Status:** SUPERSEDED — non-authoritative historical pointer
+**Superseded:** 2026-07-18
+**Superseded by:** `PXL_TRANSACTION_WORKSPACE_STANDARD.md` and `PXL_TRANSACTION_WORKSPACE_PATTERNS.md`
 
-All transaction actions use one enterprise button system.
+This former button guidance is non-authoritative for transaction workspaces.
 
-## Dimensions
-
-- Height: 32-36px, standard 34px.
-- Horizontal padding: 12px.
-- Radius: 6px.
-- Font: 13px, medium.
-- No oversized buttons in transaction headers.
-
-## Variants
-
-| Variant | Usage |
-| --- | --- |
-| Primary | Highest business importance, e.g. Post |
-| Secondary | Next lifecycle action, e.g. Submit |
-| Neutral | Save Draft, Return to Draft, utility commands |
-| Text | Cancel, low-emphasis navigation |
-| Danger | Void, destructive governed actions |
-
-## Rules
-
-- Visual emphasis must match business importance.
-- Disabled buttons remain visible when the action is expected but unavailable.
-- Destructive actions require governed confirmation where applicable.
-- Icon-only buttons require accessible names and tooltips.
+For transaction layout, visual behavior, components, responsive rules, themes, interaction, and accessibility, read only `PXL_TRANSACTION_WORKSPACE_STANDARD.md`. For permitted transaction-specific content differences, read only `PXL_TRANSACTION_WORKSPACE_PATTERNS.md`.

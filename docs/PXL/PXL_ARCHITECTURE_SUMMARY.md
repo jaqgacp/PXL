@@ -1,6 +1,13 @@
 # PXL Architecture Summary
 
-Concise, stable architecture reference for PXL. Read this instead of scanning the repository. For rules, see `docs/PXL/PXL_PRINCIPLES.md`; for current build status, see `docs/PXL/STATUS.md`; for per-transaction behavior, see `docs/PXL/PXL_TRANSACTION_MATRIX.md`.
+**Status:** Active Architecture Reference
+**Authority:** Tier 1 Governing
+**Last Verified:** 2026-07-17
+**Applies To:** Current platform architecture and technology boundaries
+**Read When:** The active task requires cross-cutting architecture context
+**Do Not Read For:** Routine finding work already mapped by `AI/AI_STATE.md`
+
+Concise, stable architecture reference for PXL. Read this instead of scanning the repository when architecture context is required. For rules, see `docs/PXL/PXL_PRINCIPLES.md`; for current operational status, see `AI/AI_STATE.md`; for per-transaction behavior, see `docs/PXL/PXL_TRANSACTION_MATRIX.md`. Historical build status is archived and is not a current authority.
 
 ## What PXL Is
 
@@ -17,7 +24,7 @@ PXL is an accounting-first, Philippine-compliance-first ERP for multi-company us
 ## Repository Layout
 
 ```
-AI/                    — AI Operating System (see AI/README.md)
+AI/                    — two-file AI fast-start layer (Agent System Prompt + AI State)
 docs/PXL/              — source-of-truth documentation (numbered module folders + summary docs)
 src/pages/             — one React page per ERP screen (lazy-loaded routes)
 src/components/        — AppShell, ErrorBoundary, GLImpactPanel, SetupReadiness, ui/ shared library
@@ -29,9 +36,9 @@ public/_headers        — production HTTP security headers (CSP)
 
 ## Core Architectural Patterns
 
-1. **Multi-tenancy via company scope + RLS.** Every company-owned table has `company_id`. Access is enforced by RLS policies using `is_company_member(company_id)` / `can_admin_company(company_id)` against `user_company_memberships (user_id, company_id, role)`. UI filtering is never the security boundary. (See `AI/AI_DECISIONS.md` DEC-003.)
+1. **Multi-tenancy via company scope + RLS.** Every company-owned table has `company_id`. Access is enforced by RLS policies using `is_company_member(company_id)` / `can_admin_company(company_id)` against `user_company_memberships (user_id, company_id, role)`. UI filtering is never the security boundary. Global reference/configuration tables require their own governed policy; `PXL-AUD-063` tracks the open BIR configuration exception.
 2. **Document lifecycle via SECURITY DEFINER RPCs.** Documents move draft → approved → posted → cancelled (or module equivalent) only through `fn_*` RPCs with `SET search_path = public`, which validate membership, recompute amounts server-side, and enforce transitions. Direct multi-round-trip writes are not used for saves or status changes.
-3. **Posting creates real journal entries.** Posting RPCs write balanced `journal_entries` / `journal_entry_lines` rows using account mappings from `company_accounting_config` and master-data account determination — the user never picks GL accounts on transactions. Every JE links back to its source document (`source_type`, `source_document_id`) for infinite drill-down.
+3. **Posting creates real journal entries.** Posting RPCs write balanced `journal_entries` / `journal_entry_lines` rows using company configuration and current transaction/master mappings. Some current flows still expose line-account choices; the governed account-determination engine remains approved backlog work. Every JE links back to its source document (`source_type`, `source_document_id`) for drill-down.
 4. **Immutable accounting.** Posted records are never edited or deleted; corrections go through reversal, void, credit/debit memo, or supersede workflows, preserving the audit trail. (DEC-002.)
 5. **Controlled number series.** Document numbers come from `fn_next_document_number` (per company, branch, document type) with row locking; voided numbers are never reused. (DEC-006.)
 6. **Audit everything.** `trg_audit_*` triggers write before/after JSONB states to append-only `sys_audit_logs` on master data, transactions, and system parameters; CAS pages expose these logs.
@@ -62,7 +69,8 @@ supabase db push  # apply migrations (hosted: link project first, then use --lin
 ## Related Documents
 
 - `docs/PXL/PXL_PRINCIPLES.md` — the 27-principle engineering constitution.
-- `docs/PXL/STATUS.md` — page build inventory per module (205/205); migration status lives in `PXL_SCHEMA_SUMMARY.md` and `AI/AI_STATE.md`.
-- `docs/PXL/UI_UX_PRINCIPLES.md` — UI standards and navigation tree.
-- `AI/AI_CONTEXT_INDEX.md` — which documents to load per work mode.
-- `AI/AI_DECISIONS.md` — why the architecture is this way.
+- `AI/AI_STATE.md` — current phase, active finding summary, and one next task; the old build-status inventory is archived.
+- `docs/PXL/PXL_TRANSACTION_WORKSPACE_STANDARD.md` — sole transaction UI architecture.
+- `docs/PXL/PXL_TRANSACTION_WORKSPACE_PATTERNS.md` — A–E transaction-content variation.
+- `docs/PXL/PXL_DOCUMENTATION_INDEX.md` — authority and task-specific documentation map.
+- `docs/PXL/archive/ai-operating-system/AI_DECISIONS.md` — historical decision provenance only; verify it against current governing standards.

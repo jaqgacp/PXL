@@ -53,7 +53,7 @@ export function transactionStickyHeaderClass(family: TransactionWorkspaceFamily)
 }
 
 export function transactionTabBarClass(family: TransactionWorkspaceFamily) {
-  return `${TRANSACTION_WORKSPACE_TONES[family].className} pxl-transaction-tabs overflow-x-auto`
+  return `${TRANSACTION_WORKSPACE_TONES[family].className} pxl-transaction-tabs min-w-0 overflow-hidden`
 }
 
 export function transactionTabButtonClass(family: TransactionWorkspaceFamily, active: boolean) {

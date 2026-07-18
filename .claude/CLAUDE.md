@@ -1,54 +1,8 @@
-# PXL Repository Instructions
+# PXL Claude Startup Adapter
 
-This repository contains an AI Operating System.
+This adapter is not a separate authority. For every fresh PXL session, read only:
 
-Before beginning work, verify that AI/AIOS_VERSION.md exists. If multiple AI operating files indicate conflicting versions or incompatible structures, stop and notify the user before continuing.
+1. `AI/AGENT_SYSTEM_PROMPT.md`
+2. `AI/AI_STATE.md`
 
-Before performing ANY task, always read:
-
-1. AI/AGENT_SYSTEM_PROMPT.md
-2. AI/AI_STATE.md
-3. AI/AI_HANDOFF.md
-4. AI/AI_WORK_QUEUE.md
-5. AI/AI_CONTEXT_INDEX.md
-
-Exception for trivial tasks (questions or single-file changes with no accounting, tax, schema, security, or lifecycle impact): reading AI/AI_STATE.md and AI/AI_HANDOFF.md is sufficient.
-
-Read AI/AI_DECISIONS.md whenever the task may affect:
-
-- Architecture
-- Database
-- Accounting
-- Tax
-- Security
-- Posting Engine
-- Transaction Lifecycle
-- Compliance
-
-Read AI/AI_CACHE_CONTEXT_PLAN.md only when working on AI workflow, prompt caching, or Claude API integration.
-
-Treat these files as the repository source of truth.
-
-Do not ask the user to restate the project unless the documents are missing or conflicting.
-
-If no direct task is provided:
-
-- Continue autonomously from AI/AI_WORK_QUEUE.md.
-- Pick the highest-priority unblocked task.
-- Update AI/AI_STATE.md, AI/AI_HANDOFF.md, and AI/AI_WORK_QUEUE.md before ending meaningful work.
-
-Primary Objective
-
-Every session should move PXL measurably closer to production readiness.
-
-When multiple reasonable tasks are available, prioritize the one that most improves:
-
-1. Correctness
-2. Accounting integrity
-3. Philippine compliance
-4. Stability
-5. Test coverage
-6. Maintainability
-
-Do not optimize for writing more code.
-Optimize for shipping a production-ready ERP.
+Then follow the mandatory startup protocol and open only the active finding, files, tests, and governing specifications that `AI_STATE.md` names. Do not load archived AI operating files, all repository Markdown, all BIR documents, all Sales Invoice documents, or historical phase reports by default.

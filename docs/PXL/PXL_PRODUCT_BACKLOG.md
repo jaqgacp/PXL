@@ -1,93 +1,104 @@
 # PXL Product Backlog
 
-Purpose: future enhancements that make PXL a better ERP, kept separate from release blockers.
+**Status:** Active Operational Backlog
+**Authority:** Tier 3; it does not override Tier 1 rules or the central findings register
+**Last Verified:** 2026-07-17
+**Applies To:** Approved implementation work, missing capabilities, UX rollout, future enhancements, and deferred work
+**Read When:** Planning beyond the one task selected in `AI/AI_STATE.md`
+**Do Not Read For:** Finding remediation detail or fresh-session startup
 
-Separation of concerns (DEC-012):
+## Backlog Rules
 
-- **Audit findings** (`PXL_END_TO_END_AUDIT_FINDINGS.md`) = production defects and release blockers. Genuine accounting/tax/security/posting/GL/data-integrity/architecture bugs become NEW findings there, never backlog entries.
-- **Architecture documents** = how the system works today.
-- **Product backlog** (this file) = enhancements. Documentation only until a phase is scheduled; backlog work must never delay or expand an audit session.
+- Official defects and release blockers belong only in `PXL_END_TO_END_AUDIT_FINDINGS.md`.
+- This file refers to defects by ID and never duplicates their full evidence or remediation.
+- Posting changes must first be defined in `PXL_ACCOUNTING_RULES_MATRIX.md`.
+- Transaction field/source changes must remain synchronized with `PXL_TRANSACTION_MATRIX.md` and `PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md`.
+- Nothing here is authorized merely because it is listed. Work must be selected in `AI/AI_STATE.md` or explicitly approved.
+- The Accounting Core Ready gate remains active; broad UX/report/dashboard rollout waits behind its security, accounting, tax, CAS, source, and regression prerequisites.
 
-Whenever a module is touched during audit work, perform a lightweight architectural review: identify extension points, prepare the architecture only when doing so has negligible risk and avoids future refactoring, otherwise record the opportunity here.
+## Active Defects
 
-Priority: High / Medium / Low (product value, independent of audit P0–P2). Complexity: S / M / L. Phase: `Alongside audit` (negligible-risk preparation only) or `Phase 2` (post-audit implementation).
+The authoritative status, severity, scope, and fix are in the central register.
 
-Active gate: **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READINESS.md`, DEC-017). Backlog/UI/report/transaction-expansion work must wait unless it directly fixes accounting, tax, posting, traceability, master-data, or production-readiness defects.
+| Finding | Backlog Relationship |
+| --- | --- |
+| `PXL-AUD-055` | Critical external key-rotation dependency; not a feature backlog item. |
+| `PXL-AUD-063` | BIR configuration RLS hardening; recommended next executable finding. |
+| `PXL-AUD-066` | CAS historical evidence correction; blocks full regression lane. |
+| `PXL-AUD-061` | Deterministic lane governance after CAS correction. |
+| `PXL-AUD-053` | Sales Invoice source-backed completeness before approved-reference status. |
+| `PXL-AUD-059` | Supported/deferred/unexercised workflow and table coverage. |
+| `PXL-AUD-067` | Core-accounting versus operational-readiness checklist scope. |
+| `PXL-AUD-060` | Login form accessibility and automation reliability. |
 
-Execution order while the gate is active: Accounting Engine -> Posting Engine -> Account Determination Engine -> Configuration-driven Tax Engine -> Master Data Governance -> CAS/BIR Readiness -> Transaction Rollout -> Report Rollout -> Dashboards -> Client Portal -> AI / Automation.
+## Approved Implementation Work
 
-Posting-related backlog items must first be expressed in `PXL_ACCOUNTING_RULES_MATRIX.md`; backlog entries do not define accounting behavior.
+These are long-term capabilities under the accounting-core sequence, not substitutes for active findings.
 
-## Target: Standard Transaction Experience
+| Work | Required Outcome | Primary Authority / Dependency | Priority |
+| --- | --- | --- | --- |
+| Account determination engine | Derive operational GL accounts from company, tax profile, item group/item, counterparty, and document type; any override is permission-gated, reason-coded, and audited. | Accounting Rules Matrix; master-data governance | High |
+| Configuration-driven tax engine | Resolve VAT, PT, EWT, CWT, and FWT applicability/rates by company and document date using governed versions and profiles. | Accounting Rules Matrix; tax setup specs | High |
+| Master-data governance | Model and permission every master required by claimed transactions; do not expose free-text substitutes for missing governed dimensions. | Principles; transaction field-source matrix | High |
+| Reconciliation suite | Prove AR=AR control, AP=AP control, inventory=inventory GL, assets=asset GL, FS=TB, and tax ledgers=tax controls with drillable variances. | Existing VAT/WHT and as-of reconciliation patterns | High |
+| CI schema-type drift gate | Regenerate Supabase types against a migrated DB and fail when `src/lib/database.types.ts` differs. | `npm run gen:types`; CI | High |
+| Governed full regression lanes | Name fresh-schema, canonical-seeded, hosted-safe read-only, and hosted UI lanes with explicit prerequisites/results. | `PXL-AUD-061`; `PXL-AUD-066` | High |
 
-AUTHORITATIVE DEFINITION: `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` (official product vision, 2026-07-10, DEC-013), detailed by `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md` (session 48 blueprint) — full layout, tab set, line grid, auto-population, account determination, summary/GL/tax panel contracts, drill contracts, adoption sequence, and gap analysis. The seven-section outline below remains as the short form; when they disagree, the standard wins. This file keeps the per-feature priority/complexity rows.
+## UX Rollout
 
-Every financial transaction page should converge toward one consistent layout. New or reworked pages should adopt this shape rather than inventing their own:
+The UI architecture rollout is complete for the 41 implemented transaction surfaces. `PXL_TRANSACTION_WORKSPACE_STANDARD.md` is the sole layout/visual authority and `PXL_TRANSACTION_WORKSPACE_PATTERNS.md` is the sole content-variation authority. Sales Invoice is an implementation, not an architecture dependency.
 
-1. **Transaction Header** — document no, status, date, company, branch, counterparty, payment terms, currency.
-2. **Business Information** — transaction-specific fields; master data (TIN, address, tax profile, VAT registration, ATC/EWT profile, default terms, default cash/bank, default revenue/expense mapping) auto-populates; users never re-encode master data.
-3. **Line Items** — future support for item, description, UOM, warehouse, tax code, discount, dimensions, revenue/expense determination, GL mapping.
-4. **Financial Summary** — consistent per-type totals (e.g. Sales: net / output VAT / gross / less CWT / cash received; Purchasing: net / input VAT / gross / less EWT / net payment; Receipt: invoice / applied payment / applied CWT / balance; PV: bill / applied EWT / net payment / balance; CM/VC: applied / remaining / application history).
-5. **GL Impact** — draft GL preview, posted journal, journal number, debit/credit, balancing validation, drilldown.
-6. **Tax Impact** — VAT, EWT, ATC, 2307 tracking, SAWT/QAP linkage, tax ledger rows, tax status, tax reconciliation.
-7. **Posting Validation** — company/branch ready, fiscal period open, number series ready, approval complete, counterparty active, tax/posting/GL configuration, audit and compliance requirements.
+Future transaction UI work must add the route to the executable coverage registry, preserve business controls, compose the shared workspace, and run the full route/screenshot/zoom/theme validation. Field-source and accounting qualification remains separate backlog work.
 
-## Cross-Module Transaction Experience
+| Work | Required Outcome | Readiness |
+| --- | --- | --- |
+| Standard transaction layout | Maintain one fluid workspace architecture without erasing transaction-specific rules. | Implemented on 41 surfaces; future routes use the same gate |
+| Shared financial summary | Server-authoritative totals and consistent commercial/inventory/accounting presentation per transaction type. | SI specification exists; shared contract not rolled out |
+| Tax impact panel | Tax-detail rows, ATC/rates, certificate/export relationships, and reconciliation status with drillback. | Ledger sources exist; shared UX pending |
+| Posting validation panel | Explain company, branch, period, series, approval, master, tax, and account blockers before action. | Readiness primitives exist; convergence pending |
+| Universal drilldown/drillback | Report → GL → JE → source → line/supporting document and back with preserved filters/context. | Trace contracts exist; universal linked UX pending |
+| Dimension summary | Show governed Branch/Department/Cost Center and later approved dimensions, including provenance/defaulting. | Existing SI slice partial; missing masters explicit |
+| Transaction/audit timeline | Present governed lifecycle events and supporting row audit as one source story. | Core evidence UI exists; richer timeline future |
+| Customer/supplier insights | Show balances, aging, open documents, tax profiles, and certificate history at capture time. | Data dispersed; aggregation endpoint/panel missing |
 
-| Feature | Business Value | Accounting Value | Compliance Value | UX Value | Dependencies | Priority | Complexity | Current Readiness | Phase | UI Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Standard transaction layout convergence | One learnable pattern across all documents | Consistent placement of accounting evidence | Consistent placement of tax evidence | Users predict where everything is | Section components below | High | L | Core pages share header/lines/GL-impact patterns informally; no shared layout component | Phase 2 | Seven-section shell (see Target above); adopt on new pages first |
-| GL Impact Panel on every posting page | Trust in what posting will do | Preview + posted JE + balancing validation at source | JE evidence for CAS | No surprises at post time | PXL-DA-001 (Retested Passed 2026-07-10) | High | M | Shared panel is broadly deployed; saved sources run exact rollback preview, posted sources show the real JE, and atomic unsaved forms show a labeled estimate | Phase 2 | Remaining enhancement: converge placement/layout under `DocumentLayout`; audited trace-family expansion closed under PXL-DA-002 |
-| Financial Summary Panel | At-a-glance document economics | Totals derived server-side, consistent with JE | VAT/EWT arithmetic visible | No mental math | Server-computed VAT totals (PXL-DA-008 Retested Passed 2026-07-12) | High | M | VAT source amounts are RPC-only/server-authoritative; totals are still shown ad hoc per page with no shared component contract | Phase 2 | Right-hand card per document type (see Target §4) |
-| Tax Impact Panel | Tax consequences visible per document | Ties document to tax ledger rows | Shows VAT/EWT/ATC/2307/SAWT/QAP linkage and reconciliation state | Tax literacy at capture time | Tax ledger (exists); snapshot reader (PXL-DA-015) | High | M | `tax_detail_entries` + reconciliation RPCs exist (`fn_vat_gl_reconciliation`, `fn_wht_gl_reconciliation`); no per-document panel | Phase 2 | Tab next to GL Impact; row per tax kind with ledger link |
-| Posting Validation Panel | Blocked postings explained before the attempt | Readiness checks match server triggers | Compliance prerequisites enforced visibly | Checklist instead of error roulette | `useTransactionReadiness`, Company Setup Checklist, `fn_can_perform`, approval SoD | Medium | M | Aggregate company checklist and core/VAT-bearing transaction blockers delivered (PXL-AUD-002 closed); broader numbered-document preflight remains PXL-AUD-016 | Phase 2 | Converge per-page banners into the standard green/red panel (see Target §7) |
-| Smart defaults / master-data auto-population | Faster capture, fewer errors | Correct accounts and terms by default | Correct TIN/ATC/VAT profile by default | Users never re-encode master data | Customer/supplier defaults (partially exist: ATC, CWT) | High | M | Supplier ATC and customer CWT defaults implemented; address/terms/account defaults partial | Alongside audit | Prefill on counterparty select; show provenance of each default |
-| Account determination engine | Non-accountants can transact safely | Accounts derived from item/service/tax profile/posting rules, not user choice | Deterministic mapping is auditable | Normal users never pick GL accounts | Posting-engine primitives (PXL-DA-004); item/service master | High | L | Users currently select revenue/expense accounts per line; `company_accounting_config` covers control accounts only | Phase 2 | Account field hidden behind an "override" affordance with permission gate |
-| Payment-method-driven behaviour | Correct capture per payment channel | Settlement account derived from method | Reference trail per channel (cheque no, GCash/Maya ref, card approval) | Only relevant fields shown | Payment modes master; banking module | Medium | M | `ref_payment_modes` exists; no per-method field rules or settlement mapping | Phase 2 | Dynamic field group under payment mode select |
-| Drilldown / drillback everywhere | Trace any number to its source | Report → GL → journal → source doc → line → supporting document and back | Auditor navigation without SQL | Click-through everywhere | PXL-DA-002 (Retested Passed 2026-07-12) | High | L | Governed source/JE/GL and aggregate trace contracts cover financial, subledger, VAT/WHT, 2307, and snapshot report families; universal per-amount links and breadcrumbs remain UX enhancement scope | Phase 2 | Every amount is a link; breadcrumb back-trail |
-| Dimension summary on documents | Branch/department/cost-center visibility | Dimensions propagate to JE lines | BIR branch reporting accuracy | See allocation before posting | PXL-DA-017 (Retested Passed 2026-07-04) | Medium | M | JE-line propagation/validation delivered (`20260704000001`); documents still capture only branch — per-line department/cost-center capture UI and document-line dimension columns remain | Phase 2 | Chip row in header; per-line dimension column |
-| Transaction / audit timeline | Who did what, when | Lifecycle evidence beside the document | CAS user-activity narrative per document | Story view instead of log tables | PXL-DA-016 `transaction_events` and PXL-AUD-050 audit evidence rollout (Retested Passed) | Medium | M | Governed lifecycle stream exists; core audit evidence UI is wired; richer timeline tab remains Phase 2 | Phase 2 | Vertical timeline tab: created → approved → posted → voided |
+## Missing Features
 
-## Sales / AR
+Missing means absent or not proven as a complete supported workflow; it does not automatically mean a defect.
 
-| Feature | Business Value | Accounting Value | Compliance Value | UX Value | Dependencies | Priority | Complexity | Current Readiness | Phase | UI Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Customer insights panel | Credit decisions at capture time | Balance, aging, open documents from AR views | CWT history and 2307-received status | Context without leaving the invoice | AR aging views (exist), receipts, 2307 tracking | Medium | M | Data exists across views; no aggregation endpoint or panel | Phase 2 | Sidebar on customer select: balance, aging buckets, recent docs, CWT profile |
-| Sales-context master data (Salesperson, Price List, default dimensions) | Fewer manual fields; consistent sales analytics | Correct dimension defaults on JE lines | — | Sales Context auto-populates instead of blank | Customer/Item master extension; PXL-DA-017 dimensions | Medium | M | **Master Data gap found in SI workspace pilot (session 66):** Salesperson, Price List, and default Project/Department/Cost-Center/Location are not modeled on Customer/Item master, so the SI Sales-Context group shows placeholders | Phase 2 | Extend Customer/Item master (do NOT add manual SI fields, §6); then prefill on customer/item select with provenance |
+- Banking transactions and reconciliation canonical workflows.
+- Fixed-asset acquisition through disposal/impairment/transfer with FA-to-GL reconciliation.
+- Customer and purchase returns plus debit/supplier debit memo coverage.
+- Approval-instance execution and separation-of-duties UI evidence.
+- Amortization, recurring journal, and revenue-recognition schedule execution.
+- Statutory return/working-paper generators and CAS export artifacts not covered by current canonical data.
+- Project, Location, and Functional Entity masters and policies.
+- Payroll engine, statutory deductions, confidentiality, approval, payment, correction, and tests.
+- Payment-method settlement mappings and method-specific references such as cheque or e-wallet identifiers.
 
-## Purchasing / AP
+## Future Enhancements
 
-| Feature | Business Value | Accounting Value | Compliance Value | UX Value | Dependencies | Priority | Complexity | Current Readiness | Phase | UI Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Supplier insights panel | Payment planning per supplier | Balance, aging, open bills, credits | EWT/ATC profile, 2307-issued history | Context without leaving the bill/PV | AP aging views (exist), `vw_ewt_summary_ap`, 2307 issuances | Medium | M | Data exists across views; no aggregation endpoint or panel | Phase 2 | Sidebar on supplier select: balance, aging, ATC defaults, recent 2307s |
+| Enhancement | Scope / Guardrail | Priority |
+| --- | --- | --- |
+| VAT/PT rate-version admin UI | Guided close-current/start-successor flow; database effective-date rules remain authoritative. | Medium |
+| Snapshot hash verification and exact re-download | Recompute SHA-256 over frozen evidence and regenerate the exact recorded file. | Medium |
+| TanStack Query adoption | Only high-revisit dashboards/registers/reports and shared reference reads when next touched; no mass refactor. | Medium |
+| React Hook Form + Zod | Complex line-item forms only; client validation mirrors but never replaces server authority. | Medium |
+| Shared company reference-data hooks | Extract within a touched domain cluster with zero behavior change and typed queries. | Medium |
+| Large-form performance work | Profile 50+ line scenarios before memoization or state architecture changes. | Low |
+| Zustand decision | Remove while unused; re-add only if cross-page state outgrows existing context. | Low |
 
-## Setup / Master Data
+## Deferred Work
 
-| Feature | Business Value | Accounting Value | Compliance Value | UX Value | Dependencies | Priority | Complexity | Current Readiness | Phase | UI Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| VAT/PT rate-version admin UI on `TaxSetupPage` | Admins can enact a statutory VAT/PT rate change without a migration | Deprecate-and-succeed keeps historical postings on their frozen rate | Effective-dated rate versions tie exports to the rate in force on each document date | Guided "close current version + start successor" flow instead of hand-editing rows | DB governance delivered (PXL-DA-010, `20260713000012`): `fn_tax_code_version_asof`, version-aware uniqueness, overlap/successor guards, used-code immutability | Medium | M | DB layer enforces versioning/immutability; `TaxSetupPage` shows ATC windows but has no VAT/PT successor-management UI, and pickers still resolve by row rather than by document date via the `*_version_asof` resolvers | Phase 2 | Mirror the ATC effective-window presentation: show active version + history, a "New rate version" action that sets the prior version's `effective_to` and links `supersedes_tax_code_id`, and route document pickers through `fn_tax_code_version_asof` by document date |
+The following wait until the Accounting Core Ready gate is cleared or an explicit task authorizes a narrow prerequisite:
 
-## Reports / Reconciliation
+- additional transaction workspace rollout;
+- report pilots and broad report-workspace conversion;
+- dashboards and management visualization expansion;
+- client portal;
+- AI/automation features;
+- campaign, opportunity, and industry masters; and
+- application-wide frontend state/form rewrites.
 
-| Feature | Business Value | Accounting Value | Compliance Value | UX Value | Dependencies | Priority | Complexity | Current Readiness | Phase | UI Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Automatic reconciliation suite | System proves its own integrity | AR aging = AR control; AP aging = AP control; inventory = inventory GL; assets = asset GL; FS = TB; TB = JE | VAT ledger = GL and 2307 = EWT ledger already enforced; extend the pattern | One dashboard of green checks | `fn_vat_gl_reconciliation` / `fn_wht_gl_reconciliation` as the pattern; PXL-DA-013 as-of views | High | L | VAT and WHT reconciliation RPCs delivered and gate returns/exports; other pairs unimplemented | Phase 2 | Reconciliation dashboard: pair, ledger amount, GL amount, variance, drill |
-| Snapshot integrity re-verification & file re-download | Auditor can prove a downloaded file matches its snapshot years later | Hash re-check proves frozen evidence untampered | BIR audit defense: recompute SHA-256 over the frozen payload and regenerate the exact exported file | One-click "Verify hash" / "Re-download file" on the snapshot reader | `ReportSnapshotsPage` (delivered, PXL-DA-015); Web Crypto for client-side SHA-256 or a server RPC | Medium | S | Reader shows stored hash and frozen rows; no recompute or re-download action yet | Phase 2 | Buttons in the snapshot detail header; green/red verify badge with recomputed hash |
+## Graduation Rule
 
-## Frontend Architecture (session 42 review — adopt selectively, never as a mass refactor)
-
-Context: the frontend is deliberately plain `useState`/`useEffect` + direct supabase-js. Since session 42 the client is typed against generated schema types (`src/lib/database.types.ts`, `npm run gen:types`), which is the production-safety layer. The entries below are UX/maintainability enhancements — none is release-blocking, and none should be applied application-wide in one pass.
-
-| Feature | Business Value | Accounting Value | Compliance Value | UX Value | Dependencies | Priority | Complexity | Current Readiness | Phase | UI Notes |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| TanStack Query on high-revisit read pages | Faster perceived navigation | None (reads only) | None | Cached dashboards/registers; stale-while-revalidate on tab switches | Library already installed | Medium | M | Not adopted anywhere; every page refetches on mount | Phase 2 | Adopt only on: dashboards, GL/TB/register/report pages, and shared reference data (customers/items/UOMs per company). Skip: setup pages, one-shot evidence pages (snapshots), low-traffic registers. Adopt when a page is next touched — never in bulk |
-| react-hook-form + Zod on complex forms | Fewer capture errors | Client mirror of server validation (server stays authoritative) | Required-field enforcement for BIR fields | Less re-render churn in 20+ line-item forms | Libraries already installed; Standard Transaction Experience shell | Medium | L | Not adopted anywhere; forms are useState-per-field | Phase 2 | Candidates in order: PaymentVouchersPage, VendorBillsPage, SalesInvoicePage, ReceiptsPage, CashSalesPage, CompanySetupPage/BranchSetupPage (compliance-required fields). Never migrate filter bars or simple modals |
-| Shared reference-data hooks (`useCompanyRefData`) | Less duplicated code | Consistent reference queries | Consistent tax-code/ATC loading | Single loading pattern | None (extract from existing pages) | Medium | M | ~30 pages duplicate customers/items/UOMs/branches/vat_codes fetch blocks; three pages shared identical dead-column bugs until session 42 — duplication is how drift spread | Phase 2 | Extract per cluster (sales docs, purchasing docs, banking) with zero behavior change; pairs naturally with TanStack Query adoption |
-| CI schema-types drift gate | Build fails when frontend and schema diverge | Protects ledger-adjacent queries | Protects compliance report queries | N/A | `npm run gen:types`; CI job regenerates and diffs | High | S | Types generated + typed client landed (session 42); regeneration is manual discipline | Alongside audit | CI step: `supabase gen types` against the migrated database, `git diff --exit-code src/lib/database.types.ts` |
-| Zustand: adopt or remove | Dependency honesty | None | None | None | Decision only | Low | S | Installed, never imported; `AppContext` (company/branch/period) covers current needs | Phase 2 | Default recommendation: remove the dependency; re-add if cross-page client state ever outgrows context |
-| Form performance profiling before optimization | Avoid speculative work | None | None | Keeps large line grids responsive | React DevTools profiling session | Low | S | No measured bottleneck exists; 1,698 useState instances are spread across 206 lazy-loaded pages, not one render tree | Phase 2 | Profile PaymentVouchersPage/VendorBillsPage with 50+ lines first; memoize rows/totals only where the profile shows churn |
-
-## Notes
-
-- pgTAP discipline: whenever accounting behaviour changes, decide whether a regression test should exist; if yes, record the scenario in `PXL_ACCOUNTING_TEST_BOOK.md` (existing rule, restated here because backlog features that touch posting inherit it).
-- Entries graduate out of this file into the work queue only when the user schedules a phase or an audit finding absorbs them (e.g. drilldown is also PXL-DA-002; the finding governs the release-blocking part, this file the product part).
+When work is scheduled, `AI/AI_STATE.md` names one bounded task and its governing documents/tests. If implementation reveals a verified defect, add it only to the central findings register. When an enhancement ships and is validated, update the relevant governing specification and remove or revise its backlog row rather than appending session history.

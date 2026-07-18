@@ -30,7 +30,7 @@ INSERT INTO companies (
   email, signatory_name, signatory_position, created_by, updated_by
 ) VALUES (
   '22222222-2222-2222-2222-222222222148', 'corporation',
-  'AUD049 Trace Corp', 'Services', '111-222-333-148',
+  'AUD049 Trace Corp', 'Services', '111-222-333-00148',
   'vat', 'calendar', 'Unit 1', 'Trace Bldg', 'Makati', 'Metro Manila', '1200',
   'aud049@test.local', 'Trace Signatory', 'President',
   '11111111-1111-1111-1111-111111111148',
@@ -63,7 +63,7 @@ INSERT INTO suppliers (
 ) VALUES (
   '66666666-6666-6666-6666-666666666148',
   '22222222-2222-2222-2222-222222222148', 'SUP-148',
-  'AUD049 Supplier Inc', '777-888-999-148', 'Supplier HQ',
+  'AUD049 Supplier Inc', '777-888-999-00148', 'Supplier HQ',
   '11111111-1111-1111-1111-111111111148',
   '11111111-1111-1111-1111-111111111148'
 );
@@ -74,7 +74,7 @@ INSERT INTO customers (
 ) VALUES (
   '55555555-5555-5555-5555-555555555148',
   '22222222-2222-2222-2222-222222222148', 'CUS-148',
-  'AUD049 Customer Inc', '444-555-666-148',
+  'AUD049 Customer Inc', '444-555-666-00148',
   'Customer HQ', 'Customer HQ',
   '11111111-1111-1111-1111-111111111148',
   '11111111-1111-1111-1111-111111111148'
@@ -90,7 +90,7 @@ INSERT INTO payment_vouchers (
   '22222222-2222-2222-2222-222222222148',
   '33333333-3333-3333-3333-333333333148',
   '66666666-6666-6666-6666-666666666148',
-  'AUD049 Supplier Inc', '777-888-999-148',
+  'AUD049 Supplier Inc', '777-888-999-00148',
   'PV-AUD049', '2026-07-10', 99, 1, 'posted',
   '11111111-1111-1111-1111-111111111148',
   '11111111-1111-1111-1111-111111111148'
@@ -107,7 +107,7 @@ INSERT INTO cash_purchases (
   '33333333-3333-3333-3333-333333333148',
   'CP-AUD049', '2026-07-12',
   '66666666-6666-6666-6666-666666666148',
-  'AUD049 Supplier Inc', '777-888-999-148',
+  'AUD049 Supplier Inc', '777-888-999-00148',
   'cash', 200, 24, 4, 220, 'posted',
   '11111111-1111-1111-1111-111111111148',
   '11111111-1111-1111-1111-111111111148'
@@ -124,7 +124,7 @@ INSERT INTO check_vouchers (
   '33333333-3333-3333-3333-333333333148',
   'CV-AUD049', '2026-07-14',
   'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaa0148',
-  'CHK-AUD049', '2026-07-14', 'AUD049 Supplier Inc', '777-888-999-148',
+  'CHK-AUD049', '2026-07-14', 'AUD049 Supplier Inc', '777-888-999-00148',
   '66666666-6666-6666-6666-666666666148',
   500, 5,
   (SELECT id FROM atc_codes WHERE code = 'WC158' ORDER BY effective_from NULLS FIRST LIMIT 1),
@@ -143,7 +143,7 @@ INSERT INTO receipts (
   '22222222-2222-2222-2222-222222222148',
   '33333333-3333-3333-3333-333333333148',
   '55555555-5555-5555-5555-555555555148',
-  'AUD049 Customer Inc', '444-555-666-148',
+  'AUD049 Customer Inc', '444-555-666-00148',
   'OR-AUD049', '2026-07-16',
   (SELECT id FROM ref_payment_modes WHERE code = 'CASH' LIMIT 1),
   297, 3, 'posted',
@@ -166,7 +166,7 @@ INSERT INTO tax_detail_entries (
     (SELECT id FROM atc_codes WHERE code = 'WC158' ORDER BY effective_from NULLS FIRST LIMIT 1),
     100, 1, 1, '2026-07-10', '2026-07-10',
     '66666666-6666-6666-6666-666666666148',
-    '777-888-999-148', 'AUD049 Supplier Inc', 'Trace goods'
+    '777-888-999-00148', 'AUD049 Supplier Inc', 'Trace goods'
   ),
   (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbb0248',
@@ -177,7 +177,7 @@ INSERT INTO tax_detail_entries (
     (SELECT id FROM atc_codes WHERE code = 'WC160' ORDER BY effective_from NULLS FIRST LIMIT 1),
     200, 2, 4, '2026-07-12', '2026-07-12',
     '66666666-6666-6666-6666-666666666148',
-    '777-888-999-148', 'AUD049 Supplier Inc', 'Trace services'
+    '777-888-999-00148', 'AUD049 Supplier Inc', 'Trace services'
   ),
   (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbb0348',
@@ -188,7 +188,7 @@ INSERT INTO tax_detail_entries (
     (SELECT id FROM atc_codes WHERE code = 'WC158' ORDER BY effective_from NULLS FIRST LIMIT 1),
     500, 1, 5, '2026-07-14', '2026-07-14',
     '66666666-6666-6666-6666-666666666148',
-    '777-888-999-148', 'AUD049 Supplier Inc', 'Trace goods'
+    '777-888-999-00148', 'AUD049 Supplier Inc', 'Trace goods'
   ),
   (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbb0448',
@@ -199,7 +199,7 @@ INSERT INTO tax_detail_entries (
     (SELECT id FROM atc_codes WHERE code = 'WC158' ORDER BY effective_from NULLS FIRST LIMIT 1),
     300, 1, 3, '2026-07-16', '2026-07-16',
     '55555555-5555-5555-5555-555555555148',
-    '444-555-666-148', 'AUD049 Customer Inc', 'Trace customer CWT'
+    '444-555-666-00148', 'AUD049 Customer Inc', 'Trace customer CWT'
   );
 
 INSERT INTO form_2307_issuances (

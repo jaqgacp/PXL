@@ -4,8 +4,9 @@ import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { TransactionWorkspace } from '@/components/document/TransactionWorkspace'
+import { SystemMetadataPanel, TransactionEmptyState } from '@/components/document/TransactionPrimitives'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 import { normalizePhTin } from '@/lib/philippines'
 
 // ── Types ─────────────────────────────────────────────────────
@@ -441,7 +442,8 @@ export default function PaymentVouchersPage() {
 
   const filtered = vouchers.filter(v =>
     !fSearch || v.voucher_number.includes(fSearch) ||
-    v.supplier_name_snapshot.toLowerCase().includes(fSearch.toLowerCase())
+    v.supplier_name_snapshot.toLowerCase().includes(fSearch.toLowerCase()) ||
+    (v.reference_number || '').toLowerCase().includes(fSearch.toLowerCase())
   )
 
   // ── List View ─────────────────────────────────────────────────
@@ -527,96 +529,83 @@ export default function PaymentVouchersPage() {
     { label: 'Lock status', value: editPV?.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
   ]
 
+  const selectedSupplier = suppliers.find(supplier => supplier.id === editPV?.supplier_id)
+  const selectedPaymentMode = paymentModes.find(paymentMode => paymentMode.id === editPV?.payment_mode_id)
+  const selectedCashAccount = cashAccounts.find(account => account.id === editPV?.bank_account_id)
+  const selectedBranch = branches.find(branch => branch.id === editPV?.branch_id)
+  const pvStatus = editPV?.status || 'draft'
+  const workflowSteps = [
+    { key: 'draft', label: 'Draft' },
+    { key: 'posted', label: 'Posted' },
+    { key: 'cancelled', label: 'Voided' },
+  ]
+  const validationErrors = [
+    !editPV?.supplier_id ? 'Supplier is required.' : '',
+    lines.every(line => line.payment_amount + line.ewt_amount <= 0) ? 'At least one bill application or supplier down payment is required.' : '',
+    lines.some(line => line.ewt_amount > 0 && !line.atc_code_id) ? 'ATC code is required for every EWT amount.' : '',
+    lines.some(line => line.ewt_amount > 0 && line.ewt_tax_base <= 0) ? 'EWT tax base must be greater than zero.' : '',
+    lines.some(line => line.ewt_amount > 0 && !line.ewt_income_nature.trim()) ? 'Income nature is required for EWT applications.' : '',
+  ].filter(Boolean)
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Toolbar */}
-      <div className={transactionHeaderClass('purchase')}>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">{editPV?.voucher_number || 'New Payment Voucher'}</span>
-        {editPV?.status && <StatusBadge status={editPV.status} />}
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          {!readOnly && (
-            <>
-              <button onClick={() => save(false)} disabled={saving || readiness.blockers.length > 0}
-                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-50">
-                {saving ? 'Saving…' : 'Save Draft'}
-              </button>
-              <button onClick={() => save(true)} disabled={saving || readiness.blockers.length > 0}
-                className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
-                {saving ? 'Posting…' : 'Save & Post'}
-              </button>
-            </>
-          )}
-          {readOnly && editPV?.status === 'posted' && (
-            <button onClick={voidVoucher} disabled={voiding}
-              className="px-3 py-1.5 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50 disabled:opacity-50">
-              {voiding ? 'Voiding…' : 'Void'}
-            </button>
-          )}
-        </div>
-      </div>
-
-      {readiness.blockers.length > 0 && (
-        <div className="px-5 py-3 border-b border-gray-100 bg-white">
-          <SetupReadinessBanner readiness={readiness} />
-        </div>
-      )}
-
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        {/* Header */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {h('Supplier', (
-              <select value={editPV?.supplier_id || ''} disabled={readOnly}
-                onChange={e => pickSupplier(e.target.value)} className={inputCls}>
-                <option value="">— select supplier —</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}
-              </select>
-            ))}
-            {h('Voucher Date', (
-              <input type="date" value={editPV?.voucher_date || today()} disabled={readOnly}
-                onChange={e => setEditPV(v => ({ ...v, voucher_date: e.target.value }))} className={inputCls} />
-            ))}
-            {h('Branch', (
-              <select value={editPV?.branch_id || ''} disabled={readOnly}
-                onChange={e => setEditPV(v => ({ ...v, branch_id: e.target.value }))} className={inputCls}>
-                <option value="">— none —</option>
-                {branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}
-              </select>
-            ))}
-            {h('Payment Mode', (
-              <select value={editPV?.payment_mode_id || ''} disabled={readOnly}
-                onChange={e => setEditPV(v => ({ ...v, payment_mode_id: e.target.value }))} className={inputCls}>
-                <option value="">—</option>
-                {paymentModes.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}
-              </select>
-            ))}
-            {h('Bank / Cash Account', (
-              <select value={editPV?.bank_account_id || ''} disabled={readOnly}
-                onChange={e => setEditPV(v => ({ ...v, bank_account_id: e.target.value }))} className={inputCls}>
-                <option value="">— use default cash account —</option>
-                {cashAccounts.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}
-              </select>
-            ))}
-            {h('Reference / Check #', (
-              <input value={editPV?.reference_number || ''} disabled={readOnly}
-                onChange={e => setEditPV(v => ({ ...v, reference_number: e.target.value }))} className={inputCls} />
-            ))}
-            {h('Remarks', (
-              <input value={editPV?.remarks || ''} disabled={readOnly}
-                onChange={e => setEditPV(v => ({ ...v, remarks: e.target.value }))} className={inputCls} />
-            ))}
-          </div>
-        </div>
-
-        {/* Bills being paid */}
-        <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-x-auto">
-          <div className="px-4 py-2.5 border-b border-gray-100">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Bills & Down Payments</span>
-          </div>
-          <table className="w-full text-xs">
+    <TransactionWorkspace
+      title="Payment Voucher"
+      documentNo={editPV?.voucher_number}
+      status={pvStatus}
+      statusLabel={pvStatus === 'cancelled' ? 'Voided' : pvStatus}
+      family="purchase"
+      identity={{ name: editPV?.supplier_name_snapshot || selectedSupplier?.registered_name || 'Supplier not selected', secondary: editPV?.supplier_tin_snapshot || selectedSupplier?.tin || undefined }}
+      metrics={[
+        { label: 'Cash Paid', value: `₱${fmt(totalPayment)}`, emphasis: true },
+        { label: 'EWT', value: `₱${fmt(totalEWT)}` },
+        { label: 'Total Applied', value: `₱${fmt(totalPayment + totalEWT)}`, emphasis: true },
+      ]}
+      meta={[
+        { label: 'Mode', value: readOnly ? 'Read only' : 'Editable', tone: readOnly ? 'warning' : 'info' },
+        { label: 'Posting', value: editPV?.posted_at ? 'Posted' : 'Not posted', tone: editPV?.posted_at ? 'success' : 'neutral' },
+      ]}
+      actions={[
+        ...(!readOnly ? [
+          { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: () => save(false), disabled: saving || readiness.blockers.length > 0 },
+          { key: 'post', label: saving ? 'Posting…' : 'Save & Post', onClick: () => save(true), disabled: saving || readiness.blockers.length > 0, variant: 'primary' as const },
+        ] : []),
+        ...(readOnly && pvStatus === 'posted' ? [
+          { key: 'void', label: voiding ? 'Voiding…' : 'Void', onClick: voidVoucher, disabled: voiding, variant: 'danger' as const, group: 'more' as const },
+        ] : []),
+      ]}
+      workflow={{ steps: workflowSteps, currentKey: pvStatus }}
+      cards={[
+        {
+          title: 'Document Information',
+          content: <div className="grid gap-3 sm:grid-cols-2">
+            {h('Voucher Date', <input type="date" value={editPV?.voucher_date || today()} disabled={readOnly} onChange={e => setEditPV(v => ({ ...v, voucher_date: e.target.value }))} className={inputCls} />)}
+            {h('Branch', <select value={editPV?.branch_id || ''} disabled={readOnly} onChange={e => setEditPV(v => ({ ...v, branch_id: e.target.value }))} className={inputCls}><option value="">— none —</option>{branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}</select>)}
+            <div><div className="pxl-field-label">Document Type</div><div className="pxl-body-text mt-1">Supplier payment / settlement</div></div>
+            <div><div className="pxl-field-label">Lock State</div><div className="pxl-body-text mt-1">{pvStatus === 'draft' ? 'Editable draft' : 'Lifecycle controlled'}</div></div>
+          </div>,
+        },
+        {
+          title: 'Supplier Information',
+          content: <div className="grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">{h('Supplier', <select value={editPV?.supplier_id || ''} disabled={readOnly} onChange={e => pickSupplier(e.target.value)} className={inputCls}><option value="">— select supplier —</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}</select>)}</div>
+            <div><div className="pxl-field-label">Supplier TIN</div><div className="pxl-body-text mt-1 font-mono">{editPV?.supplier_tin_snapshot || selectedSupplier?.tin || '—'}</div></div>
+            <div><div className="pxl-field-label">EWT Profile</div><div className="pxl-body-text mt-1">{selectedSupplier?.is_subject_to_ewt ? 'Subject to EWT' : 'Not subject / not selected'}</div></div>
+          </div>,
+        },
+        {
+          title: 'Payment Information',
+          content: <div className="grid gap-3 sm:grid-cols-2">
+            {h('Payment Mode', <select value={editPV?.payment_mode_id || ''} disabled={readOnly} onChange={e => setEditPV(v => ({ ...v, payment_mode_id: e.target.value }))} className={inputCls}><option value="">—</option>{paymentModes.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}</select>)}
+            {h('Reference / Check #', <input value={editPV?.reference_number || ''} disabled={readOnly} onChange={e => setEditPV(v => ({ ...v, reference_number: e.target.value }))} className={inputCls} />)}
+            <div className="sm:col-span-2">{h('Bank / Cash Account', <select value={editPV?.bank_account_id || ''} disabled={readOnly} onChange={e => setEditPV(v => ({ ...v, bank_account_id: e.target.value }))} className={inputCls}><option value="">— use default cash account —</option>{cashAccounts.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select>)}</div>
+          </div>,
+        },
+      ]}
+      tabBadges={{ lines: lines.length }}
+      tabContent={{
+        lines: <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]">
+          <div className="border-b border-[var(--pxl-border-medium)] px-3 py-2"><h2 className="pxl-section-title">Applications & Down Payments</h2></div>
+          <table className="pxl-data-grid w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {['Vendor Bill','Outstanding Balance','Payment Amount','EWT Withheld','EWT Base','EWT ATC','Income Nature','Variance','Net Cash',''].map(h => (
@@ -699,61 +688,43 @@ export default function PaymentVouchersPage() {
               ))}
             </tbody>
           </table>
-          {!readOnly && editPV?.supplier_id && (
-            <div className="px-4 py-2 border-t border-gray-100 flex items-center gap-4">
-              <button onClick={() => setLines(ls => [...ls, newLine()])}
-                className="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Bill</button>
-              <button onClick={addDownPaymentLine}
-                className="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Down Payment</button>
-            </div>
-          )}
-          {!readOnly && !editPV?.supplier_id && (
-            <div className="px-4 py-2 text-xs text-gray-400">Select a supplier to load open bills.</div>
-          )}
-        </div>
-
-        {/* Totals */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 flex justify-end">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm min-w-[280px]">
-            <span className="text-gray-500 text-xs">EWT Withheld</span>
-            <span className="text-right font-mono text-xs text-blue-700">{fmt(totalEWT)}</span>
-            <span className="text-gray-500 text-xs">AP Cleared (Cash + EWT)</span>
-            <span className="text-right font-mono text-xs text-gray-700">{fmt(totalPayment + totalEWT)}</span>
-            <span className="text-gray-900 font-semibold border-t border-gray-200 pt-1 mt-1">Cash Paid Out</span>
-            <span className="text-right font-mono font-bold text-gray-900 border-t border-gray-200 pt-1 mt-1">{fmt(totalPayment)}</span>
-          </div>
-        </div>
-
-        <GLImpactPanel
-          companyId={companyId}
-          sourceDocType="PV"
-          sourceDocId={editPV?.id}
-          previewRows={glImpactRows}
-        />
-
-        {editPV?.id && (
-          <div className="mt-4 space-y-3">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-                {auditFacts.map(fact => (
-                  <div key={fact.label}>
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{fact.label}</div>
-                    <div className="mt-1 text-xs text-gray-700">{fact.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <AuditTrailSection tableName="payment_vouchers" recordId={editPV.id} />
-          </div>
-        )}
-
-        {mode === 'view' && (
-          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-xs text-blue-700">
-            This voucher is {editPV?.status}. To make changes, create a new payment voucher.
-          </div>
-        )}
-      </div>
-    </div>
+          {!readOnly && editPV?.supplier_id && <div className="flex gap-3 border-t border-[var(--pxl-border-medium)] px-4 py-2"><button onClick={() => setLines(ls => [...ls, newLine()])} className="pxl-button pxl-button--text">+ Add Bill</button><button onClick={addDownPaymentLine} className="pxl-button pxl-button--text">+ Add Down Payment</button></div>}
+          {!readOnly && !editPV?.supplier_id && <div className="px-4 py-2 text-xs text-gray-500">Select a supplier to load open bills.</div>}
+        </div>,
+        financial: <div className="ml-auto grid max-w-lg grid-cols-2 gap-2"><span className="text-gray-600">Payment Amount</span><span className="text-right font-mono">₱{fmt(totalPayment)}</span><span className="text-gray-600">Withholding Tax</span><span className="text-right font-mono">₱{fmt(totalEWT)}</span><span className="text-gray-600">Applied Amount</span><span className="text-right font-mono">₱{fmt(totalPayment + totalEWT)}</span><span className="text-gray-600">Unapplied Amount</span><span className="text-right font-mono">₱0.00</span><span className="pxl-section-title border-t pt-2">Cash / Bank Amount</span><span className="border-t pt-2 text-right font-mono font-bold">₱{fmt(totalPayment)}</span></div>,
+        gl: <GLImpactPanel companyId={companyId} sourceDocType="PV" sourceDocId={editPV?.id} previewRows={glImpactRows} />,
+        tax: lines.some(line => line.ewt_amount > 0) ? <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full"><thead><tr>{['Source Document', 'ATC', 'Income Nature', 'Tax Base', 'Rate', 'EWT Amount'].map(label => <th key={label} className={['Tax Base', 'Rate', 'EWT Amount'].includes(label) ? 'text-right' : 'text-left'}>{label}</th>)}</tr></thead><tbody>{lines.filter(line => line.ewt_amount > 0).map(line => { const atc = atcCodes.find(code => code.id === line.atc_code_id); return <tr key={line._key}><td className="font-mono">{line.bill_number || 'Supplier Down Payment'}</td><td>{atc?.code || 'Missing'}</td><td>{line.ewt_income_nature || '—'}</td><td className="text-right font-mono">₱{fmt(line.ewt_tax_base)}</td><td className="text-right font-mono">{atc ? `${atc.rate}%` : '—'}</td><td className="text-right font-mono">₱{fmt(line.ewt_amount)}</td></tr> })}</tbody></table></div> : <TransactionEmptyState>No EWT is applied to this Payment Voucher.</TransactionEmptyState>,
+        validation: <div className="space-y-2">{readiness.blockers.length > 0 && <SetupReadinessBanner readiness={readiness} />}{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{validationErrors.length > 0 ? validationErrors.map(message => <div key={message} className="pxl-validation-message border border-orange-200 bg-orange-50 text-orange-800">{message}</div>) : <div className="pxl-validation-message border border-green-200 bg-green-50 text-green-800">Payment allocations, tax data, and settlement totals are ready.</div>}</div>,
+        workflow: <ol className="grid gap-2 sm:grid-cols-3">{workflowSteps.map(step => <li key={step.key} className={`pxl-transaction-card p-3 text-xs font-semibold ${step.key === pvStatus ? 'ring-2 ring-[var(--pxl-transaction-accent)]' : ''}`}>{step.label}</li>)}</ol>,
+        approval: <div className="grid gap-3 sm:grid-cols-3"><div><div className="pxl-field-label">Approval Status</div><div className="pxl-body-text mt-1">{editPV?.approved_at ? 'Approved' : pvStatus === 'posted' ? 'Posting completed' : 'No separate approval recorded'}</div></div><div><div className="pxl-field-label">Approved At</div><div className="pxl-body-text mt-1">{formatDateTime(editPV?.approved_at)}</div></div><div><div className="pxl-field-label">Next Action</div><div className="pxl-body-text mt-1">{pvStatus === 'draft' ? 'Save & Post' : 'No approval action available'}</div></div></div>,
+        audit: editPV?.id ? <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-5">{auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div><AuditTrailSection tableName="payment_vouchers" recordId={editPV.id} /></div> : <TransactionEmptyState>Audit history begins after the Payment Voucher is saved.</TransactionEmptyState>,
+        related: lines.some(line => line.vendor_bill_id) ? <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full"><thead><tr><th className="text-left">Relationship</th><th className="text-left">Document</th><th className="text-right">Amount Applied</th><th className="text-right">EWT</th></tr></thead><tbody>{lines.filter(line => line.vendor_bill_id).map(line => <tr key={line._key}><td>Settles</td><td className="font-mono font-semibold">{line.bill_number}</td><td className="text-right font-mono">₱{fmt(line.payment_amount)}</td><td className="text-right font-mono">₱{fmt(line.ewt_amount)}</td></tr>)}</tbody></table></div> : <TransactionEmptyState>No Vendor Bill is applied to this Payment Voucher.</TransactionEmptyState>,
+        party: selectedSupplier ? <dl className="grid gap-3 sm:grid-cols-3"><div><dt className="pxl-field-label">Supplier</dt><dd className="pxl-body-text mt-1">{selectedSupplier.registered_name}</dd></div><div><dt className="pxl-field-label">TIN</dt><dd className="pxl-body-text mt-1 font-mono">{selectedSupplier.tin || '—'}</dd></div><div><dt className="pxl-field-label">Withholding Profile</dt><dd className="pxl-body-text mt-1">{selectedSupplier.is_subject_to_ewt ? 'Subject to EWT' : 'Not subject to EWT'}</dd></div></dl> : <TransactionEmptyState>Select a supplier to see related-party information.</TransactionEmptyState>,
+        activity: <div className="grid gap-3 sm:grid-cols-4">{auditFacts.slice(0, 4).map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div>,
+        notes: h('Payment Remarks', <textarea value={editPV?.remarks || ''} disabled={readOnly} rows={5} onChange={e => setEditPV(v => ({ ...v, remarks: e.target.value }))} className={inputCls} />),
+        system: <SystemMetadataPanel facts={[
+          { label: 'Internal ID', value: editPV?.id || 'Assigned when saved', hint: 'Transaction identity' },
+          { label: 'Document Number', value: editPV?.voucher_number || 'Generated from number series', hint: 'Payment Voucher number' },
+          { label: 'Company ID', value: companyId || '—', hint: 'Tenant boundary' },
+          { label: 'Branch', value: selectedBranch ? `${selectedBranch.branch_code} — ${selectedBranch.branch_name}` : editPV?.branch_id || '—', hint: 'Posting context' },
+          { label: 'Payment Mode', value: selectedPaymentMode?.name || 'Not selected', hint: 'Settlement method' },
+          { label: 'Bank / Cash Account', value: selectedCashAccount ? `${selectedCashAccount.account_code} — ${selectedCashAccount.account_name}` : 'Default cash account', hint: 'Posting source' },
+          { label: 'Created', value: formatDateTime(editPV?.created_at), hint: 'Audit metadata' },
+          { label: 'Updated', value: formatDateTime(editPV?.updated_at), hint: 'Audit metadata' },
+          { label: 'Posted', value: formatDateTime(editPV?.posted_at), hint: 'Lifecycle metadata' },
+        ]} />,
+      }}
+      emptyTabMessages={{ attachments: 'No attachments have been added to this Payment Voucher.' }}
+      sidebarPanels={[
+        { key: 'application', title: 'Application Summary', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Applied</span><span className="font-mono text-xs">₱{fmt(totalPayment + totalEWT)}</span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Unapplied</span><span className="font-mono text-xs">₱0.00</span></div></div> },
+        { key: 'payment', title: 'Payment', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Cash Paid</span><span className="font-mono text-sm font-bold">₱{fmt(totalPayment)}</span></div><div className="pxl-caption">{selectedPaymentMode?.name || 'Payment mode not selected'}</div></div> },
+        { key: 'tax', title: 'Tax', content: <div className="flex justify-between gap-3"><span className="pxl-field-label">EWT</span><span className="font-mono text-xs">₱{fmt(totalEWT)}</span></div> },
+        { key: 'gl', title: 'GL Preview', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Debit</span><span className="font-mono text-xs">₱{fmt(glImpactRows.reduce((sum, row) => sum + row.debit, 0))}</span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Credit</span><span className="font-mono text-xs">₱{fmt(glImpactRows.reduce((sum, row) => sum + row.credit, 0))}</span></div></div> },
+        { key: 'supplier', title: 'Supplier', content: <div><div className="text-xs font-semibold">{editPV?.supplier_name_snapshot || selectedSupplier?.registered_name || 'Not selected'}</div><div className="pxl-caption mt-1 font-mono">{editPV?.supplier_tin_snapshot || selectedSupplier?.tin || 'No TIN'}</div></div> },
+      ]}
+      footer={<span>Created {formatDateTime(editPV?.created_at)} · Updated {formatDateTime(editPV?.updated_at)} · {pvStatus === 'draft' ? 'Editable draft' : 'Frozen by lifecycle controls'}</span>}
+      onBack={() => setMode('list')}
+      backLabel="Payment Vouchers"
+    />
   )
 }

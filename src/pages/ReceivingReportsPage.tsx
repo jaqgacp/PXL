@@ -1,13 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { StatusBadge, DateCell } from '@/components/ui/shared'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { AuditTrailSection, StatusBadge, DateCell } from '@/components/ui/shared'
+import { TransactionWorkspace } from '@/components/document/TransactionWorkspace'
+import { useBranchLabel } from '@/hooks/useBranchLabel'
+import { SystemMetadataPanel, TransactionEmptyState } from '@/components/document/TransactionPrimitives'
 
 type RRStatus = 'draft' | 'received' | 'cancelled'
 
 type RR = {
   id: string; company_id: string; rr_number: string; rr_date: string
+  branch_id: string | null; warehouse_id?: string | null; department_id?: string | null; cost_center_id?: string | null
   po_id: string; supplier_id: string; supplier_name_snapshot: string
   supplier_dr_no: string | null; remarks: string | null
   status: RRStatus; created_at: string
@@ -17,14 +21,15 @@ type RRLine = {
   _key: string; id?: string
   po_line_id: string; item_id: string; description: string
   ordered_qty: number; received_qty: number; reject_qty: number
-  uom_id: string; unit_price: number
+  uom_id: string; unit_price: number; item_type?: 'inventory_item' | 'service' | 'non_inventory'
 }
 
 type PORef = {
   id: string; po_number: string; supplier_id: string
   supplier_name_snapshot: string; supplier_tin_snapshot: string | null
-  status: string
+  status: string; branch_id: string | null; warehouse_id?: string | null; department_id?: string | null; cost_center_id?: string | null
 }
+type DimensionRef = { id: string; branch_id: string | null; department_id?: string | null; code: string; name: string }
 
 type POLine = {
   id: string; item_id: string; description: string; quantity: number
@@ -45,10 +50,14 @@ export default function ReceivingReportsPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [openPOs, setOpenPOs] = useState<PORef[]>([])
+  const [warehouses, setWarehouses] = useState<DimensionRef[]>([])
+  const [departments, setDepartments] = useState<DimensionRef[]>([])
+  const [costCenters, setCostCenters] = useState<DimensionRef[]>([])
   const [fStatus, setFStatus] = useState('')
   const [fSearch, setFSearch] = useState('')
   const listRef = useRef<HTMLDivElement>(null)
   const readOnly = mode === 'view'
+  const branchLabel = useBranchLabel(branchId)
 
   const loadReports = useCallback(async () => {
     if (!companyId) return
@@ -65,25 +74,34 @@ export default function ReceivingReportsPage() {
 
   useEffect(() => {
     if (!companyId) return
-    supabase.from('purchase_orders').select('id,po_number,supplier_id,supplier_name_snapshot,supplier_tin_snapshot,status')
+    supabase.from('purchase_orders' as any).select('id,po_number,supplier_id,supplier_name_snapshot,supplier_tin_snapshot,status,branch_id,warehouse_id,department_id,cost_center_id')
       .eq('company_id', companyId).in('status', ['approved', 'partially_received']).order('po_date', { ascending: false })
-      .then(({ data }) => setOpenPOs(data as PORef[] || []))
+      .then(({ data }) => setOpenPOs((data as unknown as PORef[]) || []))
+    Promise.all([
+      supabase.from('warehouses').select('id,branch_id,warehouse_code,warehouse_name').eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
+      supabase.from('departments').select('id,branch_id,department_code,department_name').eq('company_id', companyId).eq('is_active', true).order('department_code'),
+      supabase.from('cost_centers').select('id,branch_id,department_id,cost_center_code,cost_center_name').eq('company_id', companyId).eq('is_active', true).order('cost_center_code'),
+    ]).then(([warehouseRes, departmentRes, costCenterRes]) => {
+      setWarehouses((warehouseRes.data || []).map((row: any) => ({ id: row.id, branch_id: row.branch_id, code: row.warehouse_code, name: row.warehouse_name })))
+      setDepartments((departmentRes.data || []).map((row: any) => ({ id: row.id, branch_id: row.branch_id, code: row.department_code, name: row.department_name })))
+      setCostCenters((costCenterRes.data || []).map((row: any) => ({ id: row.id, branch_id: row.branch_id, department_id: row.department_id, code: row.cost_center_code, name: row.cost_center_name })))
+    })
   }, [companyId])
 
   const loadPOLines = async (poId: string) => {
     const { data } = await supabase.from('purchase_order_lines')
-      .select('id,item_id,description,quantity,uom_id,unit_price')
+      .select('id,item_id,description,quantity,uom_id,unit_price,item:items(item_type)')
       .eq('po_id', poId).order('line_number')
     return (data as POLine[] || []).map(l => ({
       _key: l.id, po_line_id: l.id, item_id: l.item_id || '',
       description: l.description, ordered_qty: l.quantity,
       received_qty: l.quantity, reject_qty: 0,
-      uom_id: l.uom_id || '', unit_price: l.unit_price,
+      uom_id: l.uom_id || '', unit_price: l.unit_price, item_type: (l as any).item?.item_type,
     }))
   }
 
   const openNew = () => {
-    setEditRR({ rr_date: today() })
+    setEditRR({ rr_date: today(), branch_id: branchId || '', warehouse_id: warehouses[0]?.id || '', department_id: departments[0]?.id || '', cost_center_id: costCenters[0]?.id || '' })
     setLines([])
     setError('')
     setMode('edit')
@@ -91,15 +109,15 @@ export default function ReceivingReportsPage() {
 
   const openView = (rr: RR) => {
     setEditRR({ ...rr })
-    supabase.from('receiving_report_lines').select('*').eq('rr_id', rr.id).order('line_number')
-      .then(({ data }) => setLines(data?.map(l => ({ ...l, _key: l.id })) as RRLine[] || []))
+    supabase.from('receiving_report_lines').select('*,item:items(item_type)').eq('rr_id', rr.id).order('line_number')
+      .then(({ data }) => setLines(data?.map((line: any) => ({ ...line, _key: line.id, item_type: line.item?.item_type })) as RRLine[] || []))
     setMode('view')
   }
 
   const selectPO = async (poId: string) => {
     const po = openPOs.find(p => p.id === poId)
     if (!po) return
-    setEditRR(prev => ({ ...prev, po_id: po.id }))
+    setEditRR(prev => ({ ...prev, po_id: po.id, branch_id: po.branch_id, warehouse_id: po.warehouse_id, department_id: po.department_id, cost_center_id: po.cost_center_id }))
     const lns = await loadPOLines(po.id)
     setLines(lns)
   }
@@ -116,7 +134,10 @@ export default function ReceivingReportsPage() {
       const result = await supabase.rpc('fn_save_receiving_report', {
         p_rr_id: (editRR.id || null)!,
         p_header: {
-          company_id: companyId, branch_id: branchId || null,
+          company_id: companyId, branch_id: editRR.branch_id || branchId || null,
+          warehouse_id: editRR.warehouse_id || null,
+          department_id: editRR.department_id || null,
+          cost_center_id: editRR.cost_center_id || null,
           po_id: editRR.po_id, rr_date: editRR.rr_date,
           supplier_dr_no: editRR.supplier_dr_no || '',
           remarks: editRR.remarks || '',
@@ -148,47 +169,50 @@ export default function ReceivingReportsPage() {
   const inp = 'border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white disabled:bg-gray-50'
   const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 4, maximumFractionDigits: 4 }).format(n)
 
-  if (mode !== 'list') return (
-    <div className="space-y-4" ref={listRef}>
-      <div className={`${transactionHeaderClass('purchase')} justify-between`}>
-        <div>
-          <h2 className="text-base font-semibold text-gray-900">{editRR?.id ? (readOnly ? 'Receiving Report' : 'Edit RR') : 'New Receiving Report'}</h2>
-          {editRR?.rr_number && <p className="text-xs text-gray-500 mt-0.5">{editRR.rr_number} · <StatusBadge status={STATUS_COLORS[editRR.status as string] || 'draft'} label={editRR.status as string} /></p>}
-        </div>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
-      </div>
+  if (mode !== 'list') {
+    const selectedPO = openPOs.find(po => po.id === editRR?.po_id)
+    const rrStatus = (editRR?.status || 'draft') as RRStatus
+    const totalOrdered = lines.reduce((sum, line) => sum + Number(line.ordered_qty || 0), 0)
+    const totalReceived = lines.reduce((sum, line) => sum + Number(line.received_qty || 0), 0)
+    const totalRejected = lines.reduce((sum, line) => sum + Number(line.reject_qty || 0), 0)
+    const receiptValue = lines.reduce((sum, line) => sum + Number(line.received_qty || 0) * Number(line.unit_price || 0), 0)
+    const validationErrors = [
+      !editRR?.po_id ? 'An approved Purchase Order is required.' : '',
+      lines.length === 0 ? 'At least one receipt line is required.' : '',
+      lines.some(line => line.received_qty < 0 || line.reject_qty < 0) ? 'Received and rejected quantities cannot be negative.' : '',
+      lines.some(line => line.received_qty + line.reject_qty > line.ordered_qty) ? 'Received plus rejected quantity cannot exceed ordered quantity.' : '',
+      lines.some(line => line.received_qty > 0 && line.item_type === 'inventory_item' && !editRR?.warehouse_id) ? 'Warehouse is required for inventory-item receipts.' : '',
+    ].filter(Boolean)
+    const workflowSteps = [{ key: 'draft', label: 'Draft' }, { key: 'received', label: 'Received' }, { key: 'cancelled', label: 'Cancelled' }]
 
-      {error && <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">{error}</div>}
-
-      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Header</h3>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">RR Date *</label>
-            <input type="date" value={editRR?.rr_date || ''} disabled={readOnly} onChange={e => setEditRR(p => ({ ...p, rr_date: e.target.value }))} className={inp} />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Purchase Order *</label>
-            <select value={editRR?.po_id || ''} disabled={readOnly || !!editRR?.id} onChange={e => selectPO(e.target.value)} className={inp + ' w-full'}>
-              <option value="">— Select approved PO —</option>
-              {openPOs.map(p => <option key={p.id} value={p.id}>{p.po_number} — {p.supplier_name_snapshot}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Supplier DR No.</label>
-            <input type="text" value={editRR?.supplier_dr_no || ''} disabled={readOnly} onChange={e => setEditRR(p => ({ ...p, supplier_dr_no: e.target.value }))} className={inp + ' w-full'} />
-          </div>
-          <div className="col-span-2">
-            <label className="block text-xs font-medium text-gray-700 mb-1">Remarks</label>
-            <input type="text" value={editRR?.remarks || ''} disabled={readOnly} onChange={e => setEditRR(p => ({ ...p, remarks: e.target.value }))} className={inp + ' w-full'} />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Line Items</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
+    return (
+      <div ref={listRef}>
+        <TransactionWorkspace
+          title="Goods Receipt"
+          documentNo={editRR?.rr_number}
+          status={rrStatus}
+          statusLabel={rrStatus}
+          family="purchase"
+          identity={{ name: editRR?.supplier_name_snapshot || selectedPO?.supplier_name_snapshot || 'Supplier from Purchase Order', secondary: selectedPO?.po_number || editRR?.po_id || undefined }}
+          metrics={[
+            { label: 'Quantity Received', value: fmt(totalReceived), emphasis: true },
+            { label: 'Quantity Rejected', value: fmt(totalRejected) },
+            { label: 'Receipt Value', value: `₱${new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(receiptValue)}` },
+          ]}
+          meta={[{ label: 'GL Posting', value: 'No direct GL posting', tone: 'neutral' }]}
+          actions={[
+            ...(!readOnly ? [{ key: 'save', label: saving ? 'Saving…' : 'Save Receipt', onClick: save, disabled: saving, variant: 'primary' as const }] : []),
+            ...(readOnly && rrStatus === 'draft' && editRR?.id ? [{ key: 'confirm', label: 'Confirm Receipt', onClick: () => confirm(editRR as RR), variant: 'primary' as const }] : []),
+          ]}
+          workflow={{ steps: workflowSteps, currentKey: rrStatus }}
+          cards={[
+            { title: 'Document Information', content: <div className="grid gap-3 sm:grid-cols-2"><label className="pxl-field-label">Receipt Date<input type="date" value={editRR?.rr_date || ''} disabled={readOnly} onChange={event => setEditRR(current => ({ ...current, rr_date: event.target.value }))} className={`${inp} mt-1 w-full`} /></label><label className="pxl-field-label">Supplier DR No.<input type="text" value={editRR?.supplier_dr_no || ''} disabled={readOnly} onChange={event => setEditRR(current => ({ ...current, supplier_dr_no: event.target.value }))} className={`${inp} mt-1 w-full`} /></label><div><div className="pxl-field-label">Branch</div><div className="pxl-body-text mt-1">{branchLabel}</div></div><div><div className="pxl-field-label">Receipt Status</div><div className="pxl-body-text mt-1">{rrStatus}</div></div></div> },
+            { title: 'Supplier Information', content: <div className="grid gap-3"><div><div className="pxl-field-label">Supplier</div><div className="pxl-body-text mt-1">{editRR?.supplier_name_snapshot || selectedPO?.supplier_name_snapshot || 'Sourced from Purchase Order'}</div></div><label className="pxl-field-label">Purchase Order<select value={editRR?.po_id || ''} disabled={readOnly || !!editRR?.id} onChange={event => void selectPO(event.target.value)} className={`${inp} mt-1 w-full`}><option value="">— Select approved PO —</option>{openPOs.map(po => <option key={po.id} value={po.id}>{po.po_number} — {po.supplier_name_snapshot}</option>)}</select></label><div><div className="pxl-field-label">Source Status</div><div className="pxl-body-text mt-1">{selectedPO?.status || 'Saved source snapshot'}</div></div></div> },
+            { title: 'Inventory Context', content: <div className="grid gap-3 sm:grid-cols-2"><label className="pxl-field-label">Warehouse<select value={editRR?.warehouse_id || ''} disabled={readOnly} onChange={event => setEditRR(current => ({ ...current, warehouse_id: event.target.value }))} className={`${inp} mt-1 w-full`}><option value="">— Select warehouse —</option>{warehouses.filter(w => !editRR?.branch_id || !w.branch_id || w.branch_id === editRR.branch_id).map(w => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}</select></label><label className="pxl-field-label">Department<select value={editRR?.department_id || ''} disabled={readOnly} onChange={event => setEditRR(current => ({ ...current, department_id: event.target.value }))} className={`${inp} mt-1 w-full`}><option value="">— Select department —</option>{departments.filter(d => !editRR?.branch_id || !d.branch_id || d.branch_id === editRR.branch_id).map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}</select></label><label className="pxl-field-label">Cost Center<select value={editRR?.cost_center_id || ''} disabled={readOnly} onChange={event => setEditRR(current => ({ ...current, cost_center_id: event.target.value }))} className={`${inp} mt-1 w-full`}><option value="">— Select cost center —</option>{costCenters.filter(c => (!editRR?.branch_id || !c.branch_id || c.branch_id === editRR.branch_id) && (!editRR?.department_id || !c.department_id || c.department_id === editRR.department_id)).map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}</select></label><div><div className="pxl-field-label">Ordered Quantity</div><div className="pxl-body-text mt-1 font-mono">{fmt(totalOrdered)}</div></div><div><div className="pxl-field-label">Received Quantity</div><div className="pxl-body-text mt-1 font-mono">{fmt(totalReceived)}</div></div><div><div className="pxl-field-label">Rejected Quantity</div><div className="pxl-body-text mt-1 font-mono">{fmt(totalRejected)}</div></div><div><div className="pxl-field-label">Movement</div><div className="pxl-body-text mt-1">{rrStatus === 'received' ? 'Warehouse stock receipt recorded' : 'Inbound receipt pending confirmation'}</div></div></div> },
+          ]}
+          tabBadges={{ lines: lines.length }}
+          tabContent={{
+            lines: <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full text-xs">
             <thead>
               <tr className="border-b border-gray-200 text-gray-500">
                 <th className="text-left pb-2 font-medium">Description</th>
@@ -213,20 +237,42 @@ export default function ReceivingReportsPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
-        </div>
+            </table></div>,
+            financial: <div className="space-y-4"><div className="ml-auto grid max-w-lg grid-cols-2 gap-2"><span className="text-gray-600">Total Ordered</span><span className="text-right font-mono">{fmt(totalOrdered)}</span><span className="text-gray-600">Total Received</span><span className="text-right font-mono">{fmt(totalReceived)}</span><span className="text-gray-600">Total Rejected</span><span className="text-right font-mono">{fmt(totalRejected)}</span><span className="pxl-section-title border-t pt-2">Source-Cost Value</span><span className="border-t pt-2 text-right font-mono font-bold">₱{new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(receiptValue)}</span></div><p className="pxl-caption">Receipt value is calculated from Purchase Order unit prices; it is not presented as a posted GL amount.</p></div>,
+            gl: <TransactionEmptyState>The current Goods Receipt confirmation process updates receipt and Purchase Order status but does not create a direct journal entry.</TransactionEmptyState>,
+            tax: <TransactionEmptyState>Goods Receipt does not recognize input VAT or EWT. Tax recognition occurs on the supported Vendor Bill or cash-purchase posting document.</TransactionEmptyState>,
+            validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{validationErrors.length > 0 ? validationErrors.map(message => <div key={message} className="pxl-validation-message border border-orange-200 bg-orange-50 text-orange-800">{message}</div>) : <div className="pxl-validation-message border border-green-200 bg-green-50 text-green-800">Receipt quantities and source-document controls are ready.</div>}</div>,
+            workflow: <ol className="grid gap-2 sm:grid-cols-3">{workflowSteps.map(step => <li key={step.key} className={`pxl-transaction-card p-3 text-xs font-semibold ${step.key === rrStatus ? 'ring-2 ring-[var(--pxl-transaction-accent)]' : ''}`}>{step.label}</li>)}</ol>,
+            approval: <div className="grid gap-3 sm:grid-cols-3"><div><div className="pxl-field-label">Approval / Confirmation</div><div className="pxl-body-text mt-1">{rrStatus === 'received' ? 'Receipt confirmed' : rrStatus === 'draft' ? 'Awaiting confirmation' : 'Cancelled'}</div></div><div><div className="pxl-field-label">Control</div><div className="pxl-body-text mt-1">Confirmation permission and source PO status</div></div><div><div className="pxl-field-label">Next Action</div><div className="pxl-body-text mt-1">{rrStatus === 'draft' ? 'Confirm Receipt' : 'No approval action available'}</div></div></div>,
+            audit: editRR?.id ? <AuditTrailSection tableName="receiving_reports" recordId={editRR.id} /> : <TransactionEmptyState>Audit history begins after the Goods Receipt is saved.</TransactionEmptyState>,
+            related: editRR?.po_id ? <table className="pxl-data-grid w-full"><thead><tr><th className="text-left">Relationship</th><th className="text-left">Document</th><th className="text-left">Status</th><th className="text-left">Open</th></tr></thead><tbody><tr><td>Source Purchase Order</td><td className="font-mono font-semibold">{selectedPO?.po_number || editRR.po_id}</td><td>{selectedPO?.status || 'Source snapshot'}</td><td><Link to="/purchase-orders" className="text-blue-700 hover:underline">Purchase Orders</Link></td></tr></tbody></table> : <TransactionEmptyState>Select a Purchase Order to establish source-document traceability.</TransactionEmptyState>,
+            party: <dl className="grid gap-3 sm:grid-cols-2"><div><dt className="pxl-field-label">Supplier</dt><dd className="pxl-body-text mt-1">{editRR?.supplier_name_snapshot || selectedPO?.supplier_name_snapshot || '—'}</dd></div><div><dt className="pxl-field-label">Supplier ID</dt><dd className="pxl-body-text mt-1 font-mono">{editRR?.supplier_id || selectedPO?.supplier_id || '—'}</dd></div></dl>,
+            activity: <div className="grid gap-3 sm:grid-cols-3"><div><div className="pxl-field-label">Created</div><div className="pxl-body-text mt-1">{editRR?.created_at ? new Date(editRR.created_at).toLocaleString('en-PH') : 'Not saved'}</div></div><div><div className="pxl-field-label">Confirmed</div><div className="pxl-body-text mt-1">{rrStatus === 'received' ? 'Yes' : 'No'}</div></div><div><div className="pxl-field-label">Inventory Evidence</div><div className="pxl-body-text mt-1">{rrStatus === 'received' ? 'Receipt confirmed' : 'Pending confirmation'}</div></div></div>,
+            notes: <label className="pxl-field-label">Receipt Remarks<textarea value={editRR?.remarks || ''} disabled={readOnly} rows={5} onChange={event => setEditRR(current => ({ ...current, remarks: event.target.value }))} className={`${inp} mt-1 w-full`} /></label>,
+            system: <SystemMetadataPanel facts={[
+              { label: 'Internal ID', value: editRR?.id || 'Assigned when saved', hint: 'Transaction identity' },
+              { label: 'Document Number', value: editRR?.rr_number || 'Generated from number series', hint: 'Receiving Report number' },
+              { label: 'Company ID', value: companyId || '—', hint: 'Tenant boundary' },
+              { label: 'Branch ID', value: branchId || '—', hint: 'Operational context' },
+              { label: 'Source Purchase Order', value: editRR?.po_id || 'Not selected', hint: 'Document lineage' },
+              { label: 'Created', value: editRR?.created_at ? new Date(editRR.created_at).toLocaleString('en-PH') : 'Not saved', hint: 'Audit metadata' },
+              { label: 'Posting Status', value: 'No direct GL posting', hint: 'Accounting behavior' },
+            ]} />,
+          }}
+          emptyTabMessages={{ attachments: 'No attachments have been added to this Goods Receipt.' }}
+          sidebarPanels={[
+            { key: 'inventory', title: 'Inventory', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Received</span><span className="font-mono text-sm font-bold">{fmt(totalReceived)}</span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Rejected</span><span className="font-mono text-xs">{fmt(totalRejected)}</span></div></div> },
+            { key: 'source', title: 'Source Document', content: <div><div className="font-mono text-xs font-semibold">{selectedPO?.po_number || editRR?.po_id || 'Not selected'}</div><div className="pxl-caption mt-1">Purchase Order</div></div> },
+            { key: 'gl', title: 'GL', content: <p className="pxl-caption">No direct journal posting in the current confirmation process.</p> },
+            { key: 'supplier', title: 'Supplier', content: <p className="text-xs font-semibold">{editRR?.supplier_name_snapshot || selectedPO?.supplier_name_snapshot || 'Not selected'}</p> },
+          ]}
+          footer={<span>{editRR?.id ? `Created ${editRR.created_at ? new Date(editRR.created_at).toLocaleString('en-PH') : '—'}` : 'Unsaved Goods Receipt'}</span>}
+          onBack={() => setMode('list')}
+          backLabel="Receiving Reports"
+        />
       </div>
-
-      {!readOnly && (
-        <div className="flex justify-end gap-2">
-          <button onClick={() => setMode('list')} className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
-          <button onClick={save} disabled={saving} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">
-            {saving ? 'Saving…' : 'Save RR'}
-          </button>
-        </div>
-      )}
-    </div>
-  )
+    )
+  }
 
   return (
     <div className="space-y-3">

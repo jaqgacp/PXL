@@ -182,7 +182,13 @@ export const STANDARD_TRANSACTION_TABS: TransactionWorkspaceTabKey[] = [
 ]
 
 export const STANDARD_TRANSACTION_COMPONENTS = [
+  'TransactionWorkspace',
   'DocumentLayout',
+  'TransactionPageHeader',
+  'TransactionWorkflowBanner',
+  'TransactionTabsBar',
+  'TransactionInfoCards',
+  'TransactionSidebarPanels',
   'PrimaryInformationPanel',
   'LineGrid',
   'LineDetailPanel',
@@ -197,16 +203,14 @@ export const STANDARD_TRANSACTION_COMPONENTS = [
 ] as const
 
 const docs = {
-  workspace: 'docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md',
-  experience: 'docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md',
+  workspace: 'docs/PXL/PXL_TRANSACTION_WORKSPACE_STANDARD.md',
+  patterns: 'docs/PXL/PXL_TRANSACTION_WORKSPACE_PATTERNS.md',
   manifest: 'docs/PXL/PXL_TRANSACTION_WORKSPACE_MANIFEST.md',
   playbook: 'docs/PXL/PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md',
   schema: 'docs/PXL/PXL_TRANSACTION_DEFINITION_SCHEMA.md',
   matrix: 'docs/PXL/PXL_TRANSACTION_MATRIX.md',
   accountingRules: 'docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md',
   fieldSourceMatrix: 'docs/PXL/PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md',
-  siForm: 'docs/PXL/PXL_SALES_INVOICE_UX_STANDARD.md',
-  siView: 'docs/PXL/PXL_SALES_INVOICE_VIEW_UX_STANDARD.md',
   siFunctional: 'docs/PXL/PXL_SALES_INVOICE_FUNCTIONAL_SPECIFICATION.md',
   siFields: 'docs/PXL/PXL_SALES_INVOICE_FIELD_MAPPING.md',
   siDimensions: 'docs/PXL/PXL_SALES_INVOICE_DIMENSION_MAPPING.md',
@@ -284,8 +288,6 @@ export const TRANSACTION_WORKSPACE_REGISTRY = [
     },
     documentation: [
       docs.fieldSourceMatrix,
-      docs.siForm,
-      docs.siView,
       docs.siFunctional,
       docs.siFields,
       docs.siDimensions,
@@ -293,7 +295,7 @@ export const TRANSACTION_WORKSPACE_REGISTRY = [
       docs.siGl,
       docs.siTax,
       docs.workspace,
-      docs.experience,
+      docs.patterns,
       docs.manifest,
       docs.playbook,
     ],

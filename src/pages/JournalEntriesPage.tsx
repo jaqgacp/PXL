@@ -1,11 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { BookOpen, Route, Scale } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Route } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
+import { AuditTrailSection } from '@/components/ui/shared'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { TransactionWorkspace } from '@/components/document/TransactionWorkspace'
+import { useBranchLabel } from '@/hooks/useBranchLabel'
+import { SystemMetadataPanel, TransactionEmptyState } from '@/components/document/TransactionPrimitives'
 
 // ── Types ─────────────────────────────────────────────────────
 type JEStatus = 'draft' | 'posted' | 'reversed'
@@ -49,6 +51,7 @@ const refTypeStyle = (t: string | null): string => {
 // ── Component ─────────────────────────────────────────────────
 export default function JournalEntriesPage() {
   const { companyId, branchId } = useAppCtx()
+  const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const requestedJeId = searchParams.get('jeId') || ''
 
@@ -79,6 +82,7 @@ export default function JournalEntriesPage() {
   const [openedQueryKey, setOpenedQueryKey] = useState('')
 
   const readOnly = mode === 'view'
+  const branchLabel = useBranchLabel(editJE?.branch_id || branchId)
 
   const load = useCallback(async () => {
     if (!companyId) return
@@ -357,91 +361,87 @@ export default function JournalEntriesPage() {
   // ── Edit / View ───────────────────────────────────────────────
   const inputCls = `border border-gray-300 rounded px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50 disabled:text-gray-500 w-full`
 
+  const jeStatus = editJE?.status || 'draft'
+  const selectedPeriod = periods.find(period => period.id === editJE?.fiscal_period_id)
+  const workflowSteps = [
+    { key: 'draft', label: 'Draft' },
+    { key: 'posted', label: 'Posted' },
+    { key: 'reversed', label: 'Reversed' },
+  ]
+  const validationErrors = [
+    validLines.length < 2 ? 'At least two valid journal lines are required.' : '',
+    totalDebit <= 0 ? 'Journal total must be greater than zero.' : '',
+    !isBalanced ? `Journal is out of balance by ₱${fmt(balance)}.` : '',
+    validLines.some(line => !accounts.some(account => account.id === line.account_id)) ? 'Every line requires an active postable account.' : '',
+  ].filter(Boolean)
+
   return (
-    <div className="flex flex-col h-full">
+    <>
       {reversalModal}
-      <div className={transactionHeaderClass('journal')}>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">{editJE?.je_number || 'New Manual Journal Entry'}</span>
-        {editJE?.status && <StatusBadge status={editJE.status} />}
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          {editJE?.id && (
-            <>
-              <Link to={`/accounting-trace?jeId=${editJE.id}`}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50">
-                <Route className="h-3.5 w-3.5" aria-hidden="true" />
-                Trace
-              </Link>
-              <Link to={`/general-ledger?jeId=${editJE.id}`}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50">
-                <Scale className="h-3.5 w-3.5" aria-hidden="true" />
-                GL
-              </Link>
-              <Link to={`/posting-review?jeId=${editJE.id}`}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 border border-gray-300 text-gray-700 rounded text-xs font-medium hover:bg-gray-50">
-                <BookOpen className="h-3.5 w-3.5" aria-hidden="true" />
-                Posting review
-              </Link>
-            </>
-          )}
-          {!readOnly && (
-            <button onClick={post} disabled={saving || !canPost}
-              className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-              {saving ? 'Posting…' : 'Post Entry'}
-            </button>
-          )}
-          {readOnly && editJE?.status === 'posted' && !editJE?.reversed_by_je_id && (
-            <button onClick={() => { setReverseTarget(editJE as JE); setReverseDate(today()) }}
-              className="px-3 py-1.5 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50">Reverse</button>
-          )}
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        {/* Header */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">JE Date</label>
-              <input type="date" value={editJE?.je_date || today()} disabled={readOnly}
-                onChange={e => setEditJE(v => ({ ...v, je_date: e.target.value }))} className={inputCls} />
-            </div>
-            <div className="flex flex-col gap-1 sm:col-span-2">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Description</label>
-              <input value={editJE?.description || ''} disabled={readOnly}
-                onChange={e => setEditJE(v => ({ ...v, description: e.target.value }))} className={inputCls} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Classification</label>
-              {readOnly ? (
-                <div className={inputCls}>{(editJE?.entry_class || 'regular').replace(/^\w/, c => c.toUpperCase())}</div>
-              ) : (
-                <select value={editJE?.entry_class || 'regular'}
-                  onChange={e => setEditJE(v => ({ ...v, entry_class: e.target.value }))} className={inputCls}>
-                  <option value="regular">Regular</option>
-                  <option value="adjusting">Adjusting</option>
-                  <option value="opening">Opening balance</option>
-                </select>
-              )}
-            </div>
-            {!readOnly && (
-              <label className="flex items-center gap-2 text-sm text-gray-700">
-                <input type="checkbox" checked={!!editJE?.auto_reverse}
-                  onChange={e => setEditJE(v => ({ ...v, auto_reverse: e.target.checked }))} />
-                Auto-reverse at next period start
-              </label>
-            )}
-          </div>
-        </div>
-
-        {/* Lines */}
-        <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-x-auto">
-          <div className="px-4 py-2.5 border-b border-gray-100">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Journal Lines</span>
-          </div>
-          <table className="w-full text-xs">
+      <TransactionWorkspace
+        title="Journal Entry"
+        documentNo={editJE?.je_number}
+        status={jeStatus}
+        statusLabel={jeStatus}
+        family="journal"
+        identity={{ name: editJE?.description || 'Manual Journal Entry', secondary: editJE?.reference_doc_type || 'MANUAL' }}
+        metrics={[
+          { label: 'Total Debit', value: `₱${fmt(totalDebit)}`, emphasis: true },
+          { label: 'Total Credit', value: `₱${fmt(totalCredit)}`, emphasis: true },
+          { label: 'Difference', value: `₱${fmt(balance)}`, emphasis: !isBalanced },
+        ]}
+        meta={[
+          { label: 'Balance', value: isBalanced ? 'Balanced' : 'Out of balance', tone: isBalanced ? 'success' : 'error' },
+          { label: 'Lock', value: jeStatus === 'draft' ? 'Editable' : 'Frozen', tone: jeStatus === 'draft' ? 'neutral' : 'warning' },
+        ]}
+        actions={[
+          ...(!readOnly ? [
+            { key: 'cancel', label: 'Cancel', onClick: () => setMode('list'), disabled: saving },
+            { key: 'post', label: saving ? 'Posting…' : 'Post Entry', onClick: post, disabled: saving || !canPost, variant: 'primary' as const },
+          ] : []),
+          ...(editJE?.id ? [
+            { key: 'trace', label: 'Trace', onClick: () => navigate(`/accounting-trace?jeId=${editJE.id}`) },
+            { key: 'ledger', label: 'General Ledger', onClick: () => navigate(`/general-ledger?jeId=${editJE.id}`), group: 'more' as const },
+            { key: 'review', label: 'Posting Review', onClick: () => navigate(`/posting-review?jeId=${editJE.id}`), group: 'more' as const },
+          ] : []),
+          ...(readOnly && jeStatus === 'posted' && !editJE?.reversed_by_je_id ? [{ key: 'reverse', label: 'Reverse', onClick: () => { setReverseTarget(editJE as JE); setReverseDate(today()) }, variant: 'danger' as const, group: 'more' as const }] : []),
+        ]}
+        workflow={{ steps: workflowSteps, currentKey: jeStatus }}
+        cards={[
+          {
+            title: 'Document Information',
+            content: <div className="grid gap-3 sm:grid-cols-2">
+              <label className="pxl-field-label">JE Date<input type="date" value={editJE?.je_date || today()} disabled={readOnly} onChange={e => setEditJE(v => ({ ...v, je_date: e.target.value }))} className={`${inputCls} mt-1`} /></label>
+              <div><div className="pxl-field-label">Fiscal Period</div><div className="pxl-body-text mt-1">{selectedPeriod?.period_name || 'Assigned during posting'}</div></div>
+              <div><div className="pxl-field-label">Branch</div><div className="pxl-body-text mt-1">{branchLabel}</div></div>
+              <div><div className="pxl-field-label">Reference Type</div><div className="pxl-body-text mt-1">{editJE?.reference_doc_type || 'MANUAL'}</div></div>
+            </div>,
+          },
+          {
+            title: 'Accounting Context',
+            content: <div className="grid gap-3 sm:grid-cols-2">
+              <label className="pxl-field-label">Classification{readOnly ? <div className={`${inputCls} mt-1`}>{(editJE?.entry_class || 'regular').replace(/^\w/, c => c.toUpperCase())}</div> : <select value={editJE?.entry_class || 'regular'} onChange={e => setEditJE(v => ({ ...v, entry_class: e.target.value }))} className={`${inputCls} mt-1`}><option value="regular">Regular</option><option value="adjusting">Adjusting</option><option value="opening">Opening balance</option></select>}</label>
+              <div><div className="pxl-field-label">Line Count</div><div className="pxl-body-text mt-1">{validLines.length} posting lines</div></div>
+              <div><div className="pxl-field-label">Debit / Credit Rule</div><div className="pxl-body-text mt-1">One-sided amount per line</div></div>
+              <div><div className="pxl-field-label">Balance Status</div><div className={`mt-1 text-xs font-semibold ${isBalanced ? 'text-green-700' : 'text-red-700'}`}>{isBalanced ? 'Balanced' : 'Out of balance'}</div></div>
+            </div>,
+          },
+          {
+            title: 'Posting Context',
+            content: <div className="grid gap-3 sm:grid-cols-2">
+              <div><div className="pxl-field-label">Posting Status</div><div className="pxl-body-text mt-1">{jeStatus}</div></div>
+              <div><div className="pxl-field-label">Auto Reversal</div><div className="pxl-body-text mt-1">{editJE?.auto_reverse ? 'Enabled' : 'Disabled'}</div></div>
+              {!readOnly && <label className="flex items-center gap-2 text-xs text-gray-700 sm:col-span-2"><input type="checkbox" checked={!!editJE?.auto_reverse} onChange={e => setEditJE(v => ({ ...v, auto_reverse: e.target.checked }))} />Auto-reverse at next period start</label>}
+              <div><div className="pxl-field-label">Source Document</div><div className="pxl-body-text mt-1 font-mono">{editJE?.reference_doc_id || 'Manual entry'}</div></div>
+              <div><div className="pxl-field-label">Reversal Journal</div><div className="pxl-body-text mt-1 font-mono">{editJE?.reversed_by_je_id || 'Not reversed'}</div></div>
+            </div>,
+          },
+        ]}
+        tabBadges={{ lines: lines.length }}
+        tabContent={{
+          lines: <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]">
+            <div className="border-b border-[var(--pxl-border-medium)] px-3 py-2"><h2 className="pxl-section-title">Debit & Credit Lines</h2></div>
+            <table className="pxl-data-grid w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {['Account', 'Line Description', 'Debit', 'Credit', ''].map(hh => (
@@ -492,50 +492,41 @@ export default function JournalEntriesPage() {
                 <td />
               </tr>
             </tfoot>
-          </table>
-          {!readOnly && (
-            <div className="px-4 py-2 border-t border-gray-100 flex items-center justify-between">
-              <button onClick={() => setLines(ls => [...ls, newLine()])}
-                className="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Line</button>
-              <span className={`text-xs font-semibold ${isBalanced ? 'text-green-600' : 'text-red-600'}`}>
-                {isBalanced ? 'BALANCED ✓' : `OUT OF BALANCE: ${fmt(balance)}`}
-              </span>
-            </div>
-          )}
-        </div>
-
-        <GLImpactPanel
-          companyId={companyId}
-          sourceDocType="MANUAL"
-          sourceDocId={null}
-          previewRows={glPreviewRows}
-          title="GL Impact — Manual Journal"
-        />
-
-        {readOnly && (
-          <div className="space-y-4">
-            <div className="bg-white border border-gray-200 rounded-lg p-4 text-xs text-gray-500">
-              This entry is {editJE?.status}. Posted entries are immutable — reverse to make a correction.
-            </div>
-            {editJE?.id && (
-              <div className="space-y-3">
-                <div className="bg-white border border-gray-200 rounded-lg p-4">
-                  <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {auditFacts.map(fact => (
-                      <div key={fact.label}>
-                        <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{fact.label}</div>
-                        <div className="text-xs font-medium text-gray-700">{fact.value}</div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <AuditTrailSection tableName="journal_entries" recordId={editJE.id} />
-              </div>
-            )}
-          </div>
-        )}
-      </div>
-    </div>
+            </table>
+            {!readOnly && <div className="flex items-center justify-between border-t border-[var(--pxl-border-medium)] px-4 py-2"><button onClick={() => setLines(ls => [...ls, newLine()])} className="pxl-button pxl-button--text">+ Add Line</button><span className={`text-xs font-semibold ${isBalanced ? 'text-green-700' : 'text-red-700'}`}>{isBalanced ? 'BALANCED ✓' : `OUT OF BALANCE: ${fmt(balance)}`}</span></div>}
+          </div>,
+          financial: <div className="ml-auto grid max-w-lg grid-cols-2 gap-2"><span className="text-gray-600">Total Debit</span><span className="text-right font-mono">₱{fmt(totalDebit)}</span><span className="text-gray-600">Total Credit</span><span className="text-right font-mono">₱{fmt(totalCredit)}</span><span className="pxl-section-title border-t pt-2">Difference</span><span className={`border-t pt-2 text-right font-mono font-bold ${isBalanced ? 'text-green-700' : 'text-red-700'}`}>₱{fmt(balance)}</span></div>,
+          gl: <GLImpactPanel companyId={companyId} sourceDocType="MANUAL" sourceDocId={editJE?.id || null} previewRows={glPreviewRows} title="GL Impact — Manual Journal" />,
+          tax: <TransactionEmptyState>No tax code fields are present on this Journal Entry. Tax impact is not inferred from account selection.</TransactionEmptyState>,
+          validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{validationErrors.length > 0 ? validationErrors.map(message => <div key={message} className="pxl-validation-message border border-orange-200 bg-orange-50 text-orange-800">{message}</div>) : <div className="pxl-validation-message border border-green-200 bg-green-50 text-green-800">Journal is balanced and ready to post.</div>}</div>,
+          workflow: <ol className="grid gap-2 sm:grid-cols-3">{workflowSteps.map(step => <li key={step.key} className={`pxl-transaction-card p-3 text-xs font-semibold ${step.key === jeStatus ? 'ring-2 ring-[var(--pxl-transaction-accent)]' : ''}`}>{step.label}</li>)}</ol>,
+          approval: <div className="grid gap-3 sm:grid-cols-3"><div><div className="pxl-field-label">Approval Status</div><div className="pxl-body-text mt-1">{jeStatus === 'draft' ? 'Posting authorization required' : 'Posting completed'}</div></div><div><div className="pxl-field-label">Segregation Control</div><div className="pxl-body-text mt-1">Driven by posting permissions</div></div><div><div className="pxl-field-label">Next Action</div><div className="pxl-body-text mt-1">{jeStatus === 'draft' ? 'Post Entry' : jeStatus === 'posted' ? 'Reverse when correction is required' : 'No action available'}</div></div></div>,
+          audit: editJE?.id ? <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-4">{auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div><AuditTrailSection tableName="journal_entries" recordId={editJE.id} /></div> : <TransactionEmptyState>Audit history begins when the Journal Entry is posted.</TransactionEmptyState>,
+          related: editJE?.reference_doc_id || editJE?.reversed_by_je_id ? <table className="pxl-data-grid w-full"><thead><tr><th className="text-left">Relationship</th><th className="text-left">Document Type</th><th className="text-left">Document ID</th></tr></thead><tbody>{editJE?.reference_doc_id && <tr><td>Source</td><td>{editJE.reference_doc_type || 'Source document'}</td><td className="font-mono">{editJE.reference_doc_id}</td></tr>}{editJE?.reversed_by_je_id && <tr><td>Reversed by</td><td>Journal Entry</td><td className="font-mono">{editJE.reversed_by_je_id}</td></tr>}</tbody></table> : <TransactionEmptyState>This manual Journal Entry has no source or reversal document.</TransactionEmptyState>,
+          party: <TransactionEmptyState>No entity dimension is stored on the current Journal Entry line model.</TransactionEmptyState>,
+          activity: <div className="grid gap-3 sm:grid-cols-4">{auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div>,
+          notes: <label className="pxl-field-label">Journal Description<textarea value={editJE?.description || ''} disabled={readOnly} rows={5} onChange={e => setEditJE(v => ({ ...v, description: e.target.value }))} className={`${inputCls} mt-1`} /></label>,
+          system: <SystemMetadataPanel facts={[
+            { label: 'Internal ID', value: editJE?.id || 'Assigned during posting', hint: 'Transaction identity' },
+            { label: 'Journal Number', value: editJE?.je_number || 'Generated from number series', hint: 'Journal identity' },
+            { label: 'Company ID', value: companyId || '—', hint: 'Tenant boundary' },
+            { label: 'Branch ID', value: editJE?.branch_id || branchId || '—', hint: 'Posting context' },
+            { label: 'Fiscal Period', value: selectedPeriod?.period_name || editJE?.fiscal_period_id || 'Assigned during posting', hint: 'Period control' },
+            { label: 'Created', value: formatDateTime(editJE?.created_at), hint: 'Audit metadata' },
+            { label: 'Updated', value: formatDateTime(editJE?.updated_at), hint: 'Audit metadata' },
+            { label: 'Lock Status', value: jeStatus === 'draft' ? 'Editable draft' : 'Immutable; reverse to correct', hint: 'Lifecycle control' },
+          ]} />,
+        }}
+        emptyTabMessages={{ attachments: 'No attachments have been added to this Journal Entry.' }}
+        sidebarPanels={[
+          { key: 'balance', title: 'Balance', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Debit</span><span className="font-mono text-xs">₱{fmt(totalDebit)}</span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Credit</span><span className="font-mono text-xs">₱{fmt(totalCredit)}</span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Difference</span><span className={`font-mono text-xs font-bold ${isBalanced ? 'text-green-700' : 'text-red-700'}`}>₱{fmt(balance)}</span></div></div> },
+          { key: 'posting', title: 'Posting', content: <div><div className="text-xs font-semibold">{jeStatus}</div><div className="pxl-caption mt-1">{jeStatus === 'draft' ? 'Requires balanced lines and posting permission.' : 'Posted entries are immutable.'}</div></div> },
+          { key: 'audit', title: 'Audit', content: <div className="pxl-caption">{editJE?.updated_at ? `Updated ${formatDateTime(editJE.updated_at)}` : 'Unsaved journal'}</div> },
+        ]}
+        footer={<span>{jeStatus === 'draft' ? 'Editable draft' : 'Posted entries are immutable — reverse to correct'} · Updated {formatDateTime(editJE?.updated_at)}</span>}
+        onBack={() => setMode('list')}
+        backLabel="Journal Entries"
+      />
+    </>
   )
 }

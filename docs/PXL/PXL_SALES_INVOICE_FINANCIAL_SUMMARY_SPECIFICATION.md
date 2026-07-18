@@ -85,4 +85,4 @@ The Financial tab must reconcile with:
 - posted inventory movement evidence, when applicable,
 - payment and credit applications for collected and balance due amounts.
 
-Any mismatch is a validation blocker before the Sales Invoice reference implementation can be marked fully approved.
+Any mismatch is a validation blocker before Sales Invoice business behavior can be marked fully approved. Sales Invoice is not a UI architecture reference.

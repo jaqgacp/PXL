@@ -32,7 +32,7 @@ INSERT INTO companies (id, entity_type, registered_name, line_of_business, tin,
                        address_line_1, address_line_2, city, province, zip_code,
                        email, signatory_name, signatory_position, created_by, updated_by)
 VALUES ('22222222-2222-2222-2222-222222222260', 'corporation',
-        'WHT Snapshot Test Corp', 'Software Services', '111-222-333-016',
+        'WHT Snapshot Test Corp', 'Software Services', '111-222-333-00016',
         'vat', 'calendar',
         'Unit 1', 'Test Bldg', 'Makati', 'Metro Manila', '1200',
         'harness-whtsnap@test.local', 'Juan Dela Cruz', 'President',
@@ -111,14 +111,14 @@ INSERT INTO customers (id, company_id, customer_code, registered_name, tin,
                        registered_address, delivery_address, created_by, updated_by)
 VALUES ('55555555-5555-5555-5555-555555555561',
         '22222222-2222-2222-2222-222222222260', 'CUST-001',
-        'WHT Snap Customer Inc', '444-555-666-016',
+        'WHT Snap Customer Inc', '444-555-666-00016',
         'Customer HQ, Taguig', 'Customer HQ, Taguig', auth.uid(), auth.uid());
 
 INSERT INTO suppliers (id, company_id, supplier_code, registered_name, tin,
                        registered_address, created_by, updated_by)
 VALUES ('66666666-6666-6666-6666-666666666661',
         '22222222-2222-2222-2222-222222222260', 'SUPP-001',
-        'WHT Snap Supplier Corp', '777-888-999-016',
+        'WHT Snap Supplier Corp', '777-888-999-00016',
         'Supplier HQ, Pasig', auth.uid(), auth.uid());
 
 CREATE TEMP TABLE t_ctx (key text PRIMARY KEY, id uuid);
@@ -135,7 +135,7 @@ SELECT 'si1', fn_save_sales_invoice(NULL,
     'date',                      '2026-02-10',
     'customer_id',               '55555555-5555-5555-5555-555555555561',
     'customer_name_snapshot',    'WHT Snap Customer Inc',
-    'customer_tin_snapshot',     '444-555-666-016',
+    'customer_tin_snapshot',     '444-555-666-00016',
     'customer_address_snapshot', 'Customer HQ, Taguig'
   ),
   jsonb_build_array(jsonb_build_object(
@@ -155,7 +155,7 @@ SELECT 'or1', fn_save_receipt(NULL,
     'branch_id',              '33333333-3333-3333-3333-333333333360',
     'customer_id',            '55555555-5555-5555-5555-555555555561',
     'customer_name_snapshot', 'WHT Snap Customer Inc',
-    'customer_tin_snapshot',  '444-555-666-016',
+    'customer_tin_snapshot',  '444-555-666-00016',
     'receipt_date',           '2026-02-20',
     'payment_mode_id',        (SELECT id FROM ref_payment_modes LIMIT 1),
     'total_amount',           10976,
@@ -176,7 +176,7 @@ SELECT 'vb1', fn_save_vendor_bill(NULL,
     'branch_id',               '33333333-3333-3333-3333-333333333360',
     'supplier_id',             '66666666-6666-6666-6666-666666666661',
     'supplier_name_snapshot',  'WHT Snap Supplier Corp',
-    'supplier_tin_snapshot',   '777-888-999-016',
+    'supplier_tin_snapshot',   '777-888-999-00016',
     'supplier_invoice_number', 'SUP-INV-0161',
     'bill_date',               '2026-02-12'
   ),
@@ -197,7 +197,7 @@ SELECT 'pv1', fn_save_payment_voucher(NULL,
     'branch_id',              '33333333-3333-3333-3333-333333333360',
     'supplier_id',            '66666666-6666-6666-6666-666666666661',
     'supplier_name_snapshot', 'WHT Snap Supplier Corp',
-    'supplier_tin_snapshot',  '777-888-999-016',
+    'supplier_tin_snapshot',  '777-888-999-00016',
     'voucher_date',           '2026-02-25',
     'total_amount',           5500,
     'total_ewt',              100
@@ -226,7 +226,7 @@ SELECT results_eq(
   $q$SELECT customer_tin, atc_code, income_payment, cwt_withheld
      FROM vw_cwt_summary_ar
      WHERE company_id = '22222222-2222-2222-2222-222222222260'$q$,
-  $$VALUES ('444-555-666-016'::text, 'WC140'::text, 11200.00::numeric, 224.00::numeric)$$,
+  $$VALUES ('444-555-666-00016'::text, 'WC140'::text, 11200.00::numeric, 224.00::numeric)$$,
   'vw_cwt_summary_ar exposes the OR CWT row with the gross income payment');
 
 -- 3-5. SAWT export creates a versioned exported snapshot with a SHA-256 hash
@@ -290,7 +290,7 @@ SELECT 'vb2', fn_save_vendor_bill(NULL,
     'branch_id',               '33333333-3333-3333-3333-333333333360',
     'supplier_id',             '66666666-6666-6666-6666-666666666661',
     'supplier_name_snapshot',  'WHT Snap Supplier Corp',
-    'supplier_tin_snapshot',   '777-888-999-016',
+    'supplier_tin_snapshot',   '777-888-999-00016',
     'supplier_invoice_number', 'SUP-INV-0162',
     'bill_date',               '2026-03-01'
   ),
@@ -311,7 +311,7 @@ SELECT 'pv2', fn_save_payment_voucher(NULL,
     'branch_id',              '33333333-3333-3333-3333-333333333360',
     'supplier_id',            '66666666-6666-6666-6666-666666666661',
     'supplier_name_snapshot', 'WHT Snap Supplier Corp',
-    'supplier_tin_snapshot',  '777-888-999-016',
+    'supplier_tin_snapshot',  '777-888-999-00016',
     'voucher_date',           '2026-03-10',
     'total_amount',           10200,
     'total_ewt',              1000

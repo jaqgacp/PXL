@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type PendingEntry = {
   id: string
@@ -110,41 +111,31 @@ export default function DepreciationRunPage() {
   const totalDepr = entries.filter(e => selected.has(e.id)).reduce((s, e) => s + e.depreciation_amount, 0)
 
   return (
+    <LegacyTransactionWorkspace title="Depreciation Run" family="neutral" pattern="D" posting
+      documentNo={cutoff} status={posting ? 'posting' : 'draft'} identity="Pending depreciation entries"
+      financialFacts={[{ label: 'Selected Depreciation', value: fmt(totalDepr) }, { label: 'Selected Entries', value: selected.size }, { label: 'Available Entries', value: entries.length }, { label: 'Posting Errors', value: progress?.errors.length || 0 }]}
+      contextFacts={[{ label: 'Cutoff Date', value: cutoff }, { label: 'Run State', value: posting ? 'Posting' : 'Ready' }, { label: 'Progress', value: progress && progress.total > 0 ? `${progress.done} / ${progress.total}` : 'Not started' }]}
+      sourceDocType="FA_DEPR" sourceDocId={previewEntryId}
+      actions={[
+        { key: 'refresh', label: loading ? 'Refreshing…' : 'Refresh', onClick: load, disabled: loading },
+        { key: 'post', label: posting ? `Posting ${progress?.done || 0}/${progress?.total || selected.size}…` : `Post ${selected.size} Entries`, onClick: postSelected, disabled: posting || selected.size === 0, variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'cutoff', label: 'Post Pending Up To', card: 0, content: <input type="date" value={cutoff} onChange={e => setCutoff(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'state', label: 'Run State', card: 0, content: <div className="pxl-readonly-field">{posting ? 'Posting' : 'Ready'}</div> },
+        { key: 'basis', label: 'Posting Basis', card: 1, span: 2, content: <div className="pxl-readonly-field">Pending fixed-asset depreciation entries</div> },
+        { key: 'scope', label: 'Selection', card: 2, span: 2, content: <div className="pxl-readonly-field">{selected.size} of {entries.length} entries</div> },
+      ]}
+      tabContent={{
+        validation: progress ? <div className={`pxl-validation-message border ${progress.errors.length > 0 ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}><p>{progress.done === progress.total ? 'Complete' : 'Posting'} ({progress.done}/{progress.total})</p>{progress.errors.map((entry, index) => <p key={index} className="text-red-600">{entry}</p>)}</div> : <div className="pxl-validation-message border border-gray-200">{selected.size ? `${selected.size} entries selected and ready.` : 'Select at least one pending entry.'}</div>,
+        gl: previewEntryId ? <GLImpactPanel companyId={companyId} sourceDocType="FA_DEPR" sourceDocId={previewEntryId} previewRows={[]} /> : undefined,
+      }}>
     <div>
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Depreciation Run</span>
-      </div>
-
-      <div className="px-5 py-4 space-y-4 max-w-5xl">
-        <div className="bg-white border border-gray-200 rounded-lg p-4 flex items-end gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Post All Pending Up To</label>
-            <input type="date" value={cutoff} onChange={e => setCutoff(e.target.value)}
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-            <p className="text-[10px] text-gray-400 mt-0.5">Shows all pending depreciation entries with date ≤ cutoff</p>
-          </div>
-          <button onClick={load} disabled={loading}
-            className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-40">
-            {loading ? 'Loading…' : 'Refresh'}
-          </button>
-        </div>
-
-        {progress && (
-          <div className={`border rounded p-3 text-xs ${progress.errors.length > 0 ? 'border-red-200 bg-red-50' : 'border-green-200 bg-green-50'}`}>
-            <p className="font-medium">{progress.done === progress.total ? 'Complete' : 'Posting…'} ({progress.done}/{progress.total})</p>
-            {progress.errors.map((e, i) => <p key={i} className="text-red-600 mt-1">{e}</p>)}
-          </div>
-        )}
-
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-3">
             <span className="text-xs text-gray-500 font-medium">{entries.length} pending entries</span>
             <span className="text-xs text-gray-400">|</span>
             <span className="text-xs text-gray-500">{selected.size} selected — Total: ₱ {fmt(totalDepr)}</span>
-            <button onClick={postSelected} disabled={posting || selected.size === 0}
-              className="ml-auto px-3 py-1.5 bg-gray-900 text-white rounded text-xs font-medium hover:bg-gray-800 disabled:opacity-40">
-              {posting ? `Posting ${progress?.done}/${progress?.total}…` : `Post ${selected.size} Entries`}
-            </button>
           </div>
 
           {loading ? (
@@ -155,7 +146,7 @@ export default function DepreciationRunPage() {
               <p className="text-xs text-gray-400 mt-1">All assets are up to date as of {cutoff}</p>
             </div>
           ) : (
-            <table className="w-full text-xs">
+            <table className="pxl-data-grid w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-3 py-2 w-8">
@@ -200,10 +191,7 @@ export default function DepreciationRunPage() {
           )}
         </div>
 
-        {previewEntryId && (
-          <GLImpactPanel companyId={companyId} sourceDocType="FA_DEPR" sourceDocId={previewEntryId} previewRows={[]} />
-        )}
-      </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

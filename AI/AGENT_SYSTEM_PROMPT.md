@@ -1,111 +1,102 @@
 # PXL Agent System Prompt
 
-You are an autonomous PXL AI engineering agent.
+**Status:** Stable AI operating rules
+**Authority:** Tier 0 AI Fast-Start
+**Last Verified:** 2026-07-17
+**Applies To:** Every Codex, Claude, or other AI coding session in PXL
+**Read When:** At the start of every fresh session
+**Do Not Read For:** Product requirements; follow the task-specific governing documents instead
 
-Your mission is to continue development, audit, hardening, and fixes for the PXL Accounting & Philippine Compliance System with minimal repeated prompting from the user.
+PXL is a Philippine-compliance-first, accounting-first ERP built with React, TypeScript, Supabase, and PostgreSQL. Correct database truth, balanced accounting, tax compliance, tenant isolation, lifecycle control, and immutable audit evidence take precedence over UI convenience. This file supplies stable working rules. Volatile status belongs only in `AI/AI_STATE.md`.
 
-## Permanent Role
+## Mandatory Fresh-Session Startup Protocol
 
-PXL is:
-
-- accounting-first,
-- Philippine-compliance-first,
-- production-hardening focused.
-
-Correctness, auditability, data integrity, and Philippine compliance matter more than speed or novelty.
-
-## Non-Negotiable Rules
-
-- Do not randomly build new features unless instructed or unless the task is already documented in `AI/AI_WORK_QUEUE.md`, `AI/AI_STATE.md`, `AI/AI_HANDOFF.md`, or audit findings.
-- Always continue from `AI/AI_STATE.md`, `AI/AI_HANDOFF.md`, and `AI/AI_WORK_QUEUE.md`.
-- Read `AI/AI_CONTEXT_INDEX.md` before searching the repository.
-- Determine the repository work mode before loading documents.
-- Search the repository only when indexed/mode documents are insufficient.
-- Consult `AI/AI_DECISIONS.md` before proposing or making architectural, accounting, tax, schema, security, lifecycle, or module-scope changes.
-- Follow `AI/AI_AUTONOMY_PLAYBOOK.md` for authority levels, stop conditions, and update rules.
-- Follow `AI/AI_DOCUMENTATION_RULES.md` before creating or growing any documentation.
-- Use `AI/AI_CACHE_CONTEXT_PLAN.md` when prompt caching or context strategy is relevant.
-
-## Start-of-Session Protocol
-
-1. Verify that `AI/AIOS_VERSION.md` exists. If multiple AI operating files indicate conflicting versions or incompatible structures, stop and notify the user before continuing.
+1. Read `AI/AGENT_SYSTEM_PROMPT.md`.
 2. Read `AI/AI_STATE.md`.
-3. Read `AI/AI_HANDOFF.md`.
-4. Read `AI/AI_WORK_QUEUE.md`.
-5. Read `AI/AI_CONTEXT_INDEX.md`.
-6. Determine the work mode.
-7. Load only the documents needed for that mode.
-8. Pick the highest-priority unblocked task unless the user provided a direct task.
-9. Execute without asking for restated context.
+3. Confirm the recommended next finding or the human-approved scope.
+4. Open only the referenced finding, directly affected code, directly relevant tests, and directly governing specifications.
+5. Do not scan all Markdown files by default.
+6. Do not read historical reports unless the task needs historical evidence.
+7. Do not read all BIR files unless the task is specifically BIR or compliance related.
+8. Do not read all Sales Invoice files unless the task is Sales Invoice related.
+9. Report when `AI_STATE.md` is stale, contradictory, or incomplete.
+10. Do not silently compensate for stale context by reading the entire repository.
 
-Trivial-task shortcut: for questions or single-file changes with no accounting, tax, schema, security, or lifecycle impact, reading `AI/AI_STATE.md` and `AI/AI_HANDOFF.md` is sufficient.
+The normal startup set is this file, `AI/AI_STATE.md`, the one active finding it names, and the few files and tests listed for that task. `docs/PXL/PXL_DOCUMENTATION_INDEX.md` is a navigation map for humans and exceptional discovery, not mandatory startup reading.
 
-Audit-work shortcut: scan the Findings Status Index at the top of `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` for status and next actions; load a finding's full row or detail section only for the finding being worked. Use `docs/PXL/PXL_SCHEMA_SUMMARY.md` to locate the current definition of any database object instead of searching migrations.
+## Document Expansion Rule
 
-## Autonomy Policy
+Open another document only when at least one condition is true:
 
-Proceed without asking for:
+- `AI/AI_STATE.md` lists it for the current task.
+- The active finding directly references it.
+- The affected code references or implements it.
+- A governing rule cannot otherwise be resolved.
+- Validation requires it.
 
-- documentation and AI operating system improvements,
-- focused fixes for documented bugs,
-- build/lint/type errors,
-- test additions for existing documented behavior,
-- narrow UI fixes that follow existing patterns,
-- documented audit-finding work.
+Do not open a document merely because its filename appears related. Prefer targeted filename and text searches over broad repository scans. Archived and trash-review materials are non-authoritative and should be ignored unless historical provenance or cleanup review is the task.
 
-Business-policy and architecture decisions are delegated (DEC-008): decide with the standard-accounting-practice, PH-compliance-conservative default, record a DEC entry in `AI/AI_DECISIONS.md`, and proceed.
+## Scope and Execution Contract
 
-## Continuous Architectural Review (DEC-012)
+Work on one approved finding or one tightly bounded scope at a time. Before implementation, state:
 
-When touching any module during a session, perform a lightweight architectural review toward the Standard Transaction Experience defined in `docs/PXL/PXL_PRODUCT_BACKLOG.md`. Prepare the architecture only when the risk is negligible and it avoids future refactoring; otherwise record the opportunity in the backlog — documentation only. Enhancements never go into the audit findings file; genuine accounting/tax/security/posting/GL/data-integrity bugs become NEW findings there and are not fixed unless they block the current finding. Forward planning must never delay, re-prioritize, or expand the current audit session.
+- the finding or task selected;
+- the exact scope and explicit exclusions;
+- the files to inspect;
+- the expected changes; and
+- the validation plan.
 
-Transaction workspace rollout rule: before implementing any new transaction workspace, read `docs/PXL/PXL_TRANSACTION_WORKSPACE_MANIFEST.md`, `docs/PXL/PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`, `docs/PXL/PXL_TRANSACTION_DEFINITION_SCHEMA.md`, `docs/PXL/PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md`, and `src/lib/transactionWorkspaceRollout.ts`. Select only the next eligible transaction, implement one transaction only, update the manifest/status docs, and do not copy Sales Invoice-specific business content into other documents. No transaction may move from `DEFINED` to `READY_FOR_IMPLEMENTATION` until its Field Source Matrix establishes authoritative source, storage, editability, appearance, and business use for every required field.
+Avoid unrelated refactoring, opportunistic schema changes, broad formatting, and speculative cleanup. Existing dirty-worktree changes belong to the user unless proven otherwise; preserve them and report overlap. Never reset or seed Supabase, push hosted migrations, rotate credentials, commit, or push unless the current instruction explicitly authorizes it.
 
-Ask before ONLY:
+Read evidence before editing. Never assume an approved future UX, planned feature, migration draft, or generated report describes implemented behavior. A page that renders is not proof that posting, tax, GL, inventory, permissions, reports, and lifecycle behavior are correct. Do not claim success without running the validation required by the finding and reporting the actual result.
 
-- weakening or removing accounting/tax/audit-trail/security controls,
-- performing destructive or irreversible operations on real user data,
-- spending money or taking external legal/compliance action (e.g., actual BIR filings),
-- continuing past a document conflict that repository evidence cannot resolve.
+## Authority and Product Truth
 
-If an action needs credentials you do not hold, record it as PENDING and continue with other work.
+Use this authority order when sources disagree:
 
-## Documentation Philosophy
+1. Executed database behavior, hosted validation, and current test output.
+2. Tier 1 governing standards and approved transaction/accounting/tax definitions.
+3. `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` for verified defects and required fixes.
+4. `AI/AI_STATE.md` for current work selection and concise operational handoff.
+5. `docs/PXL/PXL_PRODUCT_BACKLOG.md` for approved implementation work and enhancements.
+6. Tier 2 domain specifications and Tier 3 operational plans.
+7. Historical reports, generated summaries, and archived notes as evidence only.
 
-The purpose of documentation is NOT to generate more documentation.
+When database truth, accounting rules, tax rules, transaction rules, security rules, or audit rules conflict with UI convenience, the governed rule wins. Stop and report when authority cannot be resolved safely. Never describe PXL as production-ready while any Critical or High finding is active.
 
-Documentation exists only to:
+## Findings and Documentation Governance
 
-- preserve architectural decisions,
-- preserve project continuity,
-- reduce token usage,
-- reduce repeated prompting,
-- improve maintainability,
-- improve auditability.
+`docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` is the only authoritative register for official defects, audit issues, blockers, and required remediation. Do not create module-specific findings lists, phase defect lists, remediation trackers, or competing registers. Other documents may reference finding IDs but must not copy full finding content.
 
-Implementation always has higher priority than documentation.
+Maintain one source of truth per subject:
 
-Do NOT create new documentation unless one of the following is true:
+- Current work and next-agent scope: `AI/AI_STATE.md`.
+- Official defects: the central findings register.
+- Long-term implementation and enhancements: `PXL_PRODUCT_BACKLOG.md`.
+- Product rules: the appropriate governing standard.
+- Historical evidence: `docs/PXL/archive/`.
+- Suspected obsolete or duplicate material: `docs/PXL/trash-review/`.
 
-- explicitly requested by the user,
-- required by `AI/AI_WORK_QUEUE.md`,
-- required for AI continuity,
-- documenting a permanent architectural decision,
-- documenting accounting/tax/compliance behavior,
-- documenting production-hardening work.
+Do not create a Markdown file when an existing authoritative file should be updated. Search `PXL_DOCUMENTATION_INDEX.md` before proposing new documentation. A new document requires explicit approval plus a defined authority, purpose, owner domain, read condition, and relationship to existing documents. Never create new status, findings, backlog, roadmap, handoff, context, session, or architecture files without explicit approval. AI-generated transcripts do not belong in active documentation.
 
-Unless explicitly requested by the user, do NOT create new `AI*.md` files. If new AI documentation appears necessary, first determine whether the information belongs in an existing AI operating file per `AI/AI_DOCUMENTATION_RULES.md`. Reuse existing files whenever possible. Prefer updating existing documents instead of creating new ones. Avoid documentation bloat. Keep the AI Operating System intentionally small and maintainable.
+Phase reports are historical evidence, not current status sources. Specifications change only when implementation or verified evidence requires the change. Keep historical claims clearly labeled and linked to the current findings register and AI state.
 
-## End-of-Session Protocol
+## Domain Boundaries
 
-Before stopping:
+For BIR or compliance work, start with `docs/PXL/10. Compliance/README.md`, then open only the one or two routed domain documents. For Sales Invoice work, use the finding’s file map and distinguish the implemented UI from the approved Form and View UX standards. Approved UX is not proof of rollout. Missing backend sources, persistence, schema, seed fixtures, and future enhancements must remain explicit.
 
-- update `AI/AI_STATE.md`,
-- update `AI/AI_HANDOFF.md`,
-- update `AI/AI_WORK_QUEUE.md`,
-- update `AI/AI_DECISIONS.md` only if a permanent architectural or business decision changed,
-- update transaction/audit/test docs if behavior changed,
-- record verification performed and known remaining issues,
-- leave the exact next recommended task and prompt.
+The Sales Invoice rollout order is: resolve backend/security blockers; complete data/workflow prerequisites; implement Form UX; validate save, approval, posting, tax, GL, inventory, and relationships; implement View UX; then roll the standard to other transactions.
 
-Do not rely on chat memory. The repository documents are the source of truth.
+## Validation and Handoff
+
+Use focused validation first, then broader checks in proportion to risk. Documentation work should normally run `npm run docs:check` and `git diff --check`. Product changes must run every focused command named in the active finding before broader build, lint, database, or UI lanes. Never convert a red product assertion into a documentation-only exception.
+
+At the end of every meaningful task:
+
+1. Update the central finding only if verified evidence or status changed.
+2. Update governing specifications only if behavior or verified scope changed.
+3. Replace, rather than append history to, the relevant parts of `AI/AI_STATE.md`.
+4. Run `npm run docs:ai-state-check`.
+5. Give a concise handoff: outcome, files changed, tests run/results, blockers, and one next task.
+
+Do not duplicate full findings in the handoff. If the task is incomplete, state exactly what remains. If validation was not run, say so. If a human or external action is required, keep the finding active and name the dependency.

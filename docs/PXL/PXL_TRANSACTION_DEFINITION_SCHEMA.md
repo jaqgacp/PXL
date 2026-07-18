@@ -199,7 +199,8 @@ Any change to the schema must update:
 - `PXL_TRANSACTION_WORKSPACE_MANIFEST.md`
 - `PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`
 - `PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md` when field-source status, rules, or matrix requirements change
-- `PXL_STANDARD_TRANSACTION_WORKSPACE.md` when workspace behavior changes
+- `PXL_TRANSACTION_WORKSPACE_STANDARD.md` when workspace architecture changes
+- `PXL_TRANSACTION_WORKSPACE_PATTERNS.md` when A–E content variation changes
 - `PXL_TRANSACTION_MATRIX.md` or `PXL_ACCOUNTING_RULES_MATRIX.md` when transaction behavior changes
 
 Shared schema changes must be validated against every transaction already using the registry.

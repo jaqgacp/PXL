@@ -2,6 +2,15 @@
 
 React 19 + TypeScript + Vite frontend backed by Supabase (PostgreSQL + PostgREST + Auth + RLS).
 
+## Current Readiness and Documentation
+
+PXL is in accounting-core hardening and canonical-environment validation. It is suitable for controlled internal QA/demo use only and is not production-ready while active Critical and High findings remain.
+
+- AI agents start with `AI/AGENT_SYSTEM_PROMPT.md`, then `AI/AI_STATE.md`.
+- Official defects and required fixes live only in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`.
+- Documentation authority and task routing live in `docs/PXL/PXL_DOCUMENTATION_INDEX.md`.
+- Validate the current AI handoff with `npm run docs:ai-state-check`, or run both documentation gates with `npm run docs:check`.
+
 ---
 
 ## Stack
@@ -100,6 +109,7 @@ scripts/gen_schema_summary.sh
 - **INSERT**: `WITH CHECK (is_company_member(company_id))` on all transactional tables
 - **UPDATE/DELETE**: `USING (is_company_member(company_id))` on all transactional tables
 - Global BIR reference tables (`tax_codes`, `vat_codes`, `atc_codes`) allow reads by any authenticated user; writes require company admin role (`is_any_company_admin()`)
+- Legacy global `bir_forms` and `bir_form_mappings` still have broad authenticated write policies; `PXL-AUD-063` is the active RLS remediation and must be resolved before production readiness.
 - User dashboard data is scoped to `user_id = auth.uid()`
 
 ### SECURITY DEFINER RPCs

@@ -4,7 +4,7 @@ import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type FundRef = { id: string; fund_name: string; authorized_amount: number }
 type CCS = {
@@ -141,50 +141,33 @@ export default function CashCountSheetPage() {
 
   const ro = mode === 'view'
   return (
-    <div className="flex flex-col h-full">
-      <div className={transactionHeaderClass('banking')}>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">{form?.sheet_number || 'New Count Sheet'}</span>
-        {form?.status && <StatusBadge status={form.status} />}
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          {!ro && <>
-            <button onClick={() => save(false)} disabled={saving} className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>
-            <button onClick={() => { setBusy(true); save(true) }} disabled={saving || busy} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Finalize</button>
-          </>}
-        </div>
-      </div>
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        {!ro && <SetupReadinessBanner readiness={readiness} />}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-          <Field label="Fund *"><select disabled={ro} className={inputCls} value={form?.fund_id || ''} onChange={e => computeForFund(e.target.value)}>
-            <option value="">— select fund —</option>{funds.map(f => <option key={f.id} value={f.id}>{f.fund_name}</option>)}</select></Field>
-          <Field label="Count Date *"><input type="date" disabled={ro} className={inputCls} value={form?.count_date || today()} onChange={e => setForm(f => ({ ...f, count_date: e.target.value }))} /></Field>
-          <Field label="Counted By *"><input disabled={ro} className={inputCls} value={form?.counted_by || ''} onChange={e => setForm(f => ({ ...f, counted_by: e.target.value }))} /></Field>
-          <Field label="Witnessed By"><input disabled={ro} className={inputCls} value={form?.witnessed_by || ''} onChange={e => setForm(f => ({ ...f, witnessed_by: e.target.value }))} /></Field>
-          <Field label="Coins & Bills"><input type="number" disabled={ro} className={inputCls} value={form?.coins_and_bills ?? 0} onChange={e => setForm(f => ({ ...f, coins_and_bills: parseFloat(e.target.value) || 0 }))} /></Field>
-          <Field label="Unreplenished PCVs (auto)"><input type="number" disabled className={inputCls} value={form?.unreplenished_pcvs ?? 0} readOnly /></Field>
-          <Field label="Other Items"><input type="number" disabled={ro} className={inputCls} value={form?.other_items ?? 0} onChange={e => setForm(f => ({ ...f, other_items: parseFloat(e.target.value) || 0 }))} /></Field>
-          <Field label="Book Balance (auto)"><input type="number" disabled className={inputCls} value={form?.book_balance ?? 0} readOnly /></Field>
-          <Field label="Remarks" full><input disabled={ro} className={inputCls} value={form?.remarks || ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /></Field>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-lg p-5 mt-4 flex justify-end max-w-3xl">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm min-w-[280px]">
-            <span className="text-gray-500 text-xs">Counted Amount</span>
-            <span className="text-right font-mono text-xs text-gray-900">{fmt(counted)}</span>
-            <span className="text-gray-500 text-xs">Book Balance</span>
-            <span className="text-right font-mono text-xs text-gray-700">{fmt(Number(form?.book_balance) || 0)}</span>
-            <span className="text-gray-900 font-semibold border-t border-gray-200 pt-1 mt-1">Shortage / (Overage)</span>
-            <span className={`text-right font-mono font-bold border-t border-gray-200 pt-1 mt-1 ${shortageOverage < 0 ? 'text-red-600' : shortageOverage > 0 ? 'text-green-600' : 'text-gray-400'}`}>{fmt(shortageOverage)}</span>
-          </div>
-        </div>
-      </div>
-    </div>
+    <LegacyTransactionWorkspace title="Cash Count Sheet" family="banking" pattern="C" posting={false}
+      documentNo={form?.sheet_number} status={form?.status} identity={form?.petty_cash_funds?.fund_name}
+      financialFacts={[{ label: 'Counted Amount', value: fmt(Number(form?.counted_amount || 0)) }, { label: 'Book Balance', value: fmt(Number(form?.book_balance || 0)) }, { label: 'Shortage / Overage', value: fmt(Number(form?.shortage_overage || 0)) }, { label: 'Unreplenished Vouchers', value: fmt(Number(form?.unreplenished_pcvs || 0)) }]}
+      contextFacts={[{ label: 'Fund', value: form?.petty_cash_funds?.fund_name || 'Not selected' }, { label: 'Count Date', value: form?.count_date || 'Not assigned' }, { label: 'Counted By', value: form?.counted_by || 'Not recorded' }, { label: 'Witnessed By', value: form?.witnessed_by || 'Not recorded' }]}
+      sourceDocId={form?.id} auditTable="cash_count_sheets"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list'), hidden: ro },
+        { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: () => save(false), disabled: saving, hidden: ro },
+        { key: 'finalize', label: 'Finalize', onClick: () => { setBusy(true); save(true) }, disabled: saving || busy, hidden: ro, variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'Count Date *', card: 0, content: <input type="date" disabled={ro} className={`${inputCls} pxl-input`} value={form?.count_date || today()} onChange={e => setForm(f => ({ ...f, count_date: e.target.value }))} /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">{form?.sheet_number || 'Generated on save'}</div> },
+        { key: 'fund', label: 'Fund *', card: 1, span: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.fund_id || ''} onChange={e => computeForFund(e.target.value)}><option value="">— select fund —</option>{funds.map(f => <option key={f.id} value={f.id}>{f.fund_name}</option>)}</select> },
+        { key: 'counted-by', label: 'Counted By *', card: 1, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.counted_by || ''} onChange={e => setForm(f => ({ ...f, counted_by: e.target.value }))} /> },
+        { key: 'witness', label: 'Witnessed By', card: 1, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.witnessed_by || ''} onChange={e => setForm(f => ({ ...f, witnessed_by: e.target.value }))} /> },
+        { key: 'remarks', label: 'Remarks', card: 2, span: 2, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.remarks || ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /> },
+        { key: 'status', label: 'Count Status', card: 2, content: <div className="pxl-readonly-field capitalize">{form?.status || 'draft'}</div> },
+      ]}
+      tabContent={{ validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{!ro && <SetupReadinessBanner readiness={readiness} />}</div> }}
+      onBack={() => setMode('list')} backLabel="Cash Count Sheets">
+    <div className="overflow-x-auto"><div className="mb-2 flex items-center justify-between"><h2 className="pxl-section-title">Count Lines</h2><span className="pxl-caption">Counted amount {fmt(counted)}</span></div><table className="pxl-data-grid w-full min-w-[760px]" aria-label="Cash count lines"><thead><tr><th className="text-left">Count Component</th><th className="text-right">Amount</th><th className="text-left">Source</th></tr></thead><tbody>
+      <tr><td>Coins &amp; Bills</td><td><input type="number" disabled={ro} className={`${inputCls} pxl-input text-right`} value={form?.coins_and_bills ?? 0} onChange={e => setForm(f => ({ ...f, coins_and_bills: parseFloat(e.target.value) || 0 }))} /></td><td>Physical count</td></tr>
+      <tr><td>Unreplenished PCVs</td><td><input type="number" disabled className={`${inputCls} pxl-input text-right`} value={form?.unreplenished_pcvs ?? 0} readOnly /></td><td>System calculated</td></tr>
+      <tr><td>Other Items</td><td><input type="number" disabled={ro} className={`${inputCls} pxl-input text-right`} value={form?.other_items ?? 0} onChange={e => setForm(f => ({ ...f, other_items: parseFloat(e.target.value) || 0 }))} /></td><td>Count adjustment</td></tr>
+      <tr><td>Book Balance</td><td><input type="number" disabled className={`${inputCls} pxl-input text-right`} value={form?.book_balance ?? 0} readOnly /></td><td>System calculated</td></tr>
+    </tbody><tfoot><tr><td>Shortage / (Overage)</td><td className="text-right font-mono">{fmt(shortageOverage)}</td><td>Counted less book</td></tr></tfoot></table></div>
+    </LegacyTransactionWorkspace>
   )
-}
-
-function Field({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
-  return <div className={`flex flex-col gap-1 ${full ? 'sm:col-span-2' : ''}`}>
-    <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>{children}</div>
 }

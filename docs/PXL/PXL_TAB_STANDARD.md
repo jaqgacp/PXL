@@ -1,25 +1,9 @@
-# PXL Tab Standard
+# PXL Tab Standard (Superseded for Transaction Workspaces)
 
-Status: OFFICIAL TRANSACTION TAB STANDARD
+**Status:** SUPERSEDED — non-authoritative historical pointer
+**Superseded:** 2026-07-18
+**Superseded by:** `PXL_TRANSACTION_WORKSPACE_STANDARD.md` and `PXL_TRANSACTION_WORKSPACE_PATTERNS.md`
 
-Tabs organize transaction perspectives. They are not decorative navigation.
+This former tab guidance is non-authoritative for transaction workspaces.
 
-## Standard
-
-- Use `pxl-transaction-tabs` and `pxl-transaction-tab`.
-- Text-only labels.
-- 13px medium inactive labels.
-- Strong active state with clear border emphasis.
-- Inactive tabs remain readable.
-- Hover state is subtle.
-- Tabs integrate with the workspace tint.
-
-## Rules
-
-- Do not add icons to transaction tabs.
-- Do not use bright or saturated tab backgrounds.
-- Keep tab labels concise.
-- Preserve tab state while users edit.
-- Do not reload the full transaction unnecessarily on tab changes.
-
-Future transaction workspaces must reuse the same tab component and only change the available tab set.
+For transaction layout, visual behavior, components, responsive rules, themes, interaction, and accessibility, read only `PXL_TRANSACTION_WORKSPACE_STANDARD.md`. For permitted transaction-specific content differences, read only `PXL_TRANSACTION_WORKSPACE_PATTERNS.md`.

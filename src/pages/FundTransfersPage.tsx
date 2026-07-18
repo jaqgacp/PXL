@@ -5,7 +5,7 @@ import { AuditEvidenceBlock, StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type BankRef = { id: string; bank_name: string; account_number: string }
 type FT = {
@@ -158,41 +158,33 @@ export default function FundTransfersPage() {
 
   const ro = mode === 'view'
   return (
-    <div className="flex flex-col h-full">
-      <div className={transactionHeaderClass('banking')}>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">{form?.ft_number || 'New Fund Transfer'}</span>
-        {form?.status && <StatusBadge status={form.status} />}
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          {!ro && <button onClick={save} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>}
-          {!ro && form?.id && <button onClick={() => post(form.id!)} disabled={busy} className="px-3 py-1.5 border border-blue-300 text-blue-600 rounded text-sm hover:bg-blue-50 disabled:opacity-50">Post</button>}
-        </div>
-      </div>
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        {!ro && <SetupReadinessBanner readiness={readiness} />}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-          <Field label="Transfer Date *"><input type="date" disabled={ro} className={inputCls} value={form?.transfer_date || today()} onChange={e => setForm(f => ({ ...f, transfer_date: e.target.value }))} /></Field>
-          <Field label="Amount *"><input type="number" disabled={ro} className={inputCls} value={form?.amount ?? 0} onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} /></Field>
-          <Field label="From Account *"><select disabled={ro} className={inputCls} value={form?.from_account_id || ''} onChange={e => setForm(f => ({ ...f, from_account_id: e.target.value }))}>
-            <option value="">— select —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select></Field>
-          <Field label="To Account *"><select disabled={ro} className={inputCls} value={form?.to_account_id || ''} onChange={e => setForm(f => ({ ...f, to_account_id: e.target.value }))}>
-            <option value="">— select —</option>{banks.filter(b => b.id !== form?.from_account_id).map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select></Field>
-          <Field label="Reference Number"><input disabled={ro} className={inputCls} value={form?.reference_number || ''} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} /></Field>
-          <Field label="Remarks"><input disabled={ro} className={inputCls} value={form?.remarks || ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /></Field>
-        </div>
-        {form?.id && (
-          <div className="mt-4 max-w-5xl">
-            <GLImpactPanel companyId={companyId} sourceDocType="FT" sourceDocId={form.id} previewRows={[]} />
-            <AuditEvidenceBlock tableName="fund_transfers" recordId={form.id} facts={auditFacts} />
-          </div>
-        )}
-      </div>
+    <LegacyTransactionWorkspace title="Fund Transfer" family="banking" pattern="C" posting
+      documentNo={form?.ft_number} status={form?.status} identity={form?.from_acct?.bank_name}
+      financialFacts={[{ label: 'Transfer Amount', value: fmt(Number(form?.amount || 0)) }]}
+      contextFacts={[{ label: 'Source Account', value: form?.from_acct ? `${form.from_acct.bank_name} ${form.from_acct.account_number}` : 'Not selected' }, { label: 'Destination Account', value: form?.to_acct ? `${form.to_acct.bank_name} ${form.to_acct.account_number}` : 'Not selected' }, { label: 'Transfer Date', value: form?.transfer_date || 'Not assigned' }, { label: 'Reference', value: form?.reference_number || 'Not assigned' }]}
+      sourceDocType="FT" sourceDocId={form?.id} auditTable="fund_transfers"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list'), hidden: ro },
+        { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: save, disabled: saving || setupBlocked, hidden: ro, variant: 'primary' },
+        { key: 'post', label: 'Post', onClick: () => post(form?.id || ''), disabled: busy || setupBlocked, hidden: ro || !form?.id, variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'Transfer Date *', card: 0, content: <input type="date" disabled={ro} className={`${inputCls} pxl-input`} value={form?.transfer_date || today()} onChange={e => setForm(f => ({ ...f, transfer_date: e.target.value }))} /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">{form?.ft_number || 'Generated on save'}</div> },
+        { key: 'from', label: 'From Account *', card: 1, span: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.from_account_id || ''} onChange={e => setForm(f => ({ ...f, from_account_id: e.target.value }))}><option value="">— select —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select> },
+        { key: 'to', label: 'To Account *', card: 2, span: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.to_account_id || ''} onChange={e => setForm(f => ({ ...f, to_account_id: e.target.value }))}><option value="">— select —</option>{banks.filter(b => b.id !== form?.from_account_id).map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select> },
+        { key: 'reference', label: 'Reference Number', card: 2, span: 2, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.reference_number || ''} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} /> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{!ro && <SetupReadinessBanner readiness={readiness} />}</div>,
+        gl: form?.id ? <GLImpactPanel companyId={companyId} sourceDocType="FT" sourceDocId={form.id} previewRows={[]} /> : undefined,
+        audit: form?.id ? <AuditEvidenceBlock tableName="fund_transfers" recordId={form.id} facts={auditFacts} /> : undefined,
+      }}
+      onBack={() => setMode('list')} backLabel="Fund Transfers">
+    <div className="overflow-x-auto">
+      <div className="mb-2 flex items-center justify-between"><h2 className="pxl-section-title">Transfer Line</h2><span className="pxl-caption">Bank movement detail</span></div>
+      <table className="pxl-data-grid w-full min-w-[560px]" aria-label="Fund transfer line"><thead><tr><th className="text-right">Amount</th><th className="text-left">Remarks</th></tr></thead><tbody><tr><td><input type="number" disabled={ro} className={`${inputCls} pxl-input text-right`} value={form?.amount ?? 0} onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} /></td><td><input disabled={ro} className={`${inputCls} pxl-input`} value={form?.remarks || ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /></td></tr></tbody></table>
     </div>
+    </LegacyTransactionWorkspace>
   )
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="flex flex-col gap-1"><label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>{children}</div>
 }

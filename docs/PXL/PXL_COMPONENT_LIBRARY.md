@@ -1,38 +1,9 @@
-# PXL Component Library Standard
+# PXL Component Library Standard (Superseded for Transaction Workspaces)
 
-Status: OFFICIAL PLATFORM COMPONENT STANDARD
+**Status:** SUPERSEDED — non-authoritative historical pointer
+**Superseded:** 2026-07-18
+**Superseded by:** `PXL_TRANSACTION_WORKSPACE_STANDARD.md` and `PXL_TRANSACTION_WORKSPACE_PATTERNS.md`
 
-PXL components must be reusable, token-driven, and consistent across modules.
+This former component guidance is non-authoritative for transaction workspaces. Executable component contracts live in the shared transaction components and the sole workspace standard.
 
-## Required Shared Components
-
-| Component | Standard |
-| --- | --- |
-| Transaction Workspace | `pxl-transaction-workspace`, `DocumentLayout` |
-| Header | `pxl-transaction-header` |
-| Card / Panel | `pxl-transaction-card`, `TransactionPanel` |
-| Read-only Information Panel | `PrimaryInformationPanel` |
-| Button | `pxl-button` variants |
-| Table | `pxl-data-grid`, `LineGrid` |
-| Tabs | `pxl-transaction-tabs`, `pxl-transaction-tab` |
-| GL Impact View | `GLImpactPanel` |
-| Tax Impact View | `TaxImpactPanel` |
-| Related Documents View | `RelatedDocumentsTab` |
-| Audit Trail View | `AuditTrailSection` |
-| Status Badge | `pxl-status-badge` |
-| Input / Dropdown / Date Picker | `pxl-input` |
-| Readonly Field | `pxl-readonly-field` |
-| Dialog / Popover | `pxl-dialog` |
-| Side Panel | `pxl-side-panel` |
-| Validation Message | `pxl-validation-message` |
-| Empty State | `pxl-empty-state` |
-| Loading State | `pxl-loading-state` |
-
-## Rules
-
-- Build future transaction screens with shared components first.
-- Start transaction rollout from `src/lib/transactionWorkspaceRollout.ts`, `PXL_TRANSACTION_WORKSPACE_MANIFEST.md`, and `PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`.
-- Add props or variants when a legitimate new pattern appears.
-- Do not duplicate visual CSS inside page modules.
-- Component variants must preserve keyboard, hover, focus, disabled, and responsive states.
-- Do not place transaction-specific posting, tax, permission, or lifecycle rules inside shared presentational components.
+For transaction layout, visual behavior, components, responsive rules, themes, interaction, and accessibility, read only `PXL_TRANSACTION_WORKSPACE_STANDARD.md`. For permitted transaction-specific content differences, read only `PXL_TRANSACTION_WORKSPACE_PATTERNS.md`.

@@ -180,4 +180,4 @@ Sales Invoice currently supports the invoice, GL, VAT, receipt application, AR a
 
 ## 9. Approval Rule
 
-Sales Invoice remains the reference implementation for transaction UX structure, but it must not be marked `VALIDATED` or `APPROVED_REFERENCE` in the rollout manifest until the open completeness gaps are either implemented or explicitly excluded by an approved accounting policy.
+Sales Invoice implements the global Transaction Workspace architecture but does not define it. It must not be marked business-`VALIDATED` until the open completeness gaps are implemented or explicitly excluded by an approved accounting policy.

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type DueEntry = {
   id: string
@@ -100,51 +101,32 @@ export default function AmortizationRunPage() {
   const succeeded = results.filter(r => r.success).length
 
   return (
-    <div>
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3 flex-wrap">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Amortization Run</span>
-        <label className="text-xs text-gray-500">Entries due on or before</label>
-        <input type="date" value={asOfDate} onChange={e => setAsOfDate(e.target.value)}
-          className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-        <button onClick={load} disabled={!companyId || loading}
-          className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-40">
-          Refresh
-        </button>
-        {error && <span className="text-xs text-red-600">{error}</span>}
-        {entries.length > 0 && (
-          <button onClick={runAll} disabled={running}
-            className="ml-auto px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-            {running ? 'Running…' : `Post All (${entries.length})`}
-          </button>
-        )}
-      </div>
-
-      <div className="px-5 py-4 space-y-4">
-        {/* KPI strip */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Entries Due</p>
-            <p className="text-lg font-bold text-gray-900 tabular-nums">{entries.length}</p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Total Amount</p>
-            <p className="text-lg font-bold text-gray-900 tabular-nums font-mono">{fmt(totalDue)}</p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">As Of Date</p>
-            <p className="text-lg font-bold text-gray-700 font-mono">{asOfDate}</p>
-          </div>
-        </div>
-
-        {/* Run results */}
-        {showResults && results.length > 0 && (
+    <LegacyTransactionWorkspace title="Amortization Run" family="journal" pattern="D" posting
+      documentNo={asOfDate} status={showResults ? 'posted' : 'draft'} identity="Due amortization entries"
+      financialFacts={[{ label: 'Total Due', value: fmt(totalDue) }, { label: 'Due Entries', value: entries.length }, { label: 'Successful Posts', value: results.filter(result => result.success).length }, { label: 'Failed Posts', value: results.filter(result => !result.success).length }]}
+      contextFacts={[{ label: 'Run Through', value: asOfDate }, { label: 'Run State', value: running ? 'Posting' : showResults ? 'Completed' : 'Ready' }]}
+      sourceDocType="AMORT" sourceDocId={previewEntryId}
+      actions={[
+        { key: 'refresh', label: loading ? 'Refreshing…' : 'Refresh', onClick: load, disabled: !companyId || loading },
+        { key: 'post', label: running ? 'Running…' : `Post All (${entries.length})`, onClick: runAll, disabled: running || entries.length === 0, variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'through', label: 'Entries Due On or Before', card: 0, content: <input type="date" value={asOfDate} onChange={e => setAsOfDate(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'state', label: 'Run State', card: 0, content: <div className="pxl-readonly-field">{running ? 'Posting' : showResults ? 'Completed' : 'Ready'}</div> },
+        { key: 'basis', label: 'Posting Basis', card: 1, span: 2, content: <div className="pxl-readonly-field">Due amortization schedule entries</div> },
+        { key: 'scope', label: 'Run Scope', card: 2, span: 2, content: <div className="pxl-readonly-field">{entries.length} pending entries</div> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}<div className="pxl-validation-message border border-gray-200">{entries.length ? `${entries.length} entries are ready for posting.` : 'No entries are currently due.'}</div></div>,
+        gl: previewEntryId ? <GLImpactPanel companyId={companyId} sourceDocType="AMORT" sourceDocId={previewEntryId} previewRows={[]} /> : undefined,
+        activity: showResults && results.length > 0 ? (
           <div className={`border rounded-lg overflow-hidden ${failed ? 'border-amber-200' : 'border-green-200'}`}>
             <div className={`px-4 py-2.5 border-b ${failed ? 'border-amber-200 bg-amber-50' : 'border-green-200 bg-green-50'}`}>
               <span className={`text-[10px] font-semibold uppercase tracking-wide ${failed ? 'text-amber-600' : 'text-green-600'}`}>
                 Run Complete — {succeeded} posted{failed ? `, ${failed} failed` : ''}
               </span>
             </div>
-            <table className="w-full text-xs bg-white">
+            <table className="pxl-data-grid w-full bg-white">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {['Schedule', 'Period', 'Result', 'JE Number / Error'].map(hh => (
@@ -168,9 +150,9 @@ export default function AmortizationRunPage() {
               </tbody>
             </table>
           </div>
-        )}
-
-        {/* Due entries */}
+        ) : undefined,
+      }}>
+    <div>
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="px-4 py-2.5 border-b border-gray-100">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Pending Entries</span>
@@ -183,7 +165,7 @@ export default function AmortizationRunPage() {
               <p className="text-xs text-gray-400 mt-1">All entries up to {asOfDate} are posted, or no active schedules exist.</p>
             </div>
           ) : (
-            <table className="w-full text-xs">
+            <table className="pxl-data-grid w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {['Schedule', 'Period', 'Entry Date', 'Amount', ''].map(hh => (
@@ -217,10 +199,7 @@ export default function AmortizationRunPage() {
             </table>
           )}
         </div>
-        {previewEntryId && (
-          <GLImpactPanel companyId={companyId} sourceDocType="AMORT" sourceDocId={previewEntryId} previewRows={[]} />
-        )}
-      </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

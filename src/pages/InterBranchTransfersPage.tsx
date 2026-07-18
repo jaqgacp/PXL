@@ -5,7 +5,7 @@ import { StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type BranchRef = { id: string; branch_code: string; branch_name: string }
 type BankRef = { id: string; bank_name: string; account_number: string; branch_id: string | null }
@@ -164,47 +164,34 @@ export default function InterBranchTransfersPage() {
   const fromBanks = banks.filter(b => !form?.from_branch_id || b.branch_id === form.from_branch_id || b.branch_id == null)
   const toBanks = banks.filter(b => !form?.to_branch_id || b.branch_id === form.to_branch_id || b.branch_id == null)
   return (
-    <div className="flex flex-col h-full">
-      <div className={transactionHeaderClass('banking')}>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">{form?.ibt_number || 'New Inter-Branch Transfer'}</span>
-        {form?.status && <StatusBadge status={form.status} />}
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          {!ro && <button onClick={save} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>}
-          {!ro && form?.id && <button onClick={() => post(form.id!)} disabled={busy} className="px-3 py-1.5 border border-blue-300 text-blue-600 rounded text-sm hover:bg-blue-50 disabled:opacity-50">Post</button>}
-        </div>
-      </div>
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        {!ro && <SetupReadinessBanner readiness={readiness} />}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-          <Field label="Transfer Date *"><input type="date" disabled={ro} className={inputCls} value={form?.transfer_date || today()} onChange={e => setForm(f => ({ ...f, transfer_date: e.target.value }))} /></Field>
-          <Field label="Amount *"><input type="number" disabled={ro} className={inputCls} value={form?.amount ?? 0} onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} /></Field>
-          <Field label="From Branch *"><select disabled={ro} className={inputCls} value={form?.from_branch_id || ''} onChange={e => setForm(f => ({ ...f, from_branch_id: e.target.value }))}>
-            <option value="">— select —</option>{branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}</select></Field>
-          <Field label="To Branch *"><select disabled={ro} className={inputCls} value={form?.to_branch_id || ''} onChange={e => setForm(f => ({ ...f, to_branch_id: e.target.value }))}>
-            <option value="">— select —</option>{branches.filter(b => b.id !== form?.from_branch_id).map(b => <option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}</select></Field>
-          <Field label="From Account"><select disabled={ro} className={inputCls} value={form?.from_account_id || ''} onChange={e => setForm(f => ({ ...f, from_account_id: e.target.value }))}>
-            <option value="">— optional —</option>{fromBanks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select></Field>
-          <Field label="To Account"><select disabled={ro} className={inputCls} value={form?.to_account_id || ''} onChange={e => setForm(f => ({ ...f, to_account_id: e.target.value }))}>
-            <option value="">— optional —</option>{toBanks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select></Field>
-          <Field label="Intercompany Account"><select disabled={ro} className={inputCls} value={form?.intercompany_account_id || ''} onChange={e => setForm(f => ({ ...f, intercompany_account_id: e.target.value }))}>
-            <option value="">— optional —</option>{coa.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select></Field>
-          <Field label="Reference Number"><input disabled={ro} className={inputCls} value={form?.reference_number || ''} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} /></Field>
-          <Field label="Remarks" full><input disabled={ro} className={inputCls} value={form?.remarks || ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /></Field>
-        </div>
-        {form?.id && (
-          <div className="mt-4 max-w-5xl">
-            <GLImpactPanel companyId={companyId} sourceDocType="IBT" sourceDocId={form.id} previewRows={[]} />
-          </div>
-        )}
-      </div>
+    <LegacyTransactionWorkspace title="Inter-Branch Transfer" family="banking" pattern="C" posting
+      documentNo={form?.ibt_number} status={form?.status} identity={form?.from_branch?.branch_code}
+      financialFacts={[{ label: 'Transfer Amount', value: fmt(Number(form?.amount || 0)) }]}
+      contextFacts={[{ label: 'Source Branch', value: form?.from_branch?.branch_code || 'Not selected' }, { label: 'Destination Branch', value: form?.to_branch?.branch_code || 'Not selected' }, { label: 'Transfer Date', value: form?.transfer_date || 'Not assigned' }, { label: 'Reference', value: form?.reference_number || 'Not assigned' }]}
+      sourceDocType="IBT" sourceDocId={form?.id} auditTable="inter_branch_transfers"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list'), hidden: ro },
+        { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: save, disabled: saving || setupBlocked, hidden: ro, variant: 'primary' },
+        { key: 'post', label: 'Post', onClick: () => post(form?.id || ''), disabled: busy || setupBlocked, hidden: ro || !form?.id, variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'Transfer Date *', card: 0, content: <input type="date" disabled={ro} className={`${inputCls} pxl-input`} value={form?.transfer_date || today()} onChange={e => setForm(f => ({ ...f, transfer_date: e.target.value }))} /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">{form?.ibt_number || 'Generated on save'}</div> },
+        { key: 'from-branch', label: 'From Branch *', card: 1, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.from_branch_id || ''} onChange={e => setForm(f => ({ ...f, from_branch_id: e.target.value }))}><option value="">— select —</option>{branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}</select> },
+        { key: 'from-account', label: 'From Account', card: 1, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.from_account_id || ''} onChange={e => setForm(f => ({ ...f, from_account_id: e.target.value }))}><option value="">— optional —</option>{fromBanks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select> },
+        { key: 'to-branch', label: 'To Branch *', card: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.to_branch_id || ''} onChange={e => setForm(f => ({ ...f, to_branch_id: e.target.value }))}><option value="">— select —</option>{branches.filter(b => b.id !== form?.from_branch_id).map(b => <option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}</select> },
+        { key: 'to-account', label: 'To Account', card: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.to_account_id || ''} onChange={e => setForm(f => ({ ...f, to_account_id: e.target.value }))}><option value="">— optional —</option>{toBanks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select> },
+        { key: 'reference', label: 'Reference Number', card: 2, span: 2, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.reference_number || ''} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} /> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{!ro && <SetupReadinessBanner readiness={readiness} />}</div>,
+        gl: form?.id ? <GLImpactPanel companyId={companyId} sourceDocType="IBT" sourceDocId={form.id} previewRows={[]} /> : undefined,
+      }}
+      onBack={() => setMode('list')} backLabel="Inter-Branch Transfers">
+    <div className="overflow-x-auto">
+      <div className="mb-2 flex items-center justify-between"><h2 className="pxl-section-title">Transfer Line</h2><span className="pxl-caption">Inter-branch settlement detail</span></div>
+      <table className="pxl-data-grid w-full min-w-[760px]" aria-label="Inter-branch transfer line"><thead><tr><th className="text-left">Intercompany Account</th><th className="text-right">Amount</th><th className="text-left">Remarks</th></tr></thead><tbody><tr><td><select disabled={ro} className={`${inputCls} pxl-input`} value={form?.intercompany_account_id || ''} onChange={e => setForm(f => ({ ...f, intercompany_account_id: e.target.value }))}><option value="">— optional —</option>{coa.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select></td><td><input type="number" disabled={ro} className={`${inputCls} pxl-input text-right`} value={form?.amount ?? 0} onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} /></td><td><input disabled={ro} className={`${inputCls} pxl-input`} value={form?.remarks || ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /></td></tr></tbody></table>
     </div>
+    </LegacyTransactionWorkspace>
   )
-}
-
-function Field({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
-  return <div className={`flex flex-col gap-1 ${full ? 'sm:col-span-2' : ''}`}>
-    <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>{children}</div>
 }

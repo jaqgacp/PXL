@@ -1,5 +1,9 @@
 # AI Decisions
 
+**Status:** Historical Snapshot
+**Not Current Source of Truth:** Current rules live in `AI/AGENT_SYSTEM_PROMPT.md`; subject decisions must be verified against governing standards.
+**Read When:** A named historical decision requires provenance
+
 Purpose: permanent architectural and business memory for PXL.
 
 Use this file to record why important long-term decisions were made. This is different from `AI/AI_STATE.md`, which records the current project state and session progress. Claude, Fable, Codex, and future AI agents must consult this file before proposing architectural changes.

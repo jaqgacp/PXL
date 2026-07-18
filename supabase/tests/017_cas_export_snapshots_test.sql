@@ -34,7 +34,7 @@ INSERT INTO companies (id, entity_type, registered_name, line_of_business, tin,
                        address_line_1, address_line_2, city, province, zip_code,
                        email, signatory_name, signatory_position, created_by, updated_by)
 VALUES ('22222222-2222-2222-2222-222222222270', 'corporation',
-        'CAS Snapshot Test Corp', 'Software Services', '111-222-333-017',
+        'CAS Snapshot Test Corp', 'Software Services', '111-222-333-00017',
         'vat', 'calendar',
         'Unit 1', 'Test Bldg', 'Makati', 'Metro Manila', '1200',
         'harness-cassnap@test.local', 'Juan Dela Cruz', 'President',
@@ -113,14 +113,14 @@ INSERT INTO customers (id, company_id, customer_code, registered_name, tin,
                        registered_address, delivery_address, created_by, updated_by)
 VALUES ('55555555-5555-5555-5555-555555555571',
         '22222222-2222-2222-2222-222222222270', 'CUST-001',
-        'CAS Snap Customer Inc', '444-555-666-017',
+        'CAS Snap Customer Inc', '444-555-666-00017',
         'Customer HQ, Taguig', 'Customer HQ, Taguig', auth.uid(), auth.uid());
 
 INSERT INTO suppliers (id, company_id, supplier_code, registered_name, tin,
                        registered_address, created_by, updated_by)
 VALUES ('66666666-6666-6666-6666-666666666671',
         '22222222-2222-2222-2222-222222222270', 'SUPP-001',
-        'CAS Snap Supplier Corp', '777-888-999-017',
+        'CAS Snap Supplier Corp', '777-888-999-00017',
         'Supplier HQ, Pasig', auth.uid(), auth.uid());
 
 CREATE TEMP TABLE t_ctx (key text PRIMARY KEY, id uuid);
@@ -138,7 +138,7 @@ SELECT 'si1', fn_save_sales_invoice(NULL,
     'date',                      '2026-02-10',
     'customer_id',               '55555555-5555-5555-5555-555555555571',
     'customer_name_snapshot',    'CAS Snap Customer Inc',
-    'customer_tin_snapshot',     '444-555-666-017',
+    'customer_tin_snapshot',     '444-555-666-00017',
     'customer_address_snapshot', 'Customer HQ, Taguig'
   ),
   jsonb_build_array(jsonb_build_object(
@@ -158,7 +158,7 @@ SELECT 'or1', fn_save_receipt(NULL,
     'branch_id',              '33333333-3333-3333-3333-333333333370',
     'customer_id',            '55555555-5555-5555-5555-555555555571',
     'customer_name_snapshot', 'CAS Snap Customer Inc',
-    'customer_tin_snapshot',  '444-555-666-017',
+    'customer_tin_snapshot',  '444-555-666-00017',
     'receipt_date',           '2026-02-20',
     'payment_mode_id',        (SELECT id FROM ref_payment_modes LIMIT 1),
     'total_amount',           10976,
@@ -179,7 +179,7 @@ SELECT 'vb1', fn_save_vendor_bill(NULL,
     'branch_id',               '33333333-3333-3333-3333-333333333370',
     'supplier_id',             '66666666-6666-6666-6666-666666666671',
     'supplier_name_snapshot',  'CAS Snap Supplier Corp',
-    'supplier_tin_snapshot',   '777-888-999-017',
+    'supplier_tin_snapshot',   '777-888-999-00017',
     'supplier_invoice_number', 'SUP-INV-0171',
     'bill_date',               '2026-02-12'
   ),
@@ -274,7 +274,7 @@ SELECT results_eq(
 
 SELECT ok(
   (SELECT val ->> 'export_text' FROM t_res WHERE key='slsp1')
-    LIKE 'H|PXL-CAS-DAT-1.0|CAS_SLSP|111222333017|2026-02-01|2026-02-28|1%',
+    LIKE 'H|PXL-CAS-DAT-1.0|CAS_SLSP|11122233300017|2026-02-01|2026-02-28|1%',
   'SLSP DAT bytes start with the versioned header record');
 
 SELECT ok(
@@ -283,12 +283,12 @@ SELECT ok(
 
 SELECT ok(
   (SELECT val ->> 'export_text' FROM t_res WHERE key='slsp1')
-    LIKE '%D|S|2026-02-10|SI-%|444555666017|CAS Snap Customer Inc|10000.00|1200.00|Customer HQ, Taguig|T%',
+    LIKE '%D|S|2026-02-10|SI-%|44455566600017|CAS Snap Customer Inc|10000.00|1200.00|Customer HQ, Taguig|T%',
   'SLSP DAT bytes contain the statutory sales detail fields');
 
 SELECT ok(
   (SELECT val ->> 'export_text' FROM t_res WHERE key='slsp1')
-    LIKE '%D|P|2026-02-12|SUP-INV-0171|777888999017|CAS Snap Supplier Corp|5000.00|600.00|Supplier HQ, Pasig|T%',
+    LIKE '%D|P|2026-02-12|SUP-INV-0171|77788899900017|CAS Snap Supplier Corp|5000.00|600.00|Supplier HQ, Pasig|T%',
   'SLSP DAT bytes contain the statutory purchases detail fields');
 
 SELECT ok(
@@ -354,7 +354,7 @@ SELECT results_eq(
 
 SELECT ok(
   (SELECT val ->> 'export_text' FROM t_res WHERE key='relief1')
-    LIKE '%D|R|111222333017|P|777888999017|CAS Snap Supplier Corp|Supplier HQ, Pasig|SUP-INV-0171|2026-02-12|5000.00|0.00|0.00|5000.00|600.00|AT%',
+    LIKE '%D|R|11122233300017|P|77788899900017|CAS Snap Supplier Corp|Supplier HQ, Pasig|SUP-INV-0171|2026-02-12|5000.00|0.00|0.00|5000.00|600.00|AT%',
   'RELIEF DAT bytes include the BIR counterparty and VAT classification fields');
 
 INSERT INTO t_res

@@ -5,11 +5,17 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "npm run check:frontend-secrets && tsc -b && vite build && npm run check:frontend-secrets",
+    "check:frontend-secrets": "node scripts/check_frontend_secrets.mjs",
+    "docs:ai-state-check": "node scripts/check_ai_state.mjs",
+    "docs:check": "npm run docs:ai-state-check && bash scripts/check_docs_consistency.sh",
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "supabase test db",
     "test:sales-invoice-draft-state": "node --test --experimental-strip-types tests/sales_invoice_draft_state.test.ts",
+    "test:transaction-workspace": "node --test --experimental-strip-types tests/transaction_workspace_rollout.test.ts",
+    "test:transaction-workspace:routes": "node scripts/validate_transaction_workspace_routes.mjs",
+    "test:transaction-workspace:screenshots": "node scripts/capture_transaction_workspace_comparisons.mjs",
     "gen:types": "supabase gen types typescript --local > src/lib/database.types.ts"
   },
   "dependencies": {

@@ -34,7 +34,7 @@ INSERT INTO companies (
 ) VALUES
   (
     '22222222-2222-2222-2222-222222222126', 'corporation',
-    'Trace Reports Test Corp', 'Software Services', '111-222-333-126',
+    'Trace Reports Test Corp', 'Software Services', '111-222-333-00126',
     'vat', 'calendar', 'Unit 1', 'Test Bldg', 'Makati', 'Metro Manila', '1200',
     'trace-reports@test.local', 'Juan Dela Cruz', 'President',
     '11111111-1111-1111-1111-111111111126',
@@ -42,7 +42,7 @@ INSERT INTO companies (
   ),
   (
     '22222222-2222-2222-2222-222222222127', 'corporation',
-    'Foreign Trace Test Corp', 'Trading', '111-222-333-127',
+    'Foreign Trace Test Corp', 'Trading', '111-222-333-00127',
     'vat', 'calendar', 'Unit 2', 'Other Bldg', 'Taguig', 'Metro Manila', '1630',
     'foreign-trace@test.local', 'Maria Santos', 'President',
     '11111111-1111-1111-1111-111111111126',
@@ -116,7 +116,7 @@ INSERT INTO customers (
   (
     '55555555-5555-5555-5555-555555555126',
     '22222222-2222-2222-2222-222222222126', 'CUST-126',
-    'Trace Customer Inc', '444-555-666-126',
+    'Trace Customer Inc', '444-555-666-00126',
     'Customer HQ', 'Customer HQ',
     '11111111-1111-1111-1111-111111111126',
     '11111111-1111-1111-1111-111111111126'
@@ -124,7 +124,7 @@ INSERT INTO customers (
   (
     '55555555-5555-5555-5555-555555555127',
     '22222222-2222-2222-2222-222222222127', 'CUST-127',
-    'Foreign Customer Inc', '444-555-666-127',
+    'Foreign Customer Inc', '444-555-666-00127',
     'Foreign HQ', 'Foreign HQ',
     '11111111-1111-1111-1111-111111111126',
     '11111111-1111-1111-1111-111111111126'
@@ -136,7 +136,7 @@ INSERT INTO suppliers (
 ) VALUES (
   '66666666-6666-6666-6666-666666666126',
   '22222222-2222-2222-2222-222222222126', 'SUP-126',
-  'Trace Supplier Inc', '777-888-999-126', 'Supplier HQ',
+  'Trace Supplier Inc', '777-888-999-00126', 'Supplier HQ',
   '11111111-1111-1111-1111-111111111126',
   '11111111-1111-1111-1111-111111111126'
 );
@@ -153,7 +153,7 @@ INSERT INTO sales_invoices (
     '33333333-3333-3333-3333-333333333126',
     'SI-TRACE-126', '2026-07-10', '44444444-4444-4444-4444-444444444226',
     '55555555-5555-5555-5555-555555555126',
-    'Trace Customer Inc', '444-555-666-126', 'Customer HQ',
+    'Trace Customer Inc', '444-555-666-00126', 'Customer HQ',
     100, 12, 112, 'posted',
     '11111111-1111-1111-1111-111111111126',
     '11111111-1111-1111-1111-111111111126'
@@ -164,7 +164,7 @@ INSERT INTO sales_invoices (
     '33333333-3333-3333-3333-333333333127',
     'SI-FOREIGN-127', '2026-07-10', NULL,
     '55555555-5555-5555-5555-555555555127',
-    'Foreign Customer Inc', '444-555-666-127', 'Foreign HQ',
+    'Foreign Customer Inc', '444-555-666-00127', 'Foreign HQ',
     50, 6, 56, 'posted',
     '11111111-1111-1111-1111-111111111126',
     '11111111-1111-1111-1111-111111111126'
@@ -176,7 +176,7 @@ INSERT INTO sales_invoices (
     '33333333-3333-3333-3333-333333333126',
     'SI-TRACE-128', '2026-07-10', '44444444-4444-4444-4444-444444444226',
     '55555555-5555-5555-5555-555555555126',
-    'Trace Customer Inc', '444-555-666-126', 'Customer HQ',
+    'Trace Customer Inc', '444-555-666-00126', 'Customer HQ',
     100, 12, 112, 'posted',
     '11111111-1111-1111-1111-111111111126',
     '11111111-1111-1111-1111-111111111126'
@@ -188,7 +188,7 @@ INSERT INTO sales_invoices (
     '33333333-3333-3333-3333-333333333127',
     'SI-FOREIGN-129', '2026-07-10', NULL,
     '55555555-5555-5555-5555-555555555127',
-    'Foreign Customer Inc', '444-555-666-127', 'Foreign HQ',
+    'Foreign Customer Inc', '444-555-666-00127', 'Foreign HQ',
     50, 6, 56, 'posted',
     '11111111-1111-1111-1111-111111111126',
     '11111111-1111-1111-1111-111111111126'
@@ -204,7 +204,7 @@ INSERT INTO payment_vouchers (
   '22222222-2222-2222-2222-222222222126',
   '33333333-3333-3333-3333-333333333126',
   '66666666-6666-6666-6666-666666666126',
-  'Trace Supplier Inc', '777-888-999-126',
+  'Trace Supplier Inc', '777-888-999-00126',
   'PV-TRACE-126', '2026-07-15', 98, 2, 'posted',
   '11111111-1111-1111-1111-111111111126',
   '11111111-1111-1111-1111-111111111126'
@@ -220,7 +220,7 @@ INSERT INTO receipts (
   '22222222-2222-2222-2222-222222222126',
   '33333333-3333-3333-3333-333333333126',
   '55555555-5555-5555-5555-555555555126',
-  'Trace Customer Inc', '444-555-666-126',
+  'Trace Customer Inc', '444-555-666-00126',
   'OR-TRACE-126', '2026-07-20',
   (SELECT id FROM ref_payment_modes WHERE code = 'CASH'),
   110, 2, 'posted',
@@ -345,7 +345,7 @@ INSERT INTO tax_detail_entries (
     'SI', '77777777-7777-7777-7777-777777777126',
     'output_vat', 100, 12, 12, '2026-07-10', '2026-07-10',
     '55555555-5555-5555-5555-555555555126',
-    '444-555-666-126', 'Trace Customer Inc'
+    '444-555-666-00126', 'Trace Customer Inc'
   ),
   (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb226',
@@ -354,7 +354,7 @@ INSERT INTO tax_detail_entries (
     'PV', '77777777-7777-7777-7777-777777777226',
     'ewt_payable', 100, 2, 2, '2026-07-15', '2026-07-15',
     '66666666-6666-6666-6666-666666666126',
-    '777-888-999-126', 'Trace Supplier Inc'
+    '777-888-999-00126', 'Trace Supplier Inc'
   ),
   (
     'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbb326',
@@ -363,7 +363,7 @@ INSERT INTO tax_detail_entries (
     'OR', '77777777-7777-7777-7777-777777777326',
     'cwt_receivable', 100, 2, 2, '2026-07-20', '2026-07-20',
     '55555555-5555-5555-5555-555555555126',
-    '444-555-666-126', 'Trace Customer Inc'
+    '444-555-666-00126', 'Trace Customer Inc'
   );
 
 INSERT INTO form_2307_issuances (

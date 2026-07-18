@@ -54,7 +54,7 @@ export default function StockBalancePage() {
       warehouses!inner(warehouse_code, warehouse_name, company_id),
       items!inner(item_code, description, costing_method, min_stock_level,
         units_of_measure!inner(uom_code))
-    `).eq('warehouses.company_id', companyId).order('warehouses.warehouse_code')
+    `).eq('company_id', companyId)
 
     const list = ((data || []) as any[]).map(r => ({
       id: r.id,
@@ -74,7 +74,11 @@ export default function StockBalancePage() {
       min_stock_level: r.items?.min_stock_level != null ? Number(r.items.min_stock_level) : null,
       last_receipt_date: r.last_receipt_date,
       last_issue_date: r.last_issue_date,
-    }))
+    })).sort((a, b) =>
+      a.warehouse_code.localeCompare(b.warehouse_code)
+      || a.item_code.localeCompare(b.item_code)
+      || a.item_name.localeCompare(b.item_name)
+    )
 
     setRows(list)
     const whs = [...new Map(list.map(r => [r.warehouse_id, { id: r.warehouse_id, warehouse_code: r.warehouse_code, warehouse_name: r.warehouse_name }])).values()]

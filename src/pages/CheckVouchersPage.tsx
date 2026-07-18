@@ -6,8 +6,8 @@ import { GLImpactPanel } from '@/components/GLImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { ReportTraceLink } from '@/components/AccountingTraceLink'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 import { formatPhTinInput, isValidPhTin, normalizePhTin, PH_TIN_PLACEHOLDER } from '@/lib/philippines'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type BankRef = { id: string; bank_name: string; account_number: string }
 type COARef = { id: string; account_code: string; account_name: string }
@@ -265,48 +265,46 @@ export default function CheckVouchersPage() {
 
   const ro = mode === 'view'
   return (
-    <div className="flex flex-col h-full">
-      <div className={transactionHeaderClass('banking')}>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">{form?.cv_number || 'New Check Voucher'}</span>
-        {form?.status && <StatusBadge status={form.status} />}
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          {!ro && <button onClick={save} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>}
-          {!ro && form?.id && <button onClick={() => doRpc('fn_post_check_voucher', form.id!)} disabled={busy} className="px-3 py-1.5 border border-blue-300 text-blue-600 rounded text-sm hover:bg-blue-50 disabled:opacity-50">Post</button>}
-        </div>
-      </div>
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        {!ro && <SetupReadinessBanner readiness={readiness} />}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-          <Field label="Voucher Date *"><input type="date" disabled={ro} className={inputCls} value={form?.voucher_date || today()} onChange={e => setForm(f => ({ ...f, voucher_date: e.target.value }))} /></Field>
-          <Field label="Bank Account *"><select disabled={ro} className={inputCls} value={form?.bank_account_id || ''} onChange={e => setForm(f => ({ ...f, bank_account_id: e.target.value }))}>
-            <option value="">— select —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select></Field>
-          <Field label="Check Number *"><input disabled={ro} className={inputCls} value={form?.check_number || ''} onChange={e => setForm(f => ({ ...f, check_number: e.target.value }))} /></Field>
-          <Field label="Check Date *"><input type="date" disabled={ro} className={inputCls} value={form?.check_date || today()} onChange={e => setForm(f => ({ ...f, check_date: e.target.value }))} /></Field>
-          <Field label="Supplier (required if EWT)"><select disabled={ro} className={inputCls} value={form?.supplier_id || ''} onChange={e => pickSupplier(e.target.value)}>
-            <option value="">—</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.supplier_code} — {s.registered_name}</option>)}</select></Field>
-          <Field label="Payee *"><input disabled={ro} className={inputCls} value={form?.payee || ''} onChange={e => setForm(f => ({ ...f, payee: e.target.value }))} /></Field>
-          <Field label="Payee TIN"><input disabled={ro} className={inputCls} value={form?.payee_tin || ''} onChange={e => setForm(f => ({ ...f, payee_tin: formatPhTinInput(e.target.value) }))} placeholder={PH_TIN_PLACEHOLDER} /></Field>
-          <Field label="ATC Code (if EWT)"><select disabled={ro} className={inputCls} value={form?.atc_code_id || ''} onChange={e => pickAtc(e.target.value)}>
-            <option value="">—</option>{atcCodes.map(a => <option key={a.id} value={a.id}>{a.code} — {a.description}</option>)}</select></Field>
-          <Field label="EWT Rate (%)"><input type="number" disabled className={inputCls} value={form?.ewt_rate ?? ''} readOnly /></Field>
-          <Field label="EWT Base (defaults to gross)"><input type="number" disabled={ro} className={inputCls} value={ewtBase ?? ''} placeholder="—"
-            onChange={e => { setBaseTouched(true); setForm(f => ({ ...f, ewt_tax_base: e.target.value === '' ? null : parseFloat(e.target.value) || 0 })) }} /></Field>
-          <Field label="EWT Amount"><input type="number" disabled={ro} className={inputCls} value={form?.total_ewt_amount ?? 0} onChange={e => setForm(f => ({ ...f, total_ewt_amount: parseFloat(e.target.value) || 0 }))} /></Field>
-          {varianceNeeded && (
-            <Field label={`Variance Reason * (expected EWT ${fmt(expectedEwt ?? 0)})`}>
-              <select disabled={ro} className={inputCls} value={form?.ewt_variance_reason || ''} onChange={e => setForm(f => ({ ...f, ewt_variance_reason: e.target.value || null }))}>
-                <option value="">— select —</option>{EWT_VARIANCE_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}</select>
-            </Field>
-          )}
-          <Field label="Particulars *" full3><textarea disabled={ro} rows={2} className={inputCls} value={form?.particulars || ''} onChange={e => setForm(f => ({ ...f, particulars: e.target.value }))} /></Field>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-x-auto">
+    <LegacyTransactionWorkspace title="Check Voucher" family="banking" pattern="C" posting
+      documentNo={form?.cv_number} status={form?.status} identity={form?.payee}
+      financialFacts={[{ label: 'Net Check Amount', value: fmt(Number(form?.net_check_amount || 0)) }, { label: 'Gross Amount', value: fmt(Number(form?.total_gross_amount || 0)) }, { label: 'EWT', value: fmt(Number(form?.total_ewt_amount || 0)) }]}
+      taxFacts={[{ label: 'EWT', value: fmt(Number(form?.total_ewt_amount || 0)), hint: form?.atc_code_id ? 'Selected ATC' : 'No ATC selected' }, { label: 'EWT Tax Base', value: fmt(Number(form?.ewt_tax_base || 0)) }, { label: 'EWT Rate', value: `${Number(form?.ewt_rate || 0)}%` }]}
+      contextFacts={[{ label: 'Payee', value: form?.payee || 'Not selected' }, { label: 'Voucher Date', value: form?.voucher_date || 'Not assigned' }, { label: 'Check Number', value: form?.check_number || 'Not assigned' }, { label: 'Check Date', value: form?.check_date || 'Not assigned' }]}
+      sourceDocType="CV" sourceDocId={form?.id} auditTable="check_vouchers"
+      actions={[
+        { key: 'cancel-edit', label: 'Cancel', onClick: () => setMode('list'), hidden: ro },
+        { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: save, disabled: saving || setupBlocked, hidden: ro },
+        { key: 'post', label: 'Post', onClick: () => doRpc('fn_post_check_voucher', form?.id || ''), disabled: busy || setupBlocked, hidden: ro || !form?.id, variant: 'primary' },
+        { key: 'release', label: 'Release', onClick: () => setStatus(form?.id || '', 'released'), disabled: busy, hidden: !ro || form?.status !== 'posted', variant: 'primary' },
+        { key: 'cleared', label: 'Mark Cleared', onClick: () => markCleared(form?.id || ''), disabled: busy, hidden: !ro || form?.status !== 'released', variant: 'primary' },
+        { key: 'stale', label: 'Mark Stale', onClick: () => setStatus(form?.id || '', 'stale', { stale_date: today() }), disabled: busy, hidden: !ro || form?.status !== 'released', group: 'more' },
+        { key: 'cancel-doc', label: 'Cancel Voucher', onClick: () => doRpc('fn_cancel_check_voucher', form?.id || '', 'Cancel and reverse this check voucher?'), disabled: busy, hidden: !ro || !['posted', 'released'].includes(form?.status || ''), group: 'more', variant: 'danger' },
+      ]}
+      headerFields={[
+        { key: 'voucher-date', label: 'Voucher Date *', card: 0, content: <input type="date" disabled={ro} className={`${inputCls} pxl-input`} value={form?.voucher_date || today()} onChange={e => setForm(f => ({ ...f, voucher_date: e.target.value }))} /> },
+        { key: 'check-date', label: 'Check Date *', card: 0, content: <input type="date" disabled={ro} className={`${inputCls} pxl-input`} value={form?.check_date || today()} onChange={e => setForm(f => ({ ...f, check_date: e.target.value }))} /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">{form?.cv_number || 'Generated on save'}</div> },
+        { key: 'supplier', label: 'Supplier', card: 1, span: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.supplier_id || ''} onChange={e => pickSupplier(e.target.value)}><option value="">— Optional unless EWT —</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.supplier_code} — {s.registered_name}</option>)}</select> },
+        { key: 'payee', label: 'Payee *', card: 1, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.payee || ''} onChange={e => setForm(f => ({ ...f, payee: e.target.value }))} /> },
+        { key: 'tin', label: 'Payee TIN', card: 1, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.payee_tin || ''} onChange={e => setForm(f => ({ ...f, payee_tin: formatPhTinInput(e.target.value) }))} placeholder={PH_TIN_PLACEHOLDER} /> },
+        { key: 'bank', label: 'Bank Account *', card: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.bank_account_id || ''} onChange={e => setForm(f => ({ ...f, bank_account_id: e.target.value }))}><option value="">— select —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select> },
+        { key: 'check-number', label: 'Check Number *', card: 2, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.check_number || ''} onChange={e => setForm(f => ({ ...f, check_number: e.target.value }))} /> },
+        { key: 'atc', label: 'ATC Code', card: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.atc_code_id || ''} onChange={e => pickAtc(e.target.value)}><option value="">—</option>{atcCodes.map(a => <option key={a.id} value={a.id}>{a.code}</option>)}</select> },
+        { key: 'ewt-base', label: 'EWT Base', card: 2, content: <input type="number" disabled={ro} className={`${inputCls} pxl-input`} value={ewtBase ?? ''} placeholder="—" onChange={e => { setBaseTouched(true); setForm(f => ({ ...f, ewt_tax_base: e.target.value === '' ? null : parseFloat(e.target.value) || 0 })) }} /> },
+        { key: 'ewt', label: 'EWT Amount', card: 2, content: <input type="number" disabled={ro} className={`${inputCls} pxl-input`} value={form?.total_ewt_amount ?? 0} onChange={e => setForm(f => ({ ...f, total_ewt_amount: parseFloat(e.target.value) || 0 }))} /> },
+        { key: 'variance', label: 'EWT Variance Reason', card: 2, content: <select disabled={ro || !varianceNeeded} className={`${inputCls} pxl-input`} value={form?.ewt_variance_reason || ''} onChange={e => setForm(f => ({ ...f, ewt_variance_reason: e.target.value || null }))}><option value="">— select —</option>{EWT_VARIANCE_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}</select> },
+        { key: 'particulars', label: 'Particulars *', card: 2, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.particulars || ''} onChange={e => setForm(f => ({ ...f, particulars: e.target.value }))} /> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{!ro && <SetupReadinessBanner readiness={readiness} />}{varianceNeeded && <div className="pxl-validation-message border border-amber-200 bg-amber-50 text-amber-800">EWT variance reason is required; expected EWT is {fmt(expectedEwt ?? 0)}.</div>}</div>,
+        financial: <div className="ml-auto w-full max-w-sm space-y-2 text-sm"><div className="flex justify-between"><span>Total Gross</span><span className="font-mono">{fmt(totalGross)}</span></div><div className="flex justify-between"><span>EWT Withheld</span><span className="font-mono">{fmt(ewt)}</span></div><div className="flex justify-between border-t border-[var(--pxl-border-strong)] pt-2 font-bold"><span>Net Check Amount</span><span className="font-mono">{fmt(netCheck)}</span></div></div>,
+        gl: form?.id ? <GLImpactPanel companyId={companyId} sourceDocType="CV" sourceDocId={form.id} previewRows={[]} /> : undefined,
+        audit: form?.id ? <div className="space-y-2"><AuditTrailSection tableName="check_vouchers" recordId={form.id} /></div> : undefined,
+      }}
+      onBack={() => setMode('list')} backLabel="Check Vouchers">
+    <div className="overflow-x-auto">
           <div className="px-4 py-2.5 border-b border-gray-100"><span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Expense Distribution</span></div>
-          <table className="w-full text-xs">
+          <table className="pxl-data-grid w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200"><tr>
               {['Expense Account','Description','Amount',''].map(h => <th key={h} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 ${h === 'Amount' ? 'text-right' : 'text-left'}`}>{h}</th>)}
             </tr></thead>
@@ -328,64 +326,6 @@ export default function CheckVouchersPage() {
           {!ro && <div className="px-4 py-2 border-t border-gray-100"><button onClick={() => setLines(ls => [...ls, newLine()])} className="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Line</button></div>}
         </div>
 
-        <div className="bg-white border border-gray-200 rounded-lg p-5 flex justify-end">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm min-w-[280px]">
-            <span className="text-gray-500 text-xs">Total Gross</span><span className="text-right font-mono text-xs text-gray-900">{fmt(totalGross)}</span>
-            <span className="text-gray-500 text-xs">EWT Withheld</span>
-            <span className="text-right font-mono text-xs text-blue-700">
-              {form?.id && ewt > 0 && form.status !== 'draft' ? (
-                <ReportTraceLink
-                  companyId={companyId || ''}
-                  reportFamily="tax"
-                  filters={{ tax_kind: 'ewt_payable', source_doc_type: 'CV', source_doc_id: form.id }}
-                  title="Open the EWT tax-ledger trace for this check voucher"
-                >
-                  {fmt(ewt)}
-                </ReportTraceLink>
-              ) : fmt(ewt)}
-            </span>
-            <span className="text-gray-900 font-semibold border-t border-gray-200 pt-1 mt-1">Net Check Amount</span>
-            <span className={`text-right font-mono font-bold border-t border-gray-200 pt-1 mt-1 ${netCheck <= 0 ? 'text-red-600' : 'text-gray-900'}`}>{fmt(netCheck)}</span>
-          </div>
-        </div>
-
-        {form?.id && (
-          <div className="mt-4">
-            <GLImpactPanel companyId={companyId} sourceDocType="CV" sourceDocId={form.id} previewRows={[]} />
-          </div>
-        )}
-
-        {form?.id && (
-          <div className="mt-4 space-y-3">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-                {[
-                  { label: 'Created', value: fmtTs(form.created_at) },
-                  { label: 'Last edited', value: fmtTs(form.updated_at) },
-                  { label: 'Posted', value: fmtTs(form.posted_at) },
-                  { label: 'Lock status', value: form.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
-                ].map(fact => (
-                  <div key={fact.label}>
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{fact.label}</div>
-                    <div className="mt-1 text-xs text-gray-700">{fact.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <AuditTrailSection tableName="check_vouchers" recordId={form.id} />
-          </div>
-        )}
-      </div>
-    </div>
+    </LegacyTransactionWorkspace>
   )
-}
-
-function fmtTs(ts: string | null | undefined) {
-  return ts ? new Date(ts).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' }) : '—'
-}
-
-function Field({ label, children, full3 }: { label: string; children: React.ReactNode; full3?: boolean }) {
-  return <div className={`flex flex-col gap-1 ${full3 ? 'sm:col-span-3' : ''}`}>
-    <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>{children}</div>
 }

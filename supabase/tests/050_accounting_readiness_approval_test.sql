@@ -5,7 +5,7 @@
 --   posting accounts/VAT codes are missing or no longer active.
 -- - Vendor bills cannot be approved by RPC or direct status transition when
 --   posting accounts/VAT codes are missing or no longer active.
--- - AP-side EWT documents require a supplier TIN snapshot before approval/post.
+-- - AP-side EWT documents default a valid supplier TIN snapshot before approval/post.
 
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
@@ -29,7 +29,7 @@ INSERT INTO companies (id, entity_type, registered_name, line_of_business, tin,
                        address_line_1, address_line_2, city, province, zip_code,
                        email, signatory_name, signatory_position, created_by, updated_by)
 VALUES ('22222222-2222-2222-2222-222222222250', 'corporation',
-        'Accounting Readiness Test Corp', 'Professional Services', '111-222-333-250',
+        'Accounting Readiness Test Corp', 'Professional Services', '111-222-333-00250',
         'vat', 'calendar',
         'Unit 1', 'Test Bldg', 'Makati', 'Metro Manila', '1200',
         'accounting-readiness@test.local', 'Juan Dela Cruz', 'President',
@@ -121,7 +121,7 @@ INSERT INTO customers (id, company_id, customer_code, registered_name, tin,
                        registered_address, delivery_address, created_by, updated_by)
 VALUES ('55555555-5555-5555-5555-555555555250',
         '22222222-2222-2222-2222-222222222250', 'CUST-READY',
-        'Readiness Customer Inc', '444-555-666-250',
+        'Readiness Customer Inc', '444-555-666-00250',
         'Customer HQ, Taguig', 'Customer HQ, Taguig', auth.uid(), auth.uid());
 
 INSERT INTO suppliers (id, company_id, supplier_code, registered_name, tin,
@@ -130,12 +130,12 @@ INSERT INTO suppliers (id, company_id, supplier_code, registered_name, tin,
 VALUES
   ('66666666-6666-6666-6666-666666666250',
    '22222222-2222-2222-2222-222222222250', 'SUPP-READY',
-   'Readiness Supplier Corp', '777-888-999-250',
+   'Readiness Supplier Corp', '777-888-999-00250',
    'Supplier HQ, Pasig', false, NULL,
    auth.uid(), auth.uid()),
   ('66666666-6666-6666-6666-666666666251',
    '22222222-2222-2222-2222-222222222250', 'SUPP-EWT',
-   'EWT Supplier Corp', '',
+   'EWT Supplier Corp', '777-888-999-00251',
    'Supplier HQ, Pasig', true, (SELECT id FROM atc_codes WHERE code = 'WC140'),
    auth.uid(), auth.uid());
 
@@ -149,7 +149,7 @@ SELECT 'si-missing-revenue', fn_save_sales_invoice(NULL,
     'date',                     '2026-05-10',
     'customer_id',              '55555555-5555-5555-5555-555555555250',
     'customer_name_snapshot',   'Readiness Customer Inc',
-    'customer_tin_snapshot',    '444-555-666-250',
+    'customer_tin_snapshot',    '444-555-666-00250',
     'customer_address_snapshot','Customer HQ, Taguig'
   ),
   jsonb_build_array(jsonb_build_object(
@@ -178,7 +178,7 @@ SELECT 'si-inactive-revenue', fn_save_sales_invoice(NULL,
     'date',                     '2026-05-11',
     'customer_id',              '55555555-5555-5555-5555-555555555250',
     'customer_name_snapshot',   'Readiness Customer Inc',
-    'customer_tin_snapshot',    '444-555-666-250',
+    'customer_tin_snapshot',    '444-555-666-00250',
     'customer_address_snapshot','Customer HQ, Taguig'
   ),
   jsonb_build_array(jsonb_build_object(
@@ -202,7 +202,7 @@ SELECT 'si-inactive-vat', fn_save_sales_invoice(NULL,
     'date',                     '2026-05-12',
     'customer_id',              '55555555-5555-5555-5555-555555555250',
     'customer_name_snapshot',   'Readiness Customer Inc',
-    'customer_tin_snapshot',    '444-555-666-250',
+    'customer_tin_snapshot',    '444-555-666-00250',
     'customer_address_snapshot','Customer HQ, Taguig'
   ),
   jsonb_build_array(jsonb_build_object(
@@ -230,7 +230,7 @@ SELECT 'si-valid', fn_save_sales_invoice(NULL,
     'date',                     '2026-05-13',
     'customer_id',              '55555555-5555-5555-5555-555555555250',
     'customer_name_snapshot',   'Readiness Customer Inc',
-    'customer_tin_snapshot',    '444-555-666-250',
+    'customer_tin_snapshot',    '444-555-666-00250',
     'customer_address_snapshot','Customer HQ, Taguig'
   ),
   jsonb_build_array(jsonb_build_object(
@@ -261,7 +261,7 @@ SELECT 'vb-missing-expense', fn_save_vendor_bill(NULL,
     'branch_id',               '33333333-3333-3333-3333-333333333250',
     'supplier_id',             '66666666-6666-6666-6666-666666666250',
     'supplier_name_snapshot',  'Readiness Supplier Corp',
-    'supplier_tin_snapshot',   '777-888-999-250',
+    'supplier_tin_snapshot',   '777-888-999-00250',
     'supplier_invoice_number', 'SUP-READY-001',
     'bill_date',               '2026-05-14'
   ),
@@ -290,7 +290,7 @@ SELECT 'vb-inactive-expense', fn_save_vendor_bill(NULL,
     'branch_id',               '33333333-3333-3333-3333-333333333250',
     'supplier_id',             '66666666-6666-6666-6666-666666666250',
     'supplier_name_snapshot',  'Readiness Supplier Corp',
-    'supplier_tin_snapshot',   '777-888-999-250',
+    'supplier_tin_snapshot',   '777-888-999-00250',
     'supplier_invoice_number', 'SUP-READY-002',
     'bill_date',               '2026-05-15'
   ),
@@ -314,7 +314,7 @@ SELECT 'vb-inactive-vat', fn_save_vendor_bill(NULL,
     'branch_id',               '33333333-3333-3333-3333-333333333250',
     'supplier_id',             '66666666-6666-6666-6666-666666666250',
     'supplier_name_snapshot',  'Readiness Supplier Corp',
-    'supplier_tin_snapshot',   '777-888-999-250',
+    'supplier_tin_snapshot',   '777-888-999-00250',
     'supplier_invoice_number', 'SUP-READY-003',
     'bill_date',               '2026-05-16'
   ),
@@ -342,7 +342,7 @@ SELECT 'vb-valid', fn_save_vendor_bill(NULL,
     'branch_id',               '33333333-3333-3333-3333-333333333250',
     'supplier_id',             '66666666-6666-6666-6666-666666666250',
     'supplier_name_snapshot',  'Readiness Supplier Corp',
-    'supplier_tin_snapshot',   '777-888-999-250',
+    'supplier_tin_snapshot',   '777-888-999-00250',
     'supplier_invoice_number', 'SUP-READY-004',
     'bill_date',               '2026-05-17'
   ),
@@ -386,16 +386,16 @@ SELECT 'vb-ewt-missing-tin', fn_save_vendor_bill(NULL,
     'expense_account_id', 'aaaaaaaa-0000-0000-0000-000000000510'
   )));
 
-SELECT throws_like(
-  format('SELECT fn_approve_vendor_bill(%L)', (SELECT id FROM t_ctx WHERE key = 'vb-ewt-missing-tin')),
-  '%Supplier TIN is required when vendor bill has EWT withholding.%',
-  'source-basis EWT VB approval requires a supplier TIN snapshot');
+SELECT is(
+  (SELECT supplier_tin_snapshot FROM vendor_bills
+   WHERE id = (SELECT id FROM t_ctx WHERE key = 'vb-ewt-missing-tin')),
+  '777-888-999-00251',
+  'source-basis EWT VB defaults the valid supplier master TIN snapshot');
 
-SELECT throws_like(
-  format('UPDATE vendor_bills SET status = ''approved'' WHERE id = %L',
+SELECT lives_ok(
+  format('SELECT fn_approve_vendor_bill(%L)',
          (SELECT id FROM t_ctx WHERE key = 'vb-ewt-missing-tin')),
-  '%Supplier TIN is required when vendor bill has EWT withholding.%',
-  'source-basis EWT VB direct approved-status transition also requires a supplier TIN snapshot');
+  'source-basis EWT VB with a defaulted valid TIN can be approved');
 
 INSERT INTO t_ctx
 SELECT 'pv-ewt-missing-tin', fn_save_payment_voucher(NULL,
@@ -417,10 +417,10 @@ SELECT 'pv-ewt-missing-tin', fn_save_payment_voucher(NULL,
     'ewt_income_nature', 'Professional fees'
   )));
 
-SELECT throws_like(
-  format('SELECT fn_post_payment_voucher(%L)', (SELECT id FROM t_ctx WHERE key = 'pv-ewt-missing-tin')),
-  '%Supplier TIN is required when payment voucher has EWT withholding.%',
-  'PV posting with EWT requires a supplier TIN snapshot');
+SELECT lives_ok(
+  format('SELECT fn_post_payment_voucher(%L)',
+         (SELECT id FROM t_ctx WHERE key = 'pv-ewt-missing-tin')),
+  'PV with EWT posts after defaulting the valid supplier master TIN snapshot');
 
 SELECT * FROM finish();
 ROLLBACK;

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
-import { transactionHeaderClass, transactionSegmentButtonClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
 type Department = { id: string; department_name: string }
@@ -14,7 +14,6 @@ type IssueRecord = { id: string; issue_number: string; issue_date: string; wareh
 export default function GoodsIssuePage() {
   const { companyId, branchId } = useAppCtx()
   const today = new Date().toISOString().slice(0, 10)
-  const [tab, setTab] = useState<'new' | 'history'>('new')
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [items, setItems] = useState<Item[]>([])
@@ -100,63 +99,30 @@ export default function GoodsIssuePage() {
   }
 
   return (
+    <LegacyTransactionWorkspace title="Goods Issue" family="inventory" pattern="B" posting
+      status={pendingId ? 'draft' : 'draft'} identity={warehouses.find(w => w.id === warehouseId)?.warehouse_name}
+      financialFacts={[{ label: 'Quantity Issued', value: lines.reduce((sum, line) => sum + Number(line.qty || 0), 0), hint: 'Total source-backed issue quantity' }, { label: 'Line Count', value: lines.length }]}
+      contextFacts={[{ label: 'Warehouse', value: warehouses.find(w => w.id === warehouseId)?.warehouse_name || 'Not selected' }, { label: 'Department', value: departments.find(department => department.id === deptId)?.department_name || 'Not assigned' }, { label: 'Issue Date', value: issueDate }, { label: 'Purpose', value: purpose || 'Not recorded' }]}
+      sourceDocType="INV_GI" sourceDocId={pendingId} auditTable="goods_issues"
+      actions={[
+        { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: saveDraft, disabled: saving, hidden: !!pendingId },
+        { key: 'post', label: posting ? 'Posting…' : 'Post Issue', onClick: post, disabled: posting, hidden: !pendingId, variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'Issue Date', card: 0, content: <input type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">{pendingId ? 'Draft saved' : 'Generated on save'}</div> },
+        { key: 'warehouse', label: 'Warehouse *', card: 1, span: 2, content: <select value={warehouseId} onChange={e => setWarehouseId(e.target.value)} className="pxl-input w-full"><option value="">— Select —</option>{warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}</select> },
+        { key: 'department', label: 'Department', card: 1, span: 2, content: <select value={deptId} onChange={e => setDeptId(e.target.value)} className="pxl-input w-full"><option value="">— None —</option>{departments.map(d => <option key={d.id} value={d.id}>{d.department_name}</option>)}</select> },
+        { key: 'purpose', label: 'Purpose', card: 2, span: 2, content: <input value={purpose} onChange={e => setPurpose(e.target.value)} placeholder="Production, maintenance, office use…" className="pxl-input w-full" /> },
+        { key: 'notes', label: 'Notes', card: 2, span: 2, content: <input value={notes} onChange={e => setNotes(e.target.value)} className="pxl-input w-full" /> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{success && <div className="pxl-validation-message border border-green-200 bg-green-50 text-green-700">{success}</div>}</div>,
+        gl: pendingId ? <GLImpactPanel companyId={companyId} sourceDocType="INV_GI" sourceDocId={pendingId} previewRows={[]} /> : undefined,
+        activity: <div className="overflow-x-auto"><table className="pxl-data-grid w-full"><thead><tr>{['Issue #','Date','Warehouse','Department','Purpose','Status'].map(h => <th key={h} className="text-left">{h}</th>)}</tr></thead><tbody>{history.length === 0 ? <tr><td colSpan={6} className="pxl-empty-state">No goods issues</td></tr> : history.map(g => <tr key={g.id}><td className="font-mono font-semibold">{g.issue_number}</td><td>{g.issue_date}</td><td>{g.warehouse_name}</td><td>{g.department_name || '—'}</td><td>{g.purpose || '—'}</td><td className="capitalize">{g.status}</td></tr>)}</tbody></table></div>,
+      }}>
     <div>
-      <div className={transactionHeaderClass('inventory')}>
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Goods Issue</span>
-        <div className="ml-auto flex gap-1">
-          {(['new','history'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={transactionSegmentButtonClass('inventory', tab === t)}>
-              {t === 'new' ? 'New Issue' : 'History'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {tab === 'new' ? (
-        <div className="px-5 py-4 max-w-4xl space-y-4">
-          {error && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
-          {success && <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">{success}</div>}
-
-          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Header</p>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Warehouse *</label>
-                <select value={warehouseId} onChange={e => setWarehouseId(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                  <option value="">— Select —</option>
-                  {warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Issue Date</label>
-                <input type="date" value={issueDate} onChange={e => setIssueDate(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Department</label>
-                <select value={deptId} onChange={e => setDeptId(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                  <option value="">— None —</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.department_name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Purpose</label>
-                <input value={purpose} onChange={e => setPurpose(e.target.value)}
-                  placeholder="e.g. Production Run, Maintenance, Office Use"
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-              </div>
-              <div className="col-span-2">
-                <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="overflow-hidden">
             <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Items to Issue</p>
               <select onChange={e => { addLine(e.target.value); e.target.value = '' }}
@@ -168,7 +134,7 @@ export default function GoodsIssuePage() {
             {lines.length === 0 ? (
               <div className="py-10 text-center text-xs text-gray-400">Add items to issue</div>
             ) : (
-              <table className="w-full text-xs">
+              <table className="pxl-data-grid w-full text-xs">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>{['Item','Method','Qty Issued','Lot / Serial','Expense GL Account',''].map(h => (
                     <th key={h} className="px-3 py-2 text-[10px] font-semibold uppercase text-gray-500 text-left whitespace-nowrap">{h}</th>
@@ -220,55 +186,7 @@ export default function GoodsIssuePage() {
             )}
           </div>
 
-          {pendingId && (
-            <GLImpactPanel companyId={companyId} sourceDocType="INV_GI" sourceDocId={pendingId} previewRows={[]} />
-          )}
-
-          <div className="flex gap-2">
-            {!pendingId ? (
-              <button onClick={saveDraft} disabled={saving}
-                className="px-4 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-                {saving ? 'Saving…' : 'Save Draft'}
-              </button>
-            ) : (
-              <button onClick={post} disabled={posting}
-                className="px-4 py-1.5 bg-green-700 text-white rounded text-sm font-medium hover:bg-green-800 disabled:opacity-40">
-                {posting ? 'Posting…' : 'Post Issue'}
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="px-5 py-4">
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>{['Issue #','Date','Warehouse','Department','Purpose','Status'].map(h => (
-                  <th key={h} className="px-3 py-2 text-[10px] font-semibold uppercase text-gray-500 text-left whitespace-nowrap">{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {history.length === 0 ? (
-                  <tr><td colSpan={6} className="py-12 text-center text-gray-400">No goods issues</td></tr>
-                ) : history.map(g => (
-                  <tr key={g.id} className="hover:bg-gray-50/60">
-                    <td className="px-3 py-2 font-mono font-semibold text-gray-900">{g.issue_number}</td>
-                    <td className="px-3 py-2 font-mono text-gray-500">{g.issue_date}</td>
-                    <td className="px-3 py-2 text-gray-800">{g.warehouse_name}</td>
-                    <td className="px-3 py-2 text-gray-600">{g.department_name || '—'}</td>
-                    <td className="px-3 py-2 text-gray-600 max-w-[160px] truncate">{g.purpose || '—'}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${g.status === 'posted' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                        {g.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

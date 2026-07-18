@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { DocumentLayout, WorkflowStrip, type DocumentTab, type ToolbarAction } from '@/components/document/DocumentLayout'
+import { WorkflowStrip, type ToolbarAction } from '@/components/document/DocumentLayout'
+import { TransactionWorkspace } from '@/components/document/TransactionWorkspace'
 import { PrimaryInformationPanel, type InfoGroup } from '@/components/document/PrimaryInformationPanel'
 import { PostingValidationPanel, readinessToChecks, type ValidationCheck } from '@/components/document/PostingValidationPanel'
 import { LineGrid, type LineColumn, type LineColumnProfile } from '@/components/document/LineGrid'
@@ -19,11 +20,8 @@ import { composePhTin, getPhTinBranch, normalizePhTin } from '@/lib/philippines'
 const SI_REQUIRED_CONFIG: ConfigField[] = ['ar_account_id', 'vat_payable_account_id']
 
 // ─────────────────────────────────────────────────────────────
-// Sales Invoice — CANONICAL routed document workspace and the
-// REFERENCE implementation of the PXL Standard Transaction
-// Workspace (DEC-013/DEC-015). Single viewing/review/lifecycle
-// surface for a saved invoice (deep-linkable, UI Principle 38).
-// Draft create/edit form relocation is the final consolidation step.
+// Sales Invoice routed document view. Its business content composes the same
+// TransactionWorkspace architecture used by every other document family.
 // ─────────────────────────────────────────────────────────────
 
 type SIStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
@@ -140,7 +138,6 @@ export default function SalesInvoiceDocumentPage() {
   const [employees, setEmployees] = useState<Record<string, EmployeeRef>>({})
   const [branchName, setBranchName] = useState('')
   const [seriesName, setSeriesName] = useState('')
-  const [accentColor, setAccentColor] = useState('#14532d')
   const [termsName, setTermsName] = useState<Record<string, string>>({})
   const [customer, setCustomer] = useState<CustomerMaster | null>(null)
   const [customerOutstanding, setCustomerOutstanding] = useState<number | null>(null)
@@ -173,7 +170,7 @@ export default function SalesInvoiceDocumentPage() {
     setSi(inv)
 
     const todayIso = new Date().toISOString().slice(0, 10)
-    const [lineRes, accRes, itemRes, uomRes, vatRes, deptRes, ccRes, whRes, empRes, brRes, termRes, custRes, jeRes, rlRes, reasonRes, apprRes, seriesRes, companyRes, customerInvoiceRes, customerReceiptRes, agingRes, impactRes] = await Promise.all([
+    const [lineRes, accRes, itemRes, uomRes, vatRes, deptRes, ccRes, whRes, empRes, brRes, termRes, custRes, jeRes, rlRes, reasonRes, apprRes, seriesRes, customerInvoiceRes, customerReceiptRes, agingRes, impactRes] = await Promise.all([
       supabase.from('sales_invoice_lines').select('*').eq('sales_invoice_id', id).order('line_number'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', inv.company_id),
       supabase.from('items').select('id,item_code,description,description_long').eq('company_id', inv.company_id),
@@ -192,7 +189,6 @@ export default function SalesInvoiceDocumentPage() {
       supabase.from('void_reason_codes').select('id,code,description').eq('is_active', true).order('code'),
       supabase.from('approval_instances').select('*').eq('source_document_id', inv.id).order('step_sequence'),
       supabase.from('number_series').select('prefix,number_length,reset_frequency').eq('company_id', inv.company_id).eq('branch_id', inv.branch_id).eq('document_code', 'SI').eq('is_active', true).limit(1).maybeSingle(),
-      supabase.from('companies').select('*').eq('id', inv.company_id).maybeSingle(),
       supabase.from('sales_invoices').select('id,si_number,date,due_date,total_amount,status').eq('company_id', inv.company_id).eq('customer_id', inv.customer_id).order('date', { ascending: false }),
       supabase.from('receipts').select('id,receipt_number,receipt_date,total_amount,total_cwt,status').eq('company_id', inv.company_id).eq('customer_id', inv.customer_id).eq('status', 'posted').order('receipt_date', { ascending: false }),
       supabase.rpc('fn_ar_aging_asof', { p_company_id: inv.company_id, p_as_of: todayIso, p_customer_id: inv.customer_id }),
@@ -232,8 +228,6 @@ export default function SalesInvoiceDocumentPage() {
     setBranchName((brRes.data as { branch_name?: string } | null)?.branch_name ?? '')
     const series = seriesRes.data as { prefix?: string | null; number_length?: number; reset_frequency?: string } | null
     setSeriesName(series ? `${series.prefix || 'SI'} · ${series.number_length ?? 6} digits · ${series.reset_frequency ?? 'never'} reset` : '')
-    const company = companyRes.data as Record<string, unknown> | null
-    setAccentColor(typeof company?.workspace_accent_color === 'string' ? company.workspace_accent_color : '#14532d')
     const tmap: Record<string, string> = {}
     for (const t of termRes.data ?? []) tmap[t.id] = t.term_name
     setTermsName(tmap)
@@ -267,11 +261,20 @@ export default function SalesInvoiceDocumentPage() {
     const rls = (rlRes.data ?? []) as Array<{ receipt_id: string; payment_amount: number; cwt_amount: number }>
     let paid = 0, cwtColl = 0
     const receiptIds = [...new Set(rls.map(r => r.receipt_id))]
-    if (receiptIds.length > 0) {
-      const { data: rcpts } = await supabase.from('receipts').select('id,status').in('id', receiptIds)
-      const posted = new Set((rcpts ?? []).filter(r => r.status === 'posted').map(r => r.id))
-      for (const rl of rls) if (posted.has(rl.receipt_id)) { paid += num(rl.payment_amount); cwtColl += num(rl.cwt_amount) }
+    const postedReceiptsById = new Map(postedCustomerReceipts.map(receipt => [receipt.id, receipt]))
+    const appliedByReceipt = new Map<string, { payment: number; cwt: number }>()
+    for (const rl of rls) {
+      if (!postedReceiptsById.has(rl.receipt_id)) continue
+      paid += num(rl.payment_amount)
+      cwtColl += num(rl.cwt_amount)
+      const current = appliedByReceipt.get(rl.receipt_id) ?? { payment: 0, cwt: 0 }
+      current.payment += num(rl.payment_amount)
+      current.cwt += num(rl.cwt_amount)
+      appliedByReceipt.set(rl.receipt_id, current)
     }
+    const linkedReceipts = receiptIds
+      .map(receiptId => postedReceiptsById.get(receiptId))
+      .filter((receipt): receipt is RecentPayment => Boolean(receipt))
     const balance = num(inv.total_amount) - paid - cwtColl
     const collStatus = inv.status !== 'posted' ? null
       : balance <= 0.005 && (paid + cwtColl) > 0 ? 'Paid'
@@ -285,9 +288,26 @@ export default function SalesInvoiceDocumentPage() {
       { key: 'so', relationship: 'Source Sales Order', docType: 'Sales Order', direction: 'upstream', note: 'Not linked on this document' },
       { key: 'dr', relationship: 'Source Delivery Receipt', docType: 'Delivery Receipt', direction: 'upstream', note: 'Not linked on this document' },
       { key: 'si', relationship: 'This document', docType: 'Sales Invoice', direction: 'current', number: inv.si_number, date: inv.date, status: statusToShared[inv.status], amount: num(inv.total_amount), appliedAmount: paid + cwtColl, openBalance: balance },
-      receiptIds.length > 0
-        ? { key: 'or', relationship: 'Collection', docType: 'Official Receipt', direction: 'downstream', number: `${receiptIds.length} applied`, status: 'posted', amount: paid + cwtColl, appliedAmount: paid + cwtColl, openBalance: balance, href: '/receipts' }
-        : { key: 'or', relationship: 'Collection', docType: 'Official Receipt', direction: 'downstream', action: posted ? { label: 'Create Receipt', href: '/receipts' } : null },
+      ...linkedReceipts.map(receipt => {
+        const application = appliedByReceipt.get(receipt.id) ?? { payment: 0, cwt: 0 }
+        const applied = application.payment + application.cwt
+        return {
+          key: `or-${receipt.id}`,
+          relationship: 'Collection',
+          docType: 'Official Receipt',
+          direction: 'downstream' as const,
+          number: receipt.receipt_number,
+          date: receipt.receipt_date,
+          status: 'posted',
+          amount: num(receipt.total_amount) + num(receipt.total_cwt),
+          appliedAmount: applied,
+          openBalance: balance,
+          href: '/receipts',
+        }
+      }),
+      ...(linkedReceipts.length === 0
+        ? [{ key: 'or', relationship: 'Collection', docType: 'Official Receipt', direction: 'downstream' as const, action: posted ? { label: 'Create Receipt', href: '/receipts' } : null }]
+        : []),
       { key: 'cm', relationship: 'Adjustment', docType: 'Credit Memo', direction: 'downstream', action: posted ? { label: 'Create Credit Memo', href: '/credit-memos' } : null },
       { key: 'dm', relationship: 'Adjustment', docType: 'Debit Memo', direction: 'downstream' },
       { key: 'ret', relationship: 'Return', docType: 'Customer Return', direction: 'downstream' },
@@ -452,10 +472,8 @@ export default function SalesInvoiceDocumentPage() {
     { label: 'Due Date', value: si.due_date ? <DateCell date={si.due_date} /> : '—' },
     { label: 'Branch', value: branchName || '—' },
     { label: 'Currency', value: si.currency_code },
-    { label: 'VAT Price Basis', value: si.vat_price_basis === 'inclusive' ? 'VAT Inclusive' : 'VAT Exclusive' },
     { label: 'Payment Terms', value: termLabel(si.payment_terms_id), provenance: 'from Customer / document' },
     { label: 'External Reference', value: si.reference || 'Not linked' },
-    ...(si.posted_at ? [{ label: 'Posting Date', value: formatDateTime(si.posted_at), provenance: 'posted document timestamp' }] : []),
   ]
   const primaryGroups: InfoGroup[] = [
     {
@@ -463,8 +481,7 @@ export default function SalesInvoiceDocumentPage() {
     },
     {
       key: 'cust', title: 'Customer Information', fields: [
-        { label: 'Context', value: 'Invoice Snapshot', wide: true },
-        { label: 'Customer', value: customerLink, wide: true, provenance: 'invoice customer snapshot / opens Customer master' },
+        { label: 'Customer', value: customerLink, provenance: 'invoice customer snapshot / opens Customer master' },
         { label: 'Customer Code', value: customer?.customer_code || 'Not stored on invoice snapshot', provenance: 'current Customer master; snapshot field not stored' },
         { label: 'TIN', value: si.customer_tin_snapshot ? normalizePhTin(si.customer_tin_snapshot) : 'Not stored', provenance: 'invoice TIN snapshot' },
         { label: 'TIN Branch', value: si.customer_tin_snapshot ? getPhTinBranch(si.customer_tin_snapshot) : 'Not stored', provenance: 'invoice TIN snapshot' },
@@ -1170,28 +1187,28 @@ export default function SalesInvoiceDocumentPage() {
     </div>,
   )
 
-  const tabs: DocumentTab[] = [
-    { key: 'lines', label: 'Lines', badge: lines.length || undefined, content: linesTab },
-    { key: 'financial', label: 'Financial', content: financialTab },
-    { key: 'gl', label: 'GL Impact', content: glTab },
-    { key: 'tax', label: 'Tax Impact', content: taxTab },
-    { key: 'validation', label: 'Validation', content: validationTab },
-    { key: 'workflow', label: 'Workflow', content: workflowTab },
-    { key: 'approval', label: 'Approval', content: approvalTab },
-    { key: 'audit', label: 'Audit', content: auditTab },
-    { key: 'related', label: 'Related Docs', content: <RelatedDocumentsTab rows={relatedRows} /> },
-    { key: 'party', label: 'Related Party', content: relatedPartyTab },
-    { key: 'attachments', label: 'Attachments', content: attachmentsTab },
-    { key: 'timeline', label: 'Activity', content: timelineTab },
-    { key: 'notes', label: 'Notes', content: notesTab },
-    { key: 'system', label: 'System', content: systemTab },
-  ]
+  const tabContent = {
+    lines: linesTab,
+    financial: financialTab,
+    gl: glTab,
+    tax: taxTab,
+    validation: validationTab,
+    workflow: workflowTab,
+    approval: approvalTab,
+    audit: auditTab,
+    related: <RelatedDocumentsTab rows={relatedRows} />,
+    party: relatedPartyTab,
+    attachments: attachmentsTab,
+    activity: timelineTab,
+    notes: notesTab,
+    system: systemTab,
+  }
 
   // ── Right sidebar (§21) ─────────────────────────────────────
   return (
     <>
       {actionError && <div className="mb-3 border border-red-200 bg-red-50 rounded-md px-4 py-2 text-sm text-red-700">{actionError}</div>}
-      <DocumentLayout
+      <TransactionWorkspace
         title="Sales Invoice"
         documentNo={si.si_number}
         status={headerStatus}
@@ -1213,10 +1230,18 @@ export default function SalesInvoiceDocumentPage() {
           { label: 'Lock', value: lockLabel, tone: si.status === 'draft' ? 'neutral' : 'warning' },
         ]}
         actions={actions}
+        workflow={workflow}
         primary={primaryInfo}
-        tabs={tabs}
-        accentColor={accentColor}
-        visualStandard="transactionV1"
+        tabContent={tabContent}
+        tabBadges={{ lines: lines.length || undefined }}
+        family="sales"
+        sidebarPanels={[
+          { key: 'balance', title: 'Balance', content: <div className="space-y-2"><div className="flex items-baseline justify-between gap-3"><span className="pxl-field-label">Invoice Total</span><span className="font-mono text-xs font-semibold"><AmountCell amount={num(si.total_amount)} /></span></div><div className="flex items-baseline justify-between gap-3"><span className="pxl-field-label">Collected</span><span className="font-mono text-xs"><AmountCell amount={collection.paid + collection.cwt} /></span></div><div className="flex items-baseline justify-between gap-3"><span className="pxl-field-label">Balance Due</span><span className="font-mono text-sm font-bold"><AmountCell amount={collection.balance} /></span></div></div> },
+          { key: 'tax', title: 'Tax', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Output VAT</span><span className="font-mono text-xs"><AmountCell amount={num(si.total_vat_amount)} /></span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Expected CWT</span><span className="font-mono text-xs"><AmountCell amount={cwt} /></span></div></div> },
+          { key: 'gl', title: 'GL Preview', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Debit</span><span className="font-mono text-xs"><AmountCell amount={combinedGlDebit} /></span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Credit</span><span className="font-mono text-xs"><AmountCell amount={combinedGlCredit} /></span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Difference</span><span className={`font-mono text-xs ${Math.abs(combinedGlDifference) > 0.005 ? 'text-red-700' : 'text-green-700'}`}><AmountCell amount={combinedGlDifference} /></span></div></div> },
+          { key: 'customer', title: 'Customer', content: <div><button type="button" onClick={openCustomer} className="pxl-customer-link text-left text-xs font-semibold hover:underline">{si.customer_name_snapshot || customer?.registered_name || 'Customer unavailable'}</button><div className="pxl-caption mt-1 font-mono">{si.customer_tin_snapshot ? normalizePhTin(si.customer_tin_snapshot) : 'No TIN snapshot'}</div></div> },
+          { key: 'audit', title: 'Audit', content: <p className="pxl-caption">{lockLabel} · Updated {formatDateTime(si.updated_at)}</p> },
+        ]}
         footer={
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <span>Created {formatDateTime(si.created_at)} · Updated {formatDateTime(si.updated_at)}</span>

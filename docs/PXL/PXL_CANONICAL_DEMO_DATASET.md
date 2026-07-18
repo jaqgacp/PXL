@@ -1,5 +1,12 @@
 # PXL Canonical Demo Dataset
 
+**Status:** Active Operational Reference — incomplete canonical coverage
+**Authority:** Tier 3; governed accounting, tax, transaction, security, and findings sources prevail
+**Last Verified:** 2026-07-18 hosted reset, high-volume rebuild, and reconciliation evidence
+**Applies To:** Non-production canonical data, hosted/local validation, recovery, and coverage boundaries
+**Read When:** The task changes or validates canonical data or the hosted demo environment
+**Do Not Read For:** Routine finding implementation unrelated to canonical fixtures
+
 ## Purpose
 
 The canonical demo dataset is the governed development and QA fixture for PXL. It replaces ad hoc demo rows with deterministic companies, setup data, master data, opening stock, posted transactions, and regression assertions that exercise Philippine accounting, tax, inventory, and document-lifecycle behavior.
@@ -62,7 +69,7 @@ docker exec supabase_db_PXL pg_dump -U postgres -d postgres --clean --if-exists 
 Run reset and seed in one `psql` session so the reset GUC is active:
 
 ```bash
-(printf "SET pxl.allow_demo_reset = 'on';\nSET pxl.seed_summary = 'on';\n"; cat supabase/seeds/canonical_demo_reset.sql supabase/seeds/canonical_demo_seed.sql) | docker exec -i supabase_db_PXL psql -U postgres -d postgres -v ON_ERROR_STOP=1
+(printf "BEGIN;\nSET pxl.allow_demo_reset = 'on';\n"; cat supabase/seeds/canonical_demo_reset.sql supabase/seeds/canonical_demo_seed.sql supabase/seeds/canonical_phase3_enrichment.sql supabase/seeds/canonical_demo_volume.sql; printf "COMMIT;\n") | docker exec -i supabase_db_PXL psql -U postgres -d postgres -v ON_ERROR_STOP=1
 ```
 
 ## Seed Command
@@ -75,12 +82,32 @@ For a seed-only run after the database has already been reset:
 
 The seed is deterministic and uses stable business codes. It is safest to rerun after the reset script.
 
+Phase 3 uses the base seed as the stable baseline and applies an idempotent enrichment without resetting hosted data:
+
+```bash
+docker exec -i supabase_db_PXL psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f /dev/stdin < supabase/seeds/canonical_phase3_enrichment.sql
+```
+
+The optional high-volume layer adds 40 customers, 30 suppliers, 24 items, 60 draft sales invoices, 30 draft purchase orders, and 30 draft vendor bills to the primary VAT company:
+
+```bash
+docker exec -i supabase_db_PXL psql -U postgres -d postgres -v ON_ERROR_STOP=1 -f /dev/stdin < supabase/seeds/canonical_demo_volume.sql
+```
+
+For a hosted operator, grant owner access without hard-coding the email in source:
+
+```bash
+(printf "SET pxl.demo_owner_email = 'operator@example.com';\n"; cat supabase/seeds/canonical_demo_owner_access.sql) | docker exec -i supabase_db_PXL psql -U postgres -d postgres -v ON_ERROR_STOP=1
+```
+
 ## Test Command
 
 After reset and seed:
 
 ```bash
 supabase test db --local supabase/tests/055_canonical_demo_dataset_test.sql
+supabase test db --local supabase/tests/057_phase3_canonical_implementation_test.sql
+supabase test db --local supabase/tests/058_canonical_demo_volume_test.sql
 ```
 
 If the canonical seed is not loaded, this pgTAP file reports 34 skipped tests instead of failing the general suite.
@@ -93,13 +120,36 @@ Start the application against local Supabase:
 VITE_SUPABASE_URL='http://127.0.0.1:54321' VITE_SUPABASE_ANON_KEY="$(supabase status -o env | sed -n 's/^ANON_KEY=//p')" npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
-Run the canonical browser visibility probe:
+Run the current Phase 3 browser visibility and setup-checklist probes:
 
 ```bash
-AUDIT_BASE_URL='http://127.0.0.1:5173' NODE_PATH='/home/codespace/.npm/_npx/e41f203b7505f1fb/node_modules' node scripts/audit_canonical_ui.mjs
+AUDIT_BASE_URL='http://127.0.0.1:5173' node scripts/audit_phase3_hosted_ui.mjs
+AUDIT_BASE_URL='http://127.0.0.1:5173' node scripts/audit_phase3_checklists.mjs
 ```
 
-The script logs in, selects `ABC Trading Corporation`, and classifies core setup, master-data, sales, purchasing, inventory, banking, accounting, compliance, and report routes as `visible`, `partially visible`, `missing`, or `broken`.
+These scripts log in, select each of the five companies, verify the named canonical records/routes, exercise the ABC report set, and capture the current ten-check setup checklist. Playwright must be available to Node; these scripts are hosted-safe UI reads and must not be treated as proof of unsupported workflows.
+
+## Hosted Deployment Status
+
+Authorized non-production hosted project:
+
+- Project ref: `bskjkogijpbhukjkagfj`
+- Project name: `PXL`
+
+Hosted status through 2026-07-18:
+
+- Frontend, Supabase link, and database all target `bskjkogijpbhukjkagfj`.
+- Hosted migration history is synchronized through `20260716000005`.
+- The earlier guarded hosted reset/base seed remains the baseline; Phase 3 did not repeat it.
+- `canonical_phase3_enrichment.sql` was applied twice successfully to prove idempotence.
+- Hosted tests 055/056/057 passed 34/34, 11/11, and 38/38.
+- Hosted UI validation passed 48/48 company/master/document probes and 20/20 ABC report probes.
+- On 2026-07-18, a fresh data-only backup was captured, the legacy `PXL Demo Trading Corporation` tenant was removed, and the five canonical tenants were atomically rebuilt with Phase 3 plus the high-volume layer.
+- The designated hosted operator has owner membership in all five companies. Local tests 055/057/058 passed 34/34, 38/38, and 16/16 after the rebuild; hosted SQL verification confirmed exact volume counts, all reset triggers restored, 12 open ABC periods, and zero current AR/AP reconciliation variance. The hosted pgTAP CLI connector was not counted because its temporary login role lacked direct table permissions.
+
+## Setup Checklist Status
+
+All five canonical companies passed the checklist as it existed on 2026-07-16. That checklist validates ten core-accounting prerequisites: legal profile, branch, fiscal calendar/period, chart of accounts, number series, compliance/tax setup, and GL mappings. It does **not** prove customers, suppliers, inventory, banking, approvals, workflow breadth, reports, or statutory generators are operationally complete. `PXL-AUD-067` governs that scope/wording gap.
 
 ## Company Profiles
 
@@ -113,7 +163,7 @@ The script logs in, selects `ABC Trading Corporation`, and classifies core setup
 
 ## Master Data Summary
 
-Seeded totals after a clean reset:
+Hosted canonical totals after Phase 3 and high-volume enrichment:
 
 | Area | Count |
 | --- | ---: |
@@ -121,16 +171,18 @@ Seeded totals after a clean reset:
 | Branches | 8 |
 | Departments | 13 |
 | Cost centers | 10 |
-| Chart-of-account rows | 210 |
+| Chart-of-account rows | 215 |
 | Payment terms | 25 |
-| UOMs | 25 |
-| Items and services | 53 |
-| Warehouses | 5 |
-| Customers | 13 |
-| Suppliers | 13 |
+| UOMs | 40 |
+| Items and services | 91 |
+| Warehouses | 6 |
+| Customers | 66 |
+| Suppliers | 56 |
+| Employees | 26 |
+| Bank accounts | 10 |
 | Demo auth users | 5 |
 
-Primary VAT trading company (`DEMO-CORP-VAT`) has 3 branches, 5 departments, 5 cost centers, 3 warehouses, 10 customers, 10 suppliers, 9 stock items, 6 service items, sales/purchasing approval fixtures, bank accounts, employees, and number series for core document types.
+Primary VAT trading company (`DEMO-CORP-VAT`) has 3 branches, 5 departments, 5 cost centers, 3 warehouses, 50 customers, 40 suppliers, 22 stock items, 18 service items, sales/purchasing approval fixtures, bank accounts, employees, and number series for core document types.
 
 ## Opening Balances
 
@@ -163,6 +215,12 @@ Seeded posted or active scenarios include:
 - `TEST-INV-TRANSFER-OK`: valid stock transfer within source warehouse availability.
 - `TEST-INV-ADJ-POS` / `TEST-INV-ADJ-NEG`: positive and negative stock adjustments within available quantity.
 - `TEST-SO-OPEN-PARTIAL`: approved open sales order fixture, 10 ordered, 6 fulfilled, 4 remaining.
+- Golden Phase 3: opening inventory/JE, retail credit SI and partial OR, PO/RR/VB/PV, branch transfer, shrinkage adjustment.
+- ABC Phase 3: quotation -> SO -> DR -> SI -> partial OR, applied CM, vendor credit/application, cash purchase, physical count, and governed SI void/reversal.
+- Northstar Phase 3: retainer and milestone SIs, full retainer OR, cloud-service VB/PV, and adjusting accrual JE.
+- Prime Phase 3: VAT-exclusive and VAT-inclusive/CWT SIs, partial OR, professional-fee and rent VBs with EWT, and partial PV.
+- Bayani Phase 3: opening inventory, partial PO/RR/VB/PV, SO/DR/SI/OR chain, open advisory CWT SI, positive adjustment, and partner drawing JE.
+- ABC high-volume work queue: 60 editable draft sales invoices across all three branches, 30 editable draft purchase orders, and 30 editable draft vendor bills. These are intentionally unposted so an operator can continue their lifecycles in the application.
 
 Regression-only invalid scenarios in `055_canonical_demo_dataset_test.sql`:
 
@@ -193,45 +251,35 @@ This seed is audit-ready for the scenarios it actually executes, but it does not
 
 Current limitations:
 
-- Credit memo, customer return, vendor credit, purchase return, and posted document reversal fixtures are not yet part of this canonical seed.
-- Physical count, serialized inventory, inventory commitments/reservations, and inactive item/warehouse negative cases remain future seed/test expansions.
-- Route-level UI visibility is not yet complete: the Phase 2 browser audit finds several seeded transaction references present in the database but missing from their application routes.
-- Table coverage is not yet complete: 69 of 148 public tables are populated after seed and 79 are empty; active empty modules must be classified as future, unsupported, or pending workflow fixtures.
+- Credit memo, vendor credit/application, physical count, cash purchase, and posted SI reversal are now covered. Customer/purchase returns, debit/supplier debit memos, serialized inventory, and reservation/commitment scenarios remain unimplemented or unexercised.
+- Hosted route visibility is passed for the scripted canonical probes. The consolidated transaction workspace UI is implemented; report/source drilldown and transaction-specific business qualification are not exhaustively proven for every company.
+- Hosted table coverage is 82 populated / 66 classified empty. Banking transactions/reconciliation, fixed assets, approvals, schedules, returns, statutory-return generation, and CAS export artifacts remain empty.
+- Hosted company selector access is membership-scoped after `20260716000002`: canonical demo users and the designated hosted operator see exactly the five canonical companies. The superseded `PXL Demo Trading Corporation` tenant was removed during the 2026-07-18 rebuild; broad global BIR form configuration policies are tracked separately as `PXL-AUD-063`.
 - Project, location, and functional-entity dimensions are not invented because governed master tables do not yet exist.
 - Service-only project billing is represented by deterministic service invoices, not a full project subledger.
-- Approval workflows are seeded only for supported sales and purchasing modules.
-- The canonical pgTAP test focuses on database truth; `scripts/audit_canonical_ui.mjs` is the current UI walkthrough probe.
+- Approval workflow definitions exist, but no `approval_instances` canonical execution was fabricated.
+- `scripts/audit_phase3_hosted_ui.mjs` and `scripts/audit_phase3_checklists.mjs` are the current hosted UI probes.
 
-## Known Findings
+## Active Finding References
 
-`PXL-AUD-054` was discovered during canonical inventory-control validation: stock transfer posting did not validate source warehouse availability before decrementing source stock. It is fixed by `20260716000001_stock_transfer_availability_guard.sql` and covered by `055_canonical_demo_dataset_test.sql`.
-
-`PXL-AUD-053` remains In Progress for broader Sales Invoice gold-standard validation beyond the source-backed slice already implemented.
-
-Phase 2 product-audit findings:
-
-- `PXL-AUD-055`: service-role credential exposed through a `VITE_` client environment variable. Remove and rotate before any external demo.
-- `PXL-AUD-056`: hosted Supabase migration push is blocked until the project is proven non-production, DB credentials are supplied, and held-out migration drift is reconciled.
-- `PXL-AUD-057`: canonical database rows are not consistently visible from transaction/report routes.
-- `PXL-AUD-058`: local canonical login/CSP issue fixed; browser audit now authenticates locally.
-- `PXL-AUD-059`: complete table coverage classification is still required.
-- `PXL-AUD-060`: login labels need accessible association for reliable UI regression.
-- `PXL-AUD-061`: full pgTAP regression lanes are not yet deterministic against the canonical seeded state.
+Official status and remediation live only in `PXL_END_TO_END_AUDIT_FINDINGS.md`. Canonical-environment work should normally consider `PXL-AUD-053`, `PXL-AUD-055`, `PXL-AUD-059`, `PXL-AUD-061`, `PXL-AUD-063`, `PXL-AUD-066`, and `PXL-AUD-067`. Do not copy their full content here or infer that a passed canonical probe closes an unrelated finding.
 
 ## How To Rerun
 
 1. Confirm non-production environment.
 2. Back up the local database.
 3. Run the reset+seed command above.
-4. Run `supabase test db --local supabase/tests/055_canonical_demo_dataset_test.sql`.
-5. Run `git diff --check`, `npm run lint`, `npm run build`, and `scripts/check_docs_consistency.sh`.
+4. Run local tests 055, 057, and 058 as listed above.
+5. Run `git diff --check`, `npm run lint`, `npm run build`, `bash scripts/check_docs_consistency.sh`, and `npm run docs:ai-state-check`.
 
 ## How To Extend
 
 Use stable codes and deterministic dates. Add new scenarios to:
 
 - `supabase/seeds/canonical_demo_seed.sql`
+- `supabase/seeds/canonical_demo_volume.sql` for additive list-scale fixtures
 - `supabase/tests/055_canonical_demo_dataset_test.sql`
+- `supabase/tests/058_canonical_demo_volume_test.sql` for high-volume fixtures
 - `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` if a defect is found
 

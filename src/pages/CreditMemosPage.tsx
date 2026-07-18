@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { TransactionWorkspace } from '@/components/document/TransactionWorkspace'
+import { SystemMetadataPanel, TransactionEmptyState } from '@/components/document/TransactionPrimitives'
 import { composePhTin } from '@/lib/philippines'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────
 type CMStatus = 'draft' | 'approved' | 'applied' | 'cancelled'
@@ -382,213 +384,92 @@ export default function CreditMemosPage() {
     )
   }
 
-  // ── Form ───────────────────────────────────────────────────
+  // ── Form / View Workspace ───────────────────────────────────
+  const selectedCustomer = customers.find(customer => customer.id === fCustomer)
+  const selectedInvoice = openSIs.find(invoice => invoice.id === fInvoice)
+  const selectedReason = reasonCodes.find(reasonCode => reasonCode.id === fReason)
+  const selectedBranch = branches.find(branch => branch.id === fBranch)
+  const workflowSteps = [{ key: 'draft', label: 'Draft' }, { key: 'approved', label: 'Approved' }, { key: 'applied', label: 'Applied' }, { key: 'cancelled', label: 'Voided' }]
+  const validationErrors = [
+    !fCustomer ? 'Customer is required.' : '',
+    !fReason ? 'Reason code is required.' : '',
+    lines.every(line => !line.description.trim()) ? 'At least one credit line is required.' : '',
+    lines.some(line => line.quantity <= 0) ? 'Line quantities must be greater than zero.' : '',
+    lines.some(line => line.net_amount > 0 && !line.revenue_account_id) ? 'Revenue account mapping is required for credit lines before application.' : '',
+    lines.some(line => line.vat_amount > 0 && !line.vat_code_id) ? 'VAT code is required for taxable credit lines.' : '',
+  ].filter(Boolean)
+
   return (
-    <div>
-      <div className={transactionHeaderClass('sales')}>
-        <button onClick={() => setMode('list')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M15 18l-6-6 6-6" /></svg>
-          Credit Memos
-        </button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-mono font-semibold text-gray-900">{editDoc?.cm_number || 'New Credit Memo'}</span>
-        {editDoc && <StatusBadge status={statusMap[cmStatus]} label={cmStatus.charAt(0).toUpperCase() + cmStatus.slice(1)} />}
-        <div className="flex-1" />
-        {error && <span className="text-xs text-red-600 font-medium">{error}</span>}
-        {(mode === 'new' || cmStatus === 'draft') && !readOnly && <>
-          <button onClick={() => save('draft')} disabled={saving || setupBlocked} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>
-          <button onClick={() => save('approved')} disabled={saving || setupBlocked} className="px-3 py-1.5 border border-blue-500 text-blue-700 rounded text-sm hover:bg-blue-50 font-medium disabled:opacity-50">Submit for Approval</button>
-          <button onClick={() => save('applied')} disabled={saving || setupBlocked} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Apply</button>
-        </>}
-        {cmStatus === 'approved' && <>
-          <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Reverting…' : 'Revert to Draft'}</button>
-          <button onClick={() => save('applied')} disabled={saving || setupBlocked} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Apply</button>
-        </>}
-      </div>
-
-      <div className="divide-y divide-gray-200">
-        <div className="bg-white px-5 py-4">
-          <SetupReadinessBanner readiness={readiness} />
-        </div>
-        <div className="bg-white px-5 py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Credit Memo Header</div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-3">
-            <div><label className={lbl}>CM Number</label><div className={ro}>{editDoc?.cm_number || 'Auto-assigned on save'}</div></div>
-            <div>
-              <label className={lbl}>Date <span className="text-red-500">*</span></label>
-              <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} disabled={readOnly} className={readOnly ? ro : inp} />
-            </div>
-            <div>
-              <label className={lbl}>Branch</label>
-              <select value={fBranch} onChange={e => setFBranch(e.target.value)} disabled={readOnly} className={readOnly ? ro : inp}>
-                <option value="">Select branch…</option>
-                {branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={lbl}>Customer <span className="text-red-500">*</span></label>
-              {readOnly ? <div className={ro}>{fCustomerName}</div> : (
-                <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className={inp}>
-                  <option value="">Select customer…</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Customer TIN</label>
-              <div className={ro}>{fCustomerTIN || '—'}</div>
-            </div>
-            <div>
-              <label className={lbl}>Related Invoice</label>
-              {readOnly ? <div className={ro}>{openSIs.find(s => s.id === fInvoice)?.si_number || '—'}</div> : (
-                <select value={fInvoice} onChange={e => onInvoiceChange(e.target.value)} className={inp} disabled={!fCustomer}>
-                  <option value="">None (standalone)</option>
-                  {openSIs.map(s => <option key={s.id} value={s.id}>{s.si_number} — {new Date(s.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</option>)}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Reason Code <span className="text-red-500">*</span></label>
-              {readOnly ? <div className={ro}>{reasonCodes.find(r => r.id === fReason)?.description || '—'}</div> : (
-                <select value={fReason} onChange={e => setFReason(e.target.value)} className={inp}>
-                  <option value="">Select reason…</option>
-                  {reasonCodes.map(r => <option key={r.id} value={r.id}>{r.description}</option>)}
-                </select>
-              )}
-            </div>
-            <div className="col-span-2 md:col-span-3 lg:col-span-4">
-              <label className={lbl}>Remarks</label>
-              {readOnly ? <div className={ro}>{fRemarks || '—'}</div> : (
-                <textarea value={fRemarks} onChange={e => setFRemarks(e.target.value)} rows={2} className={inp + ' resize-none'} />
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Lines */}
-        <div className="bg-white">
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-              Credit Lines {fInvoice && siLines.length > 0 ? '(auto-filled from invoice)' : ''}
-            </span>
-            {canEdit && !fInvoice && (
-              <button type="button" onClick={() => setLines(prev => [...prev, newLine()])}
-                className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 border border-gray-300 rounded px-2 py-1 hover:bg-gray-50">
-                <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12h14" /></svg>
-                Add Line
-              </button>
-            )}
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-8">#</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 min-w-[200px]">Description</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">Qty</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-28">Unit Price</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-28">Net Amount</th>
-                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-24">VAT Code</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-24">VAT</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-28">Total</th>
-                  {canEdit && !fInvoice && <th className="px-2 w-8" />}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {lines.map((l, idx) => (
-                  <tr key={l._key} className="hover:bg-gray-50/50">
-                    <td className="px-4 py-2.5 text-xs text-gray-400 text-right">{idx + 1}</td>
-                    <td className="px-4 py-2.5">
-                      {canEdit && !fInvoice ? (
-                        <input value={l.description} onChange={e => setLineField(l._key, 'description', e.target.value)}
-                          className="w-full bg-transparent border-0 text-sm py-0 px-0 focus:outline-none" placeholder="Description…" />
-                      ) : <span className="text-xs text-gray-700">{l.description}</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      {canEdit && !fInvoice ? (
-                        <input type="number" value={l.quantity} min={0} step="any"
-                          onChange={e => setLineField(l._key, 'quantity', parseFloat(e.target.value) || 0)}
-                          className="w-16 text-right bg-transparent border-0 text-sm focus:outline-none" />
-                      ) : <span className="text-xs font-mono tabular-nums text-gray-700">{l.quantity}</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      {canEdit && !fInvoice ? (
-                        <input type="number" value={l.unit_price} min={0} step="any"
-                          onChange={e => setLineField(l._key, 'unit_price', parseFloat(e.target.value) || 0)}
-                          className="w-24 text-right bg-transparent border-0 text-sm focus:outline-none" />
-                      ) : <span className="text-xs font-mono tabular-nums text-gray-700">{fmt(l.unit_price)}</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-gray-700">{fmt(l.net_amount)}</td>
-                    <td className="px-4 py-2.5 text-xs text-gray-500">
-                      {canEdit && !fInvoice ? (
-                        <select value={l.vat_code_id} onChange={e => setLineField(l._key, 'vat_code_id', e.target.value)}
-                          className="text-xs border-0 bg-transparent focus:outline-none w-full">
-                          <option value="">—</option>
-                          {vatCodes.map(v => <option key={v.id} value={v.id}>{v.vat_code}</option>)}
-                        </select>
-                      ) : <span>{vatCodes.find(v => v.id === l.vat_code_id)?.vat_code || '—'}</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-gray-700">{fmt(l.vat_amount)}</td>
-                    <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-semibold text-gray-900">{fmt(l.total_amount)}</td>
-                    {canEdit && !fInvoice && (
-                      <td className="px-2 py-2.5">
-                        <button type="button" onClick={() => setLines(prev => prev.filter(x => x._key !== l._key))}
-                          className="text-gray-300 hover:text-red-500">
-                          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M18 6L6 18M6 6l12 12" /></svg>
-                        </button>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* Summary */}
-        <div className="bg-white px-5 py-4 flex justify-end">
-          <div className="w-64 divide-y divide-gray-100">
-            <div className="flex items-center justify-between py-1.5">
-              <span className="text-xs text-gray-500">Net Amount Credited</span>
-              <span className="text-xs font-mono tabular-nums text-gray-700">{fmt(totalNet)}</span>
-            </div>
-            <div className="flex items-center justify-between py-1.5">
-              <span className="text-xs text-gray-500">VAT Reversed</span>
-              <span className="text-xs font-mono tabular-nums text-gray-700">{fmt(totalVAT)}</span>
-            </div>
-            <div className="flex items-center justify-between py-2.5">
-              <span className="text-sm font-semibold text-gray-900">Total Credit</span>
-              <span className="text-sm font-mono tabular-nums font-semibold text-gray-900">{fmt(totalAmt)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 px-5 py-4">
-          <GLImpactPanel
-            companyId={companyId}
-            sourceDocType="CM"
-            sourceDocId={editDoc && editDoc.status !== 'draft' ? editDoc.id : null}
-            previewRows={glPreviewRows}
-          />
-        </div>
-
-        {editDoc?.id && (
-          <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 space-y-3">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                {auditFacts.map(fact => (
-                  <div key={fact.label}>
-                    <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{fact.label}</div>
-                    <div className="text-xs font-medium text-gray-700">{fact.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <AuditTrailSection tableName="credit_memos" recordId={editDoc.id} />
-          </div>
-        )}
-      </div>
-    </div>
+    <TransactionWorkspace
+      title="Credit Memo"
+      documentNo={editDoc?.cm_number}
+      status={cmStatus}
+      statusLabel={cmStatus}
+      family="sales"
+      identity={{ name: fCustomerName || selectedCustomer?.registered_name || 'Customer not selected', secondary: fCustomerTIN || undefined }}
+      metrics={[
+        { label: 'Credit Total', value: `₱${fmt(totalAmt)}`, emphasis: true },
+        { label: 'VAT Reversed', value: `₱${fmt(totalVAT)}` },
+        { label: 'Net Credit', value: `₱${fmt(totalNet)}` },
+      ]}
+      meta={[
+        { label: 'Mode', value: readOnly ? 'Read only' : 'Editable', tone: readOnly ? 'warning' : 'info' },
+        { label: 'Posting', value: editDoc?.posted_at ? 'Posted / applied' : 'Not applied', tone: editDoc?.posted_at ? 'success' : 'neutral' },
+      ]}
+      actions={[
+        ...((mode === 'new' || cmStatus === 'draft') && !readOnly ? [
+          { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: () => save('draft'), disabled: saving || setupBlocked },
+          { key: 'approve', label: 'Submit for Approval', onClick: () => save('approved'), disabled: saving || setupBlocked },
+          { key: 'apply', label: 'Apply', onClick: () => save('applied'), disabled: saving || setupBlocked, variant: 'primary' as const },
+        ] : []),
+        ...(cmStatus === 'approved' ? [
+          { key: 'revert', label: saving ? 'Reverting…' : 'Revert to Draft', onClick: () => save('draft'), disabled: saving, group: 'more' as const },
+          { key: 'apply-approved', label: 'Apply', onClick: () => save('applied'), disabled: saving || setupBlocked, variant: 'primary' as const },
+        ] : []),
+      ]}
+      workflow={{ steps: workflowSteps, currentKey: cmStatus }}
+      cards={[
+        { title: 'Document Information', content: <div className="grid gap-3 sm:grid-cols-2"><label className={lbl}>Credit Memo Date<input type="date" value={fDate} onChange={event => setFDate(event.target.value)} disabled={readOnly} className={`${readOnly ? ro : inp} mt-1`} /></label><label className={lbl}>Branch<select value={fBranch} onChange={event => setFBranch(event.target.value)} disabled={readOnly} className={`${readOnly ? ro : inp} mt-1`}><option value="">Select branch…</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.branch_code} – {branch.branch_name}</option>)}</select></label><div><div className="pxl-field-label">Credit Memo Number</div><div className="pxl-body-text mt-1 font-mono">{editDoc?.cm_number || 'Generated on save'}</div></div><div><div className="pxl-field-label">Lock State</div><div className="pxl-body-text mt-1">{cmStatus === 'draft' ? 'Editable draft' : 'Lifecycle controlled'}</div></div></div> },
+        { title: 'Customer Information', content: <div className="grid gap-3 sm:grid-cols-2"><label className={`${lbl} sm:col-span-2`}>Customer{readOnly ? <div className={`${ro} mt-1`}>{fCustomerName}</div> : <select value={fCustomer} onChange={event => void onCustomerChange(event.target.value)} className={`${inp} mt-1`}><option value="">Select customer…</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.registered_name}</option>)}</select>}</label><div><div className="pxl-field-label">Customer TIN</div><div className="pxl-body-text mt-1 font-mono">{fCustomerTIN || '—'}</div></div><div><div className="pxl-field-label">Credit Context</div><div className="pxl-body-text mt-1">Accounts receivable reduction</div></div></div> },
+        { title: 'Sales Context', content: <div className="grid gap-3 sm:grid-cols-2"><label className={lbl}>Related Invoice{readOnly ? <div className={`${ro} mt-1`}>{selectedInvoice?.si_number || (fInvoice ? 'Source invoice snapshot' : 'Standalone')}</div> : <select value={fInvoice} onChange={event => void onInvoiceChange(event.target.value)} className={`${inp} mt-1`} disabled={!fCustomer}><option value="">None (standalone)</option>{openSIs.map(invoice => <option key={invoice.id} value={invoice.id}>{invoice.si_number} — {new Date(invoice.date).toLocaleDateString('en-PH')}</option>)}</select>}</label><label className={lbl}>Reason Code{readOnly ? <div className={`${ro} mt-1`}>{selectedReason?.description || '—'}</div> : <select value={fReason} onChange={event => setFReason(event.target.value)} className={`${inp} mt-1`}><option value="">Select reason…</option>{reasonCodes.map(reasonCode => <option key={reasonCode.id} value={reasonCode.id}>{reasonCode.description}</option>)}</select>}</label><div><div className="pxl-field-label">Source Lines</div><div className="pxl-body-text mt-1">{fInvoice && siLines.length > 0 ? 'Copied from Sales Invoice' : 'Standalone credit lines'}</div></div><div><div className="pxl-field-label">Application Status</div><div className="pxl-body-text mt-1">{cmStatus}</div></div></div> },
+      ]}
+      tabBadges={{ lines: lines.length }}
+      tabContent={{
+        lines: <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><div className="flex items-center justify-between border-b border-[var(--pxl-border-medium)] px-3 py-2"><h2 className="pxl-section-title">Credit Lines {fInvoice && siLines.length > 0 ? '· From Invoice' : ''}</h2>{canEdit && !fInvoice && <button onClick={() => setLines(current => [...current, newLine()])} className="pxl-button pxl-button--text">+ Add Line</button>}</div><table className="pxl-data-grid w-full text-xs"><thead><tr>{['#', 'Description', 'Qty', 'Unit Price', 'Net Amount', 'VAT Code', 'VAT', 'Total', ''].map(label => <th key={label} className={['Qty', 'Unit Price', 'Net Amount', 'VAT', 'Total'].includes(label) ? 'text-right' : 'text-left'}>{label}</th>)}</tr></thead><tbody>{lines.map((line, index) => <tr key={line._key}><td className="text-right text-gray-500">{index + 1}</td><td>{canEdit && !fInvoice ? <input value={line.description} onChange={event => setLineField(line._key, 'description', event.target.value)} className="w-full rounded border px-2 py-1" /> : line.description}</td><td className="text-right">{canEdit && !fInvoice ? <input type="number" value={line.quantity} min={0} onChange={event => setLineField(line._key, 'quantity', Number(event.target.value) || 0)} className="w-16 rounded border px-2 py-1 text-right" /> : <span className="font-mono">{line.quantity}</span>}</td><td className="text-right">{canEdit && !fInvoice ? <input type="number" value={line.unit_price} min={0} onChange={event => setLineField(line._key, 'unit_price', Number(event.target.value) || 0)} className="w-24 rounded border px-2 py-1 text-right" /> : <span className="font-mono">{fmt(line.unit_price)}</span>}</td><td className="text-right font-mono">{fmt(line.net_amount)}</td><td>{canEdit && !fInvoice ? <select value={line.vat_code_id} onChange={event => setLineField(line._key, 'vat_code_id', event.target.value)} className="w-24 rounded border px-1.5 py-1"><option value="">—</option>{vatCodes.map(vatCode => <option key={vatCode.id} value={vatCode.id}>{vatCode.vat_code}</option>)}</select> : vatCodes.find(vatCode => vatCode.id === line.vat_code_id)?.vat_code || '—'}</td><td className="text-right font-mono">{fmt(line.vat_amount)}</td><td className="text-right font-mono font-semibold">{fmt(line.total_amount)}</td><td>{canEdit && !fInvoice && <button onClick={() => setLines(current => current.filter(item => item._key !== line._key))} className="text-red-600" aria-label={`Remove credit line ${index + 1}`}>✕</button>}</td></tr>)}</tbody></table></div>,
+        financial: <div className="ml-auto grid max-w-lg grid-cols-2 gap-2"><span className="text-gray-600">Gross Credit</span><span className="text-right font-mono">₱{fmt(totalAmt)}</span><span className="text-gray-600">Net Credit</span><span className="text-right font-mono">₱{fmt(totalNet)}</span><span className="text-gray-600">Output VAT Reversed</span><span className="text-right font-mono">₱{fmt(totalVAT)}</span><span className="pxl-section-title border-t pt-2">AR Reduction</span><span className="border-t pt-2 text-right font-mono font-bold">₱{fmt(totalAmt)}</span></div>,
+        gl: <GLImpactPanel companyId={companyId} sourceDocType="CM" sourceDocId={editDoc && editDoc.status !== 'draft' ? editDoc.id : null} previewRows={glPreviewRows} />,
+        tax: <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full"><thead><tr>{['VAT Classification', 'Tax Base Reversed', 'Rate', 'VAT Reversed', 'Source Lines'].map(label => <th key={label} className={['Tax Base Reversed', 'Rate', 'VAT Reversed', 'Source Lines'].includes(label) ? 'text-right' : 'text-left'}>{label}</th>)}</tr></thead><tbody>{(['regular', 'zero_rated', 'exempt'] as const).map(classification => { const classLines = lines.filter(line => line.vat_classification === classification); return <tr key={classification}><td>{classification.replace('_', ' ')}</td><td className="text-right font-mono">₱{fmt(classLines.reduce((sum, line) => sum + line.net_amount, 0))}</td><td className="text-right font-mono">{classification === 'regular' ? `${classLines[0]?.vat_rate || 0}%` : classification === 'zero_rated' ? '0%' : 'Exempt'}</td><td className="text-right font-mono">₱{fmt(classLines.reduce((sum, line) => sum + line.vat_amount, 0))}</td><td className="text-right font-mono">{classLines.length}</td></tr>})}</tbody></table></div>,
+        validation: <div className="space-y-2"><SetupReadinessBanner readiness={readiness} />{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{validationErrors.length > 0 ? validationErrors.map(message => <div key={message} className="pxl-validation-message border border-orange-200 bg-orange-50 text-orange-800">{message}</div>) : <div className="pxl-validation-message border border-green-200 bg-green-50 text-green-800">Credit, tax-reversal, and source-document controls are ready.</div>}</div>,
+        workflow: <ol className="grid gap-2 sm:grid-cols-4">{workflowSteps.map(step => <li key={step.key} className={`pxl-transaction-card p-3 text-xs font-semibold ${step.key === cmStatus ? 'ring-2 ring-[var(--pxl-transaction-accent)]' : ''}`}>{step.label}</li>)}</ol>,
+        approval: <div className="grid gap-3 sm:grid-cols-3"><div><div className="pxl-field-label">Approval Status</div><div className="pxl-body-text mt-1">{cmStatus === 'draft' ? 'Not submitted' : cmStatus === 'approved' ? 'Approved' : cmStatus === 'applied' ? 'Approved and applied' : 'Cancelled'}</div></div><div><div className="pxl-field-label">Control</div><div className="pxl-body-text mt-1">Status and permission controlled</div></div><div><div className="pxl-field-label">Next Action</div><div className="pxl-body-text mt-1">{cmStatus === 'draft' ? 'Submit for Approval' : cmStatus === 'approved' ? 'Apply' : 'No approval action available'}</div></div></div>,
+        audit: editDoc?.id ? <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-5">{auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div><AuditTrailSection tableName="credit_memos" recordId={editDoc.id} /></div> : <TransactionEmptyState>Audit history begins after the Credit Memo is saved.</TransactionEmptyState>,
+        related: fInvoice ? <table className="pxl-data-grid w-full"><thead><tr><th className="text-left">Relationship</th><th className="text-left">Document</th><th className="text-left">Date</th><th className="text-left">Open</th></tr></thead><tbody><tr><td>Credits</td><td className="font-mono font-semibold">{selectedInvoice?.si_number || fInvoice}</td><td>{selectedInvoice?.date || 'Source snapshot'}</td><td><Link to={`/sales-invoices/${fInvoice}`} className="text-blue-700 hover:underline">Sales Invoice</Link></td></tr></tbody></table> : <TransactionEmptyState>This is a standalone Credit Memo with no related Sales Invoice.</TransactionEmptyState>,
+        party: selectedCustomer ? <dl className="grid gap-3 sm:grid-cols-2"><div><dt className="pxl-field-label">Customer</dt><dd className="pxl-body-text mt-1">{selectedCustomer.registered_name}</dd></div><div><dt className="pxl-field-label">TIN</dt><dd className="pxl-body-text mt-1 font-mono">{composePhTin(selectedCustomer.tin, selectedCustomer.tin_branch_code)}</dd></div></dl> : <TransactionEmptyState>Select a customer to see related-party information.</TransactionEmptyState>,
+        activity: <div className="grid gap-3 sm:grid-cols-5">{auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div>,
+        notes: <label className={lbl}>Credit Memo Remarks<textarea value={fRemarks} onChange={event => setFRemarks(event.target.value)} disabled={readOnly} rows={5} className={`${readOnly ? ro : inp} mt-1 resize-none`} /></label>,
+        system: <SystemMetadataPanel facts={[
+          { label: 'Internal ID', value: editDoc?.id || 'Assigned when saved', hint: 'Transaction identity' },
+          { label: 'Document Number', value: editDoc?.cm_number || 'Generated from number series', hint: 'Credit Memo number' },
+          { label: 'Company ID', value: companyId || '—', hint: 'Tenant boundary' },
+          { label: 'Branch', value: selectedBranch ? `${selectedBranch.branch_code} — ${selectedBranch.branch_name}` : fBranch || '—', hint: 'Posting context' },
+          { label: 'Source Invoice', value: fInvoice || 'Standalone', hint: 'Document lineage' },
+          { label: 'Created', value: formatDateTime(editDoc?.created_at), hint: 'Audit metadata' },
+          { label: 'Updated', value: formatDateTime(editDoc?.updated_at), hint: 'Audit metadata' },
+          { label: 'Posted / Applied', value: formatDateTime(editDoc?.posted_at), hint: 'Lifecycle metadata' },
+          { label: 'Lock Status', value: cmStatus === 'draft' ? 'Editable draft' : 'Lifecycle controlled', hint: 'Immutability control' },
+        ]} />,
+      }}
+      emptyTabMessages={{ attachments: 'No attachments have been added to this Credit Memo.' }}
+      sidebarPanels={[
+        { key: 'balance', title: 'Credit Balance', content: <div className="flex justify-between gap-3"><span className="pxl-field-label">Total Credit</span><span className="font-mono text-sm font-bold">₱{fmt(totalAmt)}</span></div> },
+        { key: 'tax', title: 'Tax', content: <div className="flex justify-between gap-3"><span className="pxl-field-label">VAT Reversed</span><span className="font-mono text-xs">₱{fmt(totalVAT)}</span></div> },
+        { key: 'gl', title: 'GL Preview', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Debit</span><span className="font-mono text-xs">₱{fmt(glPreviewRows.reduce((sum, row) => sum + row.debit, 0))}</span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Credit</span><span className="font-mono text-xs">₱{fmt(glPreviewRows.reduce((sum, row) => sum + row.credit, 0))}</span></div></div> },
+        { key: 'customer', title: 'Customer', content: <div><div className="text-xs font-semibold">{fCustomerName || selectedCustomer?.registered_name || 'Not selected'}</div><div className="pxl-caption mt-1 font-mono">{fCustomerTIN || 'No TIN'}</div></div> },
+        { key: 'audit', title: 'Audit', content: <p className="pxl-caption">{cmStatus === 'draft' ? 'Draft remains editable.' : 'Document is frozen by lifecycle controls.'}</p> },
+      ]}
+      footer={<span>Created {formatDateTime(editDoc?.created_at)} · Updated {formatDateTime(editDoc?.updated_at)} · {cmStatus === 'draft' ? 'Editable draft' : 'Lifecycle controlled'}</span>}
+      onBack={() => setMode('list')}
+      backLabel="Credit Memos"
+    />
   )
 }

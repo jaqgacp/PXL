@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditEvidenceBlock, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
@@ -6,13 +6,15 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { ReportTraceLink } from '@/components/AccountingTraceLink'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 import { normalizePhTin } from '@/lib/philippines'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
+import { useBranchLabel } from '@/hooks/useBranchLabel'
 
 type CPStatus = 'draft' | 'posted' | 'cancelled'
 
 type CP = {
   id: string; company_id: string; branch_id: string; cp_number: string; transaction_date: string
+  warehouse_id?: string | null; department_id?: string | null; cost_center_id?: string | null
   supplier_id: string | null; supplier_name_snapshot: string | null; supplier_tin_snapshot: string | null
   payment_account_id: string | null
   payment_method: string; reference_number: string | null; remarks: string | null
@@ -31,10 +33,11 @@ type CPLine = {
 }
 
 type SupplierRef = { id: string; registered_name: string; tin: string; is_subject_to_ewt: boolean; default_atc_code_id: string | null }
-type ItemRef = { id: string; item_code: string; description: string; uom_id: string; uom_label: string; standard_cost: number; default_purchase_vat_id: string | null; purchase_account_id: string | null }
+type ItemRef = { id: string; item_code: string; description: string; item_type: 'inventory_item' | 'service' | 'non_inventory'; uom_id: string; uom_label: string; standard_cost: number; default_purchase_vat_id: string | null; purchase_account_id: string | null; inventory_account_id: string | null }
 type VATRef = { id: string; vat_code: string; description: string; vat_classification: 'regular' | 'zero_rated' | 'exempt'; rate: number }
 type COARef = { id: string; account_code: string; account_name: string }
 type ATCCode = { id: string; code: string; description: string; rate: number }
+type DimensionRef = { id: string; branch_id: string | null; department_id?: string | null; code: string; name: string }
 
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const today = () => new Date().toISOString().split('T')[0]
@@ -84,10 +87,13 @@ export default function CashPurchasesPage() {
   const [atcCodes, setAtcCodes] = useState<ATCCode[]>([])
   const [cashAccounts, setCashAccounts] = useState<COARef[]>([])
   const [expenseAccounts, setExpenseAccounts] = useState<COARef[]>([])
+  const [warehouses, setWarehouses] = useState<DimensionRef[]>([])
+  const [departments, setDepartments] = useState<DimensionRef[]>([])
+  const [costCenters, setCostCenters] = useState<DimensionRef[]>([])
   const [fStatus, setFStatus] = useState('')
   const [fSearch, setFSearch] = useState('')
-  const listRef = useRef<HTMLDivElement>(null)
   const readOnly = mode === 'view'
+  const branchLabel = useBranchLabel(editCP?.branch_id || branchId)
 
   const loadRecords = useCallback(async () => {
     if (!companyId) return
@@ -105,7 +111,7 @@ export default function CashPurchasesPage() {
   useEffect(() => {
     if (!companyId) return
     supabase.from('suppliers').select('id,registered_name,tin,is_subject_to_ewt,default_atc_code_id').eq('company_id', companyId).eq('is_active', true).order('registered_name').then(({ data }) => setSuppliers(data as SupplierRef[] || []))
-    supabase.from('items').select('id,item_code,description,uom_id,uom:units_of_measure(uom_code),standard_cost,default_purchase_vat_id,purchase_account_id:purchase_expense_account_id').eq('company_id', companyId).eq('is_active', true).order('description').then(({ data }) => setItems((data || []).map((i: any) => ({ ...i, uom_label: i.uom?.uom_code || '' }))))
+    supabase.from('items').select('id,item_code,description,item_type,uom_id,uom:units_of_measure(uom_code),standard_cost,default_purchase_vat_id,purchase_account_id:purchase_expense_account_id,inventory_account_id').eq('company_id', companyId).eq('is_active', true).order('description').then(({ data, error }) => { setItems((data || []).map((i: any) => ({ ...i, uom_label: i.uom?.uom_code || '' }))); if (error) setError(`Unable to load item picker: ${error.message}`) })
     Promise.all([
       supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true),
@@ -117,11 +123,20 @@ export default function CashPurchasesPage() {
     })
     supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code').then(({ data }) => setAtcCodes(data as ATCCode[] || []))
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['asset']).eq('is_active', true).ilike('account_name', '%cash%').order('account_code').then(({ data }) => setCashAccounts(data as COARef[] || []))
-    supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['expense','cost_of_goods']).eq('is_active', true).order('account_code').then(({ data }) => setExpenseAccounts(data as COARef[] || []))
+    supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['asset','expense','cost_of_goods']).eq('is_active', true).eq('is_postable', true).order('account_code').then(({ data }) => setExpenseAccounts(data as COARef[] || []))
+    Promise.all([
+      supabase.from('warehouses').select('id,branch_id,warehouse_code,warehouse_name').eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
+      supabase.from('departments').select('id,branch_id,department_code,department_name').eq('company_id', companyId).eq('is_active', true).order('department_code'),
+      supabase.from('cost_centers').select('id,branch_id,department_id,cost_center_code,cost_center_name').eq('company_id', companyId).eq('is_active', true).order('cost_center_code'),
+    ]).then(([warehouseRes, departmentRes, costCenterRes]) => {
+      setWarehouses((warehouseRes.data || []).map((row: any) => ({ id: row.id, branch_id: row.branch_id, code: row.warehouse_code, name: row.warehouse_name })))
+      setDepartments((departmentRes.data || []).map((row: any) => ({ id: row.id, branch_id: row.branch_id, code: row.department_code, name: row.department_name })))
+      setCostCenters((costCenterRes.data || []).map((row: any) => ({ id: row.id, branch_id: row.branch_id, department_id: row.department_id, code: row.cost_center_code, name: row.cost_center_name })))
+    })
   }, [companyId])
 
   const openNew = () => {
-    setEditCP({ transaction_date: today(), payment_method: 'cash' })
+    setEditCP({ transaction_date: today(), payment_method: 'cash', branch_id: branchId || '', warehouse_id: warehouses[0]?.id || '', department_id: departments[0]?.id || '', cost_center_id: costCenters[0]?.id || '' })
     setLines([newLine()])
     setError('')
     setMode('edit')
@@ -192,7 +207,7 @@ export default function CashPurchasesPage() {
       vat_code_id: vatRef?.id || '',
       vat_classification: vatRef?.vat_classification || 'regular',
       vat_rate: vatRef?.rate ?? 0,
-      expense_account_id: item.purchase_account_id || '',
+      expense_account_id: (item.item_type === 'inventory_item' ? item.inventory_account_id : item.purchase_account_id) || '',
       ewt_atc_code_id: lines[idx]?.ewt_atc_code_id || (suppliers.find(s => s.id === editCP?.supplier_id && s.is_subject_to_ewt)?.default_atc_code_id || ''),
     })
   }
@@ -294,6 +309,10 @@ export default function CashPurchasesPage() {
       return
     }
     if (!companyId) return
+    if (!editCP?.warehouse_id && lines.some(line => line.item_id && items.find(item => item.id === line.item_id)?.item_type === 'inventory_item' && line.quantity > 0)) {
+      setError('Warehouse is required for inventory-item cash purchases.')
+      return
+    }
     if (totals.ewt > 0.005 && !editCP?.supplier_id) {
       setError('Please select a supplier when EWT is recorded.')
       return
@@ -314,6 +333,9 @@ export default function CashPurchasesPage() {
         p_cp_id: (editCP?.id || null)!,
         p_header: {
           company_id: companyId, branch_id: editCP?.branch_id || branchId || null,
+          warehouse_id: editCP?.warehouse_id || null,
+          department_id: editCP?.department_id || null,
+          cost_center_id: editCP?.cost_center_id || null,
           transaction_date: editCP?.transaction_date, payment_method: editCP?.payment_method || 'cash',
           supplier_id: editCP?.supplier_id || null,
           supplier_name_snapshot: editCP?.supplier_name_snapshot || '',
@@ -356,65 +378,62 @@ export default function CashPurchasesPage() {
   const inp = 'border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white disabled:bg-gray-50'
 
   if (mode !== 'list') return (
-    <div className="space-y-4" ref={listRef}>
-      <div className={`${transactionHeaderClass('purchase')} justify-between`}>
-        <div>
-          <h2 className="text-base font-semibold text-gray-900">{editCP?.id ? (readOnly ? 'Cash Purchase' : 'Edit Cash Purchase') : 'New Cash Purchase'}</h2>
-          {editCP?.cp_number && <p className="text-xs text-gray-500 mt-0.5">{editCP.cp_number} · <StatusBadge status={STATUS_COLORS[editCP.status as string] || 'draft'} label={editCP.status as string} /></p>}
-        </div>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-700">← Back</button>
-      </div>
-
-      {error && <div className="bg-red-50 border border-red-200 rounded p-3 text-sm text-red-700">{error}</div>}
-      <SetupReadinessBanner readiness={readiness} />
-
-      <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Header</h3>
-        <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Date *</label>
-            <input type="date" value={editCP?.transaction_date || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, transaction_date: e.target.value }))} className={inp} />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Payment Method</label>
-            <select value={editCP?.payment_method || 'cash'} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, payment_method: e.target.value }))} className={inp + ' w-full'}>
-              <option value="cash">Cash</option>
-              <option value="check">Check</option>
-              <option value="transfer">Bank Transfer</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Payment Account</label>
-            <select value={(editCP as any)?.payment_account_id || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, payment_account_id: e.target.value } as any))} className={inp + ' w-full'}>
-              <option value="">— Select account —</option>
-              {cashAccounts.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Payee / Supplier</label>
-            <select value={editCP?.supplier_id || ''} disabled={readOnly} onChange={e => selectSupplier(e.target.value)} className={inp + ' w-full'}>
-              <option value="">— Optional —</option>
-              {suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Reference No.</label>
-            <input type="text" value={editCP?.reference_number || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, reference_number: e.target.value }))} className={inp + ' w-full'} placeholder="OR/Check/Transfer #" />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Remarks</label>
-            <input type="text" value={editCP?.remarks || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, remarks: e.target.value }))} className={inp + ' w-full'} />
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-white border border-gray-200 rounded-lg p-4">
+    <LegacyTransactionWorkspace title="Cash Purchase" family="purchase" pattern="A" posting
+      documentNo={editCP?.cp_number} status={editCP?.status} identity={editCP?.supplier_name_snapshot}
+      financialFacts={[{ label: 'Cash Paid', value: fmt(totals.cash) }, { label: 'Gross Purchase', value: fmt(totals.gross) }, { label: 'Input VAT', value: fmt(totals.vat) }, { label: 'EWT', value: fmt(totals.ewt) }]}
+      taxFacts={[{ label: 'Input VAT', value: fmt(totals.vat), hint: 'Calculated from line VAT treatment' }, { label: 'EWT', value: fmt(totals.ewt), hint: 'Calculated from line ATC and tax base' }, { label: 'EWT Tax Base', value: fmt(totals.ewtBase) }]}
+      contextFacts={[{ label: 'Supplier', value: editCP?.supplier_name_snapshot || 'Not selected' }, { label: 'Transaction Date', value: editCP?.transaction_date || 'Not assigned' }, { label: 'Payment Method', value: editCP?.payment_method || 'Not selected' }]}
+      sourceDocType="CP" sourceDocId={editCP?.id} auditTable="cash_purchases"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list'), hidden: readOnly },
+        { key: 'save', label: saving ? 'Saving…' : 'Save', onClick: save, disabled: saving || setupBlocked, hidden: readOnly, variant: 'primary' },
+        { key: 'post', label: 'Post Cash Purchase', onClick: () => post(editCP as CP), disabled: setupBlocked, hidden: !readOnly || editCP?.status !== 'draft', variant: 'primary' },
+      ]}
+      cards={[
+        {
+          title: 'Document Information',
+          content: <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+            <label className="pxl-field-label">Date *<input type="date" value={editCP?.transaction_date || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, transaction_date: e.target.value }))} className={`${inp} pxl-input mt-1 w-full`} /></label>
+            <div><div className="pxl-field-label">Branch</div><div className="pxl-readonly-field mt-1 truncate">{branchLabel}</div></div>
+            <div><div className="pxl-field-label">Document Number</div><div className="pxl-readonly-field mt-1">{editCP?.cp_number || 'Generated on save'}</div></div>
+            <div><div className="pxl-field-label">Status</div><div className="pxl-readonly-field mt-1 capitalize">{editCP?.status || 'draft'}</div></div>
+          </div>,
+        },
+        {
+          title: 'Supplier Information',
+          content: <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+            <label className="pxl-field-label col-span-2">Payee / Supplier<select value={editCP?.supplier_id || ''} disabled={readOnly} onChange={e => selectSupplier(e.target.value)} className={`${inp} pxl-input mt-1 w-full`}><option value="">— Optional —</option>{suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}</select></label>
+            <div><div className="pxl-field-label">Supplier TIN</div><div className="pxl-readonly-field mt-1">{editCP?.supplier_tin_snapshot || 'Not selected'}</div></div>
+            <div><div className="pxl-field-label">Supplier</div><div className="pxl-readonly-field mt-1 truncate">{editCP?.supplier_name_snapshot || 'Not selected'}</div></div>
+          </div>,
+        },
+        {
+          title: 'Purchase Context',
+          content: <div className="grid grid-cols-2 gap-x-3 gap-y-2">
+            <label className="pxl-field-label">Payment Method<select value={editCP?.payment_method || 'cash'} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, payment_method: e.target.value }))} className={`${inp} pxl-input mt-1 w-full`}><option value="cash">Cash</option><option value="check">Check</option><option value="transfer">Bank Transfer</option></select></label>
+            <label className="pxl-field-label">Payment Account<select value={editCP?.payment_account_id || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, payment_account_id: e.target.value }))} className={`${inp} pxl-input mt-1 w-full`}><option value="">— Select account —</option>{cashAccounts.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select></label>
+            <label className="pxl-field-label">Reference No.<input type="text" value={editCP?.reference_number || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, reference_number: e.target.value }))} className={`${inp} pxl-input mt-1 w-full`} placeholder="OR/Check/Transfer #" /></label>
+            <label className="pxl-field-label">Remarks<input type="text" value={editCP?.remarks || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, remarks: e.target.value }))} className={`${inp} pxl-input mt-1 w-full`} /></label>
+            <label className="pxl-field-label">Warehouse<select value={editCP?.warehouse_id || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, warehouse_id: e.target.value }))} className={`${inp} pxl-input mt-1 w-full`}><option value="">— Select warehouse —</option>{warehouses.filter(w => !editCP?.branch_id || !w.branch_id || w.branch_id === editCP.branch_id).map(w => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}</select></label>
+            <label className="pxl-field-label">Department<select value={editCP?.department_id || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, department_id: e.target.value }))} className={`${inp} pxl-input mt-1 w-full`}><option value="">— Select department —</option>{departments.filter(d => !editCP?.branch_id || !d.branch_id || d.branch_id === editCP.branch_id).map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}</select></label>
+            <label className="pxl-field-label">Cost Center<select value={editCP?.cost_center_id || ''} disabled={readOnly} onChange={e => setEditCP(p => ({ ...p, cost_center_id: e.target.value }))} className={`${inp} pxl-input mt-1 w-full`}><option value="">— Select cost center —</option>{costCenters.filter(c => (!editCP?.branch_id || !c.branch_id || c.branch_id === editCP.branch_id) && (!editCP?.department_id || !c.department_id || c.department_id === editCP.department_id)).map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}</select></label>
+          </div>,
+        },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}<SetupReadinessBanner readiness={readiness} /></div>,
+        gl: <GLImpactPanel companyId={companyId} sourceDocType="CP" sourceDocId={editCP?.id || null} previewRows={glPreviewRows} />,
+        audit: editCP?.id ? <AuditEvidenceBlock tableName="cash_purchases" recordId={editCP.id} facts={auditFacts} /> : undefined,
+      }}
+      onBack={() => setMode('list')} backLabel="Cash Purchases">
+    <div>
+      <div>
         <div className="flex items-center justify-between mb-3">
           <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Line Items</h3>
           {!readOnly && <button onClick={() => setLines(l => [...l, newLine()])} className="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Add Line</button>}
         </div>
         <div className="overflow-x-auto">
-        <table className="w-full min-w-[1180px] text-xs">
+        <table className="pxl-data-grid w-full min-w-[1180px] text-xs">
           <thead>
             <tr className="border-b border-gray-200 text-gray-500">
               <th className="text-left pb-2 font-medium w-36">Item</th>
@@ -488,28 +507,8 @@ export default function CashPurchasesPage() {
         </div>
       </div>
 
-      <GLImpactPanel
-        companyId={companyId}
-        sourceDocType="CP"
-        sourceDocId={editCP?.id || null}
-        previewRows={glPreviewRows}
-      />
-      {editCP?.id && (
-        <AuditEvidenceBlock tableName="cash_purchases" recordId={editCP.id} facts={auditFacts} />
-      )}
-
-      {!readOnly && (
-        <div className="flex justify-end gap-2">
-          <button onClick={() => setMode('list')} className="px-4 py-2 text-sm border border-gray-300 rounded-md hover:bg-gray-50">Cancel</button>
-          <button onClick={save} disabled={saving || setupBlocked} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
-        </div>
-      )}
-      {readOnly && editCP?.status === 'draft' && (
-        <div className="flex justify-end">
-          <button onClick={() => post(editCP as CP)} disabled={setupBlocked} className="px-4 py-2 text-sm bg-gray-900 text-white rounded-md hover:bg-gray-700 disabled:opacity-50">Post Cash Purchase</button>
-        </div>
-      )}
     </div>
+    </LegacyTransactionWorkspace>
   )
 
   return (

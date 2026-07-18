@@ -1,29 +1,9 @@
-# PXL Form Standard
+# PXL Form Standard (Superseded for Transaction Workspaces)
 
-Status: OFFICIAL FORM FIELD STANDARD
+**Status:** SUPERSEDED — non-authoritative historical pointer
+**Superseded:** 2026-07-18
+**Superseded by:** `PXL_TRANSACTION_WORKSPACE_STANDARD.md` and `PXL_TRANSACTION_WORKSPACE_PATTERNS.md`
 
-Forms must feel like ERP data-entry surfaces, not generic web forms.
+This former form-visual guidance is non-authoritative for transaction workspaces. Draft-state integrity remains governed separately by `PXL_TRANSACTION_DRAFT_STATE_STANDARD.md`.
 
-## Fields
-
-- Editable fields use `pxl-input`.
-- Readonly business facts use `pxl-readonly-field`.
-- Field labels use 12px medium text.
-- Body values use 13px regular text.
-- Readonly fields must not look disabled.
-- Required fields must be clear without relying on color alone.
-
-## Lookups
-
-Customer, Supplier, Item, Employee, Project, Cost Center, Location, and GL Account lookups must share:
-
-- Search
-- Keyboard navigation
-- Dropdown behavior
-- Clear button where applicable
-- Consistent styling
-- Future recent selections
-
-## States
-
-Every field component must define hover, focus, disabled, readonly, invalid, and loading states.
+For transaction layout, visual behavior, components, responsive rules, themes, interaction, and accessibility, read only `PXL_TRANSACTION_WORKSPACE_STANDARD.md`. For permitted transaction-specific content differences, read only `PXL_TRANSACTION_WORKSPACE_PATTERNS.md`.

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
-import { transactionHeaderClass, transactionSegmentButtonClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
 type Item = { id: string; item_code: string; description: string; costing_method: string; uom_code: string }
@@ -12,7 +12,6 @@ type TransferRecord = { id: string; transfer_number: string; transfer_date: stri
 export default function StockTransferPage() {
   const { companyId } = useAppCtx()
   const today = new Date().toISOString().slice(0, 10)
-  const [tab, setTab] = useState<'new' | 'history'>('new')
   const [warehouses, setWarehouses] = useState<Warehouse[]>([])
   const [items, setItems] = useState<Item[]>([])
   const [history, setHistory] = useState<TransferRecord[]>([])
@@ -95,57 +94,29 @@ export default function StockTransferPage() {
   }
 
   return (
+    <LegacyTransactionWorkspace title="Stock Transfer" family="inventory" pattern="B" posting
+      status={pendingId ? 'draft' : 'draft'} identity={warehouses.find(w => w.id === fromWh)?.warehouse_name}
+      financialFacts={[{ label: 'Transfer Quantity', value: lines.reduce((sum, line) => sum + Number(line.qty || 0), 0), hint: 'Total quantity moving between warehouses' }, { label: 'Line Count', value: lines.length }]}
+      contextFacts={[{ label: 'Source Warehouse', value: warehouses.find(w => w.id === fromWh)?.warehouse_name || 'Not selected' }, { label: 'Destination Warehouse', value: warehouses.find(w => w.id === toWh)?.warehouse_name || 'Not selected' }, { label: 'Transfer Date', value: txDate }]}
+      sourceDocType="INV_STX" sourceDocId={pendingId} auditTable="stock_transfers"
+      actions={[
+        { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: saveDraft, disabled: saving, hidden: !!pendingId },
+        { key: 'post', label: posting ? 'Posting…' : 'Post Transfer', onClick: post, disabled: posting, hidden: !pendingId, variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'Transfer Date', card: 0, content: <input type="date" value={txDate} onChange={e => setTxDate(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">{pendingId ? 'Draft saved' : 'Generated on save'}</div> },
+        { key: 'from', label: 'From Warehouse *', card: 1, span: 2, content: <select value={fromWh} onChange={e => setFromWh(e.target.value)} className="pxl-input w-full"><option value="">— Select —</option>{warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}</select> },
+        { key: 'to', label: 'To Warehouse *', card: 2, span: 2, content: <select value={toWh} onChange={e => setToWh(e.target.value)} className="pxl-input w-full"><option value="">— Select —</option>{warehouses.filter(w => w.id !== fromWh).map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}</select> },
+        { key: 'notes', label: 'Notes', card: 2, span: 2, content: <input value={notes} onChange={e => setNotes(e.target.value)} className="pxl-input w-full" /> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{success && <div className="pxl-validation-message border border-green-200 bg-green-50 text-green-700">{success}</div>}</div>,
+        gl: pendingId ? <GLImpactPanel companyId={companyId} sourceDocType="INV_STX" sourceDocId={pendingId} previewRows={[]} /> : undefined,
+        activity: <div className="overflow-x-auto"><table className="pxl-data-grid w-full"><thead><tr>{['Transfer #','Date','From','To','Status'].map(h => <th key={h} className="text-left">{h}</th>)}</tr></thead><tbody>{history.length === 0 ? <tr><td colSpan={5} className="pxl-empty-state">No transfers</td></tr> : history.map(t => <tr key={t.id}><td className="font-mono font-semibold">{t.transfer_number}</td><td>{t.transfer_date}</td><td>{t.from_wh}</td><td>{t.to_wh}</td><td className="capitalize">{t.status}</td></tr>)}</tbody></table></div>,
+      }}>
     <div>
-      <div className={transactionHeaderClass('inventory')}>
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Stock Transfer</span>
-        <div className="ml-auto flex gap-1">
-          {(['new','history'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={transactionSegmentButtonClass('inventory', tab === t)}>
-              {t === 'new' ? 'New Transfer' : 'History'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {tab === 'new' ? (
-        <div className="px-5 py-4 max-w-4xl space-y-4">
-          {error && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
-          {success && <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">{success}</div>}
-
-          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Transfer Header</p>
-            <div className="grid grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">From Warehouse *</label>
-                <select value={fromWh} onChange={e => setFromWh(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                  <option value="">— Select —</option>
-                  {warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">To Warehouse *</label>
-                <select value={toWh} onChange={e => setToWh(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                  <option value="">— Select —</option>
-                  {warehouses.filter(w => w.id !== fromWh).map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Transfer Date</label>
-                <input type="date" value={txDate} onChange={e => setTxDate(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-              </div>
-              <div className="col-span-3">
-                <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
-                <input value={notes} onChange={e => setNotes(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+          <div className="overflow-hidden">
             <div className="px-3 py-2 border-b border-gray-100 flex items-center gap-2">
               <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Items to Transfer</p>
               <select onChange={e => { addLine(e.target.value); e.target.value = '' }}
@@ -157,7 +128,7 @@ export default function StockTransferPage() {
             {lines.length === 0 ? (
               <div className="py-10 text-center text-xs text-gray-400">Add items using the dropdown</div>
             ) : (
-              <table className="w-full text-xs">
+              <table className="pxl-data-grid w-full text-xs">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>{['Item','Method','Qty to Transfer','Lot / Serial',''].map(h => (
                     <th key={h} className="px-3 py-2 text-[10px] font-semibold uppercase text-gray-500 text-left">{h}</th>
@@ -202,54 +173,7 @@ export default function StockTransferPage() {
             )}
           </div>
 
-          {pendingId && (
-            <GLImpactPanel companyId={companyId} sourceDocType="INV_STX" sourceDocId={pendingId} previewRows={[]} />
-          )}
-
-          <div className="flex gap-2">
-            {!pendingId ? (
-              <button onClick={saveDraft} disabled={saving}
-                className="px-4 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-                {saving ? 'Saving…' : 'Save Draft'}
-              </button>
-            ) : (
-              <button onClick={post} disabled={posting}
-                className="px-4 py-1.5 bg-green-700 text-white rounded text-sm font-medium hover:bg-green-800 disabled:opacity-40">
-                {posting ? 'Posting…' : 'Post Transfer'}
-              </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="px-5 py-4">
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>{['Transfer #','Date','From','To','Status'].map(h => (
-                  <th key={h} className="px-3 py-2 text-[10px] font-semibold uppercase text-gray-500 text-left whitespace-nowrap">{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {history.length === 0 ? (
-                  <tr><td colSpan={5} className="py-12 text-center text-gray-400">No transfers</td></tr>
-                ) : history.map(t => (
-                  <tr key={t.id} className="hover:bg-gray-50/60">
-                    <td className="px-3 py-2 font-mono font-semibold text-gray-900">{t.transfer_number}</td>
-                    <td className="px-3 py-2 font-mono text-gray-500">{t.transfer_date}</td>
-                    <td className="px-3 py-2 text-gray-800">{t.from_wh}</td>
-                    <td className="px-3 py-2 text-gray-800">{t.to_wh}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-flex px-2 py-0.5 rounded text-xs font-medium ${t.status === 'posted' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                        {t.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

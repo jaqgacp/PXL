@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { normalizePhTin } from '@/lib/philippines'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Mode = 'list' | 'new'
@@ -273,73 +273,33 @@ export default function CustomerReturnsPage() {
 
   // ── New Return form ────────────────────────────────────────────────────────
   return (
+    <LegacyTransactionWorkspace title="Customer Return" family="sales" pattern="B" posting={false}
+      status="draft" identity={fDR?.customer_name_snapshot}
+      financialFacts={[{ label: 'Return Credit', value: fmt(totals.total) }, { label: 'Net Credit', value: fmt(totals.net) }, { label: 'VAT Credit', value: fmt(totals.vat) }, { label: 'Quantity Returned', value: totals.qty }]}
+      taxFacts={[{ label: 'VAT Credit', value: fmt(totals.vat), hint: 'Tax reversal from returned lines' }]}
+      contextFacts={[{ label: 'Customer', value: fDR?.customer_name_snapshot || 'Not selected' }, { label: 'Return Date', value: fDate }, { label: 'Reason', value: reasonCodes.find(reason => reason.id === fReason)?.description || 'Not selected' }]}
+      relatedFacts={[{ label: 'Source Delivery Receipt', value: fDR?.dr_number || 'Not linked', hint: fDR ? 'Return source' : 'No receipt selected', to: '/delivery-receipts' }]}
+      actions={[{ key: 'cancel', label: 'Cancel', onClick: () => setMode('list') }, { key: 'save', label: saving ? 'Saving…' : 'Save Return', onClick: save, disabled: saving, variant: 'primary' }]}
+      headerFields={[
+        { key: 'date', label: 'Return Date *', card: 0, content: <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} className={`${inp} pxl-input`} /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">Draft Credit Memo on save</div> },
+        { key: 'customer', label: 'Customer', card: 1, span: 2, content: <div className="pxl-readonly-field">{fDR?.customer_name_snapshot || 'Select a delivery receipt'}</div> },
+        { key: 'dr', label: 'Delivery Receipt *', card: 1, span: 2, content: <div className="relative"><input value={fDR ? `${fDR.dr_number} — ${fDR.customer_name_snapshot}` : drSearch} onChange={e => { setDRSearch(e.target.value); setFDR(null); searchDRs(e.target.value) }} placeholder="Type DR number to search…" className={`${inp} pxl-input`} />{drs.length > 0 && !fDR && <div className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded border border-gray-200 bg-white shadow-lg">{drs.map(dr => <button key={dr.id} type="button" onClick={() => selectDR(dr)} className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50"><span className="font-mono font-semibold">{dr.dr_number}</span><span className="ml-2">{dr.customer_name_snapshot}</span></button>)}</div>}</div> },
+        { key: 'reason', label: 'Reason Code *', card: 2, span: 2, content: <select value={fReason} onChange={e => setFReason(e.target.value)} className={`${inp} pxl-input`}><option value="">Select reason…</option>{reasonCodes.map(r => <option key={r.id} value={r.id}>{r.code} — {r.description}</option>)}</select> },
+        { key: 'remarks', label: 'Remarks', card: 2, span: 2, content: <input value={fRemarks} onChange={e => setFRemarks(e.target.value)} className={`${inp} pxl-input`} placeholder="Additional notes…" /> },
+      ]}
+      tabContent={{
+        validation: error ? <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div> : undefined,
+        financial: <div className="ml-auto w-full max-w-sm space-y-2 text-sm"><div className="flex justify-between"><span>Total Qty Returned</span><span className="font-mono">{totals.qty}</span></div><div className="flex justify-between"><span>Net Credit</span><span className="font-mono">{fmt(totals.net)}</span></div><div className="flex justify-between"><span>VAT Credit</span><span className="font-mono">{fmt(totals.vat)}</span></div><div className="flex justify-between border-t border-[var(--pxl-border-strong)] pt-2 font-bold"><span>Total Credit Memo</span><span className="font-mono">{fmt(totals.total)}</span></div></div>,
+      }}
+      onBack={() => setMode('list')} backLabel="Customer Returns">
     <div>
-      {/* Toolbar */}
-      <div className={`${transactionHeaderClass('sales')} sticky top-0 z-10`}>
-        <button onClick={() => setMode('list')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M15 18l-6-6 6-6" /></svg>
-          Customer Returns
-        </button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-900">New Customer Return</span>
-        <div className="flex-1" />
-        {error && <span className="text-xs text-red-600 font-medium max-w-sm truncate">{error}</span>}
-        <button onClick={save} disabled={saving}
-          className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
-          {saving ? 'Saving…' : 'Save Return (Draft CM)'}
-        </button>
-      </div>
-
-      <div className="divide-y divide-gray-200">
-        {/* Header */}
-        <div className="bg-white px-5 py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Return Details</div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-x-5 gap-y-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Return Date *</label>
-              <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} className={inp} />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">Delivery Receipt *</label>
-              <div className="relative">
-                <input value={fDR ? fDR.dr_number + ' — ' + fDR.customer_name_snapshot : drSearch}
-                  onChange={e => { setDRSearch(e.target.value); setFDR(null); searchDRs(e.target.value) }}
-                  placeholder="Type DR number to search…" className={inp} />
-                {drs.length > 0 && !fDR && (
-                  <div className="absolute z-20 mt-1 w-full bg-white border border-gray-200 rounded shadow-lg max-h-48 overflow-auto">
-                    {drs.map(dr => (
-                      <button key={dr.id} onClick={() => selectDR(dr)}
-                        className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50">
-                        <span className="font-mono font-semibold text-gray-900">{dr.dr_number}</span>
-                        <span className="text-gray-500 ml-2">{dr.customer_name_snapshot}</span>
-                        <span className="text-gray-400 ml-2 text-xs">{dr.date}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-              {fDR && <div className="text-xs text-gray-400 mt-1">DR {fDR.dr_number} · {fDR.customer_name_snapshot} · {fDR.date}</div>}
-            </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Reason Code *</label>
-              <select value={fReason} onChange={e => setFReason(e.target.value)} className={inp}>
-                <option value="">Select reason…</option>
-                {reasonCodes.map(r => <option key={r.id} value={r.id}>{r.code} — {r.description}</option>)}
-              </select>
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs text-gray-500 mb-1">Remarks</label>
-              <input value={fRemarks} onChange={e => setFRemarks(e.target.value)} className={inp} placeholder="Additional notes…" />
-            </div>
-          </div>
-        </div>
-
-        {/* Return Quantities */}
+      <div>
         {returnLines.length > 0 && (
-          <div className="bg-white px-5 py-4">
+          <div>
             <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Return Quantities</div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="pxl-data-grid w-full text-sm">
                 <thead className="border-b border-gray-200">
                   <tr>
                     {['Description','Delivered','Return Qty','Unit Price','Net','VAT','Total'].map(h => (
@@ -370,23 +330,12 @@ export default function CustomerReturnsPage() {
         )}
 
         {!fDR && (
-          <div className="bg-gray-50 px-5 py-8 text-center text-sm text-gray-400">
-            Search and select a Delivery Receipt above to load return lines.
-          </div>
-        )}
-
-        {/* Totals */}
-        {totals.total > 0 && (
-          <div className="bg-gray-50 px-5 py-4 flex justify-end">
-            <div className="w-64 space-y-1.5 text-sm">
-              <div className="flex justify-between text-gray-600"><span>Total Qty Returned</span><span className="font-mono tabular-nums">{totals.qty}</span></div>
-              <div className="flex justify-between text-gray-600"><span>Net Credit Amount</span><span className="font-mono tabular-nums">{fmt(totals.net)}</span></div>
-              <div className="flex justify-between text-gray-600"><span>VAT Credit</span><span className="font-mono tabular-nums text-blue-700">{fmt(totals.vat)}</span></div>
-              <div className="flex justify-between font-bold text-gray-900 border-t border-gray-300 pt-1.5"><span>Total Credit Memo</span><span className="font-mono tabular-nums">{fmt(totals.total)}</span></div>
-            </div>
+          <div className="pxl-empty-state">
+            Select a Delivery Receipt in Customer Information to load return lines.
           </div>
         )}
       </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

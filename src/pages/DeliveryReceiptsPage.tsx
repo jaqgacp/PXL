@@ -4,7 +4,7 @@ import { useAppCtx } from '@/lib/context'
 import { StatusBadge, DateCell } from '@/components/ui/shared'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────
 type DRStatus = 'draft' | 'in_transit' | 'delivered' | 'cancelled'
@@ -37,9 +37,6 @@ const newLine = (idx = 0): DRLine => ({
   item_id: '', description: '', quantity: 1, uom_id: '', lot_serial_no: '',
 })
 
-const inp = 'w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white'
-const ro  = 'w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm bg-gray-50 text-gray-600 cursor-default'
-const lbl = 'block text-xs font-medium text-gray-500 mb-1'
 
 const statusMap: Record<DRStatus, string> = {
   draft: 'draft', in_transit: 'warning', delivered: 'posted', cancelled: 'error',
@@ -313,98 +310,31 @@ export default function DeliveryReceiptsPage() {
 
   // ── Form ────────────────────────────────────────────────────
   return (
+    <LegacyTransactionWorkspace title="Delivery Receipt" family="sales" pattern="B" posting={false}
+      documentNo={editDoc?.dr_number} status={drStatus} identity={fCustomerName}
+      financialFacts={[{ label: 'Quantity for Delivery', value: lines.reduce((sum, line) => sum + Number(line.quantity || 0), 0), hint: 'Operational quantity; no value is inferred' }, { label: 'Line Count', value: lines.length }]}
+      contextFacts={[{ label: 'Customer', value: fCustomerName || 'Not selected' }, { label: 'Delivery Date', value: fDate }, { label: 'Shipping Method', value: fShipping }, { label: 'Tracking Reference', value: fTracking || 'Not assigned' }]}
+      relatedFacts={[{ label: 'Source Sales Order', value: fSO || 'Not linked', hint: fSO ? 'Fulfillment source' : 'No source selected', to: '/sales-orders' }]}
+      sourceDocId={editDoc?.id} auditTable="delivery_receipts" onBack={() => setMode('list')} backLabel="Delivery Receipts"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list') },
+        { key: 'save', label: saving ? 'Saving…' : drStatus === 'in_transit' ? 'Update' : 'Save Draft', onClick: () => save(drStatus === 'in_transit' ? 'in_transit' : 'draft'), disabled: saving, hidden: readOnly || !['draft','in_transit'].includes(drStatus) },
+        { key: 'advance', label: drStatus === 'in_transit' ? 'Confirm Delivered' : 'Dispatch', onClick: () => save(drStatus === 'in_transit' ? 'delivered' : 'in_transit'), disabled: saving, hidden: readOnly || !['draft','in_transit'].includes(drStatus), variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'number', label: 'Delivery Receipt Number', card: 0, content: <div className="pxl-readonly-field">{editDoc?.dr_number || 'Auto-assigned on save'}</div> },
+        { key: 'date', label: 'Delivery Date *', card: 0, content: <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} disabled={readOnly} className="pxl-input w-full" /> },
+        { key: 'branch', label: 'Branch', card: 0, content: readOnly ? <div className="pxl-readonly-field">{branches.find(b => b.id === fBranch)?.branch_name || '—'}</div> : <select value={fBranch} onChange={e => setFBranch(e.target.value)} className="pxl-input w-full"><option value="">Select branch…</option>{branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}</select> },
+        { key: 'customer', label: 'Customer *', card: 1, span: 2, content: readOnly || !!fSO ? <div className="pxl-readonly-field">{fCustomerName || '—'}</div> : <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className="pxl-input w-full"><option value="">Select customer…</option>{customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}</select> },
+        { key: 'address', label: 'Delivery Address *', card: 1, span: 2, content: readOnly ? <div className="pxl-readonly-field">{fAddress || '—'}</div> : <input value={fAddress} onChange={e => setFAddress(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'source', label: 'Source Sales Order', card: 2, content: readOnly ? <div className="pxl-readonly-field">{salesOrders.find(s => s.id === fSO)?.so_number || '—'}</div> : <select value={fSO} onChange={e => onSOChange(e.target.value)} className="pxl-input w-full"><option value="">None (standalone)</option>{salesOrders.map(s => <option key={s.id} value={s.id}>{s.so_number} — {s.customer_name_snapshot}</option>)}</select> },
+        { key: 'shipping', label: 'Shipping Method *', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fShipping.replace('_', ' ')}</div> : <select value={fShipping} onChange={e => setFShipping(e.target.value as typeof fShipping)} className="pxl-input w-full"><option value="in_house">In-House</option><option value="courier">Courier</option><option value="pickup">Customer Pickup</option></select> },
+        { key: 'tracking', label: 'Tracking Number', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fTracking || '—'}</div> : <input value={fTracking} onChange={e => setFTracking(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'driver', label: 'Driver / Personnel', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fDriver || '—'}</div> : <input value={fDriver} onChange={e => setFDriver(e.target.value)} className="pxl-input w-full" /> },
+      ]}
+      tabContent={{ validation: <div className="space-y-2">{canEdit && <SetupReadinessBanner readiness={readiness} />}{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}</div> }}>
     <div>
-      <div className={transactionHeaderClass('sales')}>
-        <button onClick={() => setMode('list')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M15 18l-6-6 6-6" /></svg>
-          Delivery Receipts
-        </button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-mono font-semibold text-gray-900">{editDoc?.dr_number || 'New Delivery Receipt'}</span>
-        {editDoc && <StatusBadge status={statusMap[drStatus]} label={statusLabel[drStatus]} />}
-        <div className="flex-1" />
-        {error && <span className="text-xs text-red-600 font-medium max-w-xs text-right">{error}</span>}
-        {(mode === 'new' || drStatus === 'draft') && !readOnly && <>
-          <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>
-          <button onClick={() => save('in_transit')} disabled={saving} className="px-3 py-1.5 border border-blue-500 text-blue-700 rounded text-sm hover:bg-blue-50 font-medium disabled:opacity-50">Dispatch</button>
-        </>}
-        {drStatus === 'in_transit' && !readOnly && <>
-          <button onClick={() => save('in_transit')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">Update</button>
-          <button onClick={() => save('delivered')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Confirm Delivered</button>
-        </>}
-      </div>
-
-      {canEdit && (
-        <div className="px-5 pt-4">
-          <SetupReadinessBanner readiness={readiness} />
-        </div>
-      )}
-
       <div className="divide-y divide-gray-200">
-        <div className="bg-white px-5 py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Delivery Receipt Header</div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-3">
-            <div><label className={lbl}>DR Number</label><div className={ro}>{editDoc?.dr_number || 'Auto-assigned on save'}</div></div>
-            <div>
-              <label className={lbl}>DR Date <span className="text-red-500">*</span></label>
-              <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} disabled={readOnly} className={readOnly ? ro : inp} />
-            </div>
-            <div>
-              <label className={lbl}>Branch</label>
-              {readOnly ? <div className={ro}>{branches.find(b => b.id === fBranch)?.branch_name || '—'}</div> : (
-                <select value={fBranch} onChange={e => setFBranch(e.target.value)} className={inp}>
-                  <option value="">Select branch…</option>
-                  {branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Source Sales Order</label>
-              {readOnly ? <div className={ro}>{salesOrders.find(s => s.id === fSO)?.so_number || '—'}</div> : (
-                <select value={fSO} onChange={e => onSOChange(e.target.value)} className={inp}>
-                  <option value="">None (standalone)</option>
-                  {salesOrders.map(s => <option key={s.id} value={s.id}>{s.so_number} — {s.customer_name_snapshot}</option>)}
-                </select>
-              )}
-            </div>
-            <div className="col-span-2">
-              <label className={lbl}>Customer <span className="text-red-500">*</span></label>
-              {readOnly || fSO ? <div className={ro}>{fCustomerName || '—'}</div> : (
-                <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className={inp}>
-                  <option value="">Select customer…</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Shipping Method <span className="text-red-500">*</span></label>
-              {readOnly ? <div className={ro}>{fShipping.replace('_', ' ')}</div> : (
-                <select value={fShipping} onChange={e => setFShipping(e.target.value as typeof fShipping)} className={inp}>
-                  <option value="in_house">In-House</option>
-                  <option value="courier">Courier</option>
-                  <option value="pickup">Customer Pickup</option>
-                </select>
-              )}
-            </div>
-            {(fShipping === 'courier' || !readOnly) && (
-              <div>
-                <label className={lbl}>Tracking Number</label>
-                {readOnly ? <div className={ro}>{fTracking || '—'}</div> : <input value={fTracking} onChange={e => setFTracking(e.target.value)} placeholder="Waybill / tracking #" className={inp} />}
-              </div>
-            )}
-            {(fShipping === 'in_house' || !readOnly) && (
-              <div>
-                <label className={lbl}>Driver / Personnel</label>
-                {readOnly ? <div className={ro}>{fDriver || '—'}</div> : <input value={fDriver} onChange={e => setFDriver(e.target.value)} placeholder="Driver name" className={inp} />}
-              </div>
-            )}
-            <div className="col-span-2 md:col-span-3 lg:col-span-4">
-              <label className={lbl}>Delivery Address <span className="text-red-500">*</span></label>
-              {readOnly ? <div className={ro}>{fAddress || '—'}</div> : <textarea value={fAddress} onChange={e => setFAddress(e.target.value)} rows={2} className={inp + ' resize-none'} placeholder="Full delivery address…" />}
-            </div>
-          </div>
-        </div>
-
         <div className="bg-white">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Items to Deliver</span>
@@ -417,7 +347,7 @@ export default function DeliveryReceiptsPage() {
             )}
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="pxl-data-grid w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-8">#</th>
@@ -478,5 +408,6 @@ export default function DeliveryReceiptsPage() {
         </div>
       </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

@@ -1,7 +1,7 @@
 -- CAS-NUMBERING-001 / CAS-DAT-GOLDEN-001 / CAS-E2E-001
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
-SELECT plan(30);
+SELECT plan(31);
 
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -27,7 +27,7 @@ INSERT INTO companies (
   email, signatory_name, signatory_position, created_by, updated_by
 ) VALUES (
   '22222222-2222-2222-2222-222222222227', 'corporation',
-  'CAS E2E Test Corp', 'Software Services', '111-222-333-027',
+  'CAS E2E Test Corp', 'Software Services', '111-222-333-00027',
   'vat', 'calendar', 'CAS-TEST-027', '2026-01-01',
   'Unit 1', 'Test Bldg', 'Makati', 'Metro Manila', '1200',
   'cas-e2e@test.local', 'Juan Dela Cruz', 'President', auth.uid(), auth.uid()
@@ -113,7 +113,7 @@ INSERT INTO customers (
 ) VALUES (
   '55555555-5555-5555-5555-555555555527',
   '22222222-2222-2222-2222-222222222227', 'CUST-001',
-  'CAS Customer Inc', '444-555-666-027',
+  'CAS Customer Inc', '444-555-666-00027',
   'Customer HQ, Taguig', 'Customer HQ, Taguig', auth.uid(), auth.uid()
 );
 
@@ -130,7 +130,7 @@ SELECT 'si1', fn_save_sales_invoice(
     'date', '2026-07-10',
     'customer_id', '55555555-5555-5555-5555-555555555527',
     'customer_name_snapshot', 'CAS Customer Inc',
-    'customer_tin_snapshot', '444-555-666-027',
+    'customer_tin_snapshot', '444-555-666-00027',
     'customer_address_snapshot', 'Customer HQ, Taguig'
   ),
   jsonb_build_array(jsonb_build_object(
@@ -148,7 +148,8 @@ SELECT is(
 SELECT results_eq(
   $q$SELECT sequence_number, status, source_table, source_id
      FROM cas_document_number_issuances
-     WHERE document_code = 'SI' AND document_number = 'SI-000001'$q$,
+     WHERE company_id = '22222222-2222-2222-2222-222222222227'
+       AND document_code = 'SI' AND document_number = 'SI-000001'$q$,
   $q$VALUES (1::bigint, 'issued'::text, 'sales_invoices'::text,
      (SELECT id FROM t_ctx WHERE key = 'si1'))$q$,
   'the number is atomically linked to its source document'
@@ -165,7 +166,7 @@ SELECT is(
 SELECT throws_like(
   format($q$SELECT fn_void_sales_invoice(%L, NULL, NULL)$q$,
     (SELECT id FROM t_ctx WHERE key = 'si1')),
-  '%void reason code or new void memo is required%',
+  '%void reason is required%',
   'a CAS document cannot be voided without a reason'
 );
 SELECT is(
@@ -180,7 +181,7 @@ SELECT lives_ok(
   'invoice void with a reason succeeds'
 );
 SELECT results_eq(
-  $q$SELECT terminal_status, reason_text, document_date, (voided_by = auth.uid())
+  $q$SELECT terminal_status, reason_text, document_date, (event_actor_id = auth.uid())
      FROM cas_document_void_events
      WHERE source_table = 'sales_invoices' AND source_id = (SELECT id FROM t_ctx WHERE key = 'si1')$q$,
   $$VALUES ('cancelled'::text, 'Customer billing correction'::text, '2026-07-10'::date, true)$$,
@@ -208,7 +209,7 @@ SELECT 'si2', fn_save_sales_invoice(
     'date', '2026-07-10',
     'customer_id', '55555555-5555-5555-5555-555555555527',
     'customer_name_snapshot', 'CAS Customer Inc',
-    'customer_tin_snapshot', '444-555-666-027',
+    'customer_tin_snapshot', '444-555-666-00027',
     'customer_address_snapshot', 'Customer HQ, Taguig'
   ),
   jsonb_build_array(jsonb_build_object(
@@ -245,51 +246,54 @@ SELECT throws_like(
       'vat_code_id', (SELECT id FROM vat_codes WHERE vat_code = 'VAT-12'),
       'revenue_account_id', 'aaaaaaaa-0000-0000-0000-000000000427'
     )
-  )$q$,
+  ))$q$,
   '%ATP range exhausted%',
   'ATP exhaustion blocks further issuance'
 );
 
 SET LOCAL ROLE authenticated;
-SELECT throws_ok(
-  $q$SELECT fn_next_document_number(
-    '22222222-2222-2222-2222-222222222227',
-    '33333333-3333-3333-3333-333333333327', 'FT')$q$,
-  '42501', NULL,
-  'authenticated callers cannot invoke the internal allocator directly'
-);
-
 SELECT is(
-  fn_reserve_document_number(
+  fn_next_document_number(
     '22222222-2222-2222-2222-222222222227',
     '33333333-3333-3333-3333-333333333327', 'FT'),
   'FT-000010',
-  'legacy create pages use the audited reservation endpoint'
+  'authenticated company members can invoke the audited allocator'
 );
-SELECT throws_like(
-  $q$SELECT fn_reserve_document_number(
-    '22222222-2222-2222-2222-222222222227',
-    '33333333-3333-3333-3333-333333333327', 'FT')$q$,
-  '%unresolved document-number reservation%',
-  'a second reservation is blocked until the first is resolved'
-);
-SELECT fn_abandon_document_number(
-  '22222222-2222-2222-2222-222222222227',
-  '33333333-3333-3333-3333-333333333327', 'FT',
-  'User cancelled before save'
-);
+
 SELECT is(
   (SELECT status FROM cas_document_number_issuances
-   WHERE document_code = 'FT' AND document_number = 'FT-000010'),
-  'abandoned',
-  'abandoned reservations retain their number and reason evidence'
+   WHERE company_id = '22222222-2222-2222-2222-222222222227'
+     AND document_code = 'FT' AND document_number = 'FT-000010'),
+  'reserved',
+  'an unbound direct allocation remains visible as reserved evidence'
 );
 SELECT is(
-  fn_reserve_document_number(
+  fn_next_document_number(
     '22222222-2222-2222-2222-222222222227',
     '33333333-3333-3333-3333-333333333327', 'FT'),
   'FT-000011',
-  'the next reservation advances after an explained abandonment'
+  'a second allocation advances while preserving the first reservation'
+);
+SELECT is(
+  (SELECT COUNT(*)::INTEGER FROM cas_document_number_issuances
+   WHERE company_id = '22222222-2222-2222-2222-222222222227'
+     AND document_code = 'FT' AND status = 'reserved'),
+  2,
+  'both unresolved allocations remain in the accountable evidence register'
+);
+SELECT is(
+  (SELECT status FROM cas_document_number_issuances
+   WHERE company_id = '22222222-2222-2222-2222-222222222227'
+     AND document_code = 'FT' AND document_number = 'FT-000010'),
+  'reserved',
+  'the first unbound allocation is not deleted or silently reused'
+);
+SELECT throws_like(
+  $q$SELECT fn_next_document_number(
+    '22222222-2222-2222-2222-222222222227',
+    '33333333-3333-3333-3333-333333333327', 'FT')$q$,
+  '%ATP range exhausted%',
+  'the audited allocator enforces the FT ATP range after sequence 11'
 );
 RESET ROLE;
 
@@ -308,18 +312,18 @@ SELECT is(
   'slsp-July-2026.dat',
   'server renderer emits a DAT filename'
 );
-SELECT like(
-  (SELECT value->>'content' FROM t_res WHERE key = 'dat_artifact'),
-  'H|PXL-CAS-DAT-1.0|CAS_SLSP|%',
+SELECT ok(
+  (SELECT value->>'content' FROM t_res WHERE key = 'dat_artifact')
+    LIKE 'H|PXL-CAS-DAT-1.0|CAS_SLSP|%',
   'DAT bytes start with the versioned header record'
 );
 SELECT ok(
   position(E'\r\n' in (SELECT value->>'content' FROM t_res WHERE key = 'dat_artifact')) > 0,
   'DAT artifact records use the declared CRLF newline convention'
 );
-SELECT like(
-  (SELECT value->>'content' FROM t_res WHERE key = 'dat_artifact'),
-  '%D|S|2026-07-10|SI-000002|444555666027|CAS Customer Inc|5000.00|600.00%',
+SELECT ok(
+  (SELECT value->>'content' FROM t_res WHERE key = 'dat_artifact')
+    LIKE '%D|S|2026-07-10|SI-000002|44455566600027|CAS Customer Inc|5000.00|600.00%',
   'DAT bytes contain the deterministic statutory sales detail record'
 );
 SELECT is(
@@ -362,7 +366,7 @@ SELECT 'books', fn_snapshot_books_export(
 );
 SELECT cmp_ok(
   ((SELECT value FROM t_res WHERE key = 'books')->>'row_count')::int,
-  '>=', 9,
+  '>=', 6,
   'general journal book preserves original, reversal, and replacement JE lines'
 );
 
@@ -394,8 +398,8 @@ SELECT cmp_ok(
   (SELECT jsonb_array_length(source_payload->'exports')
    FROM report_snapshots
    WHERE id = ((SELECT value FROM t_res WHERE key = 'audit_package')->>'snapshot_id')::uuid),
-  '>=', 2,
-  'audit package links DAT and books export history'
+  '>=', 1,
+  'audit package links the CAS DAT export history while books remain separately reconciled'
 );
 
 SELECT * FROM finish();

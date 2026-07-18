@@ -1,0 +1,409 @@
+{
+  "surface": "report",
+  "manifest": {
+    "version": 1,
+    "surface": "report",
+    "title": "PXL Remediation Priorities",
+    "description": "A reconciled fix list from the Phase 2 and Phase 3 reports, the authoritative findings index, current code checks, and planning documents.",
+    "generatedAt": "2026-07-17T02:15:00Z",
+    "cards": [],
+    "charts": [
+      {
+        "id": "audit_disposition_chart",
+        "title": "Audit finding disposition",
+        "subtitle": "79 passed, 1 in progress, and 7 open out of 87 findings as of July 16, 2026",
+        "showDescription": true,
+        "intent": "composition",
+        "question": "How much of the audited finding portfolio is closed versus still active?",
+        "rationale": "A 100% stacked bar shows the closed-versus-active share without implying a time trend or ranking unlike items.",
+        "comparisonContext": {
+          "denominator": "87 findings in the authoritative status index",
+          "grain": "one row per finding status",
+          "unit": "findings"
+        },
+        "type": "horizontalStackedBar100",
+        "dataset": "finding_disposition",
+        "sourceId": "findings_index",
+        "encodings": {
+          "x": { "field": "portfolio", "type": "nominal", "label": "Audit portfolio" },
+          "y": { "field": "count", "type": "quantitative", "aggregate": "sum", "label": "Findings" },
+          "color": { "field": "status", "type": "nominal", "label": "Status" },
+          "label": { "field": "count", "type": "quantitative", "format": "number", "label": "Count" },
+          "tooltip": [
+            { "field": "status", "type": "nominal", "label": "Status" },
+            { "field": "count", "type": "quantitative", "format": "number", "label": "Findings" },
+            { "field": "share", "type": "quantitative", "format": "percent", "label": "Share" }
+          ]
+        },
+        "xAxisTitle": "Audit portfolio",
+        "yAxisTitle": "Share of 87 findings",
+        "valueFormat": "number",
+        "layout": "full",
+        "palette": { "kind": "categorical", "name": "status-composition" },
+        "labels": { "values": "all" },
+        "legend": { "position": "bottom", "sort": "spec", "title": "Status" },
+        "settings": { "groupMode": "stacked100", "orientation": "horizontal", "showPercent": true, "showValues": true },
+        "surface": { "surface": "card", "showControls": false, "viewMode": "both" }
+      }
+    ],
+    "tables": [
+      {
+        "id": "remediation_table",
+        "title": "Active remediation register",
+        "subtitle": "Recommended dependency order; completion tests are described in the surrounding sections",
+        "showDescription": true,
+        "dataset": "active_findings",
+        "density": "comfortable",
+        "sourceId": "active_remediation_register",
+        "layout": "full",
+        "defaultSort": { "field": "priority_rank", "direction": "asc" },
+        "columns": [
+          { "field": "priority_rank", "label": "Order", "type": "number", "align": "right" },
+          { "field": "finding", "label": "Finding", "type": "text" },
+          { "field": "priority_state", "label": "Priority / state", "type": "text" },
+          { "field": "fix", "label": "Required fix", "type": "text" }
+        ]
+      }
+    ],
+    "sources": [
+      {
+        "id": "findings_index",
+        "label": "PXL End-to-End Audit Findings",
+        "path": "docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md",
+        "query": {
+          "engine": "postgresql",
+          "language": "sql",
+          "sql": "WITH finding_disposition(status, finding_count) AS (VALUES ('Retested Passed', 79), ('In Progress', 1), ('Open', 7)) SELECT 'All audit findings' AS portfolio, status, finding_count AS count, finding_count::numeric / 87 AS share FROM finding_disposition;",
+          "description": "Materializes the reviewed July 16 findings-index disposition counts for the report chart.",
+          "executed_at": "2026-07-17T02:15:00Z",
+          "filters": ["All 87 findings in the authoritative status index"],
+          "metric_definitions": ["Share = status finding count divided by all 87 indexed findings."]
+        }
+      },
+      {
+        "id": "active_remediation_register",
+        "label": "Active findings extracted from the PXL audit index",
+        "path": "docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md",
+        "query": {
+          "engine": "postgresql",
+          "language": "sql",
+          "sql": "WITH active_findings(priority_rank, finding, severity, status, fix, done_when, dependency) AS (VALUES (1, 'PXL-AUD-055', 'Critical', 'Open', 'Rotate the exposed service-role key and keep service-role material out of browser-visible VITE variables.', 'Rotation confirmed; secret guard and build pass; frontend remains anon-only.', 'External credential administration.'), (2, 'PXL-AUD-063', 'High', 'Open', 'Choose BIR configuration ownership and replace broad authenticated ALL policies with governed writes.', 'Ordinary users cannot mutate mappings; authorized UI and local/hosted RLS tests pass.', 'Requires product ownership decision.'), (3, 'PXL-AUD-066', 'High', 'Open', 'Resolve document dates for CAS number issuances and void evidence.', 'Held-out CAS test 027 passes 31 of 31 and historical packages include later-created evidence.', 'Precedes PXL-AUD-061 closure.'), (4, 'PXL-AUD-061', 'High', 'Open', 'Create named deterministic fresh, canonical, held-out, hosted-safe, and hosted-UI test lanes.', 'All 57 files and 1,045 assertions pass and CI reports lanes separately.', 'Depends on PXL-AUD-066.'), (5, 'PXL-AUD-053', 'High', 'In Progress', 'Finish Sales Invoice master decisions and complete view, source-chain, report, API, export, PDF, costing, and management-report validation.', 'Residual validation is closed or formally excluded and Sales Invoice can become APPROVED_REFERENCE.', 'Requires bounded product and master-data decisions.'), (6, 'PXL-AUD-059', 'High', 'Open', 'Maintain a table-coverage matrix and add authoritative workflows or explicit deferrals for active empty modules.', 'Unexpected active-table emptiness fails a check; intentional deferrals are documented.', 'Broad multi-module program; no artificial population.'), (7, 'PXL-AUD-060', 'Medium', 'Open', 'Wire login labels, names, autocomplete attributes, and an accessible error region.', 'Playwright uses getByLabel for both fields and errors are announced accessibly.', 'Independent frontend fix.'), (8, 'PXL-AUD-067', 'Medium', 'Open', 'Scope the checklist as core accounting readiness and add conditional operational sections.', 'Profile tests prevent false-ready states and prove correct Not Applicable behavior.', 'Requires an approved checklist product model.')) SELECT priority_rank, finding, severity || ' · ' || status AS priority_state, fix, done_when, dependency FROM active_findings ORDER BY priority_rank;",
+          "description": "Materializes the eight active finding rows and their report-level remediation criteria in dependency order.",
+          "executed_at": "2026-07-17T02:15:00Z",
+          "filters": ["Status is Open or In Progress in the July 16 authoritative index"],
+          "metric_definitions": ["Priority rank is a recommended dependency order, not an audit severity score."]
+        }
+      },
+      {
+        "id": "phase_reports",
+        "label": "Phase 2 and Phase 3 reports",
+        "query": {
+          "engine": "local-document-review",
+          "language": "markdown",
+          "description": "Reconciled Phase 2 audit observations with the later Phase 3 implementation and validation results.",
+          "executed_at": "2026-07-17T02:15:00Z",
+          "tables_used": [
+            "docs/PXL/PXL_PHASE2_PRODUCT_AUDIT_REPORT.md",
+            "docs/PXL/PXL_PHASE3_CANONICAL_IMPLEMENTATION_REPORT.md"
+          ],
+          "filters": ["Phase 3 supersedes Phase 2 where a finding was explicitly retested"],
+          "metric_definitions": ["Current status follows the latest dated retest and the authoritative findings index."]
+        }
+      },
+      {
+        "id": "planning_documents",
+        "label": "PXL readiness and backlog documents",
+        "query": {
+          "engine": "local-document-review",
+          "language": "markdown",
+          "description": "Reviewed the accounting-core gate and product backlog to separate release defects from post-gate enhancements.",
+          "executed_at": "2026-07-17T02:15:00Z",
+          "tables_used": [
+            "docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md",
+            "docs/PXL/PXL_PRODUCT_BACKLOG.md"
+          ],
+          "filters": ["Release-blocking defects separated from backlog enhancements"]
+        }
+      },
+      {
+        "id": "implementation_checks",
+        "label": "Current implementation and CI checks",
+        "query": {
+          "engine": "local-code-review",
+          "language": "typescript-yaml-sql",
+          "description": "Checked the current login form, CI jobs, BIR policies, CAS package implementation, and setup checklist labels against the open findings.",
+          "executed_at": "2026-07-17T02:15:00Z",
+          "tables_used": [
+            "src/pages/LoginPage.tsx",
+            ".github/workflows/ci.yml",
+            "supabase/migrations/20260628000005_sprint2_tax.sql",
+            "supabase/migrations/20260713000009_books_reconciliation_audit_package.sql",
+            "src/components/CompanySetupChecklist.tsx"
+          ],
+          "filters": ["Read-only inspection of finding-specific implementation surfaces"]
+        }
+      }
+    ],
+    "blocks": [
+      {
+        "id": "report_title",
+        "type": "markdown",
+        "body": "# PXL Remediation Priorities"
+      },
+      {
+        "id": "executive_summary",
+        "type": "markdown",
+        "sourceId": "findings_index",
+        "body": "## Executive Summary\n\n- **PXL is not production-ready yet.** The authoritative July 16 index has **8 active findings**: 1 Critical, 5 High, and 2 Medium.\n- **The first action is operational, not a code patch.** Rotate the previously exposed Supabase service-role key and confirm the frontend remains anon-only (PXL-AUD-055).\n- **The most direct engineering path is BIR policy hardening, then the CAS date-semantics fix.** Fixing PXL-AUD-066 unlocks the held-out CAS test and enables PXL-AUD-061 to close with a fully green 57-file lane.\n- **Broad completion claims should remain constrained.** Sales Invoice validation, active-table workflow coverage, login accessibility, and operational-readiness labeling still need work even though hosted data visibility and core reconciliation now pass."
+      },
+      {
+        "id": "portfolio_takeaway",
+        "type": "markdown",
+        "sourceId": "findings_index",
+        "body": "## Most audit findings are closed, but the release gate remains blocked\n\nThe portfolio is **79 Retested Passed, 1 In Progress, and 7 Open**. The chart shows that the remaining work is a small share of the full audit, but severity—not volume—controls readiness: one unresolved Critical is enough to block production use."
+      },
+      {
+        "id": "audit_disposition_block",
+        "type": "chart",
+        "chartId": "audit_disposition_chart",
+        "layout": "full"
+      },
+      {
+        "id": "fix_order_narrative",
+        "type": "markdown",
+        "body": "## Fix these in dependency order\n\n**1. Close credential exposure first.** PXL-AUD-055 requires external service-role key rotation, followed by the existing secret guard and production build checks.\n\n**2. Harden statutory configuration access.** For PXL-AUD-063, decide whether BIR form metadata is immutable global reference data, admin-maintained configuration, or RPC-governed setup; then replace broad authenticated write policies and prove ordinary users cannot mutate mappings.\n\n**3. Correct CAS historical evidence semantics.** PXL-AUD-066 needs document-date resolution for number issuances and voids so a historical package includes evidence created after the document period.\n\n**4. Make the test lanes explicit and green.** Once the CAS defect is fixed, PXL-AUD-061 should formalize named fresh-schema, canonical-seeded, held-out CAS, hosted-safe, and hosted-UI commands/jobs and require 57 files / 1,045 assertions.\n\n**5. Complete the in-progress Sales Invoice contract.** PXL-AUD-053 still needs product decisions for Project, Location, and Functional Entity masters plus full view-state, source-chain, report, API, export, PDF, costing, and management-report validation.\n\n**6. Turn table coverage into governed scope.** PXL-AUD-059 is a program of classification and authoritative workflow fixtures—not a request to insert artificial rows. Banking, fixed assets, returns, approvals, schedules, and compliance generators need either a supported scenario with UI/RLS tests or an explicit deferral."
+      },
+      {
+        "id": "remediation_table_block",
+        "type": "table",
+        "tableId": "remediation_table",
+        "layout": "full"
+      },
+      {
+        "id": "recommended_next_steps",
+        "type": "markdown",
+        "body": "## Recommended next steps\n\n1. Rotate the service-role key and capture confirmation.\n2. Implement and test the BIR form/mapping policy migration.\n3. Implement the CAS document-date resolver and make test 027 pass 31/31.\n4. Add named package scripts and CI jobs for the documented test lanes.\n5. Run the Sales Invoice product decisions and validation as a bounded workstream.\n6. Build the table-coverage matrix, then schedule authoritative module scenarios by risk.\n7. Take the two Medium fixes as bounded UI/product tasks: accessible login semantics and an explicitly scoped operational-readiness checklist.\n8. Update stale status and AI coordination documents so they reflect 79 passed / 1 in progress / 7 open."
+      },
+      {
+        "id": "further_questions",
+        "type": "markdown",
+        "body": "## Further questions\n\n- Who is authorized to maintain global BIR form mappings: platform administrator, company owner/admin, or only a governed server process?\n- Are Project, Location, and Functional Entity required for the first production release, or should they be formally excluded from the Sales Invoice reference contract?\n- Which currently empty module families are release scope versus explicitly deferred: banking, fixed assets, returns, approvals, schedules, or statutory-return generation?\n- Should the setup checklist remain a core-accounting gate with a new name, or become a multi-section operational implementation checklist?"
+      },
+      {
+        "id": "post_gate_enhancements",
+        "type": "markdown",
+        "sourceId": "planning_documents",
+        "body": "## After the release blockers\n\nThe applicable planning documents identify valuable work that should remain **post-gate enhancement scope**, unless a new defect makes it blocking: a configuration-driven account-determination engine, broader tax-rule/profile governance, governed Project/Location and sales-context masters, an automatic reconciliation suite, and continued rollout of the standard transaction workspace. These are important, but they should not blur the eight current audit items."
+      },
+      {
+        "id": "caveats",
+        "type": "markdown",
+        "body": "## Caveats and assumptions\n\n- The **Findings Status Index** is treated as authoritative because it is dated July 16 and explicitly declares that role. Older `STATUS.md`, `AI_STATE.md`, `AI_WORK_QUEUE.md`, and `AI_HANDOFF.md` snapshots still claim zero open findings or smaller totals and should be synchronized.\n- The current docs-consistency script passes for 87 findings and 57 pgTAP files, but it does not detect those stale status/AI summaries.\n- Phase 2 observations marked Retested Passed in Phase 3 are excluded from the fix list. Remaining UI drilldown breadth and Playwright conversion are regression-hardening work unless attached to an active finding.\n- PXL-AUD-059 is intentionally broad. Closing it requires supported workflow evidence or explicit deferral decisions; table population alone is not proof of implementation readiness."
+      }
+    ],
+    "sourceNotes": {
+      "audience": "product stakeholders",
+      "scope": "Phase 2 and Phase 3 remediation status through July 16, 2026, reconciled on July 17, 2026",
+      "comparison_basis": "Phase 3 retests supersede Phase 2 findings; the findings index controls current status",
+      "chart_map": [
+        {
+          "segment": "Most audit findings are closed, but the release gate remains blocked",
+          "question": "How much of the audit portfolio is closed versus still active?",
+          "family": "Composition",
+          "type": "horizontalStackedBar100",
+          "fields": ["portfolio", "status", "count", "share"],
+          "supported_claim": "79 of 87 findings passed, but 8 remain active",
+          "palette_policy": "relaxed multi-category with labels and a visible legend",
+          "delivery": "portable HTML report"
+        }
+      ],
+      "visual_qa_note": "A single composition chart was selected because the primary deliverable is an exact remediation register; additional charts would add little decision value."
+    }
+  },
+  "snapshot": {
+    "version": 1,
+    "generatedAt": "2026-07-17T02:15:00Z",
+    "status": "ready",
+    "datasets": {
+      "active_summary": [
+        {
+          "active_total": 8,
+          "critical": 1,
+          "high": 5,
+          "medium": 2,
+          "open": 7,
+          "in_progress": 1,
+          "passed": 79,
+          "all_findings": 87
+        }
+      ],
+      "finding_disposition": [
+        { "portfolio": "All audit findings", "status": "Retested Passed", "count": 79, "share": 0.908045977 },
+        { "portfolio": "All audit findings", "status": "In Progress", "count": 1, "share": 0.011494253 },
+        { "portfolio": "All audit findings", "status": "Open", "count": 7, "share": 0.08045977 }
+      ],
+      "active_findings": [
+        {
+          "priority_rank": 1,
+          "finding": "PXL-AUD-055",
+          "severity": "Critical",
+          "status": "Open",
+          "priority_state": "Critical · Open",
+          "fix": "Rotate the previously exposed Supabase service-role key externally; keep all service-role material out of VITE variables and browser artifacts.",
+          "done_when": "Rotation is confirmed; secret guard and production build pass; normal frontend access uses only anon/authenticated credentials.",
+          "dependency": "External Supabase credential administration; cannot be closed by repository code alone."
+        },
+        {
+          "priority_rank": 2,
+          "finding": "PXL-AUD-063",
+          "severity": "High",
+          "status": "Open",
+          "priority_state": "High · Open",
+          "fix": "Choose the ownership model for BIR forms/mappings, replace broad authenticated ALL policies, and govern writes through admin-only policies or audited RPCs.",
+          "done_when": "Ordinary authenticated users can read required metadata but cannot insert, update, or delete it; authorized UI paths still work; local and hosted RLS tests pass.",
+          "dependency": "Product decision on global statutory-configuration ownership."
+        },
+        {
+          "priority_rank": 3,
+          "finding": "PXL-AUD-066",
+          "severity": "High",
+          "status": "Open",
+          "priority_state": "High · Open",
+          "fix": "Resolve source document dates for number issuances; filter void evidence by document_date with occurrence fallback while retaining allocation time for unbound reservations.",
+          "done_when": "Held-out CAS test 027 passes 31/31 and historical packages include later-created number and void evidence for documents in the requested period.",
+          "dependency": "Precedes full CI-lane closure under PXL-AUD-061."
+        },
+        {
+          "priority_rank": 4,
+          "finding": "PXL-AUD-061",
+          "severity": "High",
+          "status": "Open",
+          "priority_state": "High · Open",
+          "fix": "Add named, deterministic fresh-schema, canonical-seeded, held-out CAS, hosted-safe, and hosted-UI test commands/jobs with documented reset prerequisites.",
+          "done_when": "All 57 pgTAP files / 1,045 assertions pass after the CAS fix and CI reports each lane separately without ambiguous all-files behavior.",
+          "dependency": "Depends on PXL-AUD-066 for the final green 57-file lane."
+        },
+        {
+          "priority_rank": 5,
+          "finding": "PXL-AUD-053",
+          "severity": "High",
+          "status": "In Progress",
+          "priority_state": "High · In Progress",
+          "fix": "Decide and govern Project/Location/Functional Entity masters; complete Sales Invoice view-state, SO/DR source chain, report/API/export/PDF, costing, and management-report validation.",
+          "done_when": "The residual validation matrix is closed or formally excluded and Sales Invoice can truthfully move to VALIDATED / APPROVED_REFERENCE.",
+          "dependency": "Requires bounded product and master-data decisions; do not propagate unvalidated assumptions to later workspaces."
+        },
+        {
+          "priority_rank": 6,
+          "finding": "PXL-AUD-059",
+          "severity": "High",
+          "status": "Open",
+          "priority_state": "High · Open",
+          "fix": "Maintain a table-coverage matrix and add authoritative workflow/UI/RLS scenarios for active empty modules, or explicitly classify them as unsupported/future/deprecated.",
+          "done_when": "Unexpected active-table emptiness fails a coverage check, while intentionally deferred tables are documented and do not create false readiness claims.",
+          "dependency": "Broad program across banking, fixed assets, returns, approvals, schedules, and compliance generators; never close through artificial row insertion."
+        },
+        {
+          "priority_rank": 7,
+          "finding": "PXL-AUD-060",
+          "severity": "Medium",
+          "status": "Open",
+          "priority_state": "Medium · Open",
+          "fix": "Associate login labels and inputs; add names, autocomplete attributes, and an accessible error region; review other high-traffic forms for the same pattern.",
+          "done_when": "Playwright can fill Email and Password with getByLabel and login failures are announced accessibly.",
+          "dependency": "Independent bounded frontend fix."
+        },
+        {
+          "priority_rank": 8,
+          "finding": "PXL-AUD-067",
+          "severity": "Medium",
+          "status": "Open",
+          "priority_state": "Medium · Open",
+          "fix": "Rename the current checklist as core accounting readiness and add conditional operational sections for inventory, service-only, banking, approvals, and branch access.",
+          "done_when": "Profile-based tests prove correct Ready and Not Applicable states and prevent operational false-positive readiness.",
+          "dependency": "Requires an approved checklist product model; no data migration expected."
+        }
+      ]
+    },
+    "accessIssues": []
+  },
+  "sources": [
+    {
+      "id": "findings_index",
+      "label": "PXL End-to-End Audit Findings",
+      "path": "docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md",
+      "query": {
+        "engine": "postgresql",
+        "language": "sql",
+        "sql": "WITH finding_disposition(status, finding_count) AS (VALUES ('Retested Passed', 79), ('In Progress', 1), ('Open', 7)) SELECT 'All audit findings' AS portfolio, status, finding_count AS count, finding_count::numeric / 87 AS share FROM finding_disposition;",
+        "description": "Materializes the reviewed July 16 findings-index disposition counts for the report chart.",
+        "executed_at": "2026-07-17T02:15:00Z",
+        "filters": ["All 87 findings in the authoritative status index"],
+        "metric_definitions": ["Share = status finding count divided by all 87 indexed findings."]
+      }
+    },
+    {
+      "id": "active_remediation_register",
+      "label": "Active findings extracted from the PXL audit index",
+      "path": "docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md",
+      "query": {
+        "engine": "postgresql",
+        "language": "sql",
+        "sql": "WITH active_findings(priority_rank, finding, severity, status, fix, done_when, dependency) AS (VALUES (1, 'PXL-AUD-055', 'Critical', 'Open', 'Rotate the exposed service-role key and keep service-role material out of browser-visible VITE variables.', 'Rotation confirmed; secret guard and build pass; frontend remains anon-only.', 'External credential administration.'), (2, 'PXL-AUD-063', 'High', 'Open', 'Choose BIR configuration ownership and replace broad authenticated ALL policies with governed writes.', 'Ordinary users cannot mutate mappings; authorized UI and local/hosted RLS tests pass.', 'Requires product ownership decision.'), (3, 'PXL-AUD-066', 'High', 'Open', 'Resolve document dates for CAS number issuances and void evidence.', 'Held-out CAS test 027 passes 31 of 31 and historical packages include later-created evidence.', 'Precedes PXL-AUD-061 closure.'), (4, 'PXL-AUD-061', 'High', 'Open', 'Create named deterministic fresh, canonical, held-out, hosted-safe, and hosted-UI test lanes.', 'All 57 files and 1,045 assertions pass and CI reports lanes separately.', 'Depends on PXL-AUD-066.'), (5, 'PXL-AUD-053', 'High', 'In Progress', 'Finish Sales Invoice master decisions and complete view, source-chain, report, API, export, PDF, costing, and management-report validation.', 'Residual validation is closed or formally excluded and Sales Invoice can become APPROVED_REFERENCE.', 'Requires bounded product and master-data decisions.'), (6, 'PXL-AUD-059', 'High', 'Open', 'Maintain a table-coverage matrix and add authoritative workflows or explicit deferrals for active empty modules.', 'Unexpected active-table emptiness fails a check; intentional deferrals are documented.', 'Broad multi-module program; no artificial population.'), (7, 'PXL-AUD-060', 'Medium', 'Open', 'Wire login labels, names, autocomplete attributes, and an accessible error region.', 'Playwright uses getByLabel for both fields and errors are announced accessibly.', 'Independent frontend fix.'), (8, 'PXL-AUD-067', 'Medium', 'Open', 'Scope the checklist as core accounting readiness and add conditional operational sections.', 'Profile tests prevent false-ready states and prove correct Not Applicable behavior.', 'Requires an approved checklist product model.')) SELECT priority_rank, finding, severity || ' · ' || status AS priority_state, fix, done_when, dependency FROM active_findings ORDER BY priority_rank;",
+        "description": "Materializes the eight active finding rows and their report-level remediation criteria in dependency order.",
+        "executed_at": "2026-07-17T02:15:00Z",
+        "filters": ["Status is Open or In Progress in the July 16 authoritative index"],
+        "metric_definitions": ["Priority rank is a recommended dependency order, not an audit severity score."]
+      }
+    },
+    {
+      "id": "phase_reports",
+      "label": "Phase 2 and Phase 3 reports",
+      "query": {
+        "engine": "local-document-review",
+        "language": "markdown",
+        "description": "Reconciled Phase 2 audit observations with the later Phase 3 implementation and validation results.",
+        "executed_at": "2026-07-17T02:15:00Z",
+        "tables_used": [
+          "docs/PXL/PXL_PHASE2_PRODUCT_AUDIT_REPORT.md",
+          "docs/PXL/PXL_PHASE3_CANONICAL_IMPLEMENTATION_REPORT.md"
+        ],
+        "filters": ["Phase 3 supersedes Phase 2 where a finding was explicitly retested"],
+        "metric_definitions": ["Current status follows the latest dated retest and the authoritative findings index."]
+      }
+    },
+    {
+      "id": "planning_documents",
+      "label": "PXL readiness and backlog documents",
+      "query": {
+        "engine": "local-document-review",
+        "language": "markdown",
+        "description": "Reviewed the accounting-core gate and product backlog to separate release defects from post-gate enhancements.",
+        "executed_at": "2026-07-17T02:15:00Z",
+        "tables_used": [
+          "docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md",
+          "docs/PXL/PXL_PRODUCT_BACKLOG.md"
+        ],
+        "filters": ["Release-blocking defects separated from backlog enhancements"]
+      }
+    },
+    {
+      "id": "implementation_checks",
+      "label": "Current implementation and CI checks",
+      "query": {
+        "engine": "local-code-review",
+        "language": "typescript-yaml-sql",
+        "description": "Checked the current login form, CI jobs, BIR policies, CAS package implementation, and setup checklist labels against the open findings.",
+        "executed_at": "2026-07-17T02:15:00Z",
+        "tables_used": [
+          "src/pages/LoginPage.tsx",
+          ".github/workflows/ci.yml",
+          "supabase/migrations/20260628000005_sprint2_tax.sql",
+          "supabase/migrations/20260713000009_books_reconciliation_audit_package.sql",
+          "src/components/CompanySetupChecklist.tsx"
+        ],
+        "filters": ["Read-only inspection of finding-specific implementation surfaces"]
+      }
+    }
+  ]
+}

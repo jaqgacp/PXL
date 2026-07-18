@@ -86,6 +86,9 @@
     --pxl-transaction-accent: var(--pxl-brand-primary);
     --pxl-transaction-header-bg: var(--pxl-surface-header);
     --pxl-transaction-tabs-bg: var(--pxl-surface-tabs);
+    --pxl-transaction-sidebar-width: 16rem;
+    --pxl-transaction-control-height: 32px;
+    --pxl-transaction-row-height: 30px;
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -121,6 +124,22 @@
 }
 
 .dark {
+    --pxl-text-primary: #f3f4f6;
+    --pxl-text-secondary: #d1d5db;
+    --pxl-text-muted: #9ca3af;
+    --pxl-text-inverse: #111827;
+    --pxl-surface-page: #111827;
+    --pxl-surface-panel: #182230;
+    --pxl-surface-raised: #1f2937;
+    --pxl-surface-header: #243244;
+    --pxl-surface-tabs: #202d3d;
+    --pxl-surface-table-header: #293548;
+    --pxl-surface-table-hover: #263244;
+    --pxl-surface-table-selected: #314057;
+    --pxl-border-subtle: #374151;
+    --pxl-border-medium: #4b5563;
+    --pxl-border-strong: #64748b;
+    --pxl-focus: #93c5fd;
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);
@@ -170,48 +189,125 @@
 }
 
 @layer components {
+  /* Transaction routes use the available application viewport. Report and
+     setup pages retain the AppShell reading-width cap. */
+  main > div:has(.pxl-transaction-workspace) {
+    margin-left: 0;
+    margin-right: 0;
+    max-width: none;
+    width: 100%;
+  }
+
+  /* Compatibility boundary for transaction pages that still expose create/view
+     as in-page modes. The header helper is the migration marker, so the full
+     surface receives the shared ERP typography, controls, grids and theme
+     without changing transaction business state or posting code. */
+  main > div:has(> .pxl-transaction-header) {
+    background: var(--pxl-surface-page);
+    color: var(--pxl-text-primary);
+    font-family: var(--pxl-font-sans);
+    font-size: 13px;
+    min-height: calc(100vh - 5.5rem);
+  }
+
+  main > div:has(> .pxl-transaction-header) :is(input, select, textarea) {
+    border-color: var(--pxl-border-strong);
+    border-radius: var(--pxl-radius-md);
+    color: var(--pxl-text-primary);
+  }
+
+  main > div:has(> .pxl-transaction-header) :is(input, select, textarea):focus-visible {
+    border-color: var(--pxl-focus);
+    outline: 2px solid color-mix(in srgb, var(--pxl-focus) 30%, transparent);
+    outline-offset: 1px;
+  }
+
+  main > div:has(> .pxl-transaction-header) table {
+    color: var(--pxl-text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  main > div:has(> .pxl-transaction-header) thead {
+    background: var(--pxl-surface-table-header);
+  }
+
+  main > div:has(> .pxl-transaction-header) th {
+    color: var(--pxl-text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  main > div:has(> .pxl-transaction-header) tbody tr:hover {
+    background: var(--pxl-surface-table-hover);
+  }
+
+  .dark main > div:has(> .pxl-transaction-header) :is(.bg-white, .bg-gray-50) {
+    background-color: var(--pxl-surface-raised);
+  }
+
+  .dark main > div:has(> .pxl-transaction-header) :is(input, select, textarea) {
+    background-color: var(--pxl-surface-raised);
+    color: var(--pxl-text-primary);
+  }
+
   .pxl-transaction-workspace {
     font-family: var(--pxl-font-sans);
     background: var(--pxl-surface-page);
     color: var(--pxl-text-primary);
     font-size: 13px;
     line-height: 1.4;
+    margin: 0;
+    max-width: none;
+    min-width: 0;
+    width: 100%;
   }
 
   .pxl-transaction-workspace--sales {
     --pxl-transaction-accent: #234f7f;
-    --pxl-transaction-header-bg: #d4dee9;
-    --pxl-transaction-tabs-bg: #dce5ee;
+  }
+
+  .dark .pxl-transaction-workspace--sales {
+    --pxl-transaction-accent: #93c5fd;
   }
 
   .pxl-transaction-workspace--purchase {
     --pxl-transaction-accent: #1f6f46;
-    --pxl-transaction-header-bg: #d9e8dd;
-    --pxl-transaction-tabs-bg: #e0ece3;
+  }
+
+  .dark .pxl-transaction-workspace--purchase {
+    --pxl-transaction-accent: #86efac;
   }
 
   .pxl-transaction-workspace--journal {
     --pxl-transaction-accent: #8a5a12;
-    --pxl-transaction-header-bg: #eadfca;
-    --pxl-transaction-tabs-bg: #eee6d7;
+  }
+
+  .dark .pxl-transaction-workspace--journal {
+    --pxl-transaction-accent: #fbbf24;
   }
 
   .pxl-transaction-workspace--inventory {
     --pxl-transaction-accent: #5b4b8a;
-    --pxl-transaction-header-bg: #e1ddec;
-    --pxl-transaction-tabs-bg: #e7e3f0;
+  }
+
+  .dark .pxl-transaction-workspace--inventory {
+    --pxl-transaction-accent: #c4b5fd;
   }
 
   .pxl-transaction-workspace--banking {
     --pxl-transaction-accent: #0f6b67;
-    --pxl-transaction-header-bg: #d7e8e7;
-    --pxl-transaction-tabs-bg: #deedec;
+  }
+
+  .dark .pxl-transaction-workspace--banking {
+    --pxl-transaction-accent: #5eead4;
   }
 
   .pxl-transaction-workspace--neutral {
     --pxl-transaction-accent: #374151;
-    --pxl-transaction-header-bg: #e1e6ec;
-    --pxl-transaction-tabs-bg: #e7ebf0;
+  }
+
+  .dark .pxl-transaction-workspace--neutral {
+    --pxl-transaction-accent: #cbd5e1;
   }
 
   .pxl-transaction-workspace .font-mono {
@@ -234,6 +330,10 @@
 
   .pxl-transaction-workspace .text-gray-700 {
     color: #374151;
+  }
+
+  .dark .pxl-transaction-workspace .text-gray-700 {
+    color: var(--pxl-text-secondary);
   }
 
   .pxl-transaction-workspace .text-gray-600,
@@ -319,9 +419,21 @@
   .pxl-transaction-header {
     background: var(--pxl-transaction-header-bg);
     border-color: var(--pxl-border-strong);
+    border-left: 3px solid var(--pxl-transaction-accent);
     border-radius: var(--pxl-radius-lg);
     box-shadow: var(--pxl-shadow-header);
     color: var(--pxl-text-primary);
+    position: sticky;
+    top: 4rem;
+    z-index: 30;
+  }
+
+  .pxl-transaction-header__content {
+    min-height: 84px;
+  }
+
+  .pxl-transaction-header__metrics > div {
+    align-content: center;
   }
 
   .pxl-transaction-header .text-gray-400,
@@ -354,6 +466,45 @@
     color: var(--pxl-text-primary);
   }
 
+  .pxl-transaction-info-card {
+    min-height: 0;
+  }
+
+  .pxl-transaction-workflow {
+    min-height: 2rem;
+  }
+
+  .pxl-workflow-step {
+    align-items: center;
+    border: 1px solid transparent;
+    border-radius: var(--pxl-radius-sm);
+    display: inline-flex;
+    font-size: 12px;
+    min-height: 24px;
+    padding: 2px 8px;
+  }
+
+  .pxl-workflow-step--done {
+    background: var(--pxl-surface-table-hover);
+    color: var(--pxl-text-secondary);
+  }
+
+  .pxl-workflow-step--current {
+    background: color-mix(in srgb, var(--pxl-transaction-accent) 10%, var(--pxl-surface-raised));
+    border-color: color-mix(in srgb, var(--pxl-transaction-accent) 28%, var(--pxl-border-medium));
+    color: var(--pxl-transaction-accent);
+    font-weight: 600;
+  }
+
+  .pxl-workflow-step--upcoming {
+    background: var(--pxl-surface-panel);
+    color: var(--pxl-text-muted);
+  }
+
+  .pxl-workflow-connector {
+    color: var(--pxl-border-strong);
+  }
+
   .pxl-transaction-card--raised {
     background: var(--pxl-surface-raised);
   }
@@ -372,7 +523,7 @@
     font-size: 13px;
     font-weight: 500;
     letter-spacing: 0;
-    min-height: 36px;
+    min-height: 32px;
   }
 
   .pxl-transaction-tab--active {
@@ -381,6 +532,12 @@
     box-shadow: inset 0 2px 0 var(--pxl-text-primary), 0 1px 2px rgba(15, 23, 42, 0.08);
     color: var(--pxl-text-primary);
     font-weight: 600;
+  }
+
+  .dark .pxl-transaction-tab--active {
+    background: var(--pxl-surface-raised);
+    border-bottom-color: var(--pxl-transaction-accent);
+    box-shadow: inset 0 2px 0 var(--pxl-transaction-accent), 0 1px 2px rgba(0, 0, 0, 0.22);
   }
 
   .pxl-transaction-tab--inactive {
@@ -401,7 +558,7 @@
     font-size: 13px;
     font-weight: 500;
     gap: var(--pxl-space-2);
-    height: 34px;
+    height: var(--pxl-transaction-control-height);
     justify-content: center;
     line-height: 1;
     padding-left: 12px;
@@ -426,6 +583,12 @@
     color: var(--pxl-text-inverse);
   }
 
+  .dark .pxl-button--primary {
+    background: #e5e7eb;
+    border-color: #e5e7eb;
+    color: #111827;
+  }
+
   .pxl-button--primary:hover:not(:disabled) {
     background: #111827;
   }
@@ -434,6 +597,12 @@
     background: #ffffff;
     border: 1px solid var(--pxl-transaction-accent);
     color: var(--pxl-transaction-accent);
+  }
+
+  .dark .pxl-button--secondary,
+  .dark .pxl-button--neutral,
+  .dark .pxl-button--danger {
+    background: var(--pxl-surface-raised);
   }
 
   .pxl-button--secondary:hover:not(:disabled) {
@@ -477,13 +646,19 @@
     border-radius: var(--pxl-radius-md);
     font-size: 13px;
     line-height: 1.35;
-    min-height: 34px;
-    padding: 7px 10px;
+    min-height: var(--pxl-transaction-control-height);
+    padding: 5px 8px;
   }
 
   .pxl-input {
     background: #ffffff;
     border: 1px solid var(--pxl-border-strong);
+    color: var(--pxl-text-primary);
+  }
+
+  .dark .pxl-input,
+  .dark .pxl-readonly-field {
+    background: var(--pxl-surface-raised);
     color: var(--pxl-text-primary);
   }
 
@@ -521,6 +696,8 @@
     font-weight: 600;
     letter-spacing: 0.025em;
     text-transform: uppercase;
+    height: var(--pxl-transaction-row-height);
+    padding: 5px 10px;
   }
 
   .pxl-data-grid tbody {
@@ -540,11 +717,22 @@
     border-color: var(--pxl-border-subtle);
     color: var(--pxl-text-primary);
     font-size: 13px;
+    height: var(--pxl-transaction-row-height);
+    padding: 5px 10px;
   }
 
   .pxl-data-grid tfoot {
     background: #e8eef5;
     border-color: var(--pxl-border-strong);
+  }
+
+  .dark .pxl-data-grid tfoot {
+    background: var(--pxl-surface-table-selected);
+  }
+
+  .dark .pxl-transaction-workspace .bg-white,
+  .dark .pxl-transaction-workspace .bg-gray-50 {
+    background-color: var(--pxl-surface-raised);
   }
 
   .pxl-data-grid tfoot td {
@@ -574,7 +762,22 @@
     box-shadow: var(--pxl-shadow-popover);
   }
 
-  .pxl-validation-message {
+  .pxl-transaction-tab-panel {
+    background: var(--pxl-surface-raised);
+  }
+
+  .pxl-transaction-tab-panel > .pxl-transaction-card {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .dark .pxl-transaction-tab-panel {
+    background: var(--pxl-surface-raised);
+  }
+
+.pxl-validation-message {
     border-radius: var(--pxl-radius-md);
     font-size: 13px;
     padding: 8px 12px;
@@ -586,4 +789,30 @@
     padding: 32px 16px;
     text-align: center;
   }
+
+  @media (min-width: 1024px) {
+    .pxl-transaction-content-grid > .pxl-side-panel {
+      align-self: start;
+      max-height: calc(100vh - 5rem);
+      overflow-y: auto;
+      position: sticky;
+      top: 4.75rem;
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 1023px) {
+    .pxl-transaction-header {
+      position: relative;
+      top: auto;
+    }
+
+    .pxl-transaction-info-card {
+      min-height: 0;
+    }
+  }
+}
+
+.pxl-legacy-transaction-content {
+  min-height: 0;
 }

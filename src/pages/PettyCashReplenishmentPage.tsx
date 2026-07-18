@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditEvidenceBlock, StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type FundRef = { id: string; fund_name: string }
 type BankRef = { id: string; bank_name: string; account_number: string }
@@ -176,36 +176,38 @@ export default function PettyCashReplenishmentPage() {
 
   const ro = mode === 'view'
   return (
-    <div className="flex flex-col h-full">
-      <div className={transactionHeaderClass('banking')}>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">{form?.pcr_number || 'New Replenishment'}</span>
-        {form?.status && <StatusBadge status={form.status} />}
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          {!ro && <button onClick={save} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>}
-          {!ro && form?.id && <button onClick={() => post(form.id!)} disabled={busy} className="px-3 py-1.5 border border-blue-300 text-blue-600 rounded text-sm hover:bg-blue-50 disabled:opacity-50">Post</button>}
-        </div>
-      </div>
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        {!ro && <SetupReadinessBanner readiness={readiness} />}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl mb-4">
-          <Field label="Fund *"><select disabled={ro} className={inputCls} value={form?.fund_id || ''} onChange={e => pickFund(e.target.value)}>
-            <option value="">— select fund —</option>{funds.map(f => <option key={f.id} value={f.id}>{f.fund_name}</option>)}</select></Field>
-          <Field label="Replenishment Date *"><input type="date" disabled={ro} className={inputCls} value={form?.replenishment_date || today()} onChange={e => setForm(f => ({ ...f, replenishment_date: e.target.value }))} /></Field>
-          <Field label="Bank Account *"><select disabled={ro} className={inputCls} value={form?.bank_account_id || ''} onChange={e => setForm(f => ({ ...f, bank_account_id: e.target.value }))}>
-            <option value="">— select bank —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select></Field>
-          <Field label="Check Number"><input disabled={ro} className={inputCls} value={form?.check_number || ''} onChange={e => setForm(f => ({ ...f, check_number: e.target.value }))} /></Field>
-          <Field label="Remarks" full><input disabled={ro} className={inputCls} value={form?.remarks || ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /></Field>
-        </div>
-        <div className="bg-white border border-gray-200 rounded-lg overflow-hidden max-w-3xl">
-          <div className="px-4 py-2.5 border-b border-gray-100 flex justify-between">
+    <LegacyTransactionWorkspace title="Petty Cash Replenishment" family="banking" pattern="C" posting
+      documentNo={form?.pcr_number} status={form?.status} identity={form?.petty_cash_funds?.fund_name}
+      financialFacts={[{ label: 'Replenishment Amount', value: fmt(Number(form?.total_amount || 0)) }, { label: 'Vouchers Available', value: pcvs.length }]}
+      contextFacts={[{ label: 'Fund', value: form?.petty_cash_funds?.fund_name || 'Not selected' }, { label: 'Replenishment Date', value: form?.replenishment_date || 'Not assigned' }, { label: 'Bank Account', value: form?.bank_accounts ? `${form.bank_accounts.bank_name} ${form.bank_accounts.account_number}` : 'Not selected' }, { label: 'Check Number', value: form?.check_number || 'Not assigned' }]}
+      relatedFacts={[{ label: 'Petty Cash Vouchers', value: pcvs.length, hint: 'Eligible vouchers loaded for replenishment', to: '/petty-cash-vouchers' }]}
+      sourceDocType="PCR" sourceDocId={form?.id} auditTable="petty_cash_replenishments"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list'), hidden: ro },
+        { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: save, disabled: saving || setupBlocked, hidden: ro, variant: 'primary' },
+        { key: 'post', label: 'Post', onClick: () => post(form?.id || ''), disabled: busy || setupBlocked, hidden: ro || !form?.id, variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'Replenishment Date *', card: 0, content: <input type="date" disabled={ro} className={`${inputCls} pxl-input`} value={form?.replenishment_date || today()} onChange={e => setForm(f => ({ ...f, replenishment_date: e.target.value }))} /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">{form?.pcr_number || 'Generated on save'}</div> },
+        { key: 'fund', label: 'Fund *', card: 1, span: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.fund_id || ''} onChange={e => pickFund(e.target.value)}><option value="">— select fund —</option>{funds.map(f => <option key={f.id} value={f.id}>{f.fund_name}</option>)}</select> },
+        { key: 'bank', label: 'Bank Account *', card: 2, span: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.bank_account_id || ''} onChange={e => setForm(f => ({ ...f, bank_account_id: e.target.value }))}><option value="">— select bank —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select> },
+        { key: 'check', label: 'Check Number', card: 2, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.check_number || ''} onChange={e => setForm(f => ({ ...f, check_number: e.target.value }))} /> },
+        { key: 'remarks', label: 'Remarks', card: 2, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.remarks || ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{!ro && <SetupReadinessBanner readiness={readiness} />}</div>,
+        gl: form?.id ? <GLImpactPanel companyId={companyId} sourceDocType="PCR" sourceDocId={form.id} previewRows={[]} /> : undefined,
+        audit: form?.id ? <AuditEvidenceBlock tableName="petty_cash_replenishments" recordId={form.id} facts={auditFacts} /> : undefined,
+      }}
+      onBack={() => setMode('list')} backLabel="Petty Cash Replenishments">
+    <div className="overflow-hidden">
+          <div className="mb-2 flex justify-between">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Vouchers to Replenish</span>
             <span className="text-xs font-mono font-bold text-gray-900">Total: {fmt(total)}</span>
           </div>
           {pcvs.length === 0 ? <div className="px-4 py-6 text-xs text-gray-400">{form?.fund_id ? 'No approved unreplenished vouchers for this fund.' : 'Select a fund to load vouchers.'}</div> : (
-            <table className="w-full text-xs">
+            <table className="pxl-data-grid w-full text-xs">
               <thead className="bg-gray-50 border-b border-gray-200"><tr>
                 {['PCV #','Date','Payee','Purpose','Amount'].map(h => <th key={h} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 ${h === 'Amount' ? 'text-right' : 'text-left'}`}>{h}</th>)}
               </tr></thead>
@@ -222,19 +224,7 @@ export default function PettyCashReplenishmentPage() {
               </tbody>
             </table>
           )}
-        </div>
-        {form?.id && (
-          <div className="mt-4 max-w-5xl">
-            <GLImpactPanel companyId={companyId} sourceDocType="PCR" sourceDocId={form.id} previewRows={[]} />
-            <AuditEvidenceBlock tableName="petty_cash_replenishments" recordId={form.id} facts={auditFacts} />
-          </div>
-        )}
-      </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
-}
-
-function Field({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
-  return <div className={`flex flex-col gap-1 ${full ? 'sm:col-span-2' : ''}`}>
-    <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>{children}</div>
 }

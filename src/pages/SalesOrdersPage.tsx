@@ -5,7 +5,7 @@ import { StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { composePhTin } from '@/lib/philippines'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────
 type SOApproval = 'pending' | 'approved' | 'rejected'
@@ -46,9 +46,6 @@ const computeNet = (l: SOLine): SOLine => ({
   ...l, net_amount: Math.max(0, l.quantity * l.unit_price - l.discount_amount),
 })
 
-const inp = 'w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white'
-const ro  = 'w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm bg-gray-50 text-gray-600 cursor-default'
-const lbl = 'block text-xs font-medium text-gray-500 mb-1'
 
 const approvalBadge: Record<SOApproval, string> = { pending: 'draft', approved: 'approved', rejected: 'error' }
 const fulfillBadge: Record<SOFulfill,  string> = { open: 'draft', partial: 'warning', fulfilled: 'posted', cancelled: 'error' }
@@ -328,96 +325,33 @@ export default function SalesOrdersPage() {
 
   // ── Form ────────────────────────────────────────────────────
   return (
+    <LegacyTransactionWorkspace title="Sales Order" family="sales" pattern="E" posting={false}
+      documentNo={editDoc?.so_number} status={soFulfill === 'open' ? soApproval : soFulfill} identity={fCustomerName}
+      financialFacts={[{ label: 'Order Amount', value: `${fCurrency} ${fmt(totalAmt)}`, hint: 'Commercial commitment; no direct posting' }]}
+      contextFacts={[{ label: 'Customer', value: fCustomerName || 'Not selected' }, { label: 'Order Date', value: fDate }, { label: 'Requested Delivery', value: fDeliveryDate || 'Not assigned' }, { label: 'Fulfillment', value: soFulfill }]}
+      relatedFacts={[{ label: 'Source Quotation', value: fQuotation || 'Not linked', hint: fQuotation ? 'Converted source' : 'No quotation selected', to: '/quotations' }]}
+      sourceDocId={editDoc?.id} auditTable="sales_orders" onBack={() => setMode('list')} backLabel="Sales Orders"
+      actions={[
+        { key: 'cancel', label: soApproval === 'approved' ? 'Cancel Order' : 'Cancel', onClick: () => soApproval === 'approved' ? save('approved', 'cancelled') : setMode('list'), disabled: saving, hidden: readOnly || soFulfill === 'cancelled', variant: soApproval === 'approved' ? 'danger' : 'default' },
+        { key: 'save', label: saving ? 'Saving…' : 'Save', onClick: () => save('pending'), disabled: saving, hidden: readOnly || !['new','edit'].includes(mode) || soApproval === 'approved' },
+        { key: 'reject', label: 'Reject', onClick: () => save('rejected'), disabled: saving, hidden: readOnly || soApproval !== 'pending', variant: 'danger' },
+        { key: 'approve', label: 'Approve', onClick: () => save('approved'), disabled: saving, hidden: readOnly || soApproval !== 'pending', variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'number', label: 'Sales Order Number', card: 0, content: <div className="pxl-readonly-field">{editDoc?.so_number || 'Auto-assigned on save'}</div> },
+        { key: 'date', label: 'Order Date *', card: 0, content: <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} disabled={readOnly} className="pxl-input w-full" /> },
+        { key: 'delivery', label: 'Expected Delivery', card: 0, content: <input type="date" value={fDeliveryDate} onChange={e => setFDeliveryDate(e.target.value)} disabled={readOnly} className="pxl-input w-full" /> },
+        { key: 'branch', label: 'Branch', card: 0, content: readOnly ? <div className="pxl-readonly-field">{branches.find(b => b.id === fBranch)?.branch_name || '—'}</div> : <select value={fBranch} onChange={e => setFBranch(e.target.value)} className="pxl-input w-full"><option value="">Select branch…</option>{branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}</select> },
+        { key: 'customer', label: 'Customer *', card: 1, span: 2, content: readOnly || !!fQuotation ? <div className="pxl-readonly-field">{fCustomerName || '—'}</div> : <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className="pxl-input w-full"><option value="">Select customer…</option>{customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}</select> },
+        { key: 'tin', label: 'Customer TIN', card: 1, content: <div className="pxl-readonly-field">{fCustomerTIN || '—'}</div> },
+        { key: 'quotation', label: 'Source Quotation', card: 2, content: readOnly ? <div className="pxl-readonly-field">{quotations.find(q => q.id === fQuotation)?.quotation_number || '—'}</div> : <select value={fQuotation} onChange={e => onQuotationChange(e.target.value)} className="pxl-input w-full"><option value="">None (standalone)</option>{quotations.map(q => <option key={q.id} value={q.id}>{q.quotation_number} — {q.customer_name_snapshot}</option>)}</select> },
+        { key: 'currency', label: 'Currency', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fCurrency}</div> : <select value={fCurrency} onChange={e => setFCurrency(e.target.value)} className="pxl-input w-full">{['PHP','USD','EUR','JPY','GBP','AUD','CAD','SGD','CNY'].map(currency => <option key={currency} value={currency}>{currency}</option>)}</select> },
+        { key: 'reference', label: 'Reference No.', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fRef || '—'}</div> : <input value={fRef} onChange={e => setFRef(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'remarks', label: 'Remarks', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fRemarks || '—'}</div> : <input value={fRemarks} onChange={e => setFRemarks(e.target.value)} className="pxl-input w-full" /> },
+      ]}
+      tabContent={{ validation: <div className="space-y-2">{canEdit && <SetupReadinessBanner readiness={readiness} />}{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}</div> }}>
     <div>
-      <div className={transactionHeaderClass('sales')}>
-        <button onClick={() => setMode('list')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M15 18l-6-6 6-6" /></svg>
-          Sales Orders
-        </button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-mono font-semibold text-gray-900">{editDoc?.so_number || 'New Sales Order'}</span>
-        {editDoc && <>
-          <StatusBadge status={approvalBadge[soApproval]} label={soApproval.charAt(0).toUpperCase() + soApproval.slice(1)} />
-          <StatusBadge status={fulfillBadge[soFulfill]} label={soFulfill.charAt(0).toUpperCase() + soFulfill.slice(1)} />
-        </>}
-        <div className="flex-1" />
-        {error && <span className="text-xs text-red-600 font-medium max-w-xs text-right">{error}</span>}
-        {(mode === 'new' || soApproval === 'pending') && !readOnly && <>
-          <button onClick={() => save('pending')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
-          <button onClick={() => save('rejected')} disabled={saving} className="px-3 py-1.5 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50 disabled:opacity-50">Reject</button>
-          <button onClick={() => save('approved')} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Approve</button>
-        </>}
-        {soApproval === 'approved' && soFulfill !== 'cancelled' && !readOnly && (
-          <button onClick={() => save('approved', 'cancelled')} disabled={saving} className="px-3 py-1.5 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50 disabled:opacity-50">Cancel Order</button>
-        )}
-      </div>
-
-      {canEdit && (
-        <div className="px-5 pt-4">
-          <SetupReadinessBanner readiness={readiness} />
-        </div>
-      )}
-
       <div className="divide-y divide-gray-200">
-        <div className="bg-white px-5 py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Sales Order Header</div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-3">
-            <div><label className={lbl}>SO Number</label><div className={ro}>{editDoc?.so_number || 'Auto-assigned on save'}</div></div>
-            <div>
-              <label className={lbl}>SO Date <span className="text-red-500">*</span></label>
-              <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} disabled={readOnly} className={readOnly ? ro : inp} />
-            </div>
-            <div>
-              <label className={lbl}>Expected Delivery Date</label>
-              <input type="date" value={fDeliveryDate} onChange={e => setFDeliveryDate(e.target.value)} disabled={readOnly} className={readOnly ? ro : inp} />
-            </div>
-            <div>
-              <label className={lbl}>Branch</label>
-              {readOnly ? <div className={ro}>{branches.find(b => b.id === fBranch)?.branch_name || '—'}</div> : (
-                <select value={fBranch} onChange={e => setFBranch(e.target.value)} className={inp}>
-                  <option value="">Select branch…</option>
-                  {branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Source Quotation</label>
-              {readOnly ? <div className={ro}>{quotations.find(q => q.id === fQuotation)?.quotation_number || '—'}</div> : (
-                <select value={fQuotation} onChange={e => onQuotationChange(e.target.value)} className={inp}>
-                  <option value="">None (standalone)</option>
-                  {quotations.map(q => <option key={q.id} value={q.id}>{q.quotation_number} — {q.customer_name_snapshot}</option>)}
-                </select>
-              )}
-            </div>
-            <div className="col-span-2">
-              <label className={lbl}>Customer <span className="text-red-500">*</span></label>
-              {readOnly || fQuotation ? <div className={ro}>{fCustomerName || '—'}</div> : (
-                <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className={inp}>
-                  <option value="">Select customer…</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}
-                </select>
-              )}
-            </div>
-            <div><label className={lbl}>Customer TIN</label><div className={ro}>{fCustomerTIN || '—'}</div></div>
-            <div>
-              <label className={lbl}>Currency</label>
-              {readOnly ? <div className={ro}>{fCurrency}</div> : (
-                <select value={fCurrency} onChange={e => setFCurrency(e.target.value)} className={inp}>
-                  {['PHP','USD','EUR','JPY','GBP','AUD','CAD','SGD','CNY'].map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Reference No.</label>
-              {readOnly ? <div className={ro}>{fRef || '—'}</div> : <input value={fRef} onChange={e => setFRef(e.target.value)} placeholder="Customer PO number" className={inp} />}
-            </div>
-            <div className="col-span-2 md:col-span-3">
-              <label className={lbl}>Remarks</label>
-              {readOnly ? <div className={ro}>{fRemarks || '—'}</div> : <textarea value={fRemarks} onChange={e => setFRemarks(e.target.value)} rows={2} className={inp + ' resize-none'} />}
-            </div>
-          </div>
-        </div>
-
         <div className="bg-white">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Line Items</span>
@@ -430,7 +364,7 @@ export default function SalesOrdersPage() {
             )}
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="pxl-data-grid w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-8">#</th>
@@ -499,15 +433,8 @@ export default function SalesOrdersPage() {
           </div>
         </div>
 
-        <div className="bg-white px-5 py-4 flex justify-end">
-          <div className="w-56 divide-y divide-gray-100">
-            <div className="flex items-center justify-between py-2.5">
-              <span className="text-sm font-semibold text-gray-900">Total Amount</span>
-              <span className="text-sm font-mono tabular-nums font-semibold text-gray-900">{fCurrency} {fmt(totalAmt)}</span>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

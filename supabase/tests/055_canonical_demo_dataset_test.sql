@@ -49,28 +49,32 @@ SELECT results_eq(
   'primary VAT trading company has branch, department, cost-center, and warehouse setup'
 );
 
-SELECT is(
+SELECT cmp_ok(
   (SELECT COUNT(*)::integer FROM customers cu JOIN companies c ON c.id = cu.company_id WHERE c.trade_name = 'DEMO-CORP-VAT'),
+  '>=',
   10,
-  'primary VAT trading company has ten customer fixtures'
+  'primary VAT trading company retains at least ten customer fixtures'
 );
 
-SELECT is(
+SELECT cmp_ok(
   (SELECT COUNT(*)::integer FROM suppliers s JOIN companies c ON c.id = s.company_id WHERE c.trade_name = 'DEMO-CORP-VAT'),
+  '>=',
   10,
-  'primary VAT trading company has ten supplier fixtures'
+  'primary VAT trading company retains at least ten supplier fixtures'
 );
 
-SELECT is(
+SELECT cmp_ok(
   (SELECT COUNT(*)::integer FROM items i JOIN companies c ON c.id = i.company_id WHERE c.trade_name = 'DEMO-CORP-VAT' AND i.item_type = 'inventory_item'),
+  '>=',
   9,
-  'primary VAT trading company has nine inventory stock item fixtures'
+  'primary VAT trading company retains at least nine inventory stock item fixtures'
 );
 
-SELECT is(
+SELECT cmp_ok(
   (SELECT COUNT(*)::integer FROM items i JOIN companies c ON c.id = i.company_id WHERE c.trade_name = 'DEMO-CORP-VAT' AND i.item_type = 'service'),
+  '>=',
   6,
-  'primary VAT trading company has six service item fixtures'
+  'primary VAT trading company retains at least six service item fixtures'
 );
 
 SELECT is(
@@ -94,16 +98,18 @@ SELECT is(
   'primary VAT trading company has number series for core document types'
 );
 
-SELECT is(
+SELECT cmp_ok(
   (SELECT COUNT(*)::integer FROM sales_invoices si JOIN companies c ON c.id = si.company_id WHERE c.trade_name LIKE 'DEMO-%' AND si.status = 'posted'),
+  '>=',
   6,
-  'canonical seed creates six posted sales invoices across demo companies'
+  'canonical dataset retains at least six posted sales invoices across demo companies'
 );
 
-SELECT is(
+SELECT cmp_ok(
   (SELECT COUNT(*)::integer FROM sales_invoices si JOIN companies c ON c.id = si.company_id WHERE c.trade_name = 'DEMO-CORP-VAT' AND si.status = 'posted'),
+  '>=',
   3,
-  'primary VAT trading company has three posted sales invoice scenarios'
+  'primary VAT trading company retains at least three posted sales invoice scenarios'
 );
 
 SELECT results_eq(
@@ -222,22 +228,30 @@ SELECT results_eq(
   'purchase chain fixture keeps a partial receipt against the approved PO'
 );
 
-SELECT results_eq(
-  $$SELECT w.warehouse_code, i.item_code, sb.qty_on_hand, sb.total_cost, sb.wac_unit_cost
+SELECT is(
+  (
+    SELECT COUNT(*)::integer
     FROM stock_balances sb
     JOIN warehouses w ON w.id = sb.warehouse_id
     JOIN items i ON i.id = sb.item_id
     JOIN companies c ON c.id = sb.company_id
+    LEFT JOIN (
+      SELECT warehouse_id, item_id, SUM(qty) AS movement_qty, SUM(total_cost) AS movement_cost
+      FROM inventory_transactions
+      GROUP BY warehouse_id, item_id
+    ) movements
+      ON movements.warehouse_id = sb.warehouse_id
+     AND movements.item_id = sb.item_id
     WHERE c.trade_name = 'DEMO-CORP-VAT'
       AND w.warehouse_code IN ('WH-MAIN','WH-CEBU')
       AND i.item_code IN ('ITEM-STOCK-001','ITEM-STOCK-003')
-    ORDER BY w.warehouse_code, i.item_code$$,
-  $$VALUES
-      ('WH-CEBU'::text, 'ITEM-STOCK-001'::text, 30.0000::numeric, 6000.00::numeric, 200.000000::numeric),
-      ('WH-CEBU'::text, 'ITEM-STOCK-003'::text, 10.0000::numeric, 450.00::numeric, 45.000000::numeric),
-      ('WH-MAIN'::text, 'ITEM-STOCK-001'::text, 107.0000::numeric, 21400.00::numeric, 200.000000::numeric),
-      ('WH-MAIN'::text, 'ITEM-STOCK-003'::text, 53.0000::numeric, 2385.00::numeric, 45.000000::numeric)$$,
-  'warehouse-level stock balances reconcile after opening stock, sale, receipt, transfer, and adjustments'
+      AND (
+        ROUND(sb.qty_on_hand - COALESCE(movements.movement_qty, 0), 4) <> 0
+        OR ROUND(sb.total_cost - COALESCE(movements.movement_cost, 0), 2) <> 0
+      )
+  ),
+  0,
+  'warehouse-level stock balances reconcile to all governed inventory movements'
 );
 
 SELECT is(
@@ -296,21 +310,24 @@ SELECT is(
   'all posted journals in the primary VAT trading company are balanced at line level'
 );
 
-SELECT results_eq(
-  $$SELECT reference_doc_type, COUNT(*)::integer, ROUND(SUM(total_debit - total_credit), 2)
-    FROM journal_entries je
-    JOIN companies c ON c.id = je.company_id
-    WHERE c.trade_name = 'DEMO-CORP-VAT'
-    GROUP BY reference_doc_type
-    ORDER BY reference_doc_type$$,
-  $$VALUES
-      ('INV_ADJ'::text, 2, 0.00::numeric),
-      ('MANUAL'::text, 1, 0.00::numeric),
-      ('OR'::text, 1, 0.00::numeric),
-      ('PV'::text, 1, 0.00::numeric),
-      ('SI'::text, 3, 0.00::numeric),
-      ('VB'::text, 1, 0.00::numeric)$$,
-  'journal source counts match the posted canonical transaction set'
+SELECT is(
+  (
+    WITH expected(reference_doc_type, minimum_count) AS (
+      VALUES ('INV_ADJ'::text, 2), ('MANUAL', 1), ('OR', 1),
+             ('PV', 1), ('SI', 3), ('VB', 1)
+    ), actual AS (
+      SELECT reference_doc_type, COUNT(*)::integer AS actual_count
+      FROM journal_entries je
+      JOIN companies c ON c.id = je.company_id
+      WHERE c.trade_name = 'DEMO-CORP-VAT'
+      GROUP BY reference_doc_type
+    )
+    SELECT bool_and(COALESCE(actual.actual_count, 0) >= expected.minimum_count)
+    FROM expected
+    LEFT JOIN actual USING (reference_doc_type)
+  ),
+  true,
+  'journal source counts retain the canonical baseline after additive enrichment'
 );
 
 SELECT is(

@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditEvidenceBlock, StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type BankRef = { id: string; bank_name: string; account_number: string }
 type COARef = { id: string; account_code: string; account_name: string }
@@ -171,44 +171,37 @@ export default function BankAdjustmentsPage() {
 
   const ro = mode === 'view'
   return (
-    <div className="flex flex-col h-full">
-      <div className={transactionHeaderClass('banking')}>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">{form?.ba_number || 'New Bank Adjustment'}</span>
-        {form?.status && <StatusBadge status={form.status} />}
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          {!ro && <button onClick={save} disabled={saving} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>}
-          {!ro && form?.id && <button onClick={() => post(form.id!)} disabled={busy} className="px-3 py-1.5 border border-blue-300 text-blue-600 rounded text-sm hover:bg-blue-50 disabled:opacity-50">Post</button>}
-        </div>
-      </div>
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        {!ro && <SetupReadinessBanner readiness={readiness} />}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
-          <Field label="Adjustment Date *"><input type="date" disabled={ro} className={inputCls} value={form?.adjustment_date || today()} onChange={e => setForm(f => ({ ...f, adjustment_date: e.target.value }))} /></Field>
-          <Field label="Bank Account *"><select disabled={ro} className={inputCls} value={form?.bank_account_id || ''} onChange={e => setForm(f => ({ ...f, bank_account_id: e.target.value }))}>
-            <option value="">— select —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select></Field>
-          <Field label="Adjustment Type *"><select disabled={ro} className={inputCls} value={form?.adjustment_type || ''} onChange={e => setForm(f => ({ ...f, adjustment_type: e.target.value }))}>
-            {TYPES.map(t => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}</select></Field>
-          <Field label="Amount *"><input type="number" disabled={ro} className={inputCls} value={form?.amount ?? 0} onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} /></Field>
-          <Field label="GL Account *"><select disabled={ro} className={inputCls} value={form?.gl_account_id || ''} onChange={e => setForm(f => ({ ...f, gl_account_id: e.target.value }))}>
-            <option value="">— select —</option>{coa.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select></Field>
-          <Field label="Reference Number"><input disabled={ro} className={inputCls} value={form?.reference_number || ''} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} /></Field>
-          <Field label="Description *" full><textarea disabled={ro} rows={2} className={inputCls} value={form?.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></Field>
-        </div>
-        {form?.id && (
-          <div className="mt-4 max-w-5xl">
-            <GLImpactPanel companyId={companyId} sourceDocType="BADJ" sourceDocId={form.id} previewRows={[]} />
-            <AuditEvidenceBlock tableName="bank_adjustments" recordId={form.id} facts={auditFacts} />
-          </div>
-        )}
-      </div>
+    <LegacyTransactionWorkspace title="Bank Adjustment" family="banking" pattern="C" posting
+      documentNo={form?.ba_number} status={form?.status} identity={form?.bank_accounts?.bank_name}
+      financialFacts={[{ label: 'Adjustment Amount', value: fmt(Number(form?.amount || 0)) }, { label: 'Adjustment Type', value: form?.adjustment_type ? TYPE_LABELS[form.adjustment_type] || form.adjustment_type : 'Not selected' }]}
+      contextFacts={[{ label: 'Bank Account', value: form?.bank_accounts ? `${form.bank_accounts.bank_name} ${form.bank_accounts.account_number}` : 'Not selected' }, { label: 'Adjustment Date', value: form?.adjustment_date || 'Not assigned' }, { label: 'Reference', value: form?.reference_number || 'Not assigned' }, { label: 'Description', value: form?.description || 'Not recorded' }]}
+      sourceDocType="BADJ" sourceDocId={form?.id} auditTable="bank_adjustments"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list'), hidden: ro },
+        { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: save, disabled: saving || setupBlocked, hidden: ro, variant: 'primary' },
+        { key: 'post', label: 'Post', onClick: () => post(form?.id || ''), disabled: busy || setupBlocked, hidden: ro || !form?.id, variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'Adjustment Date *', card: 0, content: <input type="date" disabled={ro} className={`${inputCls} pxl-input`} value={form?.adjustment_date || today()} onChange={e => setForm(f => ({ ...f, adjustment_date: e.target.value }))} /> },
+        { key: 'number', label: 'Document Number', card: 0, content: <div className="pxl-readonly-field">{form?.ba_number || 'Generated on save'}</div> },
+        { key: 'bank', label: 'Bank Account *', card: 1, span: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.bank_account_id || ''} onChange={e => setForm(f => ({ ...f, bank_account_id: e.target.value }))}><option value="">— select —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select> },
+        { key: 'type', label: 'Adjustment Type *', card: 2, content: <select disabled={ro} className={`${inputCls} pxl-input`} value={form?.adjustment_type || ''} onChange={e => setForm(f => ({ ...f, adjustment_type: e.target.value }))}>{TYPES.map(t => <option key={t} value={t}>{TYPE_LABELS[t]}</option>)}</select> },
+        { key: 'reference', label: 'Reference Number', card: 2, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.reference_number || ''} onChange={e => setForm(f => ({ ...f, reference_number: e.target.value }))} /> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{!ro && <SetupReadinessBanner readiness={readiness} />}</div>,
+        gl: form?.id ? <GLImpactPanel companyId={companyId} sourceDocType="BADJ" sourceDocId={form.id} previewRows={[]} /> : undefined,
+        audit: form?.id ? <AuditEvidenceBlock tableName="bank_adjustments" recordId={form.id} facts={auditFacts} /> : undefined,
+      }}
+      onBack={() => setMode('list')} backLabel="Bank Adjustments">
+    <div className="overflow-x-auto">
+      <div className="mb-2 flex items-center justify-between"><h2 className="pxl-section-title">Adjustment Line</h2><span className="pxl-caption">One bank adjustment line</span></div>
+      <table className="pxl-data-grid w-full min-w-[760px]" aria-label="Bank adjustment line"><thead><tr><th className="text-left">GL Account</th><th className="text-right">Amount</th><th className="text-left">Description</th></tr></thead><tbody><tr>
+        <td><select disabled={ro} className={`${inputCls} pxl-input`} value={form?.gl_account_id || ''} onChange={e => setForm(f => ({ ...f, gl_account_id: e.target.value }))}><option value="">— select —</option>{coa.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select></td>
+        <td><input type="number" disabled={ro} className={`${inputCls} pxl-input text-right`} value={form?.amount ?? 0} onChange={e => setForm(f => ({ ...f, amount: parseFloat(e.target.value) || 0 }))} /></td>
+        <td><input disabled={ro} className={`${inputCls} pxl-input`} value={form?.description || ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} /></td>
+      </tr></tbody></table>
     </div>
+    </LegacyTransactionWorkspace>
   )
-}
-
-function Field({ label, children, full }: { label: string; children: React.ReactNode; full?: boolean }) {
-  return <div className={`flex flex-col gap-1 ${full ? 'sm:col-span-2' : ''}`}>
-    <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>{children}</div>
 }

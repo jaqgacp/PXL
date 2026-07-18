@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type Category = { id: string; category_code: string; category_name: string; depreciation_method: string; useful_life_months: number; salvage_rate: number }
 type Branch = { id: string; branch_name: string }
@@ -166,162 +167,42 @@ export default function AssetAcquisitionPage() {
   ] : []
 
   return (
+    <LegacyTransactionWorkspace title="Asset Acquisition" family="neutral" pattern="D" posting
+      status="draft" identity={form.asset_name}
+      financialFacts={[{ label: 'Acquisition Cost', value: acquisitionCost.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }, { label: 'Salvage Value', value: Number(form.salvage_value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }, { label: 'Depreciable Base', value: Math.max(0, acquisitionCost - Number(form.salvage_value || 0)).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }]}
+      contextFacts={[{ label: 'Asset', value: form.asset_name || 'Not named' }, { label: 'Acquisition Date', value: form.acquisition_date }, { label: 'Depreciation Start', value: form.depreciation_start_date }, { label: 'Useful Life', value: `${form.useful_life_months || 0} months` }, { label: 'Method', value: METHODS.find(method => method.value === form.depreciation_method)?.label || form.depreciation_method }, { label: 'Monthly Depreciation', value: preview == null ? 'Not applicable' : preview.monthly.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }, { label: 'Annual Depreciation', value: preview == null ? 'Not applicable' : preview.annual.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }]}
+      actions={[{ key: 'save', label: saving ? 'Registering…' : 'Register Asset', onClick: submit, disabled: saving, variant: 'primary' }]}
+      headerFields={[
+        { key: 'date', label: 'Acquisition Date *', card: 0, content: <input type="date" value={form.acquisition_date} onChange={e => f('acquisition_date', e.target.value)} className="pxl-input w-full" /> },
+        { key: 'depreciation-date', label: 'Depreciation Start *', card: 0, content: <input type="date" value={form.depreciation_start_date} onChange={e => f('depreciation_start_date', e.target.value)} className="pxl-input w-full" /> },
+        { key: 'branch', label: 'Branch', card: 0, content: <select value={form.branch_id} onChange={e => f('branch_id', e.target.value)} className="pxl-input w-full"><option value="">— None —</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.branch_name}</option>)}</select> },
+        { key: 'supplier', label: 'Supplier', card: 1, span: 2, content: <select value={form.supplier_id} onChange={e => f('supplier_id', e.target.value)} className="pxl-input w-full"><option value="">— None —</option>{suppliers.map(supplier => <option key={supplier.id} value={supplier.id}>{supplier.supplier_name}</option>)}</select> },
+        { key: 'department', label: 'Department', card: 1, content: <select value={form.department_id} onChange={e => f('department_id', e.target.value)} className="pxl-input w-full"><option value="">— None —</option>{departments.map(department => <option key={department.id} value={department.id}>{department.department_name}</option>)}</select> },
+        { key: 'asset-name', label: 'Asset Name *', card: 2, span: 2, content: <input value={form.asset_name} onChange={e => f('asset_name', e.target.value)} className="pxl-input w-full" /> },
+        { key: 'location', label: 'Location', card: 2, content: <input value={form.location} onChange={e => f('location', e.target.value)} className="pxl-input w-full" /> },
+        { key: 'credit', label: 'Credit Account', card: 2, content: <select value={form.credit_account_id} onChange={e => f('credit_account_id', e.target.value)} className="pxl-input w-full"><option value="">Post JE manually / skip</option>{coa.map(account => <option key={account.id} value={account.id}>{account.account_code} — {account.account_name}</option>)}</select> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{success && <div className="pxl-validation-message border border-green-200 bg-green-50 text-green-700">{success}</div>}</div>,
+        gl: <GLImpactPanel companyId={companyId} sourceDocType="FA" sourceDocId={null} previewRows={glPreviewRows} title="GL Impact — Acquisition" />,
+        notes: <textarea value={form.description} onChange={e => f('description', e.target.value)} rows={3} className="pxl-input w-full" aria-label="Asset description" />,
+      }}>
     <div>
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Asset Acquisition</span>
-      </div>
+      <div className="overflow-x-auto">
+        <table className="pxl-data-grid w-full">
+          <thead><tr>{['Category','Serial Number','Acquisition Cost','Method','Useful Life','Salvage Value'].map(label => <th key={label} className="text-left">{label}</th>)}</tr></thead>
+          <tbody><tr>
+            <td><select value={form.category_id} onChange={e => onCategoryChange(e.target.value)} className="pxl-input w-full"><option value="">Select category…</option>{categories.map(category => <option key={category.id} value={category.id}>{category.category_code} — {category.category_name}</option>)}</select></td>
+            <td><input value={form.serial_number} onChange={e => f('serial_number', e.target.value)} className="pxl-input w-full" /></td>
+            <td><input type="number" min={0.01} step={0.01} value={form.acquisition_cost} onChange={e => onCostChange(e.target.value)} className="pxl-input w-full text-right" /></td>
+            <td><select value={form.depreciation_method} onChange={e => f('depreciation_method', e.target.value)} className="pxl-input w-full">{METHODS.map(method => <option key={method.value} value={method.value}>{method.label}</option>)}</select></td>
+            <td><input type="number" min={1} max={600} value={form.useful_life_months} onChange={e => f('useful_life_months', e.target.value)} disabled={form.depreciation_method === 'none'} className="pxl-input w-full text-right" /></td>
+            <td><input type="number" min={0} step={0.01} value={form.salvage_value} onChange={e => f('salvage_value', e.target.value)} disabled={form.depreciation_method === 'none'} className="pxl-input w-full text-right" /></td>
+          </tr></tbody>
+        </table>
 
-      <div className="px-5 py-4 max-w-4xl space-y-4">
-        {error && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
-        {success && <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">{success}</div>}
-
-        {/* Basic Info */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Asset Details</p>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Asset Name *</label>
-              <input value={form.asset_name} onChange={e => f('asset_name', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                placeholder="e.g. Delivery Van 2026 — Toyota Hi-Ace" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Category *</label>
-              <select value={form.category_id} onChange={e => onCategoryChange(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                <option value="">— Select Category —</option>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.category_code} — {c.category_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Supplier</label>
-              <select value={form.supplier_id} onChange={e => f('supplier_id', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                <option value="">— None —</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.supplier_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Branch</label>
-              <select value={form.branch_id} onChange={e => f('branch_id', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                <option value="">— None —</option>
-                {branches.map(b => <option key={b.id} value={b.id}>{b.branch_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Department</label>
-              <select value={form.department_id} onChange={e => f('department_id', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                <option value="">— None —</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.department_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Serial Number</label>
-              <input value={form.serial_number} onChange={e => f('serial_number', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-gray-900" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Location</label>
-              <input value={form.location} onChange={e => f('location', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900"
-                placeholder="e.g. Head Office — 3rd Floor" />
-            </div>
-            <div className="col-span-2">
-              <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
-              <textarea value={form.description} onChange={e => f('description', e.target.value)} rows={2}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 resize-none" />
-            </div>
-          </div>
-        </div>
-
-        {/* Cost & Dates */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Cost & Dates</p>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Acquisition Date *</label>
-              <input type="date" value={form.acquisition_date} onChange={e => f('acquisition_date', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Depreciation Start *</label>
-              <input type="date" value={form.depreciation_start_date} onChange={e => f('depreciation_start_date', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-              <p className="text-[10px] text-gray-400 mt-0.5">BIR full-month convention: use acquisition date</p>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Acquisition Cost (₱) *</label>
-              <input type="number" min={0.01} step={0.01} value={form.acquisition_cost}
-                onChange={e => onCostChange(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900" />
-            </div>
-          </div>
-        </div>
-
-        {/* Depreciation Parameters */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Depreciation Parameters (PAS 16)</p>
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Method</label>
-              <select value={form.depreciation_method} onChange={e => f('depreciation_method', e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                {METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Useful Life (months)</label>
-              <input type="number" min={1} max={600} value={form.useful_life_months}
-                onChange={e => f('useful_life_months', e.target.value)}
-                disabled={form.depreciation_method === 'none'}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50" />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Salvage Value (₱)</label>
-              <input type="number" min={0} step={0.01} value={form.salvage_value}
-                onChange={e => f('salvage_value', e.target.value)}
-                disabled={form.depreciation_method === 'none'}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50" />
-            </div>
-          </div>
-          {preview && (
-            <div className="bg-gray-50 rounded px-3 py-2 text-xs text-gray-600 font-mono">
-              Monthly depreciation (SLM preview): ₱ {preview.monthly.toLocaleString('en-PH', { minimumFractionDigits: 2 })} &nbsp;/&nbsp; Annual: ₱ {preview.annual.toLocaleString('en-PH', { minimumFractionDigits: 2 })}
-            </div>
-          )}
-        </div>
-
-        {/* GL Accounts */}
-        <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Journal Entry — Acquisition</p>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Credit Account (Cash / AP / Bank)</label>
-            <select value={form.credit_account_id} onChange={e => f('credit_account_id', e.target.value)}
-              className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-              <option value="">— Post acquisition JE manually / skip —</option>
-              {coa.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}
-            </select>
-            <p className="text-[10px] text-gray-400 mt-0.5">If selected, posts DR Asset Account / CR this account automatically.</p>
-          </div>
-        </div>
-
-        <GLImpactPanel
-          companyId={companyId}
-          sourceDocType="FA"
-          sourceDocId={null}
-          previewRows={glPreviewRows}
-          title="GL Impact — Acquisition"
-        />
-
-        <div className="flex gap-2">
-          <button onClick={submit} disabled={saving}
-            className="px-5 py-2 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-            {saving ? 'Registering…' : 'Register Asset'}
-          </button>
-        </div>
       </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

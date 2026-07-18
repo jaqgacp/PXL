@@ -1,5 +1,8 @@
 # AI Documentation Rules
 
+**Status:** Historical Snapshot — superseded by `AI/AGENT_SYSTEM_PROMPT.md` and `docs/PXL/PXL_DOCUMENTATION_INDEX.md`
+**Not Current Source of Truth:** Do not use for fresh-session startup.
+
 Permanent governance for the AI Operating System. The goal is a compact, stable, low-maintenance set of files — not more documentation.
 
 ## Allowed AI Operating Files

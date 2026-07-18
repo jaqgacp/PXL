@@ -6,7 +6,7 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { composePhTin } from '@/lib/philippines'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────
 type DMStatus = 'draft' | 'approved' | 'paid' | 'cancelled'
@@ -51,9 +51,6 @@ const computeLine = (l: DMLLine): DMLLine => {
   return { ...l, vat_amount: vat, total_amount: l.amount + vat }
 }
 
-const inp = 'w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 bg-white'
-const ro  = 'w-full border border-gray-200 rounded px-2.5 py-1.5 text-sm bg-gray-50 text-gray-600 cursor-default'
-const lbl = 'block text-xs font-medium text-gray-500 mb-1'
 
 const statusMap: Record<DMStatus, string> = {
   draft: 'draft', approved: 'approved', paid: 'posted', cancelled: 'error',
@@ -338,88 +335,36 @@ export default function DebitMemosPage() {
 
   // ── Form ───────────────────────────────────────────────────
   return (
+    <LegacyTransactionWorkspace title="Debit Memo" family="sales" pattern="A" posting
+      documentNo={editDoc?.dm_number} status={dmStatus} identity={fCustomerName}
+      financialFacts={[{ label: 'Debit Memo Total', value: fmt(totalAmt) }, { label: 'Net Adjustment', value: fmt(totalNet) }, { label: 'Output VAT', value: fmt(totalVAT) }]}
+      taxFacts={[{ label: 'Output VAT', value: fmt(totalVAT), hint: 'Adjustment VAT from line tax codes' }]}
+      contextFacts={[{ label: 'Customer', value: fCustomerName || 'Not selected' }, { label: 'Transaction Date', value: fDate }, { label: 'Source Type', value: fSourceType || 'Not selected' }, { label: 'Reason', value: reasonCodes.find(reason => reason.id === fReason)?.description || 'Not selected' }]}
+      sourceDocType="DM" sourceDocId={editDoc?.id} auditTable="debit_memos"
+      onBack={() => setMode('list')} backLabel="Debit Memos"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list') },
+        { key: 'draft', label: saving ? 'Saving…' : dmStatus === 'approved' ? 'Revert to Draft' : 'Save Draft', onClick: () => save('draft'), disabled: saving, hidden: readOnly || !['draft','approved'].includes(dmStatus) },
+        { key: 'submit', label: 'Submit for Approval', onClick: () => save('approved'), disabled: saving || setupBlocked, hidden: readOnly || dmStatus !== 'draft' },
+        { key: 'post', label: 'Post', onClick: () => save('paid'), disabled: saving || setupBlocked, hidden: readOnly || !['draft','approved'].includes(dmStatus), variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'number', label: 'Debit Memo Number', card: 0, content: <div className="pxl-readonly-field">{editDoc?.dm_number || 'Auto-assigned on save'}</div> },
+        { key: 'date', label: 'Date *', card: 0, content: <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} disabled={readOnly} className="pxl-input w-full" /> },
+        { key: 'branch', label: 'Branch', card: 0, content: <select value={fBranch} onChange={e => setFBranch(e.target.value)} disabled={readOnly} className="pxl-input w-full"><option value="">Select branch…</option>{branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}</select> },
+        { key: 'customer', label: 'Customer *', card: 1, span: 2, content: readOnly ? <div className="pxl-readonly-field">{fCustomerName}</div> : <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className="pxl-input w-full"><option value="">Select customer…</option>{customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}</select> },
+        { key: 'tin', label: 'Customer TIN', card: 1, content: <div className="pxl-readonly-field">{fCustomerTIN || '—'}</div> },
+        { key: 'source', label: 'Source Document Type', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fSourceType || '—'}</div> : <select value={fSourceType} onChange={e => setFSourceType(e.target.value as typeof fSourceType)} className="pxl-input w-full"><option value="">None (standalone)</option><option value="invoice">Sales Invoice</option><option value="receipt">Receipt</option></select> },
+        { key: 'reason', label: 'Reason Code *', card: 2, content: readOnly ? <div className="pxl-readonly-field">{reasonCodes.find(reason => reason.id === fReason)?.description || '—'}</div> : <select value={fReason} onChange={e => setFReason(e.target.value)} className="pxl-input w-full"><option value="">Select reason…</option>{reasonCodes.map(reason => <option key={reason.id} value={reason.id}>{reason.description}</option>)}</select> },
+        { key: 'remarks', label: 'Remarks', card: 2, span: 2, content: readOnly ? <div className="pxl-readonly-field">{fRemarks || '—'}</div> : <input value={fRemarks} onChange={e => setFRemarks(e.target.value)} className="pxl-input w-full" /> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2"><SetupReadinessBanner readiness={readiness} />{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}</div>,
+        gl: <GLImpactPanel companyId={companyId} sourceDocType="DM" sourceDocId={editDoc && editDoc.status !== 'draft' ? editDoc.id : null} previewRows={glPreviewRows} />,
+        audit: editDoc?.id ? <AuditEvidenceBlock tableName="debit_memos" recordId={editDoc.id} facts={auditFacts} /> : undefined,
+      }}>
     <div>
-      <div className={transactionHeaderClass('sales')}>
-        <button onClick={() => setMode('list')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M15 18l-6-6 6-6" /></svg>
-          Debit Memos
-        </button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-mono font-semibold text-gray-900">{editDoc?.dm_number || 'New Debit Memo'}</span>
-        {editDoc && <StatusBadge status={statusMap[dmStatus]} label={dmStatus.charAt(0).toUpperCase() + dmStatus.slice(1)} />}
-        <div className="flex-1" />
-        {error && <span className="text-xs text-red-600 font-medium">{error}</span>}
-        {(mode === 'new' || dmStatus === 'draft') && !readOnly && <>
-          <button onClick={() => save('draft')} disabled={saving || setupBlocked} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Saving…' : 'Save Draft'}</button>
-          <button onClick={() => save('approved')} disabled={saving || setupBlocked} className="px-3 py-1.5 border border-blue-500 text-blue-700 rounded text-sm hover:bg-blue-50 font-medium disabled:opacity-50">Submit for Approval</button>
-          <button onClick={() => save('paid')} disabled={saving || setupBlocked} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Post</button>
-        </>}
-        {dmStatus === 'approved' && <>
-          <button onClick={() => save('draft')} disabled={saving} className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">{saving ? 'Reverting…' : 'Revert to Draft'}</button>
-          <button onClick={() => save('paid')} disabled={saving || setupBlocked} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Post</button>
-        </>}
-      </div>
-
       <div className="divide-y divide-gray-200">
-        <div className="bg-white px-5 py-4">
-          <SetupReadinessBanner readiness={readiness} />
-        </div>
-        <div className="bg-white px-5 py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Debit Memo Header</div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-3">
-            <div><label className={lbl}>DM Number</label><div className={ro}>{editDoc?.dm_number || 'Auto-assigned on save'}</div></div>
-            <div>
-              <label className={lbl}>Date <span className="text-red-500">*</span></label>
-              <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} disabled={readOnly} className={readOnly ? ro : inp} />
-            </div>
-            <div>
-              <label className={lbl}>Branch</label>
-              <select value={fBranch} onChange={e => setFBranch(e.target.value)} disabled={readOnly} className={readOnly ? ro : inp}>
-                <option value="">Select branch…</option>
-                {branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={lbl}>Customer <span className="text-red-500">*</span></label>
-              {readOnly ? <div className={ro}>{fCustomerName}</div> : (
-                <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className={inp}>
-                  <option value="">Select customer…</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Customer TIN</label>
-              <div className={ro}>{fCustomerTIN || '—'}</div>
-            </div>
-            <div>
-              <label className={lbl}>Source Document Type</label>
-              {readOnly ? <div className={ro}>{fSourceType || '—'}</div> : (
-                <select value={fSourceType} onChange={e => setFSourceType(e.target.value as typeof fSourceType)} className={inp}>
-                  <option value="">None (standalone)</option>
-                  <option value="invoice">Sales Invoice</option>
-                  <option value="receipt">Receipt</option>
-                </select>
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Reason Code <span className="text-red-500">*</span></label>
-              {readOnly ? <div className={ro}>{reasonCodes.find(r => r.id === fReason)?.description || '—'}</div> : (
-                <select value={fReason} onChange={e => setFReason(e.target.value)} className={inp}>
-                  <option value="">Select reason…</option>
-                  {reasonCodes.map(r => <option key={r.id} value={r.id}>{r.description}</option>)}
-                </select>
-              )}
-            </div>
-            <div className="col-span-2 md:col-span-3 lg:col-span-4">
-              <label className={lbl}>Remarks</label>
-              {readOnly ? <div className={ro}>{fRemarks || '—'}</div> : (
-                <textarea value={fRemarks} onChange={e => setFRemarks(e.target.value)} rows={2} className={inp + ' resize-none'} />
-              )}
-            </div>
-          </div>
-        </div>
-
         {/* Lines */}
         <div className="bg-white">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -433,7 +378,7 @@ export default function DebitMemosPage() {
             )}
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="pxl-data-grid w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-8">#</th>
@@ -498,36 +443,8 @@ export default function DebitMemosPage() {
           </div>
         </div>
 
-        {/* Summary */}
-        <div className="bg-white px-5 py-4 flex justify-end">
-          <div className="w-64 divide-y divide-gray-100">
-            <div className="flex items-center justify-between py-1.5">
-              <span className="text-xs text-gray-500">Net Charges</span>
-              <span className="text-xs font-mono tabular-nums text-gray-700">{fmt(totalNet)}</span>
-            </div>
-            <div className="flex items-center justify-between py-1.5">
-              <span className="text-xs text-gray-500">VAT</span>
-              <span className="text-xs font-mono tabular-nums text-gray-700">{fmt(totalVAT)}</span>
-            </div>
-            <div className="flex items-center justify-between py-2.5">
-              <span className="text-sm font-semibold text-gray-900">Total Debit</span>
-              <span className="text-sm font-mono tabular-nums font-semibold text-gray-900">{fmt(totalAmt)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-gray-50 px-5 py-4">
-          <GLImpactPanel
-            companyId={companyId}
-            sourceDocType="DM"
-            sourceDocId={editDoc && editDoc.status !== 'draft' ? editDoc.id : null}
-            previewRows={glPreviewRows}
-          />
-        </div>
-        {editDoc?.id && (
-          <AuditEvidenceBlock tableName="debit_memos" recordId={editDoc.id} facts={auditFacts} />
-        )}
       </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

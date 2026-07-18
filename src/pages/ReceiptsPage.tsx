@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge, AmountCell, DateCell } from '@/components/ui/shared'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { TransactionWorkspace } from '@/components/document/TransactionWorkspace'
+import { SystemMetadataPanel, TransactionEmptyState } from '@/components/document/TransactionPrimitives'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { composePhTin } from '@/lib/philippines'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────
 type RStatus = 'draft' | 'posted' | 'bounced' | 'cancelled'
@@ -558,7 +560,7 @@ export default function ReceiptsPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Receipt Date','Receipt Number','Customer','TIN','Payment Mode','Amount','CWT','Status'].map(h => (
+                    {['Receipt Date','Receipt Number','Reference','Customer','TIN','Payment Mode','Amount','CWT','Status'].map(h => (
                       <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -570,6 +572,7 @@ export default function ReceiptsPage() {
                       <tr key={r.id} onClick={() => openEdit(r)} className="hover:bg-gray-50 cursor-pointer transition-colors">
                         <td className="px-4 py-2.5 text-xs text-gray-600 whitespace-nowrap"><DateCell date={r.receipt_date} /></td>
                         <td className="px-4 py-2.5 font-mono font-semibold text-xs text-gray-900 whitespace-nowrap">{r.receipt_number}</td>
+                        <td className="px-4 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{r.reference_number || '—'}</td>
                         <td className="px-4 py-2.5 text-xs text-gray-900 max-w-[200px] truncate">{r.customer_name_snapshot}</td>
                         <td className="px-4 py-2.5 font-mono text-xs text-gray-500 whitespace-nowrap">{r.customer_tin_snapshot}</td>
                         <td className="px-4 py-2.5 text-xs text-gray-600">{pm?.name || '—'}</td>
@@ -599,318 +602,89 @@ export default function ReceiptsPage() {
     )
   }
 
-  // ── Form View ─────────────────────────────────────────────
+  // ── Form / View Workspace ─────────────────────────────────
+  const selectedCustomer = customers.find(customer => customer.id === fCustomer)
+  const selectedPaymentMode = paymentModes.find(paymentMode => paymentMode.id === fMode)
+  const selectedBankAccount = bankAccounts.find(account => account.id === fBankAccount)
+  const selectedBranch = branches.find(branch => branch.id === fBranch)
+  const receiptStatus = editDoc?.status || 'draft'
+  const workflowSteps = [{ key: 'draft', label: 'Draft' }, { key: 'posted', label: 'Posted' }, { key: 'bounced', label: 'Bounced' }, { key: 'cancelled', label: 'Voided' }]
+  const validationErrors = [
+    !fCustomer ? 'Customer is required.' : '',
+    !fMode ? 'Payment mode is required.' : '',
+    appliedLines.length === 0 ? 'At least one invoice application or customer advance is required.' : '',
+    appliedLines.some(line => line.line_type === 'invoice_application' && line.payment_amount + line.cwt_amount > line.balance_due + 0.005) ? 'An application exceeds the invoice open balance.' : '',
+    appliedLines.some(line => line.cwt_amount > 0 && !line.atc_code_id) ? 'ATC code is required for every CWT amount.' : '',
+    appliedLines.some(line => line.cwt_amount > 0 && line.cwt_tax_base <= 0) ? 'CWT tax base must be greater than zero.' : '',
+  ].filter(Boolean)
+
   return (
-    <div>
-      {/* Toolbar */}
-      <div className={transactionHeaderClass('sales')}>
-        <button onClick={() => setMode('list')} className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-900">
-          <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M15 18l-6-6 6-6" /></svg>
-          Receipts
-        </button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-mono font-semibold text-gray-900">{editDoc?.receipt_number || 'New Receipt'}</span>
-        {editDoc && <StatusBadge status={statusMap[editDoc.status]} label={editDoc.status.charAt(0).toUpperCase() + editDoc.status.slice(1)} />}
-        <div className="flex-1" />
-        {error && <span className="text-xs text-red-600 font-medium">{error}</span>}
-        {canEdit && <>
-          <button onClick={() => save('draft')} disabled={saving || readiness.blockers.length > 0}
-            className="px-3 py-1.5 border border-gray-300 rounded text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50">
-            {saving ? 'Saving…' : 'Save Draft'}
-          </button>
-          <button onClick={() => save('posted')} disabled={saving || readiness.blockers.length > 0}
-            className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
-            Post Receipt
-          </button>
-        </>}
-        {editDoc?.status === 'posted' && (
-          <button onClick={doBounce} disabled={saving}
-            className="px-3 py-1.5 border border-red-300 text-red-700 rounded text-sm hover:bg-red-50 font-medium">
-            Mark Bounced
-          </button>
-        )}
-      </div>
-
-      {readiness.blockers.length > 0 && (
-        <div className="px-5 py-3 border-b border-gray-100 bg-white">
-          <SetupReadinessBanner readiness={readiness} />
-        </div>
-      )}
-
-      <div className="divide-y divide-gray-200">
-        {/* Header */}
-        <div className="bg-white px-5 py-4">
-          <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Receipt Header</div>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-5 gap-y-3">
-            <div>
-              <label className={lbl}>Receipt Number</label>
-              <div className={ro}>{editDoc?.receipt_number || 'Auto-assigned on save'}</div>
-            </div>
-            <div>
-              <label className={lbl}>Date <span className="text-red-500">*</span></label>
-              <input type="date" value={fDate} onChange={e => setFDate(e.target.value)}
-                disabled={readOnly} className={readOnly ? ro : inp} />
-            </div>
-            <div>
-              <label className={lbl}>Branch</label>
-              <select value={fBranch} onChange={e => setFBranch(e.target.value)}
-                disabled={readOnly} className={readOnly ? ro : inp}>
-                <option value="">Select branch…</option>
-                {branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={lbl}>Customer <span className="text-red-500">*</span></label>
-              {readOnly ? <div className={ro}>{fCustomerName}</div> : (
-                <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className={inp}>
-                  <option value="">Select customer…</option>
-                  {customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Customer TIN</label>
-              <div className={ro}>{fCustomerTIN || '—'}</div>
-            </div>
-            <div>
-              <label className={lbl}>Payment Mode <span className="text-red-500">*</span></label>
-              {readOnly ? (
-                <div className={ro}>{paymentModes.find(p => p.id === fMode)?.name || '—'}</div>
-              ) : (
-                <select value={fMode} onChange={e => setFMode(e.target.value)} className={inp}>
-                  <option value="">Select mode…</option>
-                  {paymentModes.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Reference No. (Check / Bank Trace)</label>
-              {readOnly ? <div className={ro}>{fRef || '—'}</div> : (
-                <input value={fRef} onChange={e => setFRef(e.target.value)} className={inp} placeholder="Check number or bank trace…" />
-              )}
-            </div>
-            <div>
-              <label className={lbl}>Deposit to Account</label>
-              {readOnly ? (
-                <div className={ro}>{bankAccounts.find(a => a.id === fBankAccount)?.account_name || '—'}</div>
-              ) : (
-                <select value={fBankAccount} onChange={e => setFBankAccount(e.target.value)} className={inp}>
-                  <option value="">Select account…</option>
-                  {bankAccounts.map(a => <option key={a.id} value={a.id}>{a.account_code} – {a.account_name}</option>)}
-                </select>
-              )}
-            </div>
-            <div className="col-span-2 md:col-span-3 lg:col-span-4">
-              <label className={lbl}>Remarks</label>
-              {readOnly ? <div className={ro}>{fRemarks || '—'}</div> : (
-                <textarea value={fRemarks} onChange={e => setFRemarks(e.target.value)}
-                  rows={2} className={inp + ' resize-none'} />
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Invoice Application Table */}
-        <div className="bg-white">
-          <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-            <div>
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Invoice Application</span>
-              {fCustomer && !readOnly && (
-                <span className="ml-3 text-xs text-gray-400">
-                  {openInvoicesLoading ? 'Loading open invoices…' :
-                    lines.filter(l => l.line_type === 'invoice_application').length === 0 ? 'No open invoices for this customer' :
-                    `${lines.filter(l => l.line_type === 'invoice_application').length} open invoice${lines.filter(l => l.line_type === 'invoice_application').length !== 1 ? 's' : ''}`}
-                </span>
-              )}
-            </div>
-            {!fCustomer && !readOnly ? (
-              <span className="text-xs text-gray-400">Select a customer to see open invoices</span>
-            ) : !readOnly ? (
-              <button onClick={addCustomerAdvanceLine}
-                className="text-xs font-medium text-gray-500 hover:text-gray-900">
-                + Add Customer Advance
-              </button>
-            ) : null}
-          </div>
-
-          {lines.length === 0 && !openInvoicesLoading ? (
-            <div className="py-10 text-center text-sm text-gray-400">
-              {fCustomer ? 'No open invoices found for this customer. Add a customer advance if money was received before invoicing.' : 'Select a customer above to load open invoices.'}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    {['SI Number','SI Date','Original Amount','Balance Due','Payment Amount','CWT Base (net of VAT)','CWT (2307)','ATC Code','Forex Adj.','Remaining After'].map(h => (
-                      <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap last:text-right">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {lines.map(l => {
-                    const isAdvance = l.line_type === 'customer_advance'
-                    const remaining = isAdvance ? 0 : l.balance_due - l.payment_amount - l.cwt_amount - l.forex_adjustment
-                    const isOver = !isAdvance && l.payment_amount + l.cwt_amount > l.balance_due + 0.005
-                    return (
-                      <tr key={l._key} className={`hover:bg-gray-50 ${isOver ? 'bg-red-50/30' : ''}`}>
-                        <td className="px-4 py-2.5 font-mono text-xs font-semibold text-gray-900 whitespace-nowrap">
-                          <span>{l.si_number}</span>
-                          {!readOnly && isAdvance && (
-                            <button onClick={() => setLines(prev => prev.filter(row => row._key !== l._key))}
-                              className="ml-2 text-[10px] font-sans font-medium text-gray-400 hover:text-red-600">
-                              Remove
-                            </button>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{isAdvance ? '—' : <DateCell date={l.si_date} />}</td>
-                        <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums text-gray-600">{isAdvance ? '—' : fmt(l.original_amount)}</td>
-                        <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-semibold text-gray-900">{isAdvance ? '—' : fmt(l.balance_due)}</td>
-                        <td className="px-4 py-2.5">
-                          {readOnly ? (
-                            <span className="font-mono text-xs tabular-nums text-gray-700">{fmt(l.payment_amount)}</span>
-                          ) : (
-                            <input type="number" min={0} step="any"
-                              value={l.payment_amount || ''}
-                              onChange={e => setLineField(l._key, 'payment_amount', parseFloat(e.target.value) || 0)}
-                              className="w-28 border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
-                              placeholder="0.00" />
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {readOnly ? (
-                            <span className="font-mono text-xs tabular-nums text-gray-500">{l.cwt_amount > 0 ? fmt(l.cwt_tax_base) : '—'}</span>
-                          ) : (
-                            <input type="number" min={0} step="any"
-                              value={l.cwt_tax_base || ''}
-                              onChange={e => setLineField(l._key, 'cwt_tax_base', parseFloat(e.target.value) || 0)}
-                              className="w-28 border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
-                              placeholder="0.00" />
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {readOnly ? (
-                            <span className="font-mono text-xs tabular-nums text-gray-500">{fmt(l.cwt_amount)}</span>
-                          ) : (() => {
-                            const atc = atcCodes.find(a => a.id === l.atc_code_id)
-                            const expected = atc && l.cwt_tax_base > 0 ? round2(l.cwt_tax_base * atc.rate / 100) : null
-                            const mismatch = expected !== null && l.cwt_amount > 0 && Math.abs(expected - l.cwt_amount) > 0.02
-                            return (
-                              <div>
-                                <input type="number" min={0} step="any"
-                                  value={l.cwt_amount || ''}
-                                  onChange={e => setLineField(l._key, 'cwt_amount', parseFloat(e.target.value) || 0)}
-                                  className={`w-24 border rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900 ${mismatch && !l.cwt_variance_reason ? 'border-amber-400 bg-amber-50/40' : 'border-gray-300'}`}
-                                  placeholder="0.00" />
-                                {mismatch && (
-                                  <select
-                                    value={l.cwt_variance_reason}
-                                    onChange={e => setLineVarianceReason(l._key, e.target.value)}
-                                    className="mt-1 w-24 border border-amber-300 rounded px-1 py-0.5 text-[10px] focus:outline-none"
-                                    title={`Expected ${fmt(expected!)} at ${atc!.rate}% of ${fmt(l.cwt_tax_base)}`}>
-                                    <option value="">Variance reason…</option>
-                                    {CWT_VARIANCE_REASONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
-                                  </select>
-                                )}
-                              </div>
-                            )
-                          })()}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {l.cwt_amount > 0 ? (
-                            readOnly ? (
-                              <span className="font-mono text-xs text-gray-600">
-                                {atcCodes.find(a => a.id === l.atc_code_id)?.code || '—'}
-                              </span>
-                            ) : (
-                              <select
-                                value={l.atc_code_id || ''}
-                                onChange={e => setLineAtc(l._key, e.target.value || null)}
-                                className="w-28 border border-gray-300 rounded px-1.5 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                                <option value="">Select…</option>
-                                {atcCodes.map(a => (
-                                  <option key={a.id} value={a.id}>{a.code}</option>
-                                ))}
-                              </select>
-                            )
-                          ) : (
-                            <span className="text-xs text-gray-300">—</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-2.5">
-                          {readOnly ? (
-                            <span className="font-mono text-xs tabular-nums text-gray-500">{fmt(l.forex_adjustment)}</span>
-                          ) : (
-                            <input type="number" step="any"
-                              value={l.forex_adjustment || ''}
-                              onChange={e => setLineField(l._key, 'forex_adjustment', parseFloat(e.target.value) || 0)}
-                              className="w-24 border border-gray-300 rounded px-2 py-1 text-xs text-right font-mono focus:outline-none focus:ring-1 focus:ring-gray-900"
-                              placeholder="0.00" />
-                          )}
-                        </td>
-                        <td className={`px-4 py-2.5 text-right font-mono text-xs tabular-nums ${remaining < -0.005 ? 'text-red-700 font-semibold' : 'text-gray-600'}`}>
-                          {isAdvance ? '—' : fmt(Math.max(0, remaining))}
-                          {isOver && <span className="ml-1 text-red-500 text-[10px]">Exceeds balance</span>}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Summary */}
-        <div className="bg-white px-5 py-4 flex justify-end">
-          <div className="w-64 divide-y divide-gray-100">
-            <div className="flex items-center justify-between py-1.5">
-              <span className="text-xs text-gray-500">Total Payment Applied</span>
-              <span className="text-xs font-mono tabular-nums text-gray-700">{fmt(totalPayment)}</span>
-            </div>
-            <div className="flex items-center justify-between py-1.5">
-              <span className="text-xs text-gray-500">Total CWT (2307) Applied</span>
-              <span className="text-xs font-mono tabular-nums text-gray-700">{fmt(totalCWT)}</span>
-            </div>
-            <div className="flex items-center justify-between py-2.5">
-              <span className="text-sm font-semibold text-gray-900">Total Collected</span>
-              <span className="text-sm font-mono tabular-nums font-semibold text-gray-900">{fmt(totalPayment + totalCWT)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="px-5 py-4 bg-gray-50 border-t border-gray-100">
-          <GLImpactPanel
-            companyId={companyId}
-            sourceDocType="OR"
-            sourceDocId={editDoc?.id}
-            previewRows={glImpactRows}
-          />
-        </div>
-
-        {editDoc?.id && (
-          <div className="px-5 py-4 bg-gray-50 border-t border-gray-100 space-y-3">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {auditFacts.map(fact => (
-                  <div key={fact.label}>
-                    <div className="text-[10px] uppercase tracking-wide text-gray-400 mb-1">{fact.label}</div>
-                    <div className="text-xs font-medium text-gray-700">{fact.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <AuditTrailSection tableName="receipts" recordId={editDoc.id} />
-          </div>
-        )}
-
-        {editDoc?.posted_at && (
-          <div className="bg-gray-50 px-5 py-3">
-            <span className="text-xs text-gray-400">Posted {new Date(editDoc.posted_at).toLocaleString('en-PH')}</span>
-          </div>
-        )}
-      </div>
-    </div>
+    <TransactionWorkspace
+      title="Official Receipt"
+      documentNo={editDoc?.receipt_number}
+      status={receiptStatus}
+      statusLabel={receiptStatus}
+      family="sales"
+      identity={{ name: fCustomerName || selectedCustomer?.registered_name || 'Customer not selected', secondary: fCustomerTIN || undefined }}
+      metrics={[
+        { label: 'Cash Received', value: `₱${fmt(totalPayment)}`, emphasis: true },
+        { label: 'CWT', value: `₱${fmt(totalCWT)}` },
+        { label: 'Total Applied', value: `₱${fmt(totalPayment + totalCWT)}`, emphasis: true },
+      ]}
+      meta={[
+        { label: 'Mode', value: readOnly ? 'Read only' : 'Editable', tone: readOnly ? 'warning' : 'info' },
+        { label: 'Posting', value: editDoc?.posted_at ? 'Posted' : 'Not posted', tone: editDoc?.posted_at ? 'success' : 'neutral' },
+      ]}
+      actions={[
+        ...(canEdit ? [
+          { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: () => save('draft'), disabled: saving || readiness.blockers.length > 0 },
+          { key: 'post', label: saving ? 'Posting…' : 'Post Receipt', onClick: () => save('posted'), disabled: saving || readiness.blockers.length > 0, variant: 'primary' as const },
+        ] : []),
+        ...(editDoc?.status === 'posted' ? [{ key: 'bounce', label: 'Mark Bounced', onClick: doBounce, disabled: saving, variant: 'danger' as const, group: 'more' as const }] : []),
+      ]}
+      workflow={{ steps: workflowSteps, currentKey: receiptStatus }}
+      cards={[
+        { title: 'Document Information', content: <div className="grid gap-3 sm:grid-cols-2"><label className={lbl}>Receipt Date<input type="date" value={fDate} onChange={event => setFDate(event.target.value)} disabled={readOnly} className={`${readOnly ? ro : inp} mt-1`} /></label><label className={lbl}>Branch<select value={fBranch} onChange={event => setFBranch(event.target.value)} disabled={readOnly} className={`${readOnly ? ro : inp} mt-1`}><option value="">Select branch…</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.branch_code} – {branch.branch_name}</option>)}</select></label><div><div className="pxl-field-label">Receipt Number</div><div className="pxl-body-text mt-1 font-mono">{editDoc?.receipt_number || 'Generated on save'}</div></div><div><div className="pxl-field-label">Lock State</div><div className="pxl-body-text mt-1">{receiptStatus === 'draft' ? 'Editable draft' : 'Lifecycle controlled'}</div></div></div> },
+        { title: 'Customer Information', content: <div className="grid gap-3 sm:grid-cols-2"><label className={`${lbl} sm:col-span-2`}>Customer{readOnly ? <div className={`${ro} mt-1`}>{fCustomerName}</div> : <select value={fCustomer} onChange={event => onCustomerChange(event.target.value)} className={`${inp} mt-1`}><option value="">Select customer…</option>{customers.map(customer => <option key={customer.id} value={customer.id}>{customer.registered_name}</option>)}</select>}</label><div><div className="pxl-field-label">Customer TIN</div><div className="pxl-body-text mt-1 font-mono">{fCustomerTIN || '—'}</div></div><div><div className="pxl-field-label">CWT Profile</div><div className="pxl-body-text mt-1">{selectedCustomer?.is_subject_to_cwt ? 'Subject to CWT' : 'Not subject / snapshot only'}</div></div></div> },
+        { title: 'Payment Information', content: <div className="grid gap-3 sm:grid-cols-2"><label className={lbl}>Payment Mode{readOnly ? <div className={`${ro} mt-1`}>{selectedPaymentMode?.name || '—'}</div> : <select value={fMode} onChange={event => setFMode(event.target.value)} className={`${inp} mt-1`}><option value="">Select mode…</option>{paymentModes.map(paymentMode => <option key={paymentMode.id} value={paymentMode.id}>{paymentMode.name}</option>)}</select>}</label><label className={lbl}>Reference / Check #{readOnly ? <div className={`${ro} mt-1`}>{fRef || '—'}</div> : <input value={fRef} onChange={event => setFRef(event.target.value)} className={`${inp} mt-1`} />}</label><label className={`${lbl} sm:col-span-2`}>Deposit Account{readOnly ? <div className={`${ro} mt-1`}>{selectedBankAccount ? `${selectedBankAccount.account_code} – ${selectedBankAccount.account_name}` : '—'}</div> : <select value={fBankAccount} onChange={event => setFBankAccount(event.target.value)} className={`${inp} mt-1`}><option value="">Select account…</option>{bankAccounts.map(account => <option key={account.id} value={account.id}>{account.account_code} – {account.account_name}</option>)}</select>}</label></div> },
+      ]}
+      tabBadges={{ lines: lines.length }}
+      tabContent={{
+        lines: <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><div className="flex items-center justify-between border-b border-[var(--pxl-border-medium)] px-3 py-2"><div><h2 className="pxl-section-title">Applications & Advances</h2>{openInvoicesLoading && <span className="pxl-caption">Loading open invoices…</span>}</div>{!readOnly && fCustomer && <button onClick={addCustomerAdvanceLine} className="pxl-button pxl-button--text">+ Add Customer Advance</button>}</div>{lines.length === 0 ? <TransactionEmptyState>{fCustomer ? 'No open invoices found. Add a customer advance when applicable.' : 'Select a customer to load open invoices.'}</TransactionEmptyState> : <table className="pxl-data-grid w-full text-xs"><thead><tr>{['Source Document', 'Date', 'Original', 'Open Balance', 'Payment', 'CWT Base', 'CWT', 'ATC', 'Forex', 'Remaining'].map(label => <th key={label} className={['Original', 'Open Balance', 'Payment', 'CWT Base', 'CWT', 'Forex', 'Remaining'].includes(label) ? 'text-right' : 'text-left'}>{label}</th>)}</tr></thead><tbody>{lines.map(line => { const isAdvance = line.line_type === 'customer_advance'; const remaining = isAdvance ? 0 : line.balance_due - line.payment_amount - line.cwt_amount - line.forex_adjustment; const atc = atcCodes.find(code => code.id === line.atc_code_id); const expected = atc && line.cwt_tax_base > 0 ? round2(line.cwt_tax_base * atc.rate / 100) : null; const mismatch = expected !== null && line.cwt_amount > 0 && Math.abs(expected - line.cwt_amount) > 0.02; return <tr key={line._key}><td className="font-mono font-semibold">{line.si_number}{!readOnly && isAdvance && <button onClick={() => setLines(current => current.filter(row => row._key !== line._key))} className="ml-2 text-red-600">Remove</button>}</td><td>{isAdvance ? '—' : <DateCell date={line.si_date} />}</td><td className="text-right font-mono">{isAdvance ? '—' : fmt(line.original_amount)}</td><td className="text-right font-mono">{isAdvance ? '—' : fmt(line.balance_due)}</td><td className="text-right">{readOnly ? <span className="font-mono">{fmt(line.payment_amount)}</span> : <input type="number" min={0} value={line.payment_amount || ''} onChange={event => setLineField(line._key, 'payment_amount', Number(event.target.value) || 0)} className="w-24 rounded border px-2 py-1 text-right font-mono" />}</td><td className="text-right">{readOnly ? <span className="font-mono">{line.cwt_amount > 0 ? fmt(line.cwt_tax_base) : '—'}</span> : <input type="number" min={0} value={line.cwt_tax_base || ''} onChange={event => setLineField(line._key, 'cwt_tax_base', Number(event.target.value) || 0)} className="w-24 rounded border px-2 py-1 text-right font-mono" />}</td><td className="text-right">{readOnly ? <span className="font-mono">{fmt(line.cwt_amount)}</span> : <div><input type="number" min={0} value={line.cwt_amount || ''} onChange={event => setLineField(line._key, 'cwt_amount', Number(event.target.value) || 0)} className={`w-20 rounded border px-2 py-1 text-right font-mono ${mismatch && !line.cwt_variance_reason ? 'border-amber-400 bg-amber-50' : ''}`} />{mismatch && <select value={line.cwt_variance_reason} onChange={event => setLineVarianceReason(line._key, event.target.value)} className="mt-1 w-24 rounded border border-amber-300 text-[10px]"><option value="">Variance…</option>{CWT_VARIANCE_REASONS.map(reasonItem => <option key={reasonItem.value} value={reasonItem.value}>{reasonItem.label}</option>)}</select>}</div>}</td><td>{line.cwt_amount > 0 ? readOnly ? atc?.code || '—' : <select value={line.atc_code_id || ''} onChange={event => setLineAtc(line._key, event.target.value || null)} className="w-24 rounded border px-1.5 py-1"><option value="">Select…</option>{atcCodes.map(code => <option key={code.id} value={code.id}>{code.code}</option>)}</select> : '—'}</td><td className="text-right">{readOnly ? <span className="font-mono">{fmt(line.forex_adjustment)}</span> : <input type="number" value={line.forex_adjustment || ''} onChange={event => setLineField(line._key, 'forex_adjustment', Number(event.target.value) || 0)} className="w-20 rounded border px-2 py-1 text-right font-mono" />}</td><td className={`text-right font-mono ${remaining < -0.005 ? 'text-red-700' : ''}`}>{isAdvance ? '—' : fmt(Math.max(remaining, 0))}</td></tr>})}</tbody></table>}</div>,
+        financial: <div className="ml-auto grid max-w-lg grid-cols-2 gap-2"><span className="text-gray-600">Payment Amount</span><span className="text-right font-mono">₱{fmt(totalPayment)}</span><span className="text-gray-600">CWT Applied</span><span className="text-right font-mono">₱{fmt(totalCWT)}</span><span className="text-gray-600">Applied Amount</span><span className="text-right font-mono">₱{fmt(totalPayment + totalCWT)}</span><span className="text-gray-600">Customer Advance</span><span className="text-right font-mono">₱{fmt(advanceGross)}</span><span className="pxl-section-title border-t pt-2">Cash / Bank Amount</span><span className="border-t pt-2 text-right font-mono font-bold">₱{fmt(totalPayment)}</span></div>,
+        gl: <GLImpactPanel companyId={companyId} sourceDocType="OR" sourceDocId={editDoc?.id} previewRows={glImpactRows} />,
+        tax: appliedLines.some(line => line.cwt_amount > 0) ? <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full"><thead><tr>{['Source Document', 'ATC', 'CWT Base', 'Rate', 'CWT Amount', 'Timing'].map(label => <th key={label} className={['CWT Base', 'Rate', 'CWT Amount'].includes(label) ? 'text-right' : 'text-left'}>{label}</th>)}</tr></thead><tbody>{appliedLines.filter(line => line.cwt_amount > 0).map(line => { const atc = atcCodes.find(code => code.id === line.atc_code_id); return <tr key={line._key}><td className="font-mono">{line.si_number}</td><td>{atc?.code || 'Missing'}</td><td className="text-right font-mono">₱{fmt(line.cwt_tax_base)}</td><td className="text-right font-mono">{atc ? `${atc.rate}%` : '—'}</td><td className="text-right font-mono">₱{fmt(line.cwt_amount)}</td><td>Recognized on receipt posting</td></tr>})}</tbody></table></div> : <TransactionEmptyState>No CWT is applied to this Official Receipt.</TransactionEmptyState>,
+        validation: <div className="space-y-2">{readiness.blockers.length > 0 && <SetupReadinessBanner readiness={readiness} />}{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{validationErrors.length > 0 ? validationErrors.map(message => <div key={message} className="pxl-validation-message border border-orange-200 bg-orange-50 text-orange-800">{message}</div>) : <div className="pxl-validation-message border border-green-200 bg-green-50 text-green-800">Receipt applications, tax data, and posting references are ready.</div>}</div>,
+        workflow: <ol className="grid gap-2 sm:grid-cols-4">{workflowSteps.map(step => <li key={step.key} className={`pxl-transaction-card p-3 text-xs font-semibold ${step.key === receiptStatus ? 'ring-2 ring-[var(--pxl-transaction-accent)]' : ''}`}>{step.label}</li>)}</ol>,
+        approval: <div className="grid gap-3 sm:grid-cols-3"><div><div className="pxl-field-label">Approval Status</div><div className="pxl-body-text mt-1">{receiptStatus === 'draft' ? 'Posting authorization required' : receiptStatus === 'posted' ? 'Posting completed' : receiptStatus}</div></div><div><div className="pxl-field-label">Control</div><div className="pxl-body-text mt-1">Permission, period, and setup readiness</div></div><div><div className="pxl-field-label">Next Action</div><div className="pxl-body-text mt-1">{receiptStatus === 'draft' ? 'Post Receipt' : receiptStatus === 'posted' ? 'Mark Bounced when applicable' : 'No action available'}</div></div></div>,
+        audit: editDoc?.id ? <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-4">{auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div><AuditTrailSection tableName="receipts" recordId={editDoc.id} /></div> : <TransactionEmptyState>Audit history begins after the Official Receipt is saved.</TransactionEmptyState>,
+        related: appliedLines.some(line => line.invoice_id) ? <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full"><thead><tr><th className="text-left">Relationship</th><th className="text-left">Document</th><th className="text-right">Applied</th><th className="text-left">Open</th></tr></thead><tbody>{appliedLines.filter(line => line.invoice_id).map(line => <tr key={line._key}><td>Applies to</td><td className="font-mono font-semibold">{line.si_number}</td><td className="text-right font-mono">₱{fmt(line.payment_amount + line.cwt_amount)}</td><td><Link to={`/sales-invoices/${line.invoice_id}`} className="text-blue-700 hover:underline">Sales Invoice</Link></td></tr>)}</tbody></table></div> : <TransactionEmptyState>No Sales Invoice is linked; the receipt contains customer-advance content only.</TransactionEmptyState>,
+        party: selectedCustomer ? <dl className="grid gap-3 sm:grid-cols-3"><div><dt className="pxl-field-label">Customer</dt><dd className="pxl-body-text mt-1">{selectedCustomer.registered_name}</dd></div><div><dt className="pxl-field-label">TIN</dt><dd className="pxl-body-text mt-1 font-mono">{composePhTin(selectedCustomer.tin, selectedCustomer.tin_branch_code)}</dd></div><div><dt className="pxl-field-label">Registered Address</dt><dd className="pxl-body-text mt-1">{selectedCustomer.registered_address || '—'}</dd></div></dl> : <TransactionEmptyState>Select a customer to see related-party information.</TransactionEmptyState>,
+        activity: <div className="grid gap-3 sm:grid-cols-4">{auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div>,
+        notes: <label className={lbl}>Receipt Remarks<textarea value={fRemarks} onChange={event => setFRemarks(event.target.value)} disabled={readOnly} rows={5} className={`${readOnly ? ro : inp} mt-1 resize-none`} /></label>,
+        system: <SystemMetadataPanel facts={[
+          { label: 'Internal ID', value: editDoc?.id || 'Assigned when saved', hint: 'Transaction identity' },
+          { label: 'Document Number', value: editDoc?.receipt_number || 'Generated from number series', hint: 'Official Receipt number' },
+          { label: 'Company ID', value: companyId || '—', hint: 'Tenant boundary' },
+          { label: 'Branch', value: selectedBranch ? `${selectedBranch.branch_code} — ${selectedBranch.branch_name}` : fBranch || '—', hint: 'Posting context' },
+          { label: 'Payment Mode', value: selectedPaymentMode?.name || 'Not selected', hint: 'Settlement method' },
+          { label: 'Bank / Cash Account', value: selectedBankAccount ? `${selectedBankAccount.account_code} — ${selectedBankAccount.account_name}` : 'Default cash account', hint: 'Posting source' },
+          { label: 'Created', value: formatDateTime(editDoc?.created_at), hint: 'Audit metadata' },
+          { label: 'Updated', value: formatDateTime(editDoc?.updated_at), hint: 'Audit metadata' },
+          { label: 'Posted', value: formatDateTime(editDoc?.posted_at), hint: 'Lifecycle metadata' },
+        ]} />,
+      }}
+      emptyTabMessages={{ attachments: 'No attachments have been added to this Official Receipt.' }}
+      sidebarPanels={[
+        { key: 'application', title: 'Application Summary', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Applied</span><span className="font-mono text-xs">₱{fmt(totalPayment + totalCWT)}</span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Advance</span><span className="font-mono text-xs">₱{fmt(advanceGross)}</span></div></div> },
+        { key: 'payment', title: 'Payment', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Cash Received</span><span className="font-mono text-sm font-bold">₱{fmt(totalPayment)}</span></div><div className="pxl-caption">{selectedPaymentMode?.name || 'Payment mode not selected'}</div></div> },
+        { key: 'tax', title: 'Tax', content: <div className="flex justify-between gap-3"><span className="pxl-field-label">CWT</span><span className="font-mono text-xs">₱{fmt(totalCWT)}</span></div> },
+        { key: 'gl', title: 'GL Preview', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Debit</span><span className="font-mono text-xs">₱{fmt(glImpactRows.reduce((sum, row) => sum + row.debit, 0))}</span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Credit</span><span className="font-mono text-xs">₱{fmt(glImpactRows.reduce((sum, row) => sum + row.credit, 0))}</span></div></div> },
+        { key: 'customer', title: 'Customer', content: <div><div className="text-xs font-semibold">{fCustomerName || selectedCustomer?.registered_name || 'Not selected'}</div><div className="pxl-caption mt-1 font-mono">{fCustomerTIN || 'No TIN'}</div></div> },
+      ]}
+      footer={<span>Created {formatDateTime(editDoc?.created_at)} · Updated {formatDateTime(editDoc?.updated_at)} · {receiptStatus === 'draft' ? 'Editable draft' : 'Frozen by lifecycle controls'}</span>}
+      onBack={() => setMode('list')}
+      backLabel="Receipts"
+    />
   )
 }

@@ -1072,6 +1072,78 @@ Scenario: the canonical demo dataset is loaded after the controlled reset and va
 | 7 | Attempt Sales Invoice oversell | SI can be saved, but approval readiness rejects warehouse-level oversell with an insufficient-stock error and leaves the invoice draft/unposted. |
 | 8 | Inspect accounting balance | Posted journals remain balanced at header and line level; primary VAT trading company trial-balance delta is zero. |
 
+Pre-enrichment hosted read-only verification on 2026-07-16 against project `bskjkogijpbhukjkagfj` confirmed the original seeded invariant state without mutating hosted data: 12 canonical posted journals / 0 unbalanced, VAT-exclusive and VAT-inclusive SI math, CWT recognized at OR timing, VB input VAT/EWT, 0 negative stock rows, 0 stock-balance-vs-movement mismatches, AR balance 2,688 across 2 open ABC invoices when evaluated under the demo user's JWT, AP balance 1,664, source-document relationships, and posted status/posting indicators.
+
+Final Phase 3 hosted verification after idempotent incremental enrichment confirmed 48 canonical journals / 0 unbalanced, zero AR/AP reconciliation variance for all five companies, 0 negative-stock rows, 0 stock-balance-vs-movement mismatches, and company AR balances of 3,584.80 / 16,800 / 2,650 / 50,000 / 42,560 for ABC / Bayani / Golden / Northstar / Prime. The corresponding AP balances are 1,440 / 13,310 / 3,000 / 0 / 43,400. This final state is guarded by `PHASE3-CANONICAL-IMPLEMENTATION-001` below.
+
+## COMPANY-RLS-MEMBERSHIP-001 - Company Selector and Cross-Company RLS Scope
+
+Status: Executed Passing (Phase 3, 2026-07-16) in `supabase/tests/056_company_rls_membership_scope_test.sql`, 11 assertions locally and 11 assertions against hosted in a rollback transaction. Related findings: PXL-AUD-062 and PXL-AUD-061.
+
+Scenario: one authenticated owner creates an allowed company, another authenticated owner creates a hidden company, and the first user queries company selector, branch, customer, and Sales Invoice surfaces under RLS.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Query `companies` as the allowed-company owner | Only the allowed company is visible, matching the company selector's membership scope. |
+| 2 | Query the hidden company directly | The non-member company is invisible. |
+| 3 | Attempt to update the hidden company | No hidden company row is targeted or changed. |
+| 4 | Query branches and customers | Only allowed-company branch and customer rows are visible. |
+| 5 | Query Sales Invoices | Only allowed-company transaction rows are visible. |
+| 6 | Query companies as a user with no memberships | Zero companies are visible. |
+
+## PHASE3-CANONICAL-IMPLEMENTATION-001 - Differentiated Multi-Company ERP Regression
+
+Status: Executed Passing (Phase 3, 2026-07-16) in `supabase/tests/057_phase3_canonical_implementation_test.sql`, 38 assertions locally and 38 against hosted. Related findings: PXL-AUD-057, PXL-AUD-059, PXL-AUD-064, and PXL-AUD-067.
+
+Scenario: the base canonical seed is enriched idempotently with differentiated retail, wholesale, OPC service, VAT advisory, and partnership mixed-operations activity.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Apply `canonical_phase3_enrichment.sql` twice | No duplicate business scenarios; stable references and governed official numbers remain intact. |
+| 2 | Inspect all five setup profiles | Legal/tax setup, branch, fiscal periods, COA, number series, compliance, ATC/VAT applicability, and GL config are ready; non-VAT VAT steps are not applicable. |
+| 3 | Inspect Golden and Bayani inventory companies | Opening, receipt, issue, transfer/adjustment/count movements reconcile to stock with no negative warehouse quantity. |
+| 4 | Inspect Northstar and Prime service companies | Service invoices/VBs/JEs post without fake warehouse or inventory requirements. |
+| 5 | Inspect ABC lifecycle/corrections | Quotation/SO/DR/SI/OR chain, CM, VC application, cash purchase, count, and SI void/reversal remain source-linked and balanced. |
+| 6 | Reconcile tax | VAT-inclusive/exclusive, non-VAT, expected/actual CWT, and source EWT rows reconcile to document and GL evidence. |
+| 7 | Reconcile AR/AP | All five company subledgers agree with GL after including original reversed journals and counter-journals. |
+| 8 | Inspect posted documents | Posted sources carry posting/audit indicators and remain immutable. |
+
+## CANONICAL-DEMO-VOLUME-001 - Editable High-Volume Transaction Work Queue
+
+Status: Executed Passing (2026-07-18) in `supabase/tests/058_canonical_demo_volume_test.sql`, 16 assertions locally after the atomic canonical rebuild. Hosted execution of `canonical_demo_volume.sql` also completed its inline count assertions; read-only hosted verification confirmed the same counts. The linked pgTAP CLI connector was not counted because its temporary login role lacked direct table permissions.
+
+Scenario: the primary VAT trading company receives additive list-scale masters and draft documents without changing its governed posted accounting evidence.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Apply `canonical_demo_volume.sql` twice | Stable codes/references remain idempotent with 40 additional customers, 30 suppliers, 12 inventory items, and 12 service items. |
+| 2 | Inspect Sales Invoices | Exactly 60 two-line SIs exist as editable drafts across all three ABC branches, with positive server-computed totals and valid fiscal periods. |
+| 3 | Inspect Purchase Orders | Exactly 30 one-line POs exist as editable drafts against active suppliers and purchase-ready inventory items. |
+| 4 | Inspect Vendor Bills | Exactly 30 one-line VBs exist as editable drafts with positive server-computed totals and valid fiscal periods. |
+| 5 | Inspect inventory setup | Every new inventory item has replenishment controls in all ABC warehouses; no direct stock balance is fabricated. |
+| 6 | Reconcile historical accounting | Draft volume does not change posted accounting evidence; current AR/AP reconciliation remains zero variance for all five companies. |
+| 7 | Inspect company readiness | ABC retains three branches, accounting configuration, compliance profile, active number series, and open fiscal periods so each draft can continue through its governed lifecycle. |
+
+## SI-PREVIEW-PERIOD-PARITY-001 - Locked-Period Sales Invoice Preview
+
+Status: Executed Passing (Phase 3, 2026-07-16) in `supabase/tests/025_posting_preview_invariants_test.sql`, 40/40 locally and 40/40 against hosted after `20260716000005`. Related finding: PXL-AUD-065.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Save and approve an SI in a fiscal period | Preview returns the authoritative saved-document impact without persistence. |
+| 2 | Lock the covering period for a second approved SI | `fn_preview_gl_impact('SI', ...)` raises `No open fiscal period`, matching posting behavior. |
+| 3 | Inspect the rejected preview source | Source remains approved and no JE/tax/inventory rows are written. |
+
+## CAS-HISTORICAL-PACKAGE-001 - Historical Number/Void Evidence
+
+Status: Executed Failing (held-out lane, 2026-07-16) in `supabase/tests/027_cas_end_to_end_controls_test.sql`: 29/31 assertions pass; assertions 29-30 fail. Related findings: PXL-AUD-061 and PXL-AUD-066.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Create, post, and void a July 10 SI; generate reconciled books/DAT evidence later | Source documents, journals, number issuance, void event, books, and export artifacts remain immutable. |
+| 2 | Generate a CAS audit package for July 10 | Package should include the historical number and void rows based on document period. |
+| 3 | Inspect package payload | Current product returns zero number/void rows because it filters those by allocation/occurrence date; keep failing until PXL-AUD-066 is fixed. |
+
 ## CM-VC-OVERAPPLY-001 - Over-Apply Guards Net Applied Credit Memos / Vendor Credits
 
 Status: Executed Passing (session 77, 2026-07-13) in `supabase/tests/035_cm_vc_aware_overapply_test.sql`, 6 assertions. Related findings: PXL-AUD-039.

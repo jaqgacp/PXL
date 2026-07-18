@@ -1,30 +1,9 @@
-# PXL Table Standard
+# PXL Table Standard (Superseded for Transaction Workspaces)
 
-Status: OFFICIAL DATA GRID STANDARD
+**Status:** SUPERSEDED — non-authoritative historical pointer
+**Superseded:** 2026-07-18
+**Superseded by:** `PXL_TRANSACTION_WORKSPACE_STANDARD.md` and `PXL_TRANSACTION_WORKSPACE_PATTERNS.md`
 
-Tables are the primary working surface of the ERP and must feel like enterprise data grids.
+This former table guidance is non-authoritative for transaction workspaces.
 
-## Required Design
-
-- Use `pxl-data-grid`.
-- Slightly darker header background.
-- Strong but subtle header borders.
-- 13px body text.
-- 12px uppercase semi-bold column labels.
-- Consistent row height.
-- Subtle hover state.
-- Selected-row state where rows are selectable or expandable.
-- Sticky headers for long grids.
-- Sticky totals where useful.
-- Right-aligned tabular numeric columns.
-- Left-aligned text columns.
-- Totals rows use stronger background and semi-bold values.
-
-## Interaction
-
-- Column resizing where table width requires it.
-- Saved views for recurring work patterns.
-- Keyboard-friendly filtering and navigation where feasible.
-- Horizontal scrolling for wide accounting grids.
-
-Do not make tables decorative. Optimize for scanning, comparison, and repeated accounting work.
+For transaction layout, visual behavior, components, responsive rules, themes, interaction, and accessibility, read only `PXL_TRANSACTION_WORKSPACE_STANDARD.md`. For permitted transaction-specific content differences, read only `PXL_TRANSACTION_WORKSPACE_PATTERNS.md`.

@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase'
 import type { TablesInsert } from '@/lib/database.types'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type BankRef = { id: string; bank_name: string; account_number: string; account_name: string; gl_account_id: string; opening_balance: number }
 type Recon = {
@@ -201,70 +201,37 @@ export default function BankReconciliationPage() {
   const reconciled = Math.abs(difference) < 0.001
   const years = Array.from({ length: 6 }, (_, i) => new Date().getFullYear() - i)
   return (
-    <div className="flex flex-col h-full">
-      <div className={transactionHeaderClass('banking')}>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">Bank Reconciliation</span>
-        {form?.status && <StatusBadge status={form.status} />}
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          {!ro && <>
-            <button onClick={() => persist(false)} disabled={saving} className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
-            <button onClick={() => { setBusy(true); persist(true) }} disabled={saving || busy || !reconciled} title={reconciled ? '' : 'Difference must be zero to finalize'} className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">Finalize</button>
-          </>}
-        </div>
-      </div>
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-5 grid grid-cols-1 sm:grid-cols-4 gap-4 mb-4">
-          <Field label="Bank Account *"><select disabled={ro || !!form?.id} className={inputCls} value={form?.bank_account_id || ''} onChange={e => pickBank(e.target.value)}>
-            <option value="">— select —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select></Field>
-          <Field label="Month *"><select disabled={ro} className={inputCls} value={form?.recon_month || 1} onChange={e => pickPeriod(form?.recon_year || new Date().getFullYear(), Number(e.target.value))}>
-            {Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{String(m).padStart(2, '0')}</option>)}</select></Field>
-          <Field label="Year *"><select disabled={ro} className={inputCls} value={form?.recon_year || new Date().getFullYear()} onChange={e => pickPeriod(Number(e.target.value), form?.recon_month || 1)}>
-            {years.map(y => <option key={y} value={y}>{y}</option>)}</select></Field>
-          <Field label="Reconciliation Date *"><input type="date" disabled={ro} className={inputCls} value={form?.reconciliation_date || today()} onChange={e => setForm(f => ({ ...f, reconciliation_date: e.target.value }))} /></Field>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-5">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-100 mb-3">Bank Side</h3>
-            <Row label="Bank Statement Balance"><input type="number" disabled={ro} className={numCls} value={form?.bank_statement_balance ?? 0} onChange={e => setForm(f => ({ ...f, bank_statement_balance: parseFloat(e.target.value) || 0 }))} /></Row>
-            <Row label="Add: Deposits in Transit"><div className={`${numCls} bg-gray-50 text-gray-600`}>{fmt(ditTotal)}</div></Row>
-            <Row label="Less: Outstanding Checks"><input type="number" disabled={ro} className={numCls} value={form?.outstanding_checks ?? 0} onChange={e => setForm(f => ({ ...f, outstanding_checks: parseFloat(e.target.value) || 0 }))} /></Row>
-            <Row label="Bank Errors (±)"><input type="number" disabled={ro} className={numCls} value={form?.bank_errors ?? 0} onChange={e => setForm(f => ({ ...f, bank_errors: parseFloat(e.target.value) || 0 }))} /></Row>
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
-              <span className="text-sm font-semibold text-gray-900">Adjusted Bank Balance</span>
-              <span className="font-mono font-bold text-gray-900">{fmt(adjBank)}</span>
-            </div>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg p-5">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest pb-2 border-b border-gray-100 mb-3">Book Side</h3>
-            <Row label="Book Balance (GL)"><div className={`${numCls} bg-gray-50 text-gray-600`}>{fmt(bookBal)}</div></Row>
-            <Row label="Add: Book Adjustments"><input type="number" disabled={ro} className={numCls} value={form?.book_adjustments_add ?? 0} onChange={e => setForm(f => ({ ...f, book_adjustments_add: parseFloat(e.target.value) || 0 }))} /></Row>
-            <Row label="Less: Book Adjustments"><input type="number" disabled={ro} className={numCls} value={form?.book_adjustments_less ?? 0} onChange={e => setForm(f => ({ ...f, book_adjustments_less: parseFloat(e.target.value) || 0 }))} /></Row>
-            <Row label="Book Errors (±)"><input type="number" disabled={ro} className={numCls} value={form?.book_errors ?? 0} onChange={e => setForm(f => ({ ...f, book_errors: parseFloat(e.target.value) || 0 }))} /></Row>
-            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-200">
-              <span className="text-sm font-semibold text-gray-900">Adjusted Book Balance</span>
-              <span className="font-mono font-bold text-gray-900">{fmt(adjBook)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className={`rounded-lg p-5 mb-4 text-center ${reconciled ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-          <div className="text-[10px] font-semibold uppercase tracking-widest text-gray-500">Difference</div>
-          <div className={`text-2xl font-mono font-bold mt-1 ${reconciled ? 'text-green-700' : 'text-red-700'}`}>{fmt(difference)}</div>
-          {reconciled && <div className="text-xs font-semibold text-green-700 mt-1">RECONCILED ✓</div>}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <LegacyTransactionWorkspace title="Bank Reconciliation" family="banking" pattern="C" posting={false}
+      documentNo={form ? `${form.recon_year || ''}-${String(form.recon_month || '').padStart(2, '0')}` : undefined}
+      status={form?.status} identity={form?.bank_accounts?.bank_name}
+      financialFacts={[{ label: 'Adjusted Bank Balance', value: fmt(Number(form?.adjusted_bank_balance || 0)) }, { label: 'Adjusted Book Balance', value: fmt(Number(form?.adjusted_book_balance || 0)) }, { label: 'Difference', value: fmt(difference), hint: reconciled ? 'Reconciled' : 'Must equal zero before completion' }, { label: 'Outstanding Checks', value: fmt(Number(form?.outstanding_checks || 0)) }]}
+      contextFacts={[{ label: 'Bank Account', value: form?.bank_accounts ? `${form.bank_accounts.bank_name} ${form.bank_accounts.account_number}` : 'Not selected' }, { label: 'Reconciliation Date', value: form?.reconciliation_date || 'Not assigned' }, { label: 'Period', value: form ? `${form.recon_month || ''}/${form.recon_year || ''}` : 'Not assigned' }, { label: 'Status', value: form?.status || 'draft' }]}
+      sourceDocId={form?.id} auditTable="bank_reconciliations"
+      actions={[
+        { key: 'cancel', label: 'Cancel', onClick: () => setMode('list'), hidden: ro },
+        { key: 'save', label: saving ? 'Saving…' : 'Save', onClick: () => persist(false), disabled: saving, hidden: ro },
+        { key: 'finalize', label: 'Finalize', onClick: () => { setBusy(true); persist(true) }, disabled: saving || busy || !reconciled, hidden: ro, variant: 'primary', title: reconciled ? undefined : 'Difference must be zero to finalize' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'Reconciliation Date *', card: 0, content: <input type="date" disabled={ro} className={`${inputCls} pxl-input`} value={form?.reconciliation_date || today()} onChange={e => setForm(f => ({ ...f, reconciliation_date: e.target.value }))} /> },
+        { key: 'period', label: 'Period', card: 0, content: <div className="grid grid-cols-2 gap-2"><select disabled={ro} className={`${inputCls} pxl-input`} value={form?.recon_month || 1} onChange={e => pickPeriod(form?.recon_year || new Date().getFullYear(), Number(e.target.value))}>{Array.from({ length: 12 }, (_, i) => i + 1).map(m => <option key={m} value={m}>{String(m).padStart(2, '0')}</option>)}</select><select disabled={ro} className={`${inputCls} pxl-input`} value={form?.recon_year || new Date().getFullYear()} onChange={e => pickPeriod(Number(e.target.value), form?.recon_month || 1)}>{years.map(y => <option key={y} value={y}>{y}</option>)}</select></div> },
+        { key: 'bank', label: 'Bank Account *', card: 1, span: 2, content: <select disabled={ro || !!form?.id} className={`${inputCls} pxl-input`} value={form?.bank_account_id || ''} onChange={e => pickBank(e.target.value)}><option value="">— select —</option>{banks.map(b => <option key={b.id} value={b.id}>{b.bank_name} — {b.account_number}</option>)}</select> },
+        { key: 'status', label: 'Reconciliation Status', card: 1, content: <div className="pxl-readonly-field">{reconciled ? 'Reconciled' : 'Difference remains'}</div> },
+        { key: 'remarks', label: 'Remarks', card: 2, span: 2, content: <input disabled={ro} className={`${inputCls} pxl-input`} value={form?.remarks || ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /> },
+      ]}
+      tabContent={{
+        validation: error ? <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div> : undefined,
+        financial: <div className="space-y-2"><div className="grid grid-cols-1 gap-2 lg:grid-cols-2"><section className="pxl-transaction-card p-3"><h3 className="pxl-section-title mb-2">Bank Side</h3><Row label="Bank Statement Balance"><input type="number" disabled={ro} className={numCls} value={form?.bank_statement_balance ?? 0} onChange={e => setForm(f => ({ ...f, bank_statement_balance: parseFloat(e.target.value) || 0 }))} /></Row><Row label="Add: Deposits in Transit"><div className={`${numCls} bg-gray-50 text-gray-600`}>{fmt(ditTotal)}</div></Row><Row label="Less: Outstanding Checks"><input type="number" disabled={ro} className={numCls} value={form?.outstanding_checks ?? 0} onChange={e => setForm(f => ({ ...f, outstanding_checks: parseFloat(e.target.value) || 0 }))} /></Row><Row label="Bank Errors (±)"><input type="number" disabled={ro} className={numCls} value={form?.bank_errors ?? 0} onChange={e => setForm(f => ({ ...f, bank_errors: parseFloat(e.target.value) || 0 }))} /></Row><div className="mt-2 flex justify-between border-t pt-2 font-semibold"><span>Adjusted Bank Balance</span><span className="font-mono">{fmt(adjBank)}</span></div></section><section className="pxl-transaction-card p-3"><h3 className="pxl-section-title mb-2">Book Side</h3><Row label="Book Balance (GL)"><div className={`${numCls} bg-gray-50 text-gray-600`}>{fmt(bookBal)}</div></Row><Row label="Add: Book Adjustments"><input type="number" disabled={ro} className={numCls} value={form?.book_adjustments_add ?? 0} onChange={e => setForm(f => ({ ...f, book_adjustments_add: parseFloat(e.target.value) || 0 }))} /></Row><Row label="Less: Book Adjustments"><input type="number" disabled={ro} className={numCls} value={form?.book_adjustments_less ?? 0} onChange={e => setForm(f => ({ ...f, book_adjustments_less: parseFloat(e.target.value) || 0 }))} /></Row><Row label="Book Errors (±)"><input type="number" disabled={ro} className={numCls} value={form?.book_errors ?? 0} onChange={e => setForm(f => ({ ...f, book_errors: parseFloat(e.target.value) || 0 }))} /></Row><div className="mt-2 flex justify-between border-t pt-2 font-semibold"><span>Adjusted Book Balance</span><span className="font-mono">{fmt(adjBook)}</span></div></section></div><div className={`pxl-validation-message text-center font-mono font-bold ${reconciled ? 'border border-green-200 bg-green-50 text-green-700' : 'border border-red-200 bg-red-50 text-red-700'}`}>Difference: {fmt(difference)} · {reconciled ? 'RECONCILED' : 'NOT RECONCILED'}</div></div>,
+      }}
+      onBack={() => setMode('list')} backLabel="Bank Reconciliations">
+    <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
             <div className="px-4 py-2.5 border-b border-gray-100 flex justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Outstanding Checks</span>
               <span className="text-xs font-mono text-gray-500">{fmt(outChecks.reduce((s, c) => s + Number(c.net_check_amount), 0))}</span>
             </div>
             {outChecks.length === 0 ? <div className="px-4 py-6 text-xs text-gray-400">No outstanding checks.</div> : (
-              <table className="w-full text-xs"><thead className="bg-gray-50 border-b border-gray-200"><tr>
+              <table className="pxl-data-grid w-full text-xs"><thead className="bg-gray-50 border-b border-gray-200"><tr>
                 {['CV #','Check #','Date','Payee','Amount'].map(h => <th key={h} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 ${h === 'Amount' ? 'text-right' : 'text-left'}`}>{h}</th>)}
               </tr></thead><tbody className="divide-y divide-gray-100">
                 {outChecks.map(c => (<tr key={c.id}>
@@ -282,7 +249,7 @@ export default function BankReconciliationPage() {
               <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Deposits in Transit</span>
               <span className="text-xs font-mono text-gray-500">{fmt(ditTotal)}</span>
             </div>
-            <table className="w-full text-xs"><thead className="bg-gray-50 border-b border-gray-200"><tr>
+            <table className="pxl-data-grid w-full text-xs"><thead className="bg-gray-50 border-b border-gray-200"><tr>
               {['Description','Date','Amount',''].map(h => <th key={h} className={`px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 ${h === 'Amount' ? 'text-right' : 'text-left'}`}>{h}</th>)}
             </tr></thead><tbody className="divide-y divide-gray-100">
               {dits.map(d => (<tr key={d._key}>
@@ -294,19 +261,11 @@ export default function BankReconciliationPage() {
             </tbody></table>
             {!ro && <div className="px-4 py-2 border-t border-gray-100"><button onClick={() => setDits(ls => [...ls, newDIT()])} className="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Deposit</button></div>}
           </div>
-        </div>
-
-        <div className="bg-white border border-gray-200 rounded-lg p-5 mt-4">
-          <Field label="Remarks"><input disabled={ro} className={inputCls} value={form?.remarks || ''} onChange={e => setForm(f => ({ ...f, remarks: e.target.value }))} /></Field>
-        </div>
-      </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return <div className="flex flex-col gap-1"><label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{label}</label>{children}</div>
-}
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="flex justify-between items-center gap-3 py-1"><span className="text-xs text-gray-600 flex-1">{label}</span><div className="w-40">{children}</div></div>
 }

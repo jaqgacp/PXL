@@ -4,8 +4,9 @@ import { useAppCtx } from '@/lib/context'
 import { AuditTrailSection, StatusBadge } from '@/components/ui/shared'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
+import { TransactionWorkspace } from '@/components/document/TransactionWorkspace'
+import { SystemMetadataPanel, TransactionEmptyState } from '@/components/document/TransactionPrimitives'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
-import { transactionHeaderClass } from '@/lib/transactionWorkspace'
 import { normalizePhTin } from '@/lib/philippines'
 
 // ── Types ─────────────────────────────────────────────────────
@@ -13,6 +14,7 @@ type VBStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
 
 type VB = {
   id: string; company_id: string; branch_id: string
+  warehouse_id?: string | null; department_id?: string | null; cost_center_id?: string | null
   rr_id: string | null
   bill_number: string; supplier_invoice_number: string | null
   bill_date: string; due_date: string | null
@@ -47,7 +49,8 @@ type SupplierRef = {
 type ItemRef = {
   id: string; item_code: string; description: string
   uom_id: string; uom_label: string; standard_selling_price: number
-  default_purchase_vat_id: string | null; purchase_account_id: string | null
+  item_type: 'inventory_item' | 'service' | 'non_inventory'; standard_cost: number
+  default_purchase_vat_id: string | null; purchase_account_id: string | null; inventory_account_id: string | null
 }
 
 type VATRef = { id: string; vat_code: string; description: string; vat_classification: 'regular' | 'zero_rated' | 'exempt'; rate: number }
@@ -58,7 +61,9 @@ type VoidReason = { id: string; code: string; description: string }
 type ReceivingReportRef = {
   id: string; rr_number: string; rr_date: string
   supplier_id: string; supplier_name_snapshot: string
+  warehouse_id?: string | null; department_id?: string | null; cost_center_id?: string | null
 }
+type DimensionRef = { id: string; branch_id: string | null; department_id?: string | null; code: string; name: string }
 
 // ── Helpers ───────────────────────────────────────────────────
 const fmt = (n: number) =>
@@ -116,6 +121,9 @@ export default function VendorBillsPage() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [voidReasons, setVoidReasons] = useState<VoidReason[]>([])
   const [receivingReports, setReceivingReports] = useState<ReceivingReportRef[]>([])
+  const [warehouses, setWarehouses] = useState<DimensionRef[]>([])
+  const [departments, setDepartments] = useState<DimensionRef[]>([])
+  const [costCenters, setCostCenters] = useState<DimensionRef[]>([])
 
   const [fStatus, setFStatus] = useState('')
   const [fSearch, setFSearch] = useState('')
@@ -167,8 +175,8 @@ export default function VendorBillsPage() {
       supabase.from('chart_of_accounts').select('id,account_code,account_name,account_type').eq('company_id', companyId).eq('is_active', true).eq('is_postable', true).order('account_code'),
       supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
       supabase.from('void_reason_codes').select('id,code,description'),
-      supabase.from('receiving_reports')
-        .select('id,rr_number,rr_date,supplier_id,supplier_name_snapshot')
+      supabase.from('receiving_reports' as any)
+        .select('id,rr_number,rr_date,supplier_id,supplier_name_snapshot,warehouse_id,department_id,cost_center_id')
         .eq('company_id', companyId).eq('status', 'received')
         .order('rr_date', { ascending: false }),
     ])
@@ -181,10 +189,19 @@ export default function VendorBillsPage() {
     setExpenseAccounts(coaRes.data as COARef[] || [])
     setBranches(brRes.data as Branch[] || [])
     setVoidReasons(vrRes.data as VoidReason[] || [])
-    setReceivingReports(rrRes.data as ReceivingReportRef[] || [])
+    setReceivingReports((rrRes.data as unknown as ReceivingReportRef[]) || [])
+    const [warehouseRes, departmentRes, costCenterRes] = await Promise.all([
+      supabase.from('warehouses').select('id,branch_id,warehouse_code,warehouse_name').eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
+      supabase.from('departments').select('id,branch_id,department_code,department_name').eq('company_id', companyId).eq('is_active', true).order('department_code'),
+      supabase.from('cost_centers').select('id,branch_id,department_id,cost_center_code,cost_center_name').eq('company_id', companyId).eq('is_active', true).order('cost_center_code'),
+    ])
+    setWarehouses((warehouseRes.data || []).map((row: any) => ({ id: row.id, branch_id: row.branch_id, code: row.warehouse_code, name: row.warehouse_name })))
+    setDepartments((departmentRes.data || []).map((row: any) => ({ id: row.id, branch_id: row.branch_id, code: row.department_code, name: row.department_name })))
+    setCostCenters((costCenterRes.data || []).map((row: any) => ({ id: row.id, branch_id: row.branch_id, department_id: row.department_id, code: row.cost_center_code, name: row.cost_center_name })))
     // Items
-    const { data: itemData } = await supabase.from('items').select('id,item_code,description,uom_id,units_of_measure(uom_code),standard_selling_price,default_purchase_vat_id,purchase_account_id').eq('company_id', companyId).eq('is_active', true).order('item_code')
+    const { data: itemData, error: itemError } = await supabase.from('items').select('id,item_code,description,item_type,uom_id,units_of_measure(uom_code),standard_selling_price,standard_cost,default_purchase_vat_id,purchase_account_id:purchase_expense_account_id,inventory_account_id').eq('company_id', companyId).eq('is_active', true).order('item_code')
     setItems((itemData || []).map((i: any) => ({ ...i, uom_label: i.units_of_measure?.uom_code ?? '' })))
+    if (itemError) setError(`Unable to load item picker: ${itemError.message}`)
   }, [companyId])
 
   useEffect(() => { if (companyId) { load(); loadRefs() } }, [load, loadRefs, companyId])
@@ -195,7 +212,7 @@ export default function VendorBillsPage() {
       setError('Complete company, branch, fiscal period, number series, and GL posting setup before creating a vendor bill.')
       return
     }
-    setEditVB({ company_id: companyId!, branch_id: branchId || '', bill_date: today(), currency_code: 'PHP', status: 'draft' })
+    setEditVB({ company_id: companyId!, branch_id: branchId || '', bill_date: today(), currency_code: 'PHP', status: 'draft', warehouse_id: warehouses[0]?.id || '', department_id: departments[0]?.id || '', cost_center_id: costCenters[0]?.id || '' })
     setLines([emptyLine()])
     setError('')
     setMode('edit')
@@ -249,6 +266,9 @@ export default function VendorBillsPage() {
     setEditVB(v => ({
       ...v,
       rr_id: rr.id,
+      warehouse_id: rr.warehouse_id || v?.warehouse_id || '',
+      department_id: rr.department_id || v?.department_id || '',
+      cost_center_id: rr.cost_center_id || v?.cost_center_id || '',
       supplier_id: supplier.id,
       supplier_name_snapshot: supplier.registered_name,
       supplier_tin_snapshot: normalizePhTin(supplier.tin),
@@ -264,10 +284,10 @@ export default function VendorBillsPage() {
     setLines(ls => ls.map(l => l._key !== lineKey ? l : computeLine({
       ...l, item_id: item.id, description: item.description,
       uom_id: item.uom_id, uom_label: item.uom_label,
-      unit_price: item.standard_selling_price,
+      unit_price: item.standard_cost || item.standard_selling_price,
       vat_code_id: vc?.id || '', vat_classification: vc?.vat_classification || 'exempt',
       vat_rate: vc?.rate ?? 0,
-      expense_account_id: item.purchase_account_id || l.expense_account_id,
+      expense_account_id: (item.item_type === 'inventory_item' ? item.inventory_account_id : item.purchase_account_id) || l.expense_account_id,
     })))
   }
 
@@ -347,6 +367,9 @@ export default function VendorBillsPage() {
       const header = {
         company_id: companyId, branch_id: editVB.branch_id || branchId || '',
         supplier_id: editVB.supplier_id || '',
+        warehouse_id: editVB.warehouse_id || '',
+        department_id: editVB.department_id || '',
+        cost_center_id: editVB.cost_center_id || '',
         rr_id: editVB.rr_id || '',
         supplier_name_snapshot: editVB.supplier_name_snapshot || '',
         supplier_tin_snapshot: editVB.supplier_tin_snapshot || '',
@@ -413,7 +436,8 @@ export default function VendorBillsPage() {
   const filtered = bills.filter(b =>
     !fSearch || b.bill_number.includes(fSearch) ||
     b.supplier_name_snapshot.toLowerCase().includes(fSearch.toLowerCase()) ||
-    (b.supplier_invoice_number || '').includes(fSearch)
+    (b.supplier_invoice_number || '').includes(fSearch) ||
+    (b.reference || '').toLowerCase().includes(fSearch.toLowerCase())
   )
 
   // ── List View ────────────────────────────────────────────────
@@ -460,7 +484,7 @@ export default function VendorBillsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Bill #','Supplier Ref','Date','Due','Supplier','Taxable','Input VAT','Total','Status'].map(h => (
+                {['Bill #','External Ref','Supplier Ref','Date','Due','Supplier','Taxable','Input VAT','Total','Status'].map(h => (
                   <th key={h} className={`px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap ${['Taxable','Input VAT','Total'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                 ))}
               </tr>
@@ -470,6 +494,7 @@ export default function VendorBillsPage() {
                 <tr key={vb.id} onClick={() => openEdit(vb)}
                   className={`cursor-pointer hover:bg-gray-50/60 ${vb.status === 'cancelled' ? 'opacity-50' : ''}`}>
                   <td className="px-3 py-2.5 font-mono text-xs font-semibold text-gray-900 whitespace-nowrap">{vb.bill_number}</td>
+                  <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{vb.reference || '—'}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{vb.supplier_invoice_number || '—'}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{vb.bill_date}</td>
                   <td className="px-3 py-2.5 font-mono text-xs text-gray-500">{vb.due_date || '—'}</td>
@@ -527,104 +552,151 @@ export default function VendorBillsPage() {
     { label: 'Lock status', value: editVB?.status === 'draft' ? 'Draft editable' : 'Frozen by lifecycle controls' },
   ]
 
+  const selectedSupplier = suppliers.find(supplier => supplier.id === editVB?.supplier_id)
+  const selectedBranch = branches.find(branch => branch.id === editVB?.branch_id)
+  const selectedReceivingReport = receivingReports.find(report => report.id === editVB?.rr_id)
+  const validationErrors = getAccountingReadinessErrors()
+  const workflowSteps = [
+    { key: 'draft', label: 'Draft' },
+    { key: 'approved', label: 'Approved' },
+    { key: 'posted', label: 'Posted' },
+    { key: 'cancelled', label: 'Voided' },
+  ]
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Toolbar */}
-      <div className={transactionHeaderClass('purchase')}>
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">{editVB?.bill_number || 'New Vendor Bill'}</span>
-        {editVB?.status && <StatusBadge status={editVB.status} />}
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          {editVB?.status === 'approved' && (
-            <>
-              <button onClick={doRevertToDraft} disabled={saving}
-                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-50">Revert to Draft</button>
-              <button onClick={() => save('posted')} disabled={saving || readiness.blockers.length > 0}
-                className="px-3 py-1.5 bg-green-700 text-white rounded text-sm font-medium hover:bg-green-800 disabled:opacity-50">
-                {saving ? 'Posting…' : 'Post'}
-              </button>
-            </>
-          )}
-          {editVB?.status && !['draft','approved'].includes(editVB.status) && editVB.status !== 'cancelled' && (
-            <button onClick={() => setVoidTarget(editVB as VB)}
-              className="px-3 py-1.5 border border-red-300 text-red-600 rounded text-sm hover:bg-red-50">Void</button>
-          )}
-          {!readOnly && (
-            <>
-              <button onClick={() => save('draft')} disabled={saving || readiness.blockers.length > 0}
-                className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-50">
-                {saving ? 'Saving…' : 'Save Draft'}
-              </button>
-              <button onClick={() => save('approved')} disabled={saving || readiness.blockers.length > 0}
-                className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-50">
-                {saving ? 'Saving…' : 'Save & Approve'}
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
-      {readiness.blockers.length > 0 && (
-        <div className="px-5 py-3 border-b border-gray-100 bg-white">
-          <SetupReadinessBanner readiness={readiness} />
-        </div>
-      )}
-
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        {/* Header */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            {h('Supplier', (
-              <select value={editVB?.supplier_id || ''} disabled={readOnly}
-                onChange={e => pickSupplier(e.target.value)} className={inputCls}>
-                <option value="">— select supplier —</option>
-                {suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}
-              </select>
-            ))}
-            {h('Supplier Invoice #', (
-              <input value={editVB?.supplier_invoice_number || ''} disabled={readOnly}
-                onChange={e => setEditVB(v => ({ ...v, supplier_invoice_number: e.target.value }))} className={inputCls} />
-            ))}
-            {h('Receiving Report (optional)', (
-              <select value={editVB?.rr_id || ''} disabled={readOnly}
-                onChange={e => pickReceivingReport(e.target.value)} className={inputCls}>
-                <option value="">— direct bill / no RR —</option>
-                {receivingReports
-                  .filter(rr => !editVB?.supplier_id || rr.supplier_id === editVB.supplier_id)
-                  .map(rr => <option key={rr.id} value={rr.id}>{rr.rr_number} — {rr.rr_date}</option>)}
-              </select>
-            ))}
-            {h('Bill Date', (
-              <input type="date" value={editVB?.bill_date || today()} disabled={readOnly}
-                onChange={e => setEditVB(v => ({ ...v, bill_date: e.target.value }))} className={inputCls} />
-            ))}
-            {h('Due Date', (
-              <input type="date" value={editVB?.due_date || ''} disabled={readOnly}
-                onChange={e => setEditVB(v => ({ ...v, due_date: e.target.value }))} className={inputCls} />
-            ))}
-            {h('Branch', (
-              <select value={editVB?.branch_id || ''} disabled={readOnly}
-                onChange={e => setEditVB(v => ({ ...v, branch_id: e.target.value }))} className={inputCls}>
-                <option value="">— none —</option>
-                {branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}
-              </select>
-            ))}
-            {h('Reference', (
-              <input value={editVB?.reference || ''} disabled={readOnly}
-                onChange={e => setEditVB(v => ({ ...v, reference: e.target.value }))} className={inputCls} />
-            ))}
-            {h('Memo', (
-              <input value={editVB?.memo || ''} disabled={readOnly}
-                onChange={e => setEditVB(v => ({ ...v, memo: e.target.value }))} className={inputCls} />
-            ))}
-          </div>
-        </div>
-
-        {/* Lines */}
-        <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-x-auto">
-          <table className="w-full text-xs">
+    <>
+      <TransactionWorkspace
+        title="Vendor Bill"
+        documentNo={editVB?.bill_number}
+        status={editVB?.status || 'draft'}
+        statusLabel={editVB?.status === 'cancelled' ? 'Voided' : editVB?.status}
+        family="purchase"
+        identity={{
+          name: editVB?.supplier_name_snapshot || selectedSupplier?.registered_name || 'Supplier not selected',
+          secondary: editVB?.supplier_tin_snapshot || selectedSupplier?.tin || undefined,
+        }}
+        metrics={[
+          { label: 'Bill Total', value: `₱${fmt(totals.total)}`, emphasis: true },
+          { label: 'Input VAT', value: `₱${fmt(totals.vat)}` },
+          { label: 'Expected EWT', value: `₱${fmt(Number(editVB?.ewt_amount_expected || 0))}` },
+        ]}
+        meta={[
+          { label: 'Mode', value: readOnly ? 'Read only' : 'Editable', tone: readOnly ? 'warning' : 'info' },
+          { label: 'Posting', value: editVB?.posted_at ? 'Posted' : 'Not posted', tone: editVB?.posted_at ? 'success' : 'neutral' },
+        ]}
+        actions={[
+          ...(!readOnly ? [
+            { key: 'save', label: saving ? 'Saving…' : 'Save Draft', onClick: () => save('draft'), disabled: saving || readiness.blockers.length > 0 },
+            { key: 'approve', label: saving ? 'Saving…' : 'Save & Approve', onClick: () => save('approved'), disabled: saving || readiness.blockers.length > 0, variant: 'primary' as const },
+          ] : []),
+          ...(editVB?.status === 'approved' ? [
+            { key: 'revert', label: 'Revert to Draft', onClick: doRevertToDraft, disabled: saving, group: 'more' as const },
+            { key: 'post', label: saving ? 'Posting…' : 'Post', onClick: () => save('posted'), disabled: saving || readiness.blockers.length > 0, variant: 'primary' as const },
+          ] : []),
+          ...(editVB?.status === 'posted' ? [
+            { key: 'void', label: 'Void', onClick: () => setVoidTarget(editVB as VB), disabled: saving, variant: 'danger' as const, group: 'more' as const },
+          ] : []),
+        ]}
+        workflow={{ steps: workflowSteps, currentKey: editVB?.status || 'draft' }}
+        cards={[
+          {
+            title: 'Document Information',
+            content: (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {h('Bill Date', (
+                  <input type="date" value={editVB?.bill_date || today()} disabled={readOnly}
+                    onChange={e => setEditVB(v => ({ ...v, bill_date: e.target.value }))} className={inputCls} />
+                ))}
+                {h('Due Date', (
+                  <input type="date" value={editVB?.due_date || ''} disabled={readOnly}
+                    onChange={e => setEditVB(v => ({ ...v, due_date: e.target.value }))} className={inputCls} />
+                ))}
+                {h('Branch', (
+                  <select value={editVB?.branch_id || ''} disabled={readOnly}
+                    onChange={e => setEditVB(v => ({ ...v, branch_id: e.target.value }))} className={inputCls}>
+                    <option value="">— none —</option>
+                    {branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} — {b.branch_name}</option>)}
+                  </select>
+                ))}
+                {h('Currency', <input value={editVB?.currency_code || 'PHP'} disabled className={inputCls} />)}
+              </div>
+            ),
+          },
+          {
+            title: 'Supplier Information',
+            content: (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {h('Supplier', (
+                  <select value={editVB?.supplier_id || ''} disabled={readOnly}
+                    onChange={e => pickSupplier(e.target.value)} className={inputCls}>
+                    <option value="">— select supplier —</option>
+                    {suppliers.map(s => <option key={s.id} value={s.id}>{s.registered_name}</option>)}
+                  </select>
+                ))}
+                {h('Supplier Invoice #', (
+                  <input value={editVB?.supplier_invoice_number || ''} disabled={readOnly}
+                    onChange={e => setEditVB(v => ({ ...v, supplier_invoice_number: e.target.value }))} className={inputCls} />
+                ))}
+                <div>
+                  <div className="pxl-field-label">Supplier TIN</div>
+                  <div className="pxl-body-text mt-1 font-mono">{editVB?.supplier_tin_snapshot || selectedSupplier?.tin || '—'}</div>
+                </div>
+                <div>
+                  <div className="pxl-field-label">Terms</div>
+                  <div className="pxl-body-text mt-1">{selectedSupplier?.payment_terms?.days_to_due != null ? `${selectedSupplier.payment_terms.days_to_due} days` : 'Not configured'}</div>
+                </div>
+              </div>
+            ),
+          },
+          {
+            title: 'Purchase Context',
+            content: (
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {h('Receiving Report', (
+                  <select value={editVB?.rr_id || ''} disabled={readOnly}
+                    onChange={e => pickReceivingReport(e.target.value)} className={inputCls}>
+                    <option value="">— direct bill / no RR —</option>
+                    {receivingReports
+                      .filter(rr => !editVB?.supplier_id || rr.supplier_id === editVB.supplier_id)
+                      .map(rr => <option key={rr.id} value={rr.id}>{rr.rr_number} — {rr.rr_date}</option>)}
+                  </select>
+                ))}
+                {h('Reference', (
+                  <input value={editVB?.reference || ''} disabled={readOnly}
+                    onChange={e => setEditVB(v => ({ ...v, reference: e.target.value }))} className={inputCls} />
+                ))}
+                {h('Warehouse', (
+                  <select value={editVB?.warehouse_id || ''} disabled={readOnly} onChange={e => setEditVB(v => ({ ...v, warehouse_id: e.target.value }))} className={inputCls}>
+                    <option value="">— select warehouse —</option>{warehouses.filter(w => !editVB?.branch_id || !w.branch_id || w.branch_id === editVB.branch_id).map(w => <option key={w.id} value={w.id}>{w.code} — {w.name}</option>)}
+                  </select>
+                ))}
+                {h('Department', (
+                  <select value={editVB?.department_id || ''} disabled={readOnly} onChange={e => setEditVB(v => ({ ...v, department_id: e.target.value }))} className={inputCls}>
+                    <option value="">— select department —</option>{departments.filter(d => !editVB?.branch_id || !d.branch_id || d.branch_id === editVB.branch_id).map(d => <option key={d.id} value={d.id}>{d.code} — {d.name}</option>)}
+                  </select>
+                ))}
+                {h('Cost Center', (
+                  <select value={editVB?.cost_center_id || ''} disabled={readOnly} onChange={e => setEditVB(v => ({ ...v, cost_center_id: e.target.value }))} className={inputCls}>
+                    <option value="">— select cost center —</option>{costCenters.filter(c => (!editVB?.branch_id || !c.branch_id || c.branch_id === editVB.branch_id) && (!editVB?.department_id || !c.department_id || c.department_id === editVB.department_id)).map(c => <option key={c.id} value={c.id}>{c.code} — {c.name}</option>)}
+                  </select>
+                ))}
+                <div>
+                  <div className="pxl-field-label">Posting Basis</div>
+                  <div className="pxl-body-text mt-1">Expense / inventory, input VAT, and accounts payable</div>
+                </div>
+                <div>
+                  <div className="pxl-field-label">Source Status</div>
+                  <div className="pxl-body-text mt-1">{selectedReceivingReport ? `Received · ${selectedReceivingReport.rr_date}` : 'Direct vendor bill'}</div>
+                </div>
+              </div>
+            ),
+          },
+        ]}
+        tabBadges={{ lines: lines.length }}
+        tabContent={{
+          lines: (
+            <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]">
+              <table className="pxl-data-grid w-full text-xs">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {['Item','Description','Qty','Unit Price','Disc %','VAT Code','Expense Account','Net','Input VAT','Total',''].map(h => (
@@ -689,59 +761,139 @@ export default function VendorBillsPage() {
                 </tr>
               ))}
             </tbody>
-          </table>
-          {!readOnly && (
-            <div className="px-4 py-2 border-t border-gray-100">
-              <button onClick={() => setLines(ls => [...ls, emptyLine()])}
-                className="text-xs text-gray-500 hover:text-gray-900 font-medium">+ Add Line</button>
+              </table>
+              {!readOnly && (
+                <div className="px-4 py-2 border-t border-gray-100">
+                  <button onClick={() => setLines(ls => [...ls, emptyLine()])}
+                    className="pxl-button pxl-button--text">+ Add Line</button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Totals */}
-        <div className="bg-white border border-gray-200 rounded-lg p-5 flex justify-end">
-          <div className="grid grid-cols-2 gap-x-8 gap-y-1 text-sm min-w-[300px]">
-            {[
-              ['Taxable', totals.taxable],
-              ['Zero-Rated', totals.zero],
-              ['Exempt', totals.exempt],
-            ].map(([label, val]) => (
-              <React.Fragment key={label as string}>
-                <span className="text-gray-500 text-xs">{label as string}</span>
-                <span className="text-right font-mono text-xs text-gray-700">{fmt(val as number)}</span>
-              </React.Fragment>
-            ))}
-            <span className="text-gray-700 text-xs font-medium border-t border-gray-200 pt-1 mt-1">Input VAT</span>
-            <span className="text-right font-mono text-xs text-blue-700 border-t border-gray-200 pt-1 mt-1">{fmt(totals.vat)}</span>
-            <span className="text-gray-900 font-semibold">Total</span>
-            <span className="text-right font-mono font-bold text-gray-900">{fmt(totals.total)}</span>
-          </div>
-        </div>
-
-        <GLImpactPanel
-          companyId={companyId}
-          sourceDocType="VB"
-          sourceDocId={editVB?.id}
-          previewRows={glImpactRows}
-        />
-
-        {editVB?.id && (
-          <div className="mt-4 space-y-3">
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
-              <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-3">Audit Evidence</div>
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3">
-                {auditFacts.map(fact => (
-                  <div key={fact.label}>
-                    <div className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">{fact.label}</div>
-                    <div className="mt-1 text-xs text-gray-700">{fact.value}</div>
-                  </div>
-                ))}
+          ),
+          financial: (
+            <div className="ml-auto grid max-w-lg grid-cols-2 gap-x-8 gap-y-2 text-sm">
+              {[
+                ['Taxable Purchases', totals.taxable],
+                ['Zero-Rated Purchases', totals.zero],
+                ['Exempt Purchases', totals.exempt],
+                ['Input VAT', totals.vat],
+                ['Expected EWT', Number(editVB?.ewt_amount_expected || 0)],
+                ['Amount Payable', totals.total],
+              ].map(([label, value], index) => (
+                <React.Fragment key={label as string}>
+                  <span className={index === 5 ? 'pxl-section-title border-t pt-2' : 'text-gray-600'}>{label as string}</span>
+                  <span className={`text-right font-mono tabular-nums ${index === 5 ? 'border-t pt-2 font-bold text-gray-900' : 'text-gray-800'}`}>₱{fmt(value as number)}</span>
+                </React.Fragment>
+              ))}
+            </div>
+          ),
+          gl: (
+            <GLImpactPanel companyId={companyId} sourceDocType="VB" sourceDocId={editVB?.id} previewRows={glImpactRows} />
+          ),
+          tax: (
+            <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]">
+              <table className="pxl-data-grid w-full">
+                <thead><tr>{['Tax Treatment', 'Tax Base', 'Rate / Source', 'Tax Amount'].map(label => <th key={label} className={label.includes('Amount') ? 'text-right' : 'text-left'}>{label}</th>)}</tr></thead>
+                <tbody>
+                  <tr><td>Regular Input VAT</td><td className="font-mono text-right">₱{fmt(totals.taxable)}</td><td>Line VAT code</td><td className="font-mono text-right">₱{fmt(totals.vat)}</td></tr>
+                  <tr><td>Zero-Rated</td><td className="font-mono text-right">₱{fmt(totals.zero)}</td><td>0%</td><td className="font-mono text-right">₱0.00</td></tr>
+                  <tr><td>Exempt</td><td className="font-mono text-right">₱{fmt(totals.exempt)}</td><td>Exempt</td><td className="font-mono text-right">₱0.00</td></tr>
+                  <tr><td>EWT</td><td className="font-mono text-right">—</td><td>Supplier tax profile / ATC</td><td className="font-mono text-right">₱{fmt(Number(editVB?.ewt_amount_expected || 0))}</td></tr>
+                </tbody>
+              </table>
+            </div>
+          ),
+          validation: (
+            <div className="space-y-3">
+              {readiness.blockers.length > 0 && <SetupReadinessBanner readiness={readiness} />}
+              {error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700" role="alert">{error}</div>}
+              {validationErrors.length > 0 ? validationErrors.map(message => (
+                <div key={message} className="pxl-validation-message border border-orange-200 bg-orange-50 text-orange-800">{message}</div>
+              )) : <div className="pxl-validation-message border border-green-200 bg-green-50 text-green-800">Bill lines and accounting references are ready for the current lifecycle action.</div>}
+            </div>
+          ),
+          workflow: (
+            <ol className="grid gap-2 sm:grid-cols-4">
+              {workflowSteps.map(step => <li key={step.key} className={`pxl-transaction-card p-3 text-xs font-semibold ${step.key === (editVB?.status || 'draft') ? 'ring-2 ring-[var(--pxl-transaction-accent)]' : ''}`}>{step.label}</li>)}
+            </ol>
+          ),
+          approval: (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div><div className="pxl-field-label">Approval Status</div><div className="pxl-body-text mt-1">{editVB?.approved_at ? 'Approved' : 'Not approved'}</div></div>
+              <div><div className="pxl-field-label">Approved At</div><div className="pxl-body-text mt-1">{formatDateTime(editVB?.approved_at)}</div></div>
+              <div><div className="pxl-field-label">Next Action</div><div className="pxl-body-text mt-1">{editVB?.status === 'draft' ? 'Save & Approve' : editVB?.status === 'approved' ? 'Post' : 'No approval action available'}</div></div>
+            </div>
+          ),
+          audit: editVB?.id ? (
+            <div className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-5">
+                {auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}
               </div>
+              <AuditTrailSection tableName="vendor_bills" recordId={editVB.id} />
             </div>
-            <AuditTrailSection tableName="vendor_bills" recordId={editVB.id} />
+          ) : <TransactionEmptyState>Audit history begins after the vendor bill is saved.</TransactionEmptyState>,
+          related: selectedReceivingReport ? (
+            <table className="pxl-data-grid w-full"><thead><tr><th className="text-left">Relationship</th><th className="text-left">Document</th><th className="text-left">Date</th><th className="text-left">Status</th></tr></thead><tbody><tr><td>Source receipt</td><td className="font-mono font-semibold">{selectedReceivingReport.rr_number}</td><td>{selectedReceivingReport.rr_date}</td><td>Received</td></tr></tbody></table>
+          ) : <TransactionEmptyState>This is a direct vendor bill with no receiving report selected.</TransactionEmptyState>,
+          party: selectedSupplier ? (
+            <dl className="grid gap-3 sm:grid-cols-3">
+              <div><dt className="pxl-field-label">Supplier</dt><dd className="pxl-body-text mt-1">{selectedSupplier.registered_name}</dd></div>
+              <div><dt className="pxl-field-label">TIN</dt><dd className="pxl-body-text mt-1 font-mono">{selectedSupplier.tin || '—'}</dd></div>
+              <div><dt className="pxl-field-label">Registered Address</dt><dd className="pxl-body-text mt-1">{selectedSupplier.registered_address || '—'}</dd></div>
+            </dl>
+          ) : <TransactionEmptyState>Select a supplier to see the related-party summary.</TransactionEmptyState>,
+          activity: (
+            <div className="grid gap-3 sm:grid-cols-4">{auditFacts.slice(0, 4).map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div>
+          ),
+          notes: h('Vendor Bill Memo', (
+            <textarea value={editVB?.memo || ''} disabled={readOnly} rows={5}
+              onChange={e => setEditVB(v => ({ ...v, memo: e.target.value }))} className={inputCls} />
+          )),
+          system: (
+            <SystemMetadataPanel facts={[
+              { label: 'Internal ID', value: editVB?.id || 'Assigned when saved', hint: 'Transaction identity' },
+              { label: 'Document Number', value: editVB?.bill_number || 'Generated from number series', hint: 'Vendor bill number' },
+              { label: 'Company ID', value: companyId || '—', hint: 'Tenant boundary' },
+              { label: 'Branch', value: selectedBranch ? `${selectedBranch.branch_code} — ${selectedBranch.branch_name}` : editVB?.branch_id || '—', hint: 'Posting context' },
+              { label: 'Created', value: formatDateTime(editVB?.created_at), hint: 'Audit metadata' },
+              { label: 'Updated', value: formatDateTime(editVB?.updated_at), hint: 'Audit metadata' },
+              { label: 'Posted', value: formatDateTime(editVB?.posted_at), hint: 'Lifecycle metadata' },
+              { label: 'Lock Status', value: editVB?.status === 'draft' ? 'Editable draft' : 'Lifecycle locked', hint: 'Immutability control' },
+            ]} />
+          ),
+        }}
+        emptyTabMessages={{
+          attachments: 'No attachments have been added to this vendor bill.',
+        }}
+        sidebarPanels={[
+          { key: 'balance', title: 'Balance', content: <div className="flex items-baseline justify-between gap-3"><span className="pxl-field-label">Amount Payable</span><span className="font-mono text-sm font-bold">₱{fmt(totals.total)}</span></div> },
+          { key: 'tax', title: 'Tax', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Input VAT</span><span className="font-mono text-xs">₱{fmt(totals.vat)}</span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Expected EWT</span><span className="font-mono text-xs">₱{fmt(Number(editVB?.ewt_amount_expected || 0))}</span></div></div> },
+          { key: 'gl', title: 'GL Preview', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Debit</span><span className="font-mono text-xs">₱{fmt(glImpactRows.reduce((sum, row) => sum + row.debit, 0))}</span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Credit</span><span className="font-mono text-xs">₱{fmt(glImpactRows.reduce((sum, row) => sum + row.credit, 0))}</span></div></div> },
+          { key: 'supplier', title: 'Supplier', content: <div><div className="text-xs font-semibold text-gray-800">{editVB?.supplier_name_snapshot || selectedSupplier?.registered_name || 'Not selected'}</div><div className="pxl-caption mt-1 font-mono">{editVB?.supplier_tin_snapshot || selectedSupplier?.tin || 'No TIN'}</div></div> },
+          { key: 'audit', title: 'Audit', content: <div className="pxl-caption">{editVB?.status === 'draft' ? 'Draft remains editable.' : 'Document is frozen by lifecycle controls.'}</div> },
+        ]}
+        footer={<span>Created {formatDateTime(editVB?.created_at)} · Updated {formatDateTime(editVB?.updated_at)}</span>}
+        onBack={() => setMode('list')}
+        backLabel="Vendor Bills"
+      />
+
+      {voidTarget && (
+        <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <h3 className="font-semibold text-gray-900 mb-1">Void Vendor Bill</h3>
+            <p className="text-xs text-gray-500 mb-4">{voidTarget.bill_number}</p>
+            <select value={voidReasonId} onChange={e => setVoidReasonId(e.target.value)} className="w-full border border-gray-300 rounded px-2.5 py-2 text-sm mb-3">
+              <option value="">Select void reason…</option>
+              {voidReasons.map(r => <option key={r.id} value={r.id}>{r.code} — {r.description}</option>)}
+            </select>
+            <textarea value={voidMemo} onChange={e => setVoidMemo(e.target.value)} rows={2} placeholder="Additional memo (optional)" className="w-full border border-gray-300 rounded px-2.5 py-2 text-sm mb-4 resize-none" />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => { setVoidTarget(null); setError('') }} className="pxl-button pxl-button--neutral">Cancel</button>
+              <button onClick={doVoid} disabled={!voidReasonId || saving} className="pxl-button pxl-button--danger">Void Bill</button>
+            </div>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      )}
+    </>
   )
 }

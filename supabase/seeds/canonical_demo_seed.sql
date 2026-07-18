@@ -988,7 +988,7 @@ BEGIN
     SELECT id INTO v_po_line FROM purchase_order_lines WHERE po_id = v_po ORDER BY line_number LIMIT 1;
     v_rr := fn_save_receiving_report(NULL,
       jsonb_build_object(
-        'company_id', v_company, 'branch_id', v_branch,
+        'company_id', v_company, 'branch_id', v_branch, 'warehouse_id', v_wh_main,
         'po_id', v_po, 'rr_date', '2026-01-18',
         'supplier_dr_no', 'SUPDR-TEST-001',
         'remarks', 'TEST-RR-PARTIAL'
@@ -1004,7 +1004,6 @@ BEGIN
       )
     );
     PERFORM fn_confirm_receiving_report(v_rr);
-    PERFORM fn_receive_inventory(jsonb_build_object('company_id', v_company, 'warehouse_id', v_wh_main, 'item_id', v_item, 'qty', 12, 'unit_cost', 200, 'receipt_date', '2026-01-18', 'reference_doc_type', 'RR', 'reference_doc_id', v_rr, 'notes', 'Partial receiving report stock receipt'));
   END IF;
 
   -- Vendor bill with source-basis EWT and partial payment.

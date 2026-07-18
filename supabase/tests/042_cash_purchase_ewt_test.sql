@@ -27,7 +27,7 @@ INSERT INTO companies (id, entity_type, registered_name, line_of_business, tin,
                        address_line_1, address_line_2, city, province, zip_code,
                        email, signatory_name, signatory_position, created_by, updated_by)
 VALUES ('22222222-2222-2222-2222-222222222242', 'corporation',
-        'Cash Purchase EWT Corp', 'Professional Services', '111-222-333-242',
+        'Cash Purchase EWT Corp', 'Professional Services', '111-222-333-00242',
         'vat', 'calendar',
         'Unit 1', 'Test Bldg', 'Makati', 'Metro Manila', '1200',
         'cp-ewt-owner@test.local', 'Juan Dela Cruz', 'President',
@@ -97,7 +97,7 @@ INSERT INTO suppliers (id, company_id, supplier_code, registered_name, tin,
                        created_by, updated_by)
 VALUES ('66666666-6666-6666-6666-666666666242',
         '22222222-2222-2222-2222-222222222242', 'SUPP-EWT',
-        'Cash EWT Supplier Corp', '777-888-999-242',
+        'Cash EWT Supplier Corp', '777-888-999-00242',
         'Supplier HQ, Pasig', true, (SELECT id FROM atc_codes WHERE code = 'WC140'),
         auth.uid(), auth.uid());
 
@@ -111,7 +111,7 @@ SELECT throws_like(
       'transaction_date',       '2026-03-10',
       'supplier_id',            '66666666-6666-6666-6666-666666666242',
       'supplier_name_snapshot', 'Cash EWT Supplier Corp',
-      'supplier_tin_snapshot',  '777-888-999-242'
+      'supplier_tin_snapshot',  '777-888-999-00242'
     ),
     jsonb_build_array(jsonb_build_object(
       'description',        'Professional fee',
@@ -139,7 +139,7 @@ SELECT 'cp-ewt', fn_save_cash_purchase(NULL,
     'transaction_date',       '2026-03-10',
     'supplier_id',            '66666666-6666-6666-6666-666666666242',
     'supplier_name_snapshot', 'Cash EWT Supplier Corp',
-    'supplier_tin_snapshot',  '777-888-999-242'
+    'supplier_tin_snapshot',  '777-888-999-00242'
   ),
   jsonb_build_array(jsonb_build_object(
     'description',        'Professional fee',
@@ -178,7 +178,7 @@ SELECT throws_like(
       'transaction_date',       '2026-03-11',
       'supplier_id',            '66666666-6666-6666-6666-666666666242',
       'supplier_name_snapshot', 'Cash EWT Supplier Corp',
-      'supplier_tin_snapshot',  '777-888-999-242'
+      'supplier_tin_snapshot',  '777-888-999-00242'
     ),
     jsonb_build_array(jsonb_build_object(
       'description',        'Invalid EWT amount',
@@ -240,7 +240,7 @@ SELECT results_eq(
        AND tde.tax_kind = 'ewt_payable'
        AND tde.is_reversal = false$q$,
   $$VALUES (true, 'WC140'::text, 10000.00::numeric(15,2), 2.00::numeric(5,2),
-            200.00::numeric(15,2), '777-888-999-242'::text, 'Professional fees'::text)$$,
+            200.00::numeric(15,2), '777-888-999-00242'::text, 'Professional fees'::text)$$,
   'cash purchase writes source-line EWT payable tax detail for QAP/2307 evidence');
 
 SELECT results_eq(

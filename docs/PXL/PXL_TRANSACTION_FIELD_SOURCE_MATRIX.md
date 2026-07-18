@@ -553,4 +553,4 @@ Current gate status:
 - Field Source Matrix Status: `DRAFT`
 - Validation Status: `DOCUMENT_REVIEWED`
 - Blocking finding: PXL-AUD-053
-- Rollout implication: Sales Invoice remains the structural UI reference only. Do not mark it `VALIDATED` or `APPROVED_REFERENCE` until PXL-AUD-053 and fixture validation are complete.
+- Rollout implication: Sales Invoice implements the shared UI architecture but is not a UI reference or a business-approved reference. Do not mark its field-source matrix `VALIDATED` until PXL-AUD-053 and fixture validation are complete.

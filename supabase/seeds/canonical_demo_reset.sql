@@ -3,9 +3,9 @@
 -- =============================================================================
 --
 -- Purpose:
---   Remove only the canonical PXL demo/QA tenant data so the complete demo seed
---   can be rerun without duplicate companies, masters, documents, stock, or
---   journal activity.
+--   Remove only the canonical PXL demo/QA tenant data and the superseded legacy
+--   PXL sample tenant so the complete demo seed can be rerun without duplicate
+--   companies, masters, documents, stock, or journal activity.
 --
 -- Safety:
 --   This script is destructive and refuses to run unless the caller explicitly
@@ -44,21 +44,24 @@ WHERE registered_name IN (
     'ABC Trading Corporation',
     'Northstar Digital Solutions OPC',
     'Prime Business Advisory Inc.',
-    'Bayani Partners and Company'
+    'Bayani Partners and Company',
+    'PXL Demo Trading Corporation'
   )
    OR trade_name IN (
     'DEMO-SP-NONVAT',
     'DEMO-CORP-VAT',
     'DEMO-OPC-NONVAT',
     'DEMO-SVC-VAT',
-    'DEMO-PARTNERSHIP-VAT'
+    'DEMO-PARTNERSHIP-VAT',
+    'PXL Demo'
   )
    OR tin IN (
     '900-100-001-00000',
     '900-100-002-00000',
     '900-100-003-00000',
     '900-100-004-00000',
-    '900-100-005-00000'
+    '900-100-005-00000',
+    '008-123-456-00000'
   );
 
 DO $$
@@ -68,6 +71,8 @@ DECLARE
   v_table TEXT;
   v_progress BOOLEAN;
   v_round INTEGER := 0;
+  v_trigger_tables TEXT[];
+  v_trigger_table TEXT;
 BEGIN
   SELECT count(*) INTO v_company_count FROM pxl_demo_reset_company_ids;
 
@@ -77,6 +82,42 @@ BEGIN
   END IF;
 
   RAISE NOTICE 'Resetting % canonical demo companies and dependent tenant rows.', v_company_count;
+
+  -- Posted accounting documents, CAS number/void evidence, and tax snapshots
+  -- are correctly immutable during normal operation. A guarded whole-tenant
+  -- demo reset is the one controlled exception. The hosted `postgres` role is
+  -- deliberately not a superuser, so disable table-owner USER triggers only
+  -- on the affected tenant tables and restore them before returning. Internal
+  -- FK triggers remain enabled throughout the dependency-ordered purge.
+  SELECT array_agg(table_name ORDER BY table_name)
+  INTO v_trigger_tables
+  FROM (
+    SELECT DISTINCT c.table_name
+    FROM information_schema.columns c
+    JOIN information_schema.tables t
+      ON t.table_schema = c.table_schema
+     AND t.table_name = c.table_name
+     AND t.table_type = 'BASE TABLE'
+    WHERE c.table_schema = 'public'
+      AND c.column_name = 'company_id'
+    UNION
+    SELECT unnest(ARRAY[
+      'companies',
+      'tax_codes',
+      'compliance_vat_working_papers_lines',
+      'compliance_pt_working_papers_lines',
+      'compliance_ewt_working_papers_lines',
+      'compliance_fwt_working_papers_lines',
+      'compliance_1601eq_working_papers_lines',
+      'compliance_1601fq_working_papers_lines',
+      'warehouse_zones'
+    ])
+  ) affected(table_name)
+  WHERE to_regclass(format('public.%I', table_name)) IS NOT NULL;
+
+  FOREACH v_trigger_table IN ARRAY v_trigger_tables LOOP
+    EXECUTE format('ALTER TABLE public.%I DISABLE TRIGGER USER', v_trigger_table);
+  END LOOP;
 
   -- Indirect child tables without company_id that reference company-owned
   -- headers. Delete these before the generic company_id dependency pass.
@@ -164,7 +205,17 @@ BEGIN
   DELETE FROM public.companies
   WHERE id IN (SELECT id FROM pxl_demo_reset_company_ids);
 
+  FOREACH v_trigger_table IN ARRAY v_trigger_tables LOOP
+    EXECUTE format('ALTER TABLE public.%I ENABLE TRIGGER USER', v_trigger_table);
+  END LOOP;
   RAISE NOTICE 'Canonical demo reset complete.';
+EXCEPTION WHEN OTHERS THEN
+  IF COALESCE(array_length(v_trigger_tables, 1), 0) > 0 THEN
+    FOREACH v_trigger_table IN ARRAY v_trigger_tables LOOP
+      EXECUTE format('ALTER TABLE public.%I ENABLE TRIGGER USER', v_trigger_table);
+    END LOOP;
+  END IF;
+  RAISE;
 END $$;
 
 DROP TABLE IF EXISTS pxl_demo_reset_company_ids;

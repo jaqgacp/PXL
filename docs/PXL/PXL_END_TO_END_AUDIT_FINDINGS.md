@@ -1,16 +1,27 @@
 # PXL End-to-End Audit Findings
 
-Audit date: 2026-07-01
+**Status:** Active authoritative findings register
+**Authority:** Tier 1 Governing — the only official register for PXL defects, audit issues, blockers, and required remediation
+**Initial Audit Date:** 2026-07-01
+**Last Verified:** 2026-07-16 Phase 3 evidence; status/index reconciled 2026-07-17
+**Applies To:** Product readiness, accounting, tax, inventory, security, audit, UX, data, and regression findings
+**Read When:** Opening a specific referenced finding or reconciling official status
+**Do Not Read For:** Fresh-session startup beyond the one finding named in `AI/AI_STATE.md`
 
-Scope reviewed: build scripts, TypeScript build/lint, Supabase migrations, RLS/auth model, company setup, master data dependencies, sales invoice/receipt flow, vendor bill/payment voucher flow, posting RPCs, trial balance, AR/AP ledgers, VAT/EWT/2307 compliance surfaces, and user flow from an accountant/auditor perspective.
+This is an accumulated register. Evidence in older rows is a dated snapshot, not a claim about the current toolchain. Current status is controlled by the indexes below and the matching detail sections. Product rules remain in their governing standards; broader enhancements remain in `PXL_PRODUCT_BACKLOG.md`; current work selection remains in `AI/AI_STATE.md`.
 
-Build/test evidence:
+## Active Findings Index
 
-- `npm run build` passed.
-- `npm run lint` passed with warnings, including hook dependency warnings and suspicious unused-expression warnings.
-- No automated test script is defined in `package.json`.
-- No local Supabase instance/seed data was available in this workspace, so the critical flow was traced statically through UI code and SQL RPCs, not executed against a live database.
-- `PXL_TRANSACTION_MATRIX.md` is now a required living architecture artifact. Any transaction code change or fix session must keep it synchronized with this audit file and the codebase.
+| Priority | Finding | Severity | Status | Required Fix | Primary Owner Area | Dependency |
+| ---: | --- | --- | --- | --- | --- | --- |
+| 1 | [PXL-AUD-055](#pxl-aud-055) | Critical | Open | Obtain external key-rotation confirmation, then rerun the frontend secret/build guards. | Security / operations | Authorized Supabase key operator |
+| 2 | [PXL-AUD-063](#pxl-aud-063) | High | Open | Replace broad global BIR configuration writes with governed read/write policies and pgTAP evidence. | BIR security / RLS | Decide global configuration authority; current UI is read-only |
+| 3 | [PXL-AUD-066](#pxl-aud-066) | High | Open | Align CAS number/void evidence to governed document-period semantics. | CAS / audit evidence | AUD-055 sequencing; test 027 |
+| 4 | [PXL-AUD-061](#pxl-aud-061) | High | Open | Formalize deterministic test lanes and restore the full lane after AUD-066. | QA / regression | AUD-066 |
+| 5 | [PXL-AUD-053](#pxl-aud-053) | High | In Progress | Finish source-backed SI dimensions and downstream view/report/API/export validation. | Sales Invoice / accounting | Governed masters and source decisions |
+| 6 | [PXL-AUD-059](#pxl-aud-059) | High | Open | Govern or explicitly defer unexercised active table/workflow coverage. | Product coverage / QA | Module support decisions and fixtures |
+| 7 | [PXL-AUD-067](#pxl-aud-067) | Medium | Open | Distinguish core-accounting readiness from operational readiness. | Setup / product governance | Approved checklist model |
+| 8 | [PXL-AUD-060](#pxl-aud-060) | Medium | Open | Add accessible login labels, autocomplete, error semantics, and UI regression. | Authentication UX | None; scheduled after higher findings |
 
 ## Findings Status Index
 
@@ -94,13 +105,19 @@ Status values: `Open` (not started), `In Progress` (scoped fixes landed, work re
 | PXL-AUD-052 | Medium | Retested Passed | Fixed 2026-07-10: Cash Purchase item lookup queried non-existent columns (`units_of_measure.uom_name`, `items.purchase_account_id`), so the item picker always loaded empty; select realigned to `uom_code` and aliased `purchase_expense_account_id`. |
 | PXL-AUD-053 | High | In Progress | Sales Invoice source-backed completeness and draft-state preservation slices implemented; keep open for Project/Location/Functional Entity master decisions plus full view-state/report/API/export validation before marking Sales Invoice `VALIDATED` or `APPROVED_REFERENCE`. |
 | PXL-AUD-054 | Critical | Retested Passed | Stock transfer posting now enforces source-warehouse availability before mutating stock; canonical demo regression test covers valid transfer and blocked over-transfer. |
-| PXL-AUD-055 | Critical | Open | Remove client-exposed service-role credentials from Vite environment, rotate the exposed key, and add a build/static check that forbids `VITE_*SERVICE*ROLE*` secrets. |
-| PXL-AUD-056 | High | Open | Resolve hosted Supabase environment safety/deployment blockers before any migration push: prove non-production, provide DB password or db-url, and reconcile held-out out-of-order migrations. |
-| PXL-AUD-057 | High | Open | Make canonical seeded transactions visible and traceable in the application pages; browser audit shows many populated transaction/report tables are missing from their routes. |
+| PXL-AUD-055 | Critical | Open | Frontend secret guard is implemented and passed pre/post build; externally rotate the previously exposed service-role key before closing. |
+| PXL-AUD-056 | High | Retested Passed | Hosted migration history is synchronized and canonical demo reset/seed completed after repairing held-out migration drift with compatibility-history migrations for `20260710000004`/`00005`; root cause was PostgreSQL default-parameter incompatibility plus out-of-order hosted history. |
+| PXL-AUD-057 | High | Retested Passed | Hosted Phase 3 UI automation now passes 48/48 company/master/document probes and 20/20 report probes; canonical references are searchable on SI/OR/PO/VB/PV lists and SI Related Docs shows the linked OR. Remaining broader UX rollout work stays under PXL-AUD-053. |
 | PXL-AUD-058 | Medium | Retested Passed | Local canonical UI login now works after auth seed fields and Vite dev CSP were corrected; keep the browser audit script as a regression probe. |
-| PXL-AUD-059 | High | Open | Close or explicitly defer unexercised application-table coverage; 79 of 148 public tables are empty after the canonical seed, including several active workflow/compliance modules. |
+| PXL-AUD-059 | High | Open | Meaningful hosted coverage improved from 68 to 82 of 148 tables; 66 empty tables are now classified, but banking, fixed assets, returns, approvals, schedules, and tax-return generators remain unexercised or unsupported. |
 | PXL-AUD-060 | Medium | Open | Associate login labels with their inputs and review form accessibility patterns; the login screen required CSS selectors instead of label-based automation. |
-| PXL-AUD-061 | High | Open | Make the full pgTAP regression suite deterministic against the documented reset state or clearly split canonical-seed tests from fresh-schema tests. |
+| PXL-AUD-061 | High | Open | Fresh replay plus canonical seed/enrichment now passes 56 files and 1,014 assertions; the held-out CAS historical-package file remains isolated with two real product failures under PXL-AUD-066. |
+| PXL-AUD-062 | Critical | Retested Passed | Company selector/company-table RLS now restricts reads to memberships and updates to owner/admin; hosted UI and pgTAP retest passed. |
+| PXL-AUD-063 | High | Open | Tighten or explicitly govern global BIR form configuration policies that still allow broad authenticated `FOR ALL USING (true)`. |
+| PXL-AUD-064 | High | Retested Passed | AR/AP reconciliation now treats original `reversed` journals and counter-journals consistently; all five hosted companies reconcile with zero variance. |
+| PXL-AUD-065 | High | Retested Passed | Unposted Sales Invoice GL preview again rejects locked/missing fiscal periods; local and hosted posting-preview regression passed 40/40. |
+| PXL-AUD-066 | High | Open | Historical CAS audit packages filter number/void evidence by occurrence time while books/exports use document periods, omitting later-created evidence for the requested period. |
+| PXL-AUD-067 | Medium | Open | Company Setup Checklist verifies only ten core accounting prerequisites and can report operational readiness before customers, suppliers, inventory, banking, or workflow coverage exists. |
 
 ## Production Readiness Gate
 
@@ -113,15 +130,19 @@ PXL is production-ready when all of the following hold. Re-check this gate at th
 5. Hosted Supabase is in sync (`supabase migration list --linked` shows no pending migrations).
 6. Production Readiness Scores below have been re-assessed after the last Critical fix.
 
-Standing (2026-07-16, Phase 2 canonical demo product audit): 74 Retested Passed / 1 In Progress / 6 Open (81 findings). PXL-AUD-055 is a Critical security blocker because a service-role credential is exposed through a Vite client environment variable. PXL-AUD-056 blocks hosted migration deployment until the target is proven non-production and migration drift is reconciled. PXL-AUD-057 and PXL-AUD-059 show that the canonical dataset exists in database truth but is not yet a complete product-visible regression environment. PXL-AUD-061 records that the full pgTAP suite is not yet deterministic against the canonical seeded state. PXL-AUD-053 remains the Sales Invoice gold-standard residual. DEC-017 still governs sequencing: the active milestone is **PXL Accounting Core Ready** (`PXL_ACCOUNTING_CORE_READINESS.md`). `PXL_ACCOUNTING_RULES_MATRIX.md` is the governed posting-behavior reference for future fixes and rollout.
+Standing (2026-07-16, Phase 3 canonical implementation retest): 79 Retested Passed / 1 In Progress / 7 Open (87 findings). PXL-AUD-055 remains the only open Critical and requires external key-rotation confirmation; the frontend secret guard passes. PXL-AUD-062 remains passed with exactly five membership-scoped selector companies. PXL-AUD-057 is now passed after 48/48 hosted company/master/document probes, 20/20 report probes, and focused SI detail-tab verification. PXL-AUD-059 remains open with hosted coverage improved to 82 populated / 66 classified empty tables. PXL-AUD-061 now has a green 56-file deterministic lane; only the separately held-out CAS historical package behavior remains red under PXL-AUD-066. PXL-AUD-064 and PXL-AUD-065 close the reversal-aware reconciliation and locked-period SI preview regressions. PXL-AUD-067 records that checklist readiness is core-accounting-only, not full operational implementation. PXL-AUD-053 remains the approved Sales Invoice UX rollout residual, and PXL-AUD-063 remains the global BIR policy blocker.
+
+<a id="pxl-aud-053"></a>
 
 ### New Finding Detail - PXL-AUD-053
 
 | Field | Value |
 | --- | --- |
+| Title | Sales Invoice is not yet a fully source-backed approved reference transaction |
 | Status | In Progress |
 | Severity | High |
 | Area | Sales Invoice completeness / dimensions / inventory accounting / source-backed view |
+| Module / Environment | Sales / AR; local and hosted canonical validation |
 | Issue | The Sales Invoice workspace now has the source-backed implementation for the platform masters currently available and the create/edit data-loss defect has been corrected, but the transaction cannot be marked final until missing master-data families and downstream validation coverage are closed. |
 | Expected Behavior | Every Sales Invoice business fact should be entered, inherited from master data, computed by governed rules, generated by posting/tax services, or explicitly shown as unavailable. Inventory-item invoices must post authoritative COGS/Inventory and service-only invoices must avoid inventory movement. |
 | Current Behavior | Branch, Department, Cost Center, Warehouse for inventory lines, Salesperson, Account Owner, VAT Price Basis, and inventory/COGS are now stored and propagated by the Sales Invoice transaction where governed masters exist. VAT Inclusive save is persisted and server-computed. Inventory item lines create COGS/Inventory JE lines and inventory issue evidence; void restores stock. Create/edit state is now owned by a single draft object, route initialization is keyed to company/route/invoice identity, and selector changes no longer reinitialize unrelated unsaved fields. Project, Location, and Functional Entity remain blocked because no governed masters exist. |
@@ -130,6 +151,12 @@ Standing (2026-07-16, Phase 2 canonical demo product audit): 74 Retested Passed 
 | Fix Applied This Session | Added Sales Invoice persistence for VAT Price Basis, Department, Cost Center, Warehouse, Salesperson, Account Owner, line warehouse/dimensions/remarks/source metadata, inventory/COGS accounts, unit cost, inventory cost, and inventory transaction link; updated save/post/void RPCs for VAT-inclusive server computation, dimension validation/propagation, COGS/Inventory posting, stock issue/restoration, and posting-generated evidence under line immutability; separated commercial/inventory accounting-impact presentation; corrected create/edit draft-state ownership and route-keyed initialization; added pure draft-state regression tests. |
 | Remaining Work | Add governed Project/Location/Functional Entity masters before exposing those dimensions; enrich user display names; validate the complete view-state matrix, source-chain SO/DR relationships, imports/exports/API/PDF/report mappings, FIFO/specific-identification fixtures, and management-reporting outputs. |
 | Test Performed | `supabase db reset --local --no-seed` with documented held-out drafts excluded and restored; `supabase test db --local supabase/tests/054_sales_invoice_completeness_test.sql` passed 22/22; `npm run test:sales-invoice-draft-state`; `npm run gen:types`; `npm run lint`; `npm run build`. |
+| Business / Accounting / Tax / Inventory Impact | An unproven reference transaction can propagate incomplete dimensions and reporting; current VAT, COGS, inventory issue/restoration, and balanced posting slices are implemented but must not be generalized beyond their executed evidence. |
+| Security and Audit Impact | Incomplete source/view/export traceability weakens audit drillback; no separate active RLS defect is asserted here. |
+| Affected Tables / Functions / Routes | `sales_invoices`; `sales_invoice_lines`; inventory and journal evidence tables; `fn_save_sales_invoice`; `fn_post_sales_invoice`; `fn_void_sales_invoice`; create/edit and saved-document routes. |
+| Recommended Implementation Sequence | First govern missing masters or formally exclude them; then validate view-state and source chains; then reports/API/export/PDF; only then reassess Form/View UX rollout and `APPROVED_REFERENCE` status. |
+| Dependencies / Workaround | Depends on Project/Location/Functional Entity product decisions. Until resolved, show unsupported facts as unavailable and do not fabricate fields or masters. |
+| Last Verified / Supporting Reports | 2026-07-16; `docs/PXL/archive/phase-reports/PXL_PHASE3_CANONICAL_IMPLEMENTATION_REPORT.md` and `PXL_CANONICAL_DEMO_DATASET.md`. |
 | Fix Session Size | Large |
 
 ### New Finding Detail - PXL-AUD-054
@@ -149,71 +176,80 @@ Standing (2026-07-16, Phase 2 canonical demo product audit): 74 Retested Passed 
 | Test Performed | Rollback dry-runs proved the seed and reset are executable; after the local canonical reset+seed, `supabase test db --local supabase/tests/055_canonical_demo_dataset_test.sql` passed 34/34 assertions, including valid transfer, blocked over-transfer, approval-time SI oversell blocking, VAT price basis, CWT timing, stock balances, and journal balance. The same file skips cleanly when the canonical seed is absent. |
 | Fix Session Size | Medium |
 
+<a id="pxl-aud-055"></a>
+
 ### New Finding Detail - PXL-AUD-055
 
 | Field | Value |
 | --- | --- |
+| Title | Previously browser-exposed Supabase service-role key requires rotation confirmation |
 | Status | Open |
 | Severity | Critical |
 | Area | Security / client secret exposure / environment configuration |
-| Issue | The local app environment includes a service-role credential in a `VITE_` variable. Vite exposes all `VITE_` variables to browser code, so a service-role credential is visible to any user who can load the dev bundle. |
+| Module / Environment | Frontend environment and build artifacts; local/hosted-connected non-production workflow |
+| Issue | The local app environment included a service-role credential in a `VITE_` variable. Vite exposes all `VITE_` variables to browser code, so a service-role credential is visible to any user who can load the dev bundle. |
 | Reproduction / Evidence | With the local app running, the served `src/lib/supabase.ts` module includes `import.meta.env` with `VITE_SUPABASE_SERVICE_ROLE_KEY`. The application code currently uses only URL and anon key, but the credential is still bundled because of the prefix. The value is intentionally not copied into this document. |
 | Expected Behavior | Service-role credentials must never be present in browser-visible environment variables, source maps, static assets, logs, or client bundles. Only anon/public keys should be exposed to the frontend. |
-| Actual Behavior | A service-role credential is available in the browser-visible Vite environment. |
+| Actual Behavior | The local `.env.local` `VITE_SUPABASE_SERVICE_ROLE_KEY` line was removed during hosted-deployment preparation, and `.env.local` now contains the hosted URL, anon key, and project ref only under `VITE_`. Phase 3 added `scripts/check_frontend_secrets.mjs` and wired it into `npm run build` before and after `vite build`; the guard scans frontend-facing env/source/static/build files, forbidden public secret variable names, `sb_secret_` markers, and JWT payloads with `role=service_role` without printing secret values. The finding remains Open because external rotation of the previously exposed key has not been confirmed. |
 | Business Impact | Any demo, preview, or production-like deployment with this variable can bypass normal product permissions if the key is valid. |
 | Accounting Impact | A leaked service role can mutate or delete accounting records outside governed RPCs, invalidating audit evidence. |
 | Inventory Impact | A leaked service role can bypass inventory availability, movement, and immutability controls. |
 | Tax Impact | A leaked service role can alter tax detail, returns, and compliance evidence. |
 | Security Impact | Critical RLS bypass and privilege-escalation risk. Rotate the exposed service-role key after removal. |
 | Likely Root Cause | Frontend and server Supabase credentials are stored together and the service-role variable uses the Vite public-prefix convention. |
-| Files / Surfaces | `.env.local` local configuration; Vite client bundle; `src/lib/supabase.ts` by environment injection. |
-| Recommended Implementation | Remove all `VITE_*SERVICE*ROLE*` variables; move server-only secrets to non-Vite names loaded only in server/CI contexts; rotate the exposed service-role key; add a CI/static check that fails on `VITE_SUPABASE_SERVICE_ROLE_KEY`, `service_role`, or JWTs with `role=service_role` in frontend bundles and env files. |
-| Regression Tests | Add a build/static test that scans `dist`, served dev modules, and committed env examples for service-role tokens or forbidden env names. |
-| Retest Plan | Run the app and verify `curl http://127.0.0.1:5173/src/lib/supabase.ts` no longer exposes a service-role variable; build and scan `dist`; verify normal login/data access still uses anon auth. |
+| Files / Surfaces | `.env.local` local configuration; Vite client bundle; `src/lib/supabase.ts` by environment injection; `scripts/check_frontend_secrets.mjs`; `package.json`. |
+| Recommended Implementation | Keep all `VITE_*SERVICE*ROLE*` variables removed; move server-only secrets to non-Vite names loaded only in server/CI contexts; rotate the exposed service-role key; keep the build/static guard in CI so `VITE_SUPABASE_SERVICE_ROLE_KEY`, `sb_secret_`, and service-role JWTs fail before deployment. |
+| Regression Tests | `npm run check:frontend-secrets` and `npm run build` now execute the static/bundle scan. Add CI execution if not already covered by the build lane. |
+| Retest Plan | After external key rotation, re-run `npm run check:frontend-secrets` and `npm run build`, verify normal login/data access still uses anon auth, and then close the finding. |
+| Affected Tables / Functions / Routes | No product table or RPC is the remediation target; the exposure can bypass all RLS-protected surfaces if the key remains valid. |
+| Recommended Implementation Sequence | Authorized rotation; update server-only consumers; confirm client env remains anon-only; run secret guard and build; record confirmation without copying secret material. |
+| Dependencies | An authorized Supabase key operator and secure external environment coordination. |
+| Workaround | Keep access limited to controlled non-production use and rely on the passing frontend guard; this does not substitute for rotation. |
+| Last Verified / Supporting Reports | 2026-07-16; archived Phase 2 and Phase 3 reports under `docs/PXL/archive/phase-reports/`. |
 
 ### New Finding Detail - PXL-AUD-056
 
 | Field | Value |
 | --- | --- |
-| Status | Open |
+| Status | Retested Passed |
 | Severity | High |
 | Area | Deployment / Supabase migration governance / environment safety |
-| Issue | Hosted migration push could not be completed safely or technically. The supplied command uses an unsupported CLI flag, the linked database requires DB password or db-url for migration inspection/push, and the dry run reports held-out local migrations that would be inserted before the remote database's latest migration. The hosted project is named `PXL`, but no metadata proved it is non-production. |
-| Reproduction / Evidence | `supabase projects list` identifies project ref `bskjkogijpbhukjkagfj`, host `db.bskjkogijpbhukjkagfj.supabase.co`, status healthy, name `PXL`. `supabase db push --project-ref bskjkogijpbhukjkagfj` fails with `Unrecognized flag: --project-ref`. `supabase migration list --linked` fails without `SUPABASE_DB_PASSWORD`. `supabase db push --dry-run --linked` reports local migrations `20260710000004_atc_document_date_versioning.sql` and `20260710000005_cas_numbering_void_dat_controls.sql` would need `--include-all` before later remote history. |
+| Issue | Hosted migration deployment was blocked by out-of-order held-out migration history, not by authentication. The hosted database already had the trusted later replacements (`20260713000002` and CAS replacement slices) while local `20260710000004`/`00005` were still pending, so `--include-all` tried to replay older draft logic over newer hosted schema. |
+| Reproduction / Evidence | Hosted `pg_proc` showed the exact existing signature `fn_validate_payment_voucher_line_ewt(uuid,numeric,numeric,uuid,numeric,text,date)` with call arguments `p_ewt_tax_base DEFAULT NULL::numeric`, `p_ewt_variance_reason DEFAULT NULL::text`, and `p_document_date DEFAULT NULL::date` (`pronargdefaults = 3`). The local July 10 draft attempted `CREATE OR REPLACE FUNCTION` for that same identity without defaults, causing PostgreSQL SQLSTATE 42P13: `cannot remove parameter defaults from existing function`. Migration history also showed `20260710000004`/`00005` missing while later July 13 replacements were already applied. |
 | Expected Behavior | Migration push should target a proven non-production environment, use supported Supabase CLI flags, show a clean migration plan, and apply only validated migrations in order. |
-| Actual Behavior | No hosted migration was applied. Safety confirmation is incomplete, and migration history is blocked by older held-out files. |
+| Actual Behavior | Fixed 2026-07-16: `20260710000004` and `20260710000005` now execute as guarded compatibility-history migrations that leave the trusted replacement schema untouched when the later replacement migrations are already recorded. Hosted dry runs were clean, `supabase db push --linked --include-all` applied `20260710000004`, `20260710000005`, and `20260716000001`, and `supabase migration list --linked` now shows local and remote synchronized through `20260716000001`. |
 | Business Impact | The canonical regression dataset and latest inventory guard cannot be trusted as deployed until hosted migration state is reconciled. |
 | Accounting Impact | Out-of-order or held-out migrations can leave accounting, CAS numbering, ATC, and posting functions inconsistent between local QA and hosted app. |
 | Inventory Impact | The stock-transfer availability guard remains local unless pushed through a clean migration path. |
 | Tax Impact | Held-out ATC/CAS migrations may affect tax-code effective dating and statutory export controls. |
-| Security Impact | Pushing to an unproven production environment would violate the reset/migration safety gate. |
-| Likely Root Cause | CLI command shape was incorrect for the installed Supabase CLI; linked DB password was not supplied; previously held-out migrations remain in the local migrations directory before the remote head. |
+| Security Impact | The reset proceeded only after migration history synchronization and fresh hosted dumps. No remote schema was edited manually and no migration was marked applied with `migration repair`. |
+| Likely Root Cause | The July 10 ATC and CAS drafts had been held out, then superseded by later trusted migrations that were already hosted. Replaying the old drafts after the replacements collided with PostgreSQL function default rules and existing CAS evidence tables. The exact ATC collision was default removal on an existing function identity; PostgreSQL requires dropping the exact function signature before recreating it or preserving compatible defaults. Because the later migration already supplied the trusted implementation, the safe strategy was guarded compatibility-history migrations rather than overwriting newer schema. |
 | Files / Surfaces | Supabase project `bskjkogijpbhukjkagfj`; `supabase/.temp/project-ref`; `supabase/migrations/20260710000004_atc_document_date_versioning.sql`; `supabase/migrations/20260710000005_cas_numbering_void_dat_controls.sql`; `supabase/migrations/20260716000001_stock_transfer_availability_guard.sql`. |
-| Recommended Implementation | Add an explicit environment classification for the hosted project; provide `SUPABASE_DB_PASSWORD` or a non-production `--db-url`; decide whether the held-out `20260710000004`/`00005` migrations are valid, superseded, or should be removed from the push path; run `supabase migration list --linked`; use `supabase db push --linked` only after a clean dry run. Do not use `--include-all` until the held-out migrations pass fresh replay and focused tests. |
+| Recommended Implementation | Keep the compatibility-history migrations in place for `20260710000004`/`00005`; do not restore the old draft bodies or manually repair hosted migration history. Future superseded held-out migrations should either use exact-signature `DROP FUNCTION` + `CREATE FUNCTION` before changing defaults, or become explicit compatibility migrations when a later trusted migration already owns the schema state. |
 | Regression Tests | Add a deployment checklist that captures project ref, host, DB name, branch, user, migration dry run, and non-production proof before any hosted push. |
-| Retest Plan | Re-run migration list and dry-run with DB credentials against a confirmed non-production project, then apply and verify remote migration history includes the intended stock-transfer guard only after all predecessors are reconciled. |
+| Retest Plan | Completed 2026-07-16: confirmed credentials present; queried hosted function signature and migration history; reran hosted dry runs; pushed pending migrations; verified hosted migration history includes `20260710000004`, `20260710000005`, and `20260716000001`; took schema and data dumps under `supabase/.temp/backups`; ran hosted canonical reset+seed; validated 5 demo companies, 5 demo users, 6 posted sales invoices, 1 posted vendor bill, 14 inventory transactions, 1 stock transfer, branch-scoped number series, and stock balances. |
 
 ### New Finding Detail - PXL-AUD-057
 
 | Field | Value |
 | --- | --- |
-| Status | Open |
+| Status | Retested Passed |
 | Severity | High |
 | Area | Website verification / canonical dataset visibility / route-level product readiness |
-| Issue | The canonical dataset is visible in selectors and core setup/master data pages, but many seeded transaction and report references are not visible on their application routes even though database rows exist. The app therefore is not yet a permanent product-visible regression environment. |
-| Reproduction / Evidence | `scripts/audit_canonical_ui.mjs` logged in as `demo.admin@pxl.local`, selected `ABC Trading Corporation`, and probed setup, master-data, sales, purchasing, inventory, banking, accounting, compliance, and reports. Visible examples: company selector, branch selector, customers, suppliers, items, warehouses, sales order `TEST-SO-OPEN-PARTIAL`, payment voucher `TEST-PV-PARTIAL`, journal entry opening balance, GL accounts. Missing examples: sales invoices `TEST-SI-STANDALONE`/`TEST-SI-VAT-INCLUSIVE`, receipt `TEST-OR-SI-STANDALONE`, purchase order `TEST-PO-PARTIAL-RECEIPT`, vendor bill `TEST-VB-PARTIAL-PAYMENT`, stock balances/movements/transfers/adjustments, bank accounts, trial balance rows, AR/AP aging rows, EWT summary. Partial examples: departments show `Finance` but not `CC-FIN`; number series show `SI`/`OR` but not `VB`/`PV`; tax review pages show report headings but not seeded source documents. |
+| Issue | The hosted canonical dataset is visible in selectors and core setup/master data pages, but seeded transaction and report references are not consistently visible from their application routes even though hosted database rows exist. The app therefore is not yet a permanent product-visible regression environment. |
+| Reproduction / Evidence | Final Phase 3 hosted automation against project `bskjkogijpbhukjkagfj` logged in as `demo.admin@pxl.local`, confirmed exactly five selector companies, and passed 48/48 company/master/document probes plus 20/20 ABC report probes with zero runtime page errors. Focused Sales Invoice verification passed Lines, Financial, GL Impact, Tax Impact, Validation, Audit, Related Docs, and Related Party; the posted invoice was read-only and Related Docs displayed the actual linked OR number. The automation explicitly selects History tabs and applies report/date filters where required. |
 | Expected Behavior | Every canonical seed reference intended for implementation QA should be findable from the relevant screen and drillable to source, journal, tax detail, inventory movement, subledger, payment, and report evidence. |
-| Actual Behavior | Database truth and UI visibility diverge across several modules. Some pages show only route chrome or headings, and some pages filter out seeded rows by branch, period, status, query shape, or missing UI binding. |
+| Actual Behavior | The canonical documents and reports in the final probe agree with hosted database truth. SI/OR/VB/PV searches expose their external/reference fields; PO exposes the existing notes field as Reference / Note because no dedicated external-reference column exists. Stock Balance is fixed, history/date/report controls are exercised, and SI Related Docs now identifies the linked OR. This finding is closed for the canonical visibility root cause; incomplete approved Sales Invoice UX-standard rollout remains PXL-AUD-053, not a seed defect. |
 | Business Impact | Implementation consultants cannot use the app alone to demonstrate or validate seeded workflows. |
 | Accounting Impact | Posted SIs, VBs, receipts, aging, and TB evidence cannot be consistently reviewed from UI. |
-| Inventory Impact | Stock-balance and inventory movement evidence is not visible from inventory screens. |
+| Inventory Impact | Stock transfer, stock adjustment, and inventory movement evidence is visible only after choosing the right history/date controls; stock balance evidence is blocked by the PostgREST ordering defect. |
 | Tax Impact | VAT/EWT source-document traceability is incomplete in UI review pages. |
 | Security Impact | Not directly a security defect, but it weakens user-facing evidence of RLS/company isolation and permission behavior. |
 | Likely Root Cause | Route queries and UI tables have not all been aligned with the canonical business-reference fields, selected branch/period context, source-document trace APIs, or the canonical seed's posted statuses. |
-| Files / Surfaces | `scripts/audit_canonical_ui.mjs`; transaction pages for SI/OR/PO/VB/inventory/banking/aging/compliance; report pages; source-trace routes. |
-| Recommended Implementation | For each missing route, compare the page query/filter against the seeded rows and expected business reference; add route-level empty-state diagnostics that say whether rows are hidden by company, branch, period, status, or permissions; surface canonical business references and drillbacks in list columns; add Playwright assertions for the canonical dataset. |
-| Regression Tests | Convert `scripts/audit_canonical_ui.mjs` into a CI-capable Playwright smoke test with expected visible tokens per module once each route is fixed. |
-| Retest Plan | Run the local canonical reset/seed, start the app against local Supabase, run the audit script, and require every intended canonical token to be visible or explicitly classified as a documented feature gap. |
+| Files / Surfaces | `scripts/audit_canonical_ui.mjs`; `src/pages/StockBalancePage.tsx`; transaction pages for SI/OR/PO/VB/PV/inventory/aging/compliance/audit; report pages; source-trace routes. |
+| Recommended Implementation | Keep `scripts/audit_phase3_hosted_ui.mjs` as the canonical hosted smoke lane. Future list/detail changes must preserve official numbers, external references, history/date filter behavior, posted read-only state, and source drillbacks. Add a dedicated PO external-reference field only through an approved schema/persistence change. |
+| Regression Tests | Convert the hosted UI probe into a CI-capable Playwright smoke test with expected visible tokens per module, including filter/history interactions. Stock Balance now has direct hosted UI evidence in the probe. |
+| Retest Plan | Completed 2026-07-16 through the hosted app. Re-run the scripted 48 company/master/document and 20 report probes after route-query, filter, RLS, or seed changes. |
 
 ### New Finding Detail - PXL-AUD-058
 
@@ -233,17 +269,21 @@ Standing (2026-07-16, Phase 2 canonical demo product audit): 74 Retested Passed 
 | Test Performed | Local reset+seed completed; direct Auth password grant for `demo.admin@pxl.local` returned HTTP 200; browser-context fetch to Auth returned HTTP 200; `scripts/audit_canonical_ui.mjs` completed login and route probing. |
 | Remaining Work | Consider creating demo users through Supabase Admin APIs in future seed tooling rather than direct `auth.*` inserts, if the project standardizes on API-backed Auth provisioning. |
 
+<a id="pxl-aud-059"></a>
+
 ### New Finding Detail - PXL-AUD-059
 
 | Field | Value |
 | --- | --- |
+| Title | Canonical dataset does not yet exercise every active product workflow |
 | Status | Open |
 | Severity | High |
 | Area | Table coverage / feature completeness / regression-scope clarity |
-| Issue | After the canonical seed, 69 of 148 public tables are populated and 79 remain empty. Several empty tables represent active or user-visible workflows, not merely future placeholders. |
-| Reproduction / Evidence | A dynamic coverage query over every `public` base table found 148 tables, 5,080 public rows, 124 company-scoped tables, 69 populated tables, and 79 empty tables. Empty active workflow examples include `approval_instances`, `delivery_receipts`, `delivery_receipt_lines`, `vendor_credits`, `vendor_credit_lines`, `vendor_credit_applications`, `purchase_returns`, `purchase_return_lines`, `physical_count_sheets`, `physical_count_sheet_lines`, `bank_reconciliations`, `bank_adjustments`, `check_vouchers`, `cash_purchases`, `petty_cash_vouchers`, fixed-asset lifecycle tables, compliance working-paper/return tables, `warehouse_item_settings`, and `withholding_remittances`. |
+| Module / Environment | Cross-module canonical data; hosted project `bskjkogijpbhukjkagfj` |
+| Issue | Phase 3 raised meaningful hosted coverage to 82 of 148 public tables, leaving 66 empty. The remaining tables are classified, but several correspond to active or partially implemented workflows that still lack governed canonical generators or UI validation. |
+| Reproduction / Evidence | Hosted `phase3_hosted_read_only.sql` found 148 tables, 82 populated, and 66 empty. Phase 3 newly exercised quotations, delivery receipts, credit memos, vendor credits/applications, cash purchase, physical count, warehouse settings, additional inventory movements, and multi-company journals/tax rows. Remaining empty groups are approvals; banking/reconciliation; fixed assets; amortization/recurring/revenue-recognition schedules; debit/supplier memos and purchase returns; BIR return/working-paper/certificate tables; CAS export artifacts; and technical/future tables. |
 | Expected Behavior | Every active application table should be classified as populated by canonical regression, automatically populated by a supported workflow, intentionally empty for a documented future feature, deprecated/unused, or requiring manual implementation testing. |
-| Actual Behavior | The table coverage picture is not yet part of the canonical dataset documentation, and multiple active modules remain unexercised by seed or UI audit. |
+| Actual Behavior | The Phase 3 report now classifies all 66 empty tables by supported workflow and reason. No artificial rows were inserted. PXL-AUD-059 remains open because several implemented-looking modules still have no governed canonical scenario or verified report/UI generator. |
 | Business Impact | Product readiness can be overstated because empty tables may correspond to missing implementation paths rather than intentionally deferred modules. |
 | Accounting Impact | Empty return/reconciliation/adjustment/asset/payment tables mean accounting lifecycle breadth is incomplete. |
 | Inventory Impact | Physical count, returns, warehouse settings, and some movement families are not seeded or tested end-to-end. |
@@ -253,15 +293,23 @@ Standing (2026-07-16, Phase 2 canonical demo product audit): 74 Retested Passed 
 | Files / Surfaces | Public schema tables; canonical seed; `docs/PXL/PXL_CANONICAL_DEMO_DATASET.md`; Phase 2 coverage report. |
 | Recommended Implementation | Add a maintained table coverage matrix with purpose, owner module, populated status, expected population mechanism, UI route, RLS test status, and next action; then either seed meaningful workflow rows or mark unsupported/future tables as intentionally deferred. |
 | Regression Tests | Add a table-coverage test/report that fails only on unexpected active-table emptiness, not on intentionally deferred future modules. |
-| Retest Plan | Re-run the coverage query after each canonical seed expansion and reconcile empty active tables against docs and route-level Playwright tests. |
+| Retest Plan | Re-run the hosted coverage query after each canonical seed expansion and reconcile empty active tables against docs and route-level Playwright tests. |
+| Affected Functions / Policies / Routes | Workflow generators, report routes, and RLS policies associated with the 66 classified empty tables; no single shared RPC owns the gap. |
+| Recommended Implementation Sequence | Maintain the classification; select one supported workflow; add meaningful fixtures and route/security evidence; otherwise mark it explicitly future or unsupported. |
+| Dependencies / Workaround | Depends on module support decisions. Until exercised, do not cite an empty-table module as implemented from route presence alone. |
+| Last Verified / Supporting Reports | 2026-07-16; `docs/PXL/archive/phase-reports/PXL_PHASE3_CANONICAL_IMPLEMENTATION_REPORT.md`, hosted read-only verification, and `PXL_CANONICAL_DEMO_DATASET.md`. |
+
+<a id="pxl-aud-060"></a>
 
 ### New Finding Detail - PXL-AUD-060
 
 | Field | Value |
 | --- | --- |
+| Title | Login fields lack accessible label and error semantics |
 | Status | Open |
 | Severity | Medium |
 | Area | UI accessibility / login form / automation reliability |
+| Module / Environment | Authentication UI; local and hosted browser automation |
 | Issue | Login labels are visually present but not programmatically associated with the email/password inputs. Label-based Playwright automation and assistive technologies cannot resolve the fields by label. |
 | Reproduction / Evidence | `page.getByLabel('Email')` failed on `LoginPage`; the audit script had to fall back to `input[type="email"]` and `input[type="password"]`. |
 | Expected Behavior | Every visible form label should use `htmlFor`/`id` or an equivalent accessible-name pattern, with `autocomplete` attributes where applicable. |
@@ -274,28 +322,195 @@ Standing (2026-07-16, Phase 2 canonical demo product audit): 74 Retested Passed 
 | Recommended Implementation | Add stable `id` values to email/password inputs, matching `htmlFor` on labels, `name`, `autocomplete="email"` and `autocomplete="current-password"`, and an accessible error region for login failures. Review other high-traffic ERP forms for the same pattern. |
 | Regression Tests | Add a small Playwright assertion that can fill login with `getByLabel('Email')` and `getByLabel('Password')`. |
 | Retest Plan | Re-run the browser audit script using label selectors instead of CSS selectors. |
+| Affected Tables / Functions / Policies | None. The affected route is the login form in `src/pages/LoginPage.tsx`. |
+| Recommended Implementation Sequence | Wire `id`/`htmlFor` and names; add autocomplete and accessible error status; add the label-based browser assertion; then audit only high-traffic forms in a separately approved scope. |
+| Dependencies / Workaround | No product dependency. Current CSS selectors are an automation workaround, not an accessibility fix. |
+| Last Verified / Supporting Reports | 2026-07-16; archived Phase 2/Phase 3 hosted UI evidence under `docs/PXL/archive/phase-reports/`. |
+
+<a id="pxl-aud-061"></a>
 
 ### New Finding Detail - PXL-AUD-061
 
 | Field | Value |
 | --- | --- |
+| Title | Regression lanes are not yet fully green and explicitly governed |
 | Status | Open |
 | Severity | High |
 | Area | Regression harness / canonical seed compatibility / CI reliability |
+| Module / Environment | Database regression harness; fresh schema, canonical-seeded, and held-out CAS lanes |
 | Issue | The focused canonical test passes, but the full `npm test` pgTAP suite is not deterministic after the canonical reset+seed state. A permanent canonical regression environment cannot rely on a suite that fails because tests assume different seed state, hard-coded fixture IDs, old TIN formats, or held-out migration behavior. |
 | Reproduction / Evidence | After local canonical reset+seed, `npm test` ran 55 files and failed. Failing files included `009_gl_reversal_visibility_test.sql` and `020_status_immutability_test.sql` due duplicate hard-coded auth user IDs; `016_wht_export_snapshots_test.sql` and `042_cash_purchase_ewt_test.sql` due TIN branch-code formatting expectations; `017_cas_export_snapshots_test.sql` and `027_cas_end_to_end_controls_test.sql` due CAS/DAT/void evidence drift; `025_posting_preview_invariants_test.sql` due missing locked-period preview rejection; `026_accounting_trace_report_routes_test.sql`, `048_withholding_trace_drilldowns_test.sql`, and `050_accounting_readiness_approval_test.sql` due current TIN check constraints and fixture values. The focused `055_canonical_demo_dataset_test.sql` passed 34/34. |
 | Expected Behavior | The repo should provide a clear green regression command for the canonical environment, or separate commands for fresh-schema pgTAP and canonical-seeded product regression with documented reset prerequisites. Tests should be idempotent and should not depend on execution leftovers from earlier files. |
-| Actual Behavior | The focused canonical regression is green, but the broad suite fails when run in the seeded permanent regression environment. |
+| Actual Behavior | Phase 3 repaired stale five-digit TIN fixtures, current CAS allocator expectations, and committed-fixture teardown; it also fixed the locked-period preview product regression. A fresh migration replay followed by base seed plus two enrichment replays passes 56 files / 1,014 assertions. Tests 055/056/057 pass locally and hosted. The separately held-out `027_cas_end_to_end_controls_test.sql` runs 31 assertions and fails only two assertions for the historical CAS evidence defect tracked as PXL-AUD-066. |
 | Business Impact | Teams cannot use one documented command to prove the product is ready after canonical seed changes. |
 | Accounting Impact | Accounting findings can be hidden by harness failures unrelated to the change under test. |
 | Inventory Impact | Inventory regressions can be missed if the suite is already red before inventory assertions. |
 | Tax Impact | Tax/DAT/withholding fixture drift creates false positives and masks real compliance defects. |
 | Security Impact | RLS/security tests may not run cleanly after earlier tests leave committed state. |
-| Likely Root Cause | Historical pgTAP files mix transactional tests, committed fixtures, hard-coded auth IDs, hard-coded TIN text expectations, and assumptions about held-out migrations. The canonical seed introduced a persistent baseline, but the full suite has not been normalized for that baseline. |
-| Files / Surfaces | `supabase/tests/*.sql`; `package.json` test command; canonical seed/reset scripts; docs test commands. |
-| Recommended Implementation | Split test commands into fresh-schema, canonical-seeded, and held-out/experimental lanes; make auth/user fixtures idempotent or unique per file; update old TIN expectations to the governed 9-digit taxpayer + 5-digit branch format; move CAS held-out tests to the lane that includes their required migrations; document which command must be green for each release gate. |
+| Likely Root Cause | Most failures were fixture/schema drift and one committed-fixture cleanup defect. Those are repaired. The remaining red assertions are genuine product behavior: the CAS package mixes document-period and event-occurrence dates. |
+| Files / Surfaces | `supabase/tests/*.sql`; `supabase/tests/056_company_rls_membership_scope_test.sql`; `package.json` test command; canonical seed/reset scripts; docs test commands. |
+| Recommended Implementation | Keep the 56-file deterministic lane as the release gate; keep test 027 in the held-out product-defect lane until PXL-AUD-066 is fixed. Add named package scripts/CI jobs for fresh schema, canonical seeded, hosted-safe read-only, and hosted UI lanes rather than relying on an ambiguous all-files command. |
 | Regression Tests | Add a wrapper that starts from a documented reset state and runs the intended lane with no residual fixtures. CI should publish per-lane results rather than one ambiguous red suite. |
-| Retest Plan | Run fresh-schema pgTAP from a clean reset, run canonical seed plus canonical UI audit, and run held-out CAS/ATC tests only after their migrations are intentionally included. |
+| Retest Plan | Completed for the deterministic lane on 2026-07-16. After PXL-AUD-066 is fixed, re-run all 57 files and require all 1,045 assertions to pass; continue hosted rollback tests 055/056/057 and hosted-safe SQL/UI lanes independently. |
+| Affected Tables / Functions / Policies | Cross-cutting test fixtures; CAS package functions through the held-out dependency; no new production behavior is prescribed by this harness finding. |
+| Recommended Implementation Sequence | Fix AUD-066; prove test 027 at 31/31; add named deterministic commands/CI lanes; run the complete 57-file lane. |
+| Dependencies / Workaround | Depends on AUD-066. Until fixed, report the 56-file green lane and test 027 red lane separately; never call the full suite green. |
+| Last Verified / Supporting Reports | 2026-07-16; `docs/PXL/archive/phase-reports/PXL_PHASE3_CANONICAL_IMPLEMENTATION_REPORT.md` and the accounting test book. |
+
+### New Finding Detail - PXL-AUD-062
+
+| Field | Value |
+| --- | --- |
+| Status | Retested Passed |
+| Severity | Critical |
+| Area | Hosted access control / company selector / company setup RLS |
+| Issue | Hosted company visibility and company setup writes are not restricted to the signed-in user's memberships/admin role. The demo admin can see an active non-member company in the company selector, and hosted RLS includes a permissive authenticated company update policy. |
+| Reproduction / Evidence | Hosted UI against project `bskjkogijpbhukjkagfj` logged in as `demo.admin@pxl.local` showed the five canonical companies plus `PXL Demo Trading Corporation`. Hosted SQL showed `PXL Demo Trading Corporation` is active, has no `user_company_memberships` row for the demo admin, and still appears in the selector. `pg_policies` for `companies` includes `authenticated_select_companies` with `qual = true` and `authenticated_update_companies` with `qual = true`; `information_schema.role_table_grants` shows `authenticated` has `UPDATE` on `public.companies`. The same broad-policy scan also found authenticated `ALL` policies on `bir_forms` and `bir_form_mappings`. |
+| Expected Behavior | Company selectors and company-scoped setup surfaces should list only companies the user can access, unless a deliberate super-admin path exists. Company updates should require `can_admin_company(id)` or an equivalent owner/admin predicate, and broad reference/setup policies should be explicitly reviewed. |
+| Actual Behavior | Fixed in Phase 3. Migration `20260716000002_company_rls_membership_scope.sql` drops the permissive company select/update policies and recreates `companies_read_own` with `is_company_member(id)` and `companies_update` with `can_admin_company(id)` as both `USING` and `WITH CHECK`. Hosted policy verification now shows zero broad company SELECT/UPDATE policies. The UI company selector shows exactly the five canonical member companies and no longer shows `PXL Demo Trading Corporation`. |
+| Business Impact | Users can see tenant names outside their memberships, and company master records may be exposed to unintended authenticated updates. |
+| Accounting Impact | Unauthorized company setup changes can invalidate posting configuration, fiscal setup, CAS identity, and report context. |
+| Inventory Impact | Company-level access drift can expose or corrupt downstream branch/warehouse configuration. |
+| Tax Impact | Unauthorized company profile edits can corrupt TIN/RDO/tax-registration/CAS profile data used in VAT/EWT/BIR outputs. |
+| Security Impact | Critical tenant-isolation and privilege-boundary risk was closed for company selector/read/update scope. This is distinct from PXL-AUD-055's service-role exposure. Residual broad BIR form configuration policies are now tracked separately as PXL-AUD-063. |
+| Likely Root Cause | Legacy broad authenticated policies were left alongside newer membership-scoped policies; because PostgreSQL RLS policies are permissive by default, `USING (true)` makes the stricter `companies_read_own` / `companies_update` policies ineffective for the same command. |
+| Files / Surfaces | Hosted `public.companies` RLS/grants; `src/components/AppShell.tsx` company selector; setup pages that load companies directly; `supabase/migrations/20260716000002_company_rls_membership_scope.sql`; `supabase/tests/056_company_rls_membership_scope_test.sql`. |
+| Recommended Implementation | Completed for the company selector/read/update root cause. Keep company creation explicitly governed and decide separately whether open company creation remains intended product behavior. Review broad global BIR form mapping policies under PXL-AUD-063. |
+| Regression Tests | `supabase/tests/056_company_rls_membership_scope_test.sql` proves selector query scope, direct company-table isolation, unauthorized company update invisibility, branch visibility, cross-company customer visibility, cross-company Sales Invoice visibility, and no-membership zero-company behavior. |
+| Retest Plan | Completed 2026-07-16: `supabase db reset --local --no-seed` replayed through `20260716000002`; `supabase test db --local supabase/tests/056_company_rls_membership_scope_test.sql` passed 11/11; `supabase db push --linked --dry-run` showed only `20260716000002`; `supabase db push --linked` applied it; hosted migration history shows `20260716000002`; hosted `pg_policies` shows company SELECT as `is_company_member(id)` and UPDATE as `can_admin_company(id)`; hosted broad company SELECT/UPDATE policy count is 0; hosted rollback pgTAP test passed 11/11; hosted UI selector shows exactly the five canonical companies. |
+
+<a id="pxl-aud-063"></a>
+
+### New Finding Detail - PXL-AUD-063
+
+| Field | Value |
+| --- | --- |
+| Title | Global BIR form configuration permits ungoverned authenticated writes |
+| Status | Open |
+| Severity | High |
+| Area | Security / compliance setup governance / global BIR reference configuration |
+| Module / Environment | BIR setup / RLS; hosted and migration-replay environments |
+| Issue | Hosted `bir_forms` and `bir_form_mappings` still have broad authenticated `FOR ALL USING (true)` policies. They are global statutory/configuration tables rather than company selector tables, but broad write/delete capability is not explicitly governed. |
+| Preconditions | Authenticated user access to the hosted Supabase project. |
+| Reproduction / Evidence | Hosted `pg_policies` on 2026-07-16 shows `auth_all_bir_forms` on `bir_forms` and `auth_all_bir_form_mappings` on `bir_form_mappings`, both `cmd = ALL`, `qual = true`. |
+| Expected Behavior | Global statutory reference/configuration tables should be read-only for ordinary authenticated users unless a governed admin/setup role or RPC explicitly authorizes writes. |
+| Actual Behavior | The broad policies remain unchanged after the Phase 3 company RLS fix because their product write semantics and any setup UI dependency have not yet been reviewed safely. |
+| UI Evidence | Not yet route-retested for mutation capability. `BIRFormConfigPage` exists in the bundle and needs a role/permission decision before policy tightening. |
+| Database Evidence | `pg_policies` confirms broad `ALL` posture on both tables. |
+| Accounting Impact | Incorrect BIR form mappings can make statutory outputs map wrong source data or periods. |
+| Tax Impact | High tax-compliance impact if authenticated non-admin users can alter BIR form definitions or mapping rules. |
+| Inventory Impact | None direct. |
+| Security and Audit Impact | Broad global write policy weakens auditability and separation of duties for compliance configuration. |
+| Business Impact | An ordinary authenticated user could change shared statutory configuration used outside any one company boundary. |
+| Likely Root Cause | Early Sprint 2 tax policies treated BIR form metadata as open authenticated configuration and were not revisited during company-scoped RLS hardening. |
+| Affected Tables | `bir_forms`; `bir_form_mappings`. |
+| Affected Files | `supabase/migrations/20260628000005_sprint2_tax.sql`; future hardening migration; BIR form configuration UI if writes are supported. |
+| Affected RPCs, Functions, Triggers, or Policies | `auth_all_bir_forms`; `auth_all_bir_form_mappings`. |
+| Recommended Fix | Decide whether these tables are immutable global references, admin-only configuration, or RPC-governed setup. Then replace `FOR ALL USING (true)` with read-only authenticated policies plus admin-only write policies, or route writes through governed SECURITY DEFINER RPCs with audit events. |
+| Recommended Implementation Sequence | Confirm the current page uses `ref_compliance_forms`; define legacy global tables as ordinary-user read-only; replace the two policies in a new migration; add role-based insert/update/delete denial tests; validate authorized maintenance only if such a role already exists. |
+| Migration or Backfill Requirement | Migration required to drop/replace policies; no data backfill expected unless existing mappings are invalid. |
+| Regression Test | Add pgTAP tests proving ordinary authenticated users can read required BIR metadata but cannot insert/update/delete mappings without admin/setup authority. |
+| Retest Plan | Re-query hosted `pg_policies`, run the new pgTAP test locally and hosted rollback, and validate any affected BIR form setup UI still works for authorized users only. |
+| Dependencies | Product decision for who may maintain BIR form mappings; potential role/permission model expansion beyond current company owner/admin memberships. |
+| Workaround | Limit access to non-production/demo environments and avoid granting ordinary users compliance-configuration responsibilities until the policy is tightened. |
+| Last Verified / Supporting Reports | 2026-07-16; archived Phase 3 report, `docs/PXL/10. Compliance/README.md`, and BIR Form Configuration specification. |
+| Recommended Implementation Order | Review UI dependency first, then ship policy migration and regression test, then retest BIR form configuration routes. |
+
+### New Finding Detail - PXL-AUD-064
+
+| Field | Value |
+| --- | --- |
+| Title | Reversed source journals were excluded from AR/AP control reconciliation |
+| Status | Retested Passed |
+| Severity | High |
+| Module / Environment | Accounting reconciliation; local and hosted canonical environments |
+| Company and Scenario | ABC Trading Corporation; governed void/reversal Sales Invoice scenario |
+| Preconditions | A posted source document is reversed with an original JE marked `reversed` and a posted counter-JE. |
+| Reproduction Steps | Void the Phase 3 ABC invoice and run AR/AP subledger-to-GL reconciliation. |
+| Expected Behavior | Original and counter-JE net to zero under the same reversal-aware GL visibility convention. |
+| Actual Behavior | Before the fix, the original `reversed` JE was excluded while the posted counter-JE remained, producing a PHP 1,120 AR variance. Migration `20260716000004` now includes `posted` and `reversed` source journals; all five hosted companies reconcile at zero variance. |
+| UI / Database Evidence | Hosted reports remained usable; SQL reconciliation exposed the variance and then zero after migration. |
+| Accounting / Tax / Inventory Impact | High accounting control-account misstatement; no tax or inventory quantity impact. |
+| Security and Audit Impact | A false reconciliation variance could obscure real subledger defects. |
+| Likely Root Cause | Newer reconciliation functions regressed from the established reversal-aware GL status convention to `status = 'posted'`. |
+| Affected Tables / Files / Functions | `journal_entries`, AR/AP source tables; `20260716000004_reversal_aware_subledger_reconciliation.sql`; `fn_ar_subledger_gl_reconciliation`; `fn_ap_subledger_gl_reconciliation`; test 057. |
+| Recommended Fix / Migration | Completed by migration `20260716000004`; no backfill required. |
+| Regression Test / Retest Plan | Test 057 validates zero AR/AP variance after the canonical void; local and hosted 38/38 passed. |
+| Dependencies / Workaround / Order | None remaining; keep this invariant in the canonical-seeded lane. |
+
+### New Finding Detail - PXL-AUD-065
+
+| Field | Value |
+| --- | --- |
+| Title | Specialized Sales Invoice GL preview bypassed locked-period rejection |
+| Status | Retested Passed |
+| Severity | High |
+| Module / Environment | Sales Invoice accounting preview; local and hosted |
+| Company and Scenario | Posting-preview test company; approved unposted August invoice in a locked period |
+| Preconditions | Approved SI has no posted journal and its posting date has no open fiscal period. |
+| Reproduction Steps | Call `fn_preview_gl_impact('SI', invoice_id)` after locking the covering period. |
+| Expected Behavior | Preview rejects the same locked/missing period that posting rejects. |
+| Actual Behavior | The specialized SI preview returned a payload with null period metadata instead of throwing. Migration `20260716000005` adds a public period guard and delegates to a non-public versioned core implementation. |
+| UI / Database Evidence | Current SI GL Impact uses the RPC; hosted pgTAP test 025 passed all 40 assertions after deployment. |
+| Accounting / Tax / Inventory Impact | Preview could falsely indicate posting readiness; no persisted posting, tax, or inventory mutation occurred. |
+| Security and Audit Impact | Internal core execution was revoked from `anon`/`authenticated`; only the guarded public function remains callable. |
+| Likely Root Cause | `20260715000004` routed SI previews to a specialized renderer that resolved but did not enforce the fiscal period. |
+| Affected Tables / Files / Functions | `fiscal_periods`; `20260716000005_sales_invoice_preview_period_guard.sql`; `fn_preview_gl_impact`; `fn_preview_gl_impact_core`; test 025. |
+| Recommended Fix / Migration | Completed with an idempotent versioned-function wrapper; no data backfill. |
+| Regression Test / Retest Plan | Local and hosted test 025 passed 40/40; migration history verified through `20260716000005`. |
+| Dependencies / Workaround / Order | None remaining. This is a current implementation defect fix, not approved SI UX-standard rollout. |
+
+<a id="pxl-aud-066"></a>
+
+### New Finding Detail - PXL-AUD-066
+
+| Field | Value |
+| --- | --- |
+| Title | Historical CAS audit package omits later-created number and void evidence |
+| Status | Open |
+| Severity | High |
+| Module / Environment | CAS audit package; fresh local canonical-seeded test lane |
+| Company and Scenario | CAS E2E fixture; July 10 documents and exports generated during a later test execution |
+| Preconditions | Books/export snapshots have a historical report period, while number allocations and void events occur later. |
+| Reproduction Steps | Run test 027 and request `fn_snapshot_cas_audit_package` for `2026-07-10`. |
+| Expected Behavior | The package includes number and void evidence for documents in the requested accounting/document period regardless of when the evidence was generated. |
+| Actual Behavior | Books/exports are selected by report period, but number issuances use `allocated_at` and void events use `occurred_at`; the package contains zero historical number/void rows. Test 027 fails assertions 29-30. |
+| UI / Database Evidence | No complete UI package drilldown was claimed. Database function output and pgTAP provide direct evidence. |
+| Accounting / Tax / Inventory Impact | Historical statutory audit support can be incomplete; no direct posting, tax calculation, or stock mutation error. |
+| Security and Audit Impact | High audit-evidence completeness risk for packages generated after the document date. |
+| Likely Root Cause | Mixed temporal semantics inside one package: period-based books/exports versus event-occurrence-based issuance/void evidence. |
+| Affected Tables / Files / Functions | `cas_document_number_issuances`, `cas_document_void_events`, `report_snapshots`, `cas_export_log`; `fn_snapshot_cas_audit_package`; test 027. |
+| Affected Migration / Route | `supabase/migrations/20260710000005_cas_numbering_void_dat_controls.sql`; CAS audit package database path. No complete UI package drilldown is claimed. |
+| Recommended Fix / Migration | Add a governed source-document-date resolver for issuance rows; filter voids by `document_date` with occurrence fallback; preserve allocation-time evidence for unbound reservations. No backfill should be needed. |
+| Regression Test / Retest Plan | Keep test 027 in the held-out lane; after the migration require 31/31 and then all 57 files / 1,045 assertions to pass. |
+| Dependencies / Workaround / Order | Fix after open Critical security work and before treating CAS historical packages as complete. Current workaround is package generation on the event date plus separate books/export evidence, explicitly documented as incomplete. |
+| Last Verified / Supporting Reports | 2026-07-16; archived Phase 3 report and `supabase/tests/027_cas_end_to_end_controls_test.sql`. |
+
+<a id="pxl-aud-067"></a>
+
+### New Finding Detail - PXL-AUD-067
+
+| Field | Value |
+| --- | --- |
+| Title | Company Setup Checklist can report ready before operational setup exists |
+| Status | Open |
+| Severity | Medium |
+| Module / Environment | Company Setup Checklist; hosted canonical UI |
+| Company and Scenario | All five canonical companies; pre-enrichment Bayani demonstrated the false-ready boundary |
+| Preconditions | Legal profile, branch, fiscal calendar, COA, number series, compliance/tax, and GL mappings exist while operational masters/transactions are absent. |
+| Reproduction Steps | Open each hosted checklist; compare its ten checks with customers, suppliers, items, warehouses, bank accounts, sales/purchasing setup, and approval coverage. |
+| Expected Behavior | Checklist status clearly distinguishes core accounting readiness from full operational implementation and conditionally evaluates inventory/service requirements. |
+| Actual Behavior | All current checks are correctly Ready or VAT Not Applicable, but the checklist does not evaluate operational masters. Before enrichment it reported Bayani ready despite no customers, suppliers, warehouse, or transactions. |
+| UI / Database Evidence | `scripts/audit_phase3_checklists.mjs` passes all current checks; hosted master counts prove the broader setup now exists but is not what the checklist measured. |
+| Accounting / Tax / Inventory Impact | Core accounting/tax checks are accurate; operational inventory and subledger readiness can be overstated. |
+| Security and Audit Impact | No direct RLS defect; readiness evidence is narrower than its user-facing interpretation. |
+| Likely Root Cause | Checklist scope was designed around minimum posting prerequisites, not differentiated ERP implementation readiness. |
+| Affected Tables / Files / Functions | `CompanySetupChecklist.tsx`; setup/master tables; checklist audit script. |
+| Affected Route / Policy | Company Setup checklist UI; no migration, RPC, or RLS change is required for the wording/scope fix. |
+| Recommended Fix / Migration | Rename/scope the current result as core accounting readiness and add conditional operational sections for inventory, service-only, banking, approvals, and branch access. No data migration required. |
+| Regression Test / Retest Plan | Add company-profile checklist tests proving VAT and warehouse Not Applicable states and operational false-negative/false-positive behavior. |
+| Dependencies / Workaround / Order | Requires an approved checklist product model. Until then, use the Phase 3 checklist matrix plus master/transaction evidence rather than the green banner alone. |
+| Last Verified / Supporting Reports | 2026-07-16; archived Phase 3 report and `scripts/audit_phase3_checklists.mjs`. |
 
 | Finding ID | Area | Severity | Status | Issue | Expected Behavior | Actual Behavior | Root Cause | Files Affected | Test Performed | Fix Plan | Fix Session Size |
 | ---------- | ---- | -------- | ------ | ----- | ----------------- | --------------- | ---------- | -------------- | -------------- | -------- | ---------------- |
@@ -1164,7 +1379,7 @@ Missing or incomplete for production:
 | PXL-DA-017 | Branch/dimension control | High | Retested Passed | Branch, department, and cost center were not consistently propagated to journal lines. Fixed per DEC-011 (branch = reporting dimension, company = security boundary): `20260704000001_je_line_dimensions.sql` adds `branch_id`/`department_id`/`cost_center_id` to `journal_entry_lines`; `trg_je_dimensions_guard` validates the header branch belongs to the JE company; `trg_je_line_dimensions_guard` welds line company to the JE company, inherits the header branch when a line has none (covers all 34 JE writers centrally, current and future), and validates every line dimension's company; existing lines were backfilled from their headers; `vw_general_ledger.branch_id` became line-accurate (`COALESCE(line, header)` — same name/type/position, so Branch P&L upgraded transparently) with line `department_id`/`cost_center_id` appended; `fn_post_manual_je` accepts per-line dimensions in `p_lines`; `fn_reverse_je` copies line dimensions onto reversal lines. | Branch P&L and cost center reporting can be wrong. | GL lines may lose dimensional traceability. | Tax branch reporting may be incomplete. | None — DEC-011 keeps security company-scoped. | Branch was optional in the GL header and not line-level; dimension integrity was unenforced. | `supabase/migrations/20260704000001_je_line_dimensions.sql`; `supabase/tests/019_je_line_dimensions_test.sql`; `journal_entries`; `journal_entry_lines`; `vw_general_ledger` | Done for propagation/validation. Document-line department/cost-center capture is a backlog enhancement (Dimension summary on documents); stock transfer JEs stay branch-unattributed by design (they span warehouses); `fn_bt_reverse_je` and doc-void counter-JEs inherit the header branch but do not copy line dept/cc (no capture path writes dept/cc on those JEs today — adopt the `fn_reverse_je` pattern when one exists). | Medium | Executed passing 2026-07-04: seeded scenario JE-DIMS-001 (`supabase/tests/019_je_line_dimensions_test.sql`, 14 assertions) — SI branch propagates header→lines, manual JE per-line dept/cc accepted with header-branch fallback, reversal preserves line dimensions, cross-company header branch / line branch / line department rejected, line company divergence blocked, `vw_general_ledger` exposes line dimensions and branch P&L revenue reconciles to the posted SI. | Master data and posting engine. |
 | PXL-DA-018 | Report performance / large dataset readiness | Medium | Retested Passed | Several reports relied on broad client-side selects/aggregation and non-parameterized views. | Reports can now page through high-growth GL data without browser-side materialization. | Fixed for the core GL/TB report family: `fn_general_ledger_report` returns filtered/paginated GL rows with total row count and full-period debit/credit totals; `fn_gl_account_ledger_summary` and `fn_gl_account_ledger_page` compute opening, period, closing, and running balances server-side; `fn_trial_balance_report` computes TB rows by date range and entry-class mode. Supporting GL report indexes were added, and General Ledger, Account Detail Ledger, and Trial Balance pages now call these RPCs. | Compliance snapshot/export families already use server-side snapshot RPCs; this session closes the broad GL/TB client-aggregation risk. | Low. | Reporting layer was built page-by-page without durable server-side report APIs. | `supabase/migrations/20260714000009_da018_heavy_report_readiness.sql`; `supabase/tests/052_heavy_report_readiness_test.sql`; `src/pages/GeneralLedgerPage.tsx`; `src/pages/AccountDetailLedgerPage.tsx`; `src/pages/TrialBalancePage.tsx`; generated `src/lib/database.types.ts`; `docs/PXL/PXL_SCHEMA_SUMMARY.md` | Closed for the audited heavy GL/TB family. Future large report pages should adopt the same parameterized RPC + bounded page/export pattern rather than broad `vw_*` selects. | Medium | HEAVY-REPORT-READINESS-001 passed 18/18 on 2026-07-14: server-side GL page size, filtered total rows, full-period totals independent of page size, account-type/entry-class filters, limit clamp, account-ledger row count/opening/period/closing/running balance across an offset page, JE drilldown filtering, and unadjusted/adjusted TB aggregation. Held-out-safe fresh DB reset passed. Full trusted pgTAP passed 900/900 across 51 files with held-out test 027 excluded. `npm run gen:types`, schema summary regeneration, `npm run lint`, `npm run build`, and `git diff --check` passed. | Matrix-sync discipline closed under PXL-DA-020. |
 | PXL-DA-019 | CAS/BIR readiness | Critical | Retested Passed | CAS evidence now covers governed document-number issuance/void evidence, exact exported CAS/books bytes, versioned CRLF DAT artifacts, source/GL-reconciled books exports, and a server-attested CAS audit support package. | CAS exports and BIR books should be reproducible, hash-attested, linked to immutable snapshots/artifacts, and packaged with reconciliation evidence. | Implemented in trusted migrations `20260712000004`, `20260713000007`, `20260713000008`, and `20260713000009`, with the audit support page invoking the package RPC. | Residual CAS certification work is operational/legal validation, not an unimplemented core evidence control in this finding. | Low. | CAS was added as a UI/schema layer without full enforcement throughout transaction lifecycle; sessions 64, 80, 81, and 82 added governed numbering/void evidence, exact export-file evidence, `PXL-CAS-DAT-1.0` artifacts, books source/GL reconciliation, and audit package snapshots. | `src/pages/CASDashboardPage.tsx`; `src/pages/CASDATFileGenerationPage.tsx`; `src/pages/CASDocumentVoidRegisterPage.tsx`; `src/pages/AuditSupportPackagePage.tsx`; the seven Books pages; `src/lib/exportDownload.ts`; `supabase/migrations/20260701000005_audit_cas.sql`; `supabase/migrations/20260712000004_cas_numbering_void_evidence.sql`; `supabase/migrations/20260713000007_cas_export_file_hashes.sql`; `supabase/migrations/20260713000008_cas_dat_layout.sql`; `supabase/migrations/20260713000009_books_reconciliation_audit_package.sql`; `supabase/tests/017_cas_export_snapshots_test.sql`; `supabase/tests/018_books_export_snapshots_test.sql`; number-series and transaction migrations | Closed. Keep new export/report surfaces on the same snapshot/hash/reconciliation package model. | Large | CAS-EXPORT-SNAP-001 passes 29 assertions and BOOKS-EXPORT-SNAP-001 passes 22 assertions on a filtered fresh replay through `20260713000009`; direct log forging is denied, DAT exact bytes/artifacts are mirrored, all seven books reconcile to source rows and linked balanced GL entries, and `fn_snapshot_cas_audit_package` blocks periods without reconciled books/export hash evidence. | Numbering, audit events, report snapshots. |
-| PXL-DA-020 | Transaction matrix synchronization | High | Retested Passed | `PXL_TRANSACTION_MATRIX.md` exists, but final audit found transaction behavior gaps that must be reflected whenever fixes change code. | The transaction matrix must be mechanically tied to the audit backlog so status changes and active findings cannot drift silently. | Fixed: `scripts/check_docs_consistency.sh` now computes the Findings Status Index checksum and requires `PXL_TRANSACTION_MATRIX.md` to carry that exact line; it also requires every non-passed finding ID to be referenced in the matrix. | Wrong or stale matrix documentation can lead to wrong fixes, accounting rules, tax behavior, and traceability assumptions. | Low. | The prior gate checked findings-index agreement and test-book file coverage, but did not assert any matrix freshness signal. | `scripts/check_docs_consistency.sh`; `docs/PXL/PXL_TRANSACTION_MATRIX.md`; `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` | Closed. Any future audit-status change or active finding addition now requires a deliberate matrix update before the docs gate can pass. | Small | `scripts/check_docs_consistency.sh` passed with the DA-020 checksum contract: findings index consistent, matrix checksum/current findings in sync, and test book matching all test files. `bash -n scripts/check_docs_consistency.sh` passed. | Session 100 closed the remaining In-Progress items; the current checksum is 72 Retested Passed / 0 In Progress / 0 Open. |
+| PXL-DA-020 | Transaction matrix synchronization | High | Retested Passed | `PXL_TRANSACTION_MATRIX.md` exists, but final audit found transaction behavior gaps that must be reflected whenever fixes change code. | The transaction matrix must be mechanically tied to the audit backlog so status changes and active findings cannot drift silently. | Fixed: `scripts/check_docs_consistency.sh` now computes the Findings Status Index checksum and requires `PXL_TRANSACTION_MATRIX.md` to carry that exact line; it also requires every non-passed finding ID to be referenced in the matrix. | Wrong or stale matrix documentation can lead to wrong fixes, accounting rules, tax behavior, and traceability assumptions. | Low. | The prior gate checked findings-index agreement and test-book file coverage, but did not assert any matrix freshness signal. | `scripts/check_docs_consistency.sh`; `docs/PXL/PXL_TRANSACTION_MATRIX.md`; `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` | Closed. Any future audit-status change or active finding addition now requires a deliberate matrix update before the docs gate can pass. | Small | `scripts/check_docs_consistency.sh` passed with the DA-020 checksum contract: findings index consistent, matrix checksum/current findings in sync, and test book matching all test files. `bash -n scripts/check_docs_consistency.sh` passed. | Historical session-100 checksum was 72 Retested Passed / 0 In Progress / 0 Open; it is superseded by the authoritative indexes at the top of this file. |
 
 ## Production Readiness Scores
 
@@ -1210,7 +1425,7 @@ Use these sessions after the existing critical small fix unless a newer blocker 
 | Date | Session | Findings | Status | What Changed | Test Performed | Remaining Risk | Next Recommended Action |
 | ---- | ------- | -------- | ------ | ------------ | -------------- | -------------- | ----------------------- |
 | 2026-07-14 | 99 | PXL-DA-020 | Retested Passed | Extended `scripts/check_docs_consistency.sh` so transaction-matrix sync is no longer manual-only: the script computes the authoritative Findings Status Index checksum, requires `PXL_TRANSACTION_MATRIX.md` to carry the exact checksum, and requires every non-passed finding ID to appear in the matrix. Updated the matrix with the current checksum and maintenance rules. | `scripts/check_docs_consistency.sh` passed with 72 findings, matrix checksum/current findings in sync, and 52 test files in the test book. `bash -n scripts/check_docs_consistency.sh` passed. | No open DA-020 functional risk remains. Hosted Supabase state was unchanged by this docs/script-only fix; local migration `20260714000009` from DA-018 was pushed with session 100. | Session 100 completed AUD-045 and AUD-050. |
-| 2026-07-14 | 100 | PXL-AUD-045, PXL-AUD-050 | Retested Passed | Completed the two remaining audit items. AUD-045: added `20260714000010_aud045_si_expected_cwt_receipt_flow.sql`, storing `sales_invoices.cwt_atc_code_id`/`cwt_tax_base`, replacing `fn_save_sales_invoice` with customer-default ATC/rate/base validation, deriving SI expected CWT in `SalesInvoicePage`, and carrying remaining SI expected CWT/base/ATC into `ReceiptsPage` OR lines. AUD-050: added reusable `AuditEvidenceBlock`, wired audit evidence into Debit Memo, Vendor Credit, Cash Purchase, Cash Sale drillback, Fund Transfer, Bank Adjustment, Petty Cash Voucher, Petty Cash Replenishment, Purchase Return, and the generic Accounting Source page for registered posting source types. | Held-out-safe `supabase db reset --local` replayed through `20260714000010` with drafts `20260710000004`/`00005` and test `027` moved aside then restored. Focused test 053 (SI-EXPECTED-CWT-OR-001) passed 9/9. Full trusted pgTAP passed **909/909 across 52 files**; `npm run gen:types`, `scripts/gen_schema_summary.sh`, `npm run lint`, `npm run build`, `scripts/check_docs_consistency.sh`, and `git diff --check` passed. `main` was pushed, hosted Supabase applied `20260714000009`/`20260714000010`, and a held-out-safe post-push dry run returned "Remote database is up to date." | No open audit-finding risk remains: the Findings Status Index is 72 Retested Passed / 0 In Progress / 0 Open. Future new transaction pages must keep adopting `AuditEvidenceBlock` or the DocumentLayout Audit Trail tab. | Keep the accounting core stable under AIQ-017; no audit-finding fix remains open. |
+| 2026-07-14 | 100 | PXL-AUD-045, PXL-AUD-050 | Retested Passed | Completed the two remaining audit items. AUD-045: added `20260714000010_aud045_si_expected_cwt_receipt_flow.sql`, storing `sales_invoices.cwt_atc_code_id`/`cwt_tax_base`, replacing `fn_save_sales_invoice` with customer-default ATC/rate/base validation, deriving SI expected CWT in `SalesInvoicePage`, and carrying remaining SI expected CWT/base/ATC into `ReceiptsPage` OR lines. AUD-050: added reusable `AuditEvidenceBlock`, wired audit evidence into Debit Memo, Vendor Credit, Cash Purchase, Cash Sale drillback, Fund Transfer, Bank Adjustment, Petty Cash Voucher, Petty Cash Replenishment, Purchase Return, and the generic Accounting Source page for registered posting source types. | Held-out-safe `supabase db reset --local` replayed through `20260714000010` with drafts `20260710000004`/`00005` and test `027` moved aside then restored. Focused test 053 (SI-EXPECTED-CWT-OR-001) passed 9/9. Full trusted pgTAP passed **909/909 across 52 files**; `npm run gen:types`, `scripts/gen_schema_summary.sh`, `npm run lint`, `npm run build`, `scripts/check_docs_consistency.sh`, and `git diff --check` passed. `main` was pushed, hosted Supabase applied `20260714000009`/`20260714000010`, and a held-out-safe post-push dry run returned "Remote database is up to date." | Historical session-100 state had 72 Retested Passed / 0 In Progress / 0 Open. Later audits superseded that standing; use the indexes at the top of this file. Future new transaction pages must keep adopting `AuditEvidenceBlock` or the DocumentLayout Audit Trail tab. | Historical next step was to keep the accounting core stable; current work selection now lives only in `AI/AI_STATE.md`. |
 | 2026-07-14 | 98 | PXL-DA-018 | Retested Passed | Added `20260714000009_da018_heavy_report_readiness.sql` and HEAVY-REPORT-READINESS-001 (`supabase/tests/052_heavy_report_readiness_test.sql`). The migration adds GL-report indexes plus `fn_general_ledger_report`, `fn_gl_account_ledger_summary`, `fn_gl_account_ledger_page`, and `fn_trial_balance_report`. General Ledger, Account Detail Ledger, and Trial Balance now use the server-side report APIs for bounded rows, totals, opening/closing/running balances, and TB entry-class mode aggregation. | Held-out-safe fresh `supabase db reset --local --no-seed` passed with drafts `20260710000004`/`00005` moved aside/restored. Focused test 052 passed 18/18. Full trusted pgTAP passed **900/900 across 51 files** with held-out test `027` excluded. `npm run gen:types` passed; schema summary regenerated (272 functions / 20 views / 149 tables / 287 triggers; 111 migrations / 52 tests). `npm run lint`, `npm run build`, and `git diff --check` passed. | No open DA-018 functional risk remains; hosted Supabase was pushed through `20260714000009` in session 100. | Session 99 completed DA-020; session 100 completed AUD-045 and AUD-050. |
 | 2026-07-14 | 97 | PXL-DA-013 | Retested Passed | Added `20260714000008_da013_asof_ledger_reconciliation.sql` and ASOF-LEDGER-RECON-001 (`supabase/tests/051_asof_ledger_reconciliation_test.sql`). The migration adds as-of customer/supplier ledger RPCs and AR/AP subledger-to-GL reconciliation RPCs using configured control accounts. Customer ledgers use cutoff-dated posted SI, invoice-applied OR, applied CM, and paid DM rows; supplier ledgers use cutoff-dated posted VB net of source-accrued EWT, PV bill applications, and posted VC rows while excluding supplier down payments from AP. | Held-out-safe fresh `supabase db reset --local` passed with drafts `20260710000004`/`00005` moved aside/restored. Focused test 051 passed 16/16. Full trusted pgTAP passed **882/882 across 50 files** with held-out test `027` excluded. `npm run gen:types` passed; schema summary regenerated (266 functions / 20 views / 149 tables / 287 triggers; 110 migrations / 51 tests). `npm run lint`, `npm run build`, and `bash -n scripts/gen_schema_summary.sh scripts/check_docs_consistency.sh` passed. Hosted Supabase push applied `20260714000006`, `20260714000007`, and `20260714000008`; a held-out-safe post-push dry run returned "Remote database is up to date." | No open DA-013 functional risk remains. The CLI emitted the known pg-delta catalog-cache warning after apply, but migration history verified clean through the dry run. | Sessions 98-100 completed DA-018, DA-020, AUD-045, and AUD-050. |
 | 2026-07-14 | 96 | PXL-AUD-009, PXL-AUD-010 | Retested Passed | Added `20260714000007_aud009_aud010_accounting_readiness_closure.sql` and ACCOUNTING-READINESS-APPROVAL-001 (`supabase/tests/050_accounting_readiness_approval_test.sql`). The migration adds AP supplier-TIN snapshot defaulting triggers for VB/PV, extends VB readiness validation to reject EWT when the supplier TIN snapshot remains blank, and extends PV EWT posting readiness with the same supplier-TIN guard. The new test closes the SI/VB seeded evidence gap with missing revenue/expense account, inactive account, inactive VAT code, direct status transition, valid approve/post, and AP-side EWT missing-TIN assertions. | Held-out-safe fresh `supabase db reset --local --no-seed` passed with drafts `20260710000004`/`00005` moved aside/restored. Focused test 050 passed 17/17. Full trusted pgTAP passed **866/866 across 49 files** with held-out test `027` excluded. `npm run gen:types` passed; schema summary regenerated (262 functions / 20 views / 149 tables / 287 triggers; 109 migrations / 50 tests). `npm run lint`, `npm run build`, `bash -n scripts/gen_schema_summary.sh`, `scripts/check_docs_consistency.sh`, `git diff --check`, and `git diff --cached --check` passed. Hosted Supabase push for `20260714000006` through `20260714000008` completed in session 97. | No open AUD-009/AUD-010 functional risk remains. | Sessions 97-98 completed DA-013 and DA-018; continue remaining DA-020 plus AUD-045/AUD-050. |

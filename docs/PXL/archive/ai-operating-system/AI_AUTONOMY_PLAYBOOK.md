@@ -1,5 +1,8 @@
 # AI Autonomy Playbook
 
+**Status:** Historical Snapshot — superseded by `AI/AGENT_SYSTEM_PROMPT.md`
+**Not Current Source of Truth:** Do not use for fresh-session startup.
+
 Purpose: make Claude, Fable, Codex, or any future AI agent able to keep improving PXL with fewer user prompts, while staying inside accounting, compliance, and architectural guardrails.
 
 Autonomy in PXL means bounded autonomy. The agent should keep working from documented priorities, but it must not invent product direction, weaken controls, or make irreversible architectural changes without evidence.

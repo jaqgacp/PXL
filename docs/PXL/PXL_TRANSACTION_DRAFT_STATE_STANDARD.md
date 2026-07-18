@@ -2,7 +2,7 @@
 
 Status: Mandatory platform standard
 Last updated: 2026-07-15
-Reference implementation: Sales Invoice Create/Edit Workspace
+First validated implementation: Sales Invoice Create/Edit Workspace; UI architecture is governed separately by `PXL_TRANSACTION_WORKSPACE_STANDARD.md`
 
 ## Purpose
 

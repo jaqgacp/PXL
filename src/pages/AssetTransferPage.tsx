@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
-import { transactionHeaderClass, transactionSegmentButtonClass } from '@/lib/transactionWorkspace'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type Asset = { id: string; asset_number: string; asset_name: string; branch_name: string | null; department_name: string | null; status: string }
 type Branch = { id: string; branch_name: string }
@@ -34,7 +34,6 @@ export default function AssetTransferPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
-  const [tab, setTab] = useState<'new' | 'history'>('new')
 
   const load = useCallback(async () => {
     if (!companyId) return
@@ -96,109 +95,24 @@ export default function AssetTransferPage() {
   }
 
   return (
-    <div>
-      <div className={transactionHeaderClass('inventory')}>
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Asset Transfer</span>
-        <div className="ml-auto flex gap-1">
-          {(['new','history'] as const).map(t => (
-            <button key={t} onClick={() => setTab(t)}
-              className={transactionSegmentButtonClass('inventory', tab === t)}>
-              {t === 'new' ? 'New Transfer' : 'History'}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {tab === 'new' ? (
-        <div className="px-5 py-4 max-w-2xl space-y-4">
-          {error && <div className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-3 py-2">{error}</div>}
-          {success && <div className="text-xs text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2">{success}</div>}
-
-          <div className="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Transfer Details</p>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Asset *</label>
-              <select value={assetId} onChange={e => setAssetId(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                <option value="">— Select Asset —</option>
-                {assets.map(a => <option key={a.id} value={a.id}>{a.asset_number} — {a.asset_name}</option>)}
-              </select>
-            </div>
-
-            {selectedAsset && (
-              <div className="bg-gray-50 rounded px-3 py-2 text-xs grid grid-cols-2 gap-2">
-                <div><p className="text-gray-400 text-[10px]">Current Branch</p><p className="font-medium text-gray-800">{selectedAsset.branch_name || '—'}</p></div>
-                <div><p className="text-gray-400 text-[10px]">Current Department</p><p className="font-medium text-gray-800">{selectedAsset.department_name || '—'}</p></div>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Transfer Date *</label>
-              <input type="date" value={transferDate} onChange={e => setTransferDate(e.target.value)}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">To Branch</label>
-                <select value={toBranch} onChange={e => setToBranch(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                  <option value="">— Keep current —</option>
-                  {branches.map(b => <option key={b.id} value={b.id}>{b.branch_name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">To Department</label>
-                <select value={toDept} onChange={e => setToDept(e.target.value)}
-                  className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-gray-900">
-                  <option value="">— Keep current —</option>
-                  {departments.map(d => <option key={d.id} value={d.id}>{d.department_name}</option>)}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
-              <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2}
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 resize-none" />
-            </div>
-          </div>
-
-          <button onClick={submit} disabled={saving || !assetId}
-            className="px-5 py-2 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-            {saving ? 'Saving…' : 'Record Transfer'}
-          </button>
-        </div>
-      ) : (
-        <div className="px-5 py-4">
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full text-xs">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>{['Asset #','Name','Date','From Branch','From Dept','To Branch','To Dept','Notes'].map(h => (
-                  <th key={h} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 text-left whitespace-nowrap">{h}</th>
-                ))}</tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {history.length === 0 ? (
-                  <tr><td colSpan={8} className="py-12 text-center text-gray-400">No transfer records</td></tr>
-                ) : history.map(x => (
-                  <tr key={x.id} className="hover:bg-gray-50/60">
-                    <td className="px-3 py-2 font-mono font-semibold text-gray-900">{x.asset_number}</td>
-                    <td className="px-3 py-2 text-gray-800 max-w-[140px] truncate">{x.asset_name}</td>
-                    <td className="px-3 py-2 font-mono text-gray-500">{x.transfer_date}</td>
-                    <td className="px-3 py-2 text-gray-600">{x.from_branch || '—'}</td>
-                    <td className="px-3 py-2 text-gray-600">{x.from_dept || '—'}</td>
-                    <td className="px-3 py-2 text-blue-700 font-medium">{x.to_branch || '—'}</td>
-                    <td className="px-3 py-2 text-blue-700 font-medium">{x.to_dept || '—'}</td>
-                    <td className="px-3 py-2 text-gray-500 max-w-[120px] truncate">{x.notes || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-    </div>
+    <LegacyTransactionWorkspace title="Asset Transfer" family="inventory" pattern="B" posting={false}
+      status="draft" identity={selectedAsset?.asset_name}
+      financialFacts={[{ label: 'Assets Transferred', value: selectedAsset ? 1 : 0, hint: 'Custody movement; no direct GL posting' }]}
+      contextFacts={[{ label: 'Asset', value: selectedAsset ? `${selectedAsset.asset_number} — ${selectedAsset.asset_name}` : 'Not selected' }, { label: 'Source Branch', value: selectedAsset?.branch_name || 'Not assigned' }, { label: 'Destination Branch', value: branches.find(branch => branch.id === toBranch)?.branch_name || 'Not selected' }, { label: 'Source Department', value: selectedAsset?.department_name || 'Not assigned' }, { label: 'Destination Department', value: departments.find(department => department.id === toDept)?.department_name || 'Not selected' }, { label: 'Transfer Date', value: transferDate }]}
+      actions={[{ key: 'save', label: saving ? 'Saving…' : 'Record Transfer', onClick: submit, disabled: saving || !assetId, variant: 'primary' }]}
+      headerFields={[
+        { key: 'date', label: 'Transfer Date *', card: 0, content: <input type="date" value={transferDate} onChange={e => setTransferDate(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'state', label: 'Posting State', card: 0, content: <div className="pxl-readonly-field">No direct GL posting</div> },
+        { key: 'asset', label: 'Asset *', card: 1, span: 2, content: <select value={assetId} onChange={e => setAssetId(e.target.value)} className="pxl-input w-full"><option value="">Select asset…</option>{assets.map(asset => <option key={asset.id} value={asset.id}>{asset.asset_number} — {asset.asset_name}</option>)}</select> },
+        { key: 'branch', label: 'To Branch', card: 2, content: <select value={toBranch} onChange={e => setToBranch(e.target.value)} className="pxl-input w-full"><option value="">Keep current</option>{branches.map(branch => <option key={branch.id} value={branch.id}>{branch.branch_name}</option>)}</select> },
+        { key: 'department', label: 'To Department', card: 2, content: <select value={toDept} onChange={e => setToDept(e.target.value)} className="pxl-input w-full"><option value="">Keep current</option>{departments.map(department => <option key={department.id} value={department.id}>{department.department_name}</option>)}</select> },
+        { key: 'notes', label: 'Notes', card: 2, span: 2, content: <input value={notes} onChange={e => setNotes(e.target.value)} className="pxl-input w-full" /> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}{success && <div className="pxl-validation-message border border-green-200 bg-green-50 text-green-700">{success}</div>}</div>,
+        activity: <div className="overflow-x-auto"><table className="pxl-data-grid w-full"><thead><tr>{['Asset #','Name','Date','From Branch','From Dept','To Branch','To Dept','Notes'].map(label => <th key={label} className="text-left">{label}</th>)}</tr></thead><tbody>{history.length === 0 ? <tr><td colSpan={8} className="pxl-empty-state">No transfer records</td></tr> : history.map(record => <tr key={record.id}><td>{record.asset_number}</td><td>{record.asset_name}</td><td>{record.transfer_date}</td><td>{record.from_branch || '—'}</td><td>{record.from_dept || '—'}</td><td>{record.to_branch || '—'}</td><td>{record.to_dept || '—'}</td><td>{record.notes || '—'}</td></tr>)}</tbody></table></div>,
+      }}>
+      <div className="overflow-x-auto"><table className="pxl-data-grid w-full"><thead><tr>{['Asset','Source Branch','Source Department','Destination Branch','Destination Department'].map(label => <th key={label} className="text-left">{label}</th>)}</tr></thead><tbody><tr><td>{selectedAsset ? `${selectedAsset.asset_number} — ${selectedAsset.asset_name}` : 'Select an asset above'}</td><td>{selectedAsset?.branch_name || '—'}</td><td>{selectedAsset?.department_name || '—'}</td><td>{branches.find(branch => branch.id === toBranch)?.branch_name || selectedAsset?.branch_name || '—'}</td><td>{departments.find(department => department.id === toDept)?.department_name || selectedAsset?.department_name || '—'}</td></tr></tbody></table></div>
+    </LegacyTransactionWorkspace>
   )
 }

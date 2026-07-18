@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type PendingJE = {
   id: string
@@ -115,86 +116,25 @@ export default function AutoReversalRunPage() {
   const succeeded = results.filter(r => r.success).length
 
   return (
+    <LegacyTransactionWorkspace title="Auto Reversal Run" family="journal" pattern="D" posting
+      documentNo={reversalDate} status={showResults ? 'posted' : 'draft'} identity="Pending reversing journals"
+      financialFacts={[{ label: 'Reversal Debit', value: fmt(totalDebit) }, { label: 'Reversal Credit', value: fmt(totalDebit) }, { label: 'Eligible Journals', value: pendingJEs.length }, { label: 'Successful Reversals', value: results.filter(result => result.success).length }]}
+      contextFacts={[{ label: 'Reversal Date', value: reversalDate }, { label: 'Period Filter', value: periods.find(period => period.id === filterPeriod)?.period_name || 'All eligible periods' }, { label: 'Run State', value: running ? 'Posting' : showResults ? 'Completed' : 'Ready' }]}
+      actions={[
+        { key: 'refresh', label: loading ? 'Refreshing…' : 'Refresh', onClick: load, disabled: !companyId || loading },
+        { key: 'execute', label: running ? 'Reversing…' : `Execute All (${pendingJEs.length})`, onClick: reverseAll, disabled: running || pendingJEs.length === 0, variant: 'primary' },
+      ]}
+      headerFields={[
+        { key: 'date', label: 'Reversal Date', card: 0, content: <input type="date" value={reversalDate} onChange={event => setReversalDate(event.target.value)} className="pxl-input w-full" /> },
+        { key: 'state', label: 'Run State', card: 0, content: <div className="pxl-readonly-field">{running ? 'Posting' : showResults ? 'Completed' : 'Ready'}</div> },
+        { key: 'period', label: 'Period Filter', card: 1, span: 2, content: <select value={filterPeriod} onChange={event => setFilterPeriod(event.target.value)} className="pxl-input w-full"><option value="">All periods</option>{periods.map(period => <option key={period.id} value={period.id}>{period.period_name}</option>)}</select> },
+        { key: 'basis', label: 'Posting Basis', card: 2, span: 2, content: <div className="pxl-readonly-field">Posted journals flagged for auto reversal</div> },
+      ]}
+      tabContent={{
+        validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}<div className="pxl-validation-message border border-gray-200">Reversals post only when the selected date is in an open period.</div></div>,
+        activity: showResults && results.length ? <div className={`border rounded-lg overflow-hidden ${failed ? 'border-amber-200' : 'border-green-200'}`}><div className="px-3 py-2">Run complete — {succeeded} reversed{failed ? `, ${failed} failed` : ''}</div><table className="pxl-data-grid w-full"><thead><tr><th>Original JE</th><th>Result</th><th>Reversal JE / Error</th></tr></thead><tbody>{results.map(result => <tr key={result.je_id}><td>{result.je_number}</td><td>{result.success ? 'Reversed' : 'Failed'}</td><td>{result.reversal_je || result.error || '—'}</td></tr>)}</tbody></table></div> : undefined,
+      }}>
     <div>
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3 flex-wrap">
-        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Auto Reversal Run</span>
-        <select value={filterPeriod} onChange={e => setFilterPeriod(e.target.value)}
-          className="border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900">
-          <option value="">All periods</option>
-          {periods.map(p => <option key={p.id} value={p.id}>{p.period_name}</option>)}
-        </select>
-        <label className="text-xs text-gray-500">Reversal Date</label>
-        <input type="date" value={reversalDate} onChange={e => setReversalDate(e.target.value)}
-          className="border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900" />
-        <button onClick={load} disabled={!companyId || loading}
-          className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50 disabled:opacity-40">
-          Refresh
-        </button>
-        {error && <span className="text-xs text-red-600">{error}</span>}
-        {pendingJEs.length > 0 && (
-          <button onClick={reverseAll} disabled={running}
-            className="ml-auto px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-            {running ? 'Reversing…' : `Execute All (${pendingJEs.length})`}
-          </button>
-        )}
-      </div>
-
-      <div className="px-5 py-4 space-y-4">
-        {/* Info banner */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 text-xs text-blue-700">
-          Auto Reversal Run creates reversing journal entries for all posted JEs that were flagged with "Auto-reverse at next period start." Reversals will be posted to <strong>{reversalDate}</strong>. Ensure this date falls within an open fiscal period.
-        </div>
-
-        {/* KPI strip */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">JEs Awaiting Reversal</p>
-            <p className="text-lg font-bold text-gray-900 tabular-nums">{pendingJEs.length}</p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Total Amount (DR)</p>
-            <p className="text-lg font-bold text-gray-900 tabular-nums font-mono">{fmt(totalDebit)}</p>
-          </div>
-          <div className="bg-white border border-gray-200 rounded-lg px-4 py-3">
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Reversal Date</p>
-            <p className="text-lg font-bold text-gray-700 font-mono">{reversalDate}</p>
-          </div>
-        </div>
-
-        {/* Results */}
-        {showResults && results.length > 0 && (
-          <div className={`border rounded-lg overflow-hidden ${failed ? 'border-amber-200' : 'border-green-200'}`}>
-            <div className={`px-4 py-2.5 border-b ${failed ? 'border-amber-200 bg-amber-50' : 'border-green-200 bg-green-50'}`}>
-              <span className={`text-[10px] font-semibold uppercase tracking-wide ${failed ? 'text-amber-600' : 'text-green-600'}`}>
-                Run Complete — {succeeded} reversed{failed ? `, ${failed} failed` : ''}
-              </span>
-            </div>
-            <table className="w-full text-xs bg-white">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  {['Original JE', 'Result', 'Reversal JE / Error'].map(hh => (
-                    <th key={hh} className="px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-gray-500 text-left">{hh}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {results.map(r => (
-                  <tr key={r.je_id} className={r.success ? '' : 'bg-red-50'}>
-                    <td className="px-3 py-2 font-mono text-gray-900">{r.je_number}</td>
-                    <td className="px-3 py-2">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${r.success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                        {r.success ? 'Reversed' : 'Failed'}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 font-mono text-gray-600">{r.reversal_je || r.error || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-
-        {/* Pending JEs */}
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           <div className="px-4 py-2.5 border-b border-gray-100">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Journal Entries Pending Auto-Reversal</span>
@@ -207,7 +147,7 @@ export default function AutoReversalRunPage() {
               <p className="text-xs text-gray-400 mt-1">All auto-reverse flagged JEs have been reversed, or none exist for the selected filter.</p>
             </div>
           ) : (
-            <table className="w-full text-xs">
+            <table className="pxl-data-grid w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   {['JE Number', 'JE Date', 'Period', 'Description', 'Total Debit', ''].map(hh => (
@@ -240,7 +180,7 @@ export default function AutoReversalRunPage() {
             </table>
           )}
         </div>
-      </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

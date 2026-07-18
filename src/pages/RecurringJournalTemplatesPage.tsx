@@ -4,6 +4,7 @@ import type { TablesInsert } from '@/lib/database.types'
 import { useAppCtx } from '@/lib/context'
 import { StatusBadge } from '@/components/ui/shared'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
+import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type Recurrence = 'monthly' | 'quarterly' | 'semi_annual' | 'annual'
 
@@ -184,7 +185,6 @@ export default function RecurringJournalTemplatesPage() {
     } finally { setExecuting(false) }
   }
 
-  const inputCls = `border border-gray-300 rounded px-2.5 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-gray-900 w-full`
 
   // execute modal
   const execModal = execTarget && (
@@ -221,7 +221,7 @@ export default function RecurringJournalTemplatesPage() {
   if (mode === 'list') return (
     <div>
       {execModal}
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-3">
+      <div className="pxl-list-header flex items-center gap-2 border-b border-gray-200 px-4 py-2">
         <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Recurring Journal Templates</span>
         {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
         <button onClick={openNew} disabled={!companyId}
@@ -277,67 +277,31 @@ export default function RecurringJournalTemplatesPage() {
 
   // ── Edit ──────────────────────────────────────────────────────
   return (
-    <div className="flex flex-col h-full">
-      {execModal}
-      <div className="bg-white border-b border-gray-200 px-5 py-2.5 flex items-center gap-2 flex-wrap">
-        <button onClick={() => setMode('list')} className="text-sm text-gray-500 hover:text-gray-900">← Back</button>
-        <span className="text-gray-300">|</span>
-        <span className="text-sm font-semibold text-gray-700">{edit?.id ? edit.template_name : 'New Template'}</span>
-        <div className="ml-auto flex items-center gap-2">
-          {error && <span className="text-xs text-red-600 max-w-xs truncate">{error}</span>}
-          <button onClick={save} disabled={saving || !canSave}
-            className="px-3 py-1.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 disabled:opacity-40">
-            {saving ? 'Saving…' : 'Save Template'}
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 overflow-auto bg-gray-50 px-5 py-4">
-        <div className="bg-white border border-gray-200 rounded-lg p-5 mb-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Template Name *</label>
-              <input value={edit?.template_name || ''} onChange={e => setEdit(v => ({ ...v, template_name: e.target.value }))} className={inputCls} />
-            </div>
-            <div className="flex flex-col gap-1 sm:col-span-2">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Description</label>
-              <input value={edit?.description || ''} onChange={e => setEdit(v => ({ ...v, description: e.target.value }))} className={inputCls} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Recurrence *</label>
-              <select value={edit?.recurrence_type || 'monthly'} onChange={e => setEdit(v => ({ ...v, recurrence_type: e.target.value as Recurrence }))} className={inputCls}>
-                <option value="monthly">Monthly</option>
-                <option value="quarterly">Quarterly</option>
-                <option value="semi_annual">Semi-Annual</option>
-                <option value="annual">Annual</option>
-              </select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Day of Month * (1–28)</label>
-              <input type="number" min={1} max={28} value={edit?.day_of_month || 1}
-                onChange={e => setEdit(v => ({ ...v, day_of_month: Math.min(28, Math.max(1, parseInt(e.target.value) || 1)) }))} className={inputCls} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Start Date *</label>
-              <input type="date" value={edit?.start_date || today()} onChange={e => setEdit(v => ({ ...v, start_date: e.target.value }))} className={inputCls} />
-            </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">End Date</label>
-              <input type="date" value={edit?.end_date || ''} onChange={e => setEdit(v => ({ ...v, end_date: e.target.value || null }))} className={inputCls} />
-            </div>
-            <label className="flex items-center gap-2 text-sm text-gray-700 mt-5">
-              <input type="checkbox" checked={!!edit?.auto_reverse} onChange={e => setEdit(v => ({ ...v, auto_reverse: e.target.checked }))} />
-              Auto-reverse next period
-            </label>
-          </div>
-        </div>
+    <LegacyTransactionWorkspace title="Recurring Journal Template" family="journal" pattern="D" posting={false}
+      status={edit?.is_active ? 'active' : 'draft'} identity={edit?.template_name}
+      financialFacts={[{ label: 'Total Debit', value: fmt(totalDebit) }, { label: 'Total Credit', value: fmt(totalCredit) }, { label: 'Difference', value: fmt(totalDebit - totalCredit), hint: isBalanced ? 'Balanced' : 'Template must balance before save' }]}
+      contextFacts={[{ label: 'Template', value: edit?.template_name || 'New template' }, { label: 'Recurrence', value: edit?.recurrence_type ? RECURRENCE_LABEL[edit.recurrence_type] : 'Monthly' }, { label: 'Start Date', value: edit?.start_date || today() }, { label: 'Auto Reverse', value: edit?.auto_reverse ? 'Enabled' : 'Disabled' }]}
+      sourceDocId={edit?.id} auditTable="recurring_journal_templates"
+      onBack={() => setMode('list')} backLabel="Recurring Templates"
+      actions={[{ key: 'cancel', label: 'Cancel', onClick: () => setMode('list') }, { key: 'save', label: saving ? 'Saving…' : 'Save Template', onClick: save, disabled: saving || !canSave, variant: 'primary' }]}
+      headerFields={[
+        { key: 'name', label: 'Template Name *', card: 0, span: 2, content: <input value={edit?.template_name || ''} onChange={event => setEdit(current => ({ ...current, template_name: event.target.value }))} className="pxl-input w-full" /> },
+        { key: 'start', label: 'Start Date *', card: 0, content: <input type="date" value={edit?.start_date || today()} onChange={event => setEdit(current => ({ ...current, start_date: event.target.value }))} className="pxl-input w-full" /> },
+        { key: 'description', label: 'Description', card: 1, span: 2, content: <input value={edit?.description || ''} onChange={event => setEdit(current => ({ ...current, description: event.target.value }))} className="pxl-input w-full" /> },
+        { key: 'end', label: 'End Date', card: 1, content: <input type="date" value={edit?.end_date || ''} onChange={event => setEdit(current => ({ ...current, end_date: event.target.value || null }))} className="pxl-input w-full" /> },
+        { key: 'recurrence', label: 'Recurrence *', card: 2, content: <select value={edit?.recurrence_type || 'monthly'} onChange={event => setEdit(current => ({ ...current, recurrence_type: event.target.value as Recurrence }))} className="pxl-input w-full"><option value="monthly">Monthly</option><option value="quarterly">Quarterly</option><option value="semi_annual">Semi-Annual</option><option value="annual">Annual</option></select> },
+        { key: 'day', label: 'Day of Month (1–28)', card: 2, content: <input type="number" min={1} max={28} value={edit?.day_of_month || 1} onChange={event => setEdit(current => ({ ...current, day_of_month: Math.min(28, Math.max(1, Number.parseInt(event.target.value) || 1)) }))} className="pxl-input w-full" /> },
+        { key: 'reverse', label: 'Reversal', card: 2, span: 2, content: <label className="flex min-h-8 items-center gap-2"><input type="checkbox" checked={!!edit?.auto_reverse} onChange={event => setEdit(current => ({ ...current, auto_reverse: event.target.checked }))} /> Auto-reverse next period</label> },
+      ]}
+      tabContent={{ validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}<div className={`pxl-validation-message border ${isBalanced ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'}`}>{isBalanced ? 'Template is balanced.' : `Out of balance by ${fmt(balance)}.`}</div></div> }}>
+    <div>
 
         {/* Lines */}
-        <div className="bg-white border border-gray-200 rounded-lg mb-4 overflow-x-auto">
+        <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
           <div className="px-4 py-2.5 border-b border-gray-100">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400">Template Lines</span>
           </div>
-          <table className="w-full text-xs">
+          <table className="pxl-data-grid w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 {['Account', 'Description', 'Debit', 'Credit', ''].map(hh => (
@@ -391,7 +355,7 @@ export default function RecurringJournalTemplatesPage() {
             </span>
           </div>
         </div>
-      </div>
     </div>
+    </LegacyTransactionWorkspace>
   )
 }

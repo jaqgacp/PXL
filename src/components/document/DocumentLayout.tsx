@@ -1,14 +1,11 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
+import type { TransactionWorkspaceFamily } from '@/lib/transactionWorkspace'
 
 // ─────────────────────────────────────────────────────────────
-// PXL Standard Transaction Workspace — DocumentLayout shell
-//
-// The canonical layout every posting document converges onto
-// (DEC-013 / PXL_STANDARD_TRANSACTION_WORKSPACE.md §"Standard Page
-// Structure"; blueprint §3/§15). "Build first — everything else
-// slots into it." Pure presentational: no data fetching, no posting
-// behavior. Reuses the shared.tsx atoms; never forks StatusBadge.
+// PXL Transaction Workspace — permanent shared shell governed by
+// PXL_TRANSACTION_WORKSPACE_STANDARD.md. Pure presentational: no data
+// fetching, posting, tax, lifecycle, or permission behavior.
 // ─────────────────────────────────────────────────────────────
 
 export type WorkflowStep = { key: string; label: string }
@@ -59,8 +56,6 @@ export type DocumentTab = {
   badge?: React.ReactNode
 }
 
-type TransactionVisualStandard = 'transactionV1'
-
 // ── WorkflowStrip ─────────────────────────────────────────────
 // Visual document lifecycle (Draft → Approved → Posted → …). The
 // current step is highlighted; prior steps read as completed.
@@ -70,14 +65,14 @@ export function WorkflowStrip({ steps, currentKey }: { steps: WorkflowStep[]; cu
     <ol className="flex items-center flex-wrap gap-1 text-xs">
       {steps.map((step, i) => {
         const state = i < currentIdx ? 'done' : i === currentIdx ? 'current' : 'upcoming'
-        const cls =
-          state === 'current' ? 'bg-blue-50 text-blue-700 font-semibold' :
-          state === 'done' ? 'bg-gray-100 text-gray-600' :
-          'bg-gray-100 text-gray-400'
         return (
           <li key={step.key} className="flex items-center gap-1">
-            <span className={`inline-flex items-center px-2 py-0.5 rounded ${cls}`}>{step.label}</span>
-            {i < steps.length - 1 && <span className="text-gray-300" aria-hidden>→</span>}
+            <span
+              aria-current={state === 'current' ? 'step' : undefined}
+              className={`pxl-workflow-step pxl-workflow-step--${state}`}>
+              {step.label}
+            </span>
+            {i < steps.length - 1 && <span className="pxl-workflow-connector" aria-hidden>→</span>}
           </li>
         )
       })}
@@ -89,7 +84,7 @@ export function WorkflowStrip({ steps, currentKey }: { steps: WorkflowStep[]; cu
 // Fixed-order action bar; inapplicable actions are disabled, not
 // hidden (UI Principle 16). Destructive/secondary actions collapse
 // under a More ▾ menu.
-function DocumentToolbar({ actions, inverse = false }: { actions: ToolbarAction[]; inverse?: boolean }) {
+export function TransactionActionBar({ actions, inverse = false }: { actions: ToolbarAction[]; inverse?: boolean }) {
   const [openMore, setOpenMore] = useState(false)
   const [menuPosition, setMenuPosition] = useState<MenuPosition | null>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
@@ -180,6 +175,8 @@ function DocumentToolbar({ actions, inverse = false }: { actions: ToolbarAction[
           <button
             ref={triggerRef}
             onClick={() => setOpenMore(o => !o)}
+            aria-haspopup="menu"
+            aria-expanded={openMore}
             className={`pxl-button ${inverse
               ? 'border border-white/30 bg-white/10 text-white hover:bg-white/20'
               : 'pxl-button--neutral'}`}>
@@ -188,6 +185,8 @@ function DocumentToolbar({ actions, inverse = false }: { actions: ToolbarAction[
           {openMore && menuPosition && createPortal(
             <div
               ref={menuRef}
+              role="menu"
+              aria-label="More transaction actions"
               className="pxl-dialog fixed z-[9999] w-56 overflow-y-auto py-1"
               style={{
                 top: menuPosition.top,
@@ -198,6 +197,7 @@ function DocumentToolbar({ actions, inverse = false }: { actions: ToolbarAction[
               {more.map(a => (
                 <button
                   key={a.key}
+                  role="menuitem"
                   onClick={() => { setOpenMore(false); a.onClick() }}
                   disabled={a.disabled}
                   title={a.title}
@@ -250,36 +250,48 @@ function HeaderStateChip({ label, value, tone = 'neutral', title }: {
 // labels truncate before the bar can overflow. The canonical twelve-tab
 // set therefore remains one line with no arrows or horizontal scrollbar.
 export function TransactionTabsBar({
-  tabs, activeKey, onChange, visualStandard,
+  tabs, activeKey, onChange,
 }: {
   tabs: DocumentTab[]
   activeKey: string
   onChange: (key: string) => void
-  visualStandard?: TransactionVisualStandard
 }) {
   const visible = tabs.filter(t => !t.hidden)
-  const isTransactionV1 = visualStandard === 'transactionV1'
+  const tabRefs = useRef<Array<HTMLButtonElement | null>>([])
+  const moveFocus = (index: number) => {
+    if (visible.length === 0) return
+    const next = (index + visible.length) % visible.length
+    const key = visible[next]?.key
+    if (!key) return
+    onChange(key)
+    tabRefs.current[next]?.focus()
+  }
   return (
     <div
-      className={`${isTransactionV1 ? 'pxl-transaction-tabs' : ''} flex w-full min-w-0 items-stretch px-1`}
-      role="tablist"
-      style={isTransactionV1 ? undefined : { backgroundColor: 'color-mix(in srgb, var(--transaction-accent, #14532d) 5%, white)' }}>
-      {visible.map(t => {
+      className="pxl-transaction-tabs flex w-full min-w-0 items-stretch px-1"
+      role="tablist">
+      {visible.map((t, index) => {
         const on = t.key === activeKey
+        const tabId = `transaction-tab-${t.key}`
+        const panelId = `transaction-panel-${t.key}`
         return (
           <button
             key={t.key}
+            ref={node => { tabRefs.current[index] = node }}
+            id={tabId}
             role="tab"
             aria-selected={on}
+            aria-controls={panelId}
+            tabIndex={on ? 0 : -1}
             onClick={() => onChange(t.key)}
+            onKeyDown={event => {
+              if (event.key === 'ArrowRight') { event.preventDefault(); moveFocus(index + 1) }
+              if (event.key === 'ArrowLeft') { event.preventDefault(); moveFocus(index - 1) }
+              if (event.key === 'Home') { event.preventDefault(); moveFocus(0) }
+              if (event.key === 'End') { event.preventDefault(); moveFocus(visible.length - 1) }
+            }}
             title={t.label}
-            style={!isTransactionV1 && on ? { borderColor: 'var(--transaction-accent, #111827)', color: 'var(--transaction-accent, #111827)' } : undefined}
-            className={`${isTransactionV1 ? `pxl-transaction-tab ${on ? 'pxl-transaction-tab--active' : 'pxl-transaction-tab--inactive'}` : ''} min-w-0 flex-1 whitespace-nowrap border-b-2 px-2 py-2 leading-none transition-colors ${
-              isTransactionV1
-                ? ''
-                : on
-                  ? 'font-semibold'
-                  : 'border-transparent text-gray-500 font-medium hover:text-gray-800 hover:bg-white/60'}`}>
+            className={`pxl-transaction-tab ${on ? 'pxl-transaction-tab--active' : 'pxl-transaction-tab--inactive'} min-w-0 flex-1 whitespace-nowrap border-b-2 px-2 py-2 leading-none transition-colors`}>
             <span className="block truncate">{t.label}</span>
             {t.badge != null && (
               <span className="sr-only"> ({t.badge})</span>
@@ -287,6 +299,84 @@ export function TransactionTabsBar({
           </button>
         )
       })}
+    </div>
+  )
+}
+
+export function TransactionPageHeader({
+  title,
+  documentNo,
+  status,
+  statusLabel,
+  identity,
+  metrics = [],
+  meta = [],
+  actions = [],
+  onBack,
+  backLabel,
+}: {
+  title: string
+  documentNo?: string | null
+  status?: string
+  statusLabel?: string
+  identity?: DocumentIdentity
+  metrics?: DocumentMetric[]
+  meta?: DocumentMetaField[]
+  actions?: ToolbarAction[]
+  onBack?: () => void
+  backLabel?: string
+}) {
+  return (
+    <header className="pxl-transaction-header overflow-hidden rounded-lg border-b text-gray-900">
+      <div className="pxl-transaction-header__content flex flex-col gap-3 px-3 py-2.5 xl:flex-row xl:items-center">
+        <div className="pxl-transaction-header__identity flex min-w-0 items-start gap-4 xl:w-[40%]">
+          {onBack && (
+            <button onClick={onBack} className="pxl-button pxl-button--text mt-0.5 h-8 px-2" title={`Back to ${backLabel || `${title}s`}`} aria-label={`Back to ${backLabel || `${title}s`}`}>
+              <span aria-hidden>←</span>
+              <span className="ml-1 hidden sm:inline">{backLabel || `${title}s`}</span>
+            </button>
+          )}
+          <div className="min-w-0">
+            <div className="pxl-header-metric-label">{title}</div>
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2.5">
+              <h1 className="pxl-document-number truncate">
+                {documentNo || `Unsaved ${title}`}
+              </h1>
+              {status && <HeaderStateChip value={statusLabel || status} tone={statusTone(status)} label="Document status" />}
+              {meta.map((field, index) => <HeaderStateChip key={`${field.label}-${index}`} value={field.value} tone={field.tone} label={field.label} />)}
+            </div>
+            {identity && (
+              <div className="mt-2 flex min-w-0 items-center gap-3">
+                <span className="pxl-customer-link truncate">{identity.name}</span>
+                {identity.secondary && <span className="pxl-caption truncate font-mono">{identity.secondary}</span>}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {metrics.length > 0 && (
+          <dl className="pxl-transaction-header__metrics grid min-w-0 grid-cols-3 gap-3 border-y border-[var(--pxl-border-medium)] py-2 xl:flex-1 xl:border-x xl:border-y-0 xl:px-4 xl:py-0">
+            {metrics.map(metric => (
+              <div key={metric.label} className="min-w-0 xl:text-right">
+                <dt className="pxl-header-metric-label truncate">{metric.label}</dt>
+                <dd className={`mt-1 truncate font-mono tabular-nums ${metric.emphasis ? 'pxl-header-metric-value' : 'text-sm font-semibold text-gray-800'}`}>
+                  {metric.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+
+        {actions.length > 0 && <div className="pxl-transaction-header__actions shrink-0 xl:ml-auto"><TransactionActionBar actions={actions} /></div>}
+      </div>
+    </header>
+  )
+}
+
+export function TransactionWorkflowBanner({ steps, currentKey }: { steps: WorkflowStep[]; currentKey: string }) {
+  return (
+    <div className="pxl-transaction-workflow pxl-transaction-card px-3 py-1.5" aria-label="Transaction workflow status">
+      <WorkflowStrip steps={steps} currentKey={currentKey} />
     </div>
   )
 }
@@ -310,7 +400,13 @@ export function TransactionTabs({
   return (
     <div>
       <div className="border-b border-gray-200"><TransactionTabsBar tabs={tabs} activeKey={active} onChange={setActive} /></div>
-      <div className="pt-4" role="tabpanel">{activeTab?.content}</div>
+      <div
+        id={activeTab ? `transaction-panel-${activeTab.key}` : undefined}
+        aria-labelledby={activeTab ? `transaction-tab-${activeTab.key}` : undefined}
+        className="pt-4"
+        role="tabpanel">
+        {activeTab?.content}
+      </div>
     </div>
   )
 }
@@ -328,12 +424,13 @@ export function DocumentLayout({
   primary,
   tabs,
   footer,
-  accentColor = '#14532d',
-  visualStandard,
+  visualFamily = 'sales',
   onBack,
   backLabel,
   activeTabKey,
   onTabChange,
+  workflow,
+  sidebar,
 }: {
   /** Document type name, e.g. "Sales Invoice". */
   title: string
@@ -352,77 +449,39 @@ export function DocumentLayout({
   tabs: DocumentTab[]
   /** Compact immutable/system metadata at the bottom of the workspace. */
   footer?: React.ReactNode
-  /** Company-controlled transaction accent. Cards remain white; the shell uses a 3% tint. */
-  accentColor?: string
-  visualStandard?: TransactionVisualStandard
+  /** Family tint for shared transaction workspaces; never changes business behavior. */
+  visualFamily?: TransactionWorkspaceFamily
   onBack?: () => void
   backLabel?: string
   activeTabKey?: string
   onTabChange?: (key: string) => void
+  /** Optional transaction-specific sidebar. Omit when it would duplicate header or tab facts. */
+  sidebar?: React.ReactNode
 }) {
   const visibleTabs = tabs.filter(t => !t.hidden)
   const [internalTab, setInternalTab] = useState(visibleTabs[0]?.key ?? '')
   const activeKey = activeTabKey ?? internalTab
   const setActive = (k: string) => { if (onTabChange) onTabChange(k); else setInternalTab(k) }
-  const activeTab = visibleTabs.find(t => t.key === activeKey) ?? visibleTabs[0]
-  const isTransactionV1 = visualStandard === 'transactionV1'
-
-  const workspaceStyle = {
-    '--transaction-accent': accentColor,
-    '--pxl-transaction-accent': accentColor,
-    backgroundColor: isTransactionV1 ? undefined : 'color-mix(in srgb, var(--transaction-accent) 3%, white)',
-  } as React.CSSProperties
-  const headerStyle = {
-    backgroundColor: isTransactionV1 ? undefined : 'color-mix(in srgb, var(--transaction-accent) 5%, white)',
-    borderColor: isTransactionV1 ? undefined : 'color-mix(in srgb, var(--transaction-accent) 16%, #e5e7eb)',
-  } as React.CSSProperties
-
+  const resolvedActiveKey = visibleTabs.some(tab => tab.key === activeKey) ? activeKey : visibleTabs[0]?.key
   return (
-    <section className={`${isTransactionV1 ? 'pxl-transaction-workspace pxl-transaction-workspace--sales' : ''} space-y-3 rounded-md p-3`} style={workspaceStyle} aria-label={`${title} workspace`}>
+    <section className={`pxl-transaction-workspace pxl-transaction-workspace--${visualFamily} space-y-2 rounded-md p-2`} aria-label={`${title} workspace`}>
       {/* Document header: identity, status, primary metrics, and actions live here once. */}
-      <header className={`${isTransactionV1 ? 'pxl-transaction-header' : 'shadow-sm'} overflow-hidden rounded-lg border-b text-gray-900`} style={headerStyle}>
-        <div className="flex flex-col gap-4 px-4 py-3 xl:flex-row xl:items-center">
-          <div className="flex min-w-0 items-start gap-4 xl:w-[40%]">
-            {onBack && (
-              <button onClick={onBack} className="pxl-button pxl-button--text mt-0.5 h-8 px-2" title={`Back to ${backLabel || `${title}s`}`} aria-label={`Back to ${backLabel || `${title}s`}`}>
-                <span aria-hidden>←</span>
-                <span className="ml-1 hidden sm:inline">{backLabel || `${title}s`}</span>
-              </button>
-            )}
-            <div className="min-w-0">
-              <div className="pxl-header-metric-label">{title}</div>
-              <div className="mt-1 flex min-w-0 flex-wrap items-center gap-2.5">
-                <h1 className="pxl-document-number truncate">
-                  {documentNo || `Unsaved ${title}`}
-                </h1>
-                {status && <HeaderStateChip value={statusLabel || status} tone={statusTone(status)} label="Document status" />}
-                {meta.map((f, i) => <HeaderStateChip key={i} value={f.value} tone={f.tone} label={f.label} />)}
-              </div>
-              {identity && (
-                <div className="mt-2 flex min-w-0 items-center gap-3">
-                  <span className="pxl-customer-link truncate">{identity.name}</span>
-                  {identity.secondary && <span className="pxl-caption truncate font-mono">{identity.secondary}</span>}
-                </div>
-              )}
-            </div>
-          </div>
+      <TransactionPageHeader
+        title={title}
+        documentNo={documentNo}
+        status={status}
+        statusLabel={statusLabel}
+        identity={identity}
+        metrics={metrics}
+        meta={meta}
+        actions={actions}
+        onBack={onBack}
+        backLabel={backLabel}
+      />
 
-          {metrics.length > 0 && (
-            <dl className="grid min-w-0 grid-cols-3 gap-3 border-y border-[var(--pxl-border-medium)] py-2 xl:flex-1 xl:border-x xl:border-y-0 xl:px-4 xl:py-0">
-              {metrics.map(metric => (
-                <div key={metric.label} className="min-w-0 xl:text-right">
-                  <dt className="pxl-header-metric-label truncate">{metric.label}</dt>
-                  <dd className={`mt-1 font-mono tabular-nums truncate ${metric.emphasis ? 'pxl-header-metric-value' : 'text-sm font-semibold text-gray-800'}`}>
-                    {metric.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          )}
-
-          {actions.length > 0 && <div className="shrink-0 xl:ml-auto"><DocumentToolbar actions={actions} /></div>}
-        </div>
-      </header>
+      {workflow && workflow.steps.length > 0 && (
+        <TransactionWorkflowBanner steps={workflow.steps} currentKey={workflow.currentKey} />
+      )}
 
       {/* Primary Information — full width, before the tabs */}
       {primary}
@@ -430,13 +489,30 @@ export function DocumentLayout({
       {/* Full-width compact tab bar — 12 tabs on one row, no horizontal
           scroll at 1920×1080 (it spans the whole content width, not the
           narrower content column beside the sidebar). */}
-      <div className={`${isTransactionV1 ? 'border-[var(--pxl-border-strong)]' : 'border-gray-200'} overflow-hidden rounded border`}>
-        <TransactionTabsBar tabs={tabs} activeKey={activeKey} onChange={setActive} visualStandard={visualStandard} />
+      <div className="overflow-hidden rounded border border-[var(--pxl-border-strong)]">
+        <TransactionTabsBar tabs={tabs} activeKey={resolvedActiveKey || ''} onChange={setActive} />
       </div>
 
       {/* Active tab content */}
-      <div className={`min-w-0 w-full rounded border bg-white px-3 py-2.5 ${isTransactionV1 ? 'border-[var(--pxl-border-medium)] shadow-[var(--pxl-shadow-card)]' : 'border-gray-200'}`} role="tabpanel">
-        {activeTab?.content}
+      <div className={sidebar ? 'pxl-transaction-content-grid grid min-w-0 items-start gap-2 lg:grid-cols-[minmax(0,1fr)_15rem] xl:grid-cols-[minmax(0,1fr)_16rem]' : ''}>
+        <div className="min-w-0">
+          {visibleTabs.map(tab => {
+            const active = tab.key === resolvedActiveKey
+            return (
+              <div
+                key={tab.key}
+                id={`transaction-panel-${tab.key}`}
+                aria-labelledby={`transaction-tab-${tab.key}`}
+                aria-hidden={!active}
+                hidden={!active}
+                className="pxl-transaction-tab-panel min-w-0 w-full rounded border border-[var(--pxl-border-medium)] bg-white px-2.5 py-2 shadow-[var(--pxl-shadow-card)]"
+                role="tabpanel">
+                {tab.content}
+              </div>
+            )
+          })}
+        </div>
+        {sidebar && <aside className="pxl-side-panel min-w-0 p-2.5" aria-label={`${title} summary`}>{sidebar}</aside>}
       </div>
 
       {footer && <footer className="pxl-caption px-1">{footer}</footer>}

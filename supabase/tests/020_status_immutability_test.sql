@@ -10,8 +10,8 @@
 --
 -- NOTE: unlike the other test files, this file COMMITs its fixtures — the
 -- same-transaction construction exception would otherwise make every
--- tamper attempt look legitimate. Run against a fresh database
--- (`supabase db reset --local` first), per the standing test discipline.
+-- tamper attempt look legitimate. A trigger-disabled, company-scoped teardown
+-- at the end keeps repeated suite runs isolated.
 -- Assertions run as postgres: the guards are triggers and fire beneath
 -- RLS, so blocking here proves the control holds for ANY role.
 -- ══════════════════════════════════════════════════════════════════════════════
@@ -348,3 +348,35 @@ SELECT throws_like(
   'approved quotation cannot be deleted');
 
 SELECT * FROM finish();
+
+SET session_replication_role = replica;
+DO $$
+DECLARE
+  v_table RECORD;
+BEGIN
+  FOR v_table IN
+    SELECT DISTINCT c.table_schema, c.table_name
+    FROM information_schema.columns c
+    JOIN information_schema.tables t
+      ON t.table_schema = c.table_schema
+     AND t.table_name = c.table_name
+     AND t.table_type = 'BASE TABLE'
+    WHERE c.table_schema = 'public'
+      AND c.column_name = 'company_id'
+      AND c.table_name <> 'companies'
+    ORDER BY c.table_name
+  LOOP
+    EXECUTE format(
+      'DELETE FROM %I.%I WHERE company_id = %L',
+      v_table.table_schema,
+      v_table.table_name,
+      '22222222-2222-2222-2222-222222222220'
+    );
+  END LOOP;
+END;
+$$;
+DELETE FROM companies
+WHERE id = '22222222-2222-2222-2222-222222222220';
+DELETE FROM auth.users
+WHERE id = '11111111-1111-1111-1111-111111111120';
+SET session_replication_role = origin;
