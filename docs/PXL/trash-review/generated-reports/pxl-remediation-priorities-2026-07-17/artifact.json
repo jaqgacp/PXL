@@ -119,8 +119,8 @@
           "description": "Reviewed the accounting-core gate and product backlog to separate release defects from post-gate enhancements.",
           "executed_at": "2026-07-17T02:15:00Z",
           "tables_used": [
-            "docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md",
-            "docs/PXL/PXL_PRODUCT_BACKLOG.md"
+            "docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md",
+            "docs/PXL/00. Governance/PXL_PRODUCT_BACKLOG.md"
           ],
           "filters": ["Release-blocking defects separated from backlog enhancements"]
         }
@@ -381,8 +381,8 @@
         "description": "Reviewed the accounting-core gate and product backlog to separate release defects from post-gate enhancements.",
         "executed_at": "2026-07-17T02:15:00Z",
         "tables_used": [
-          "docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md",
-          "docs/PXL/PXL_PRODUCT_BACKLOG.md"
+          "docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md",
+          "docs/PXL/00. Governance/PXL_PRODUCT_BACKLOG.md"
         ],
         "filters": ["Release-blocking defects separated from backlog enhancements"]
       }

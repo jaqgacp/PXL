@@ -203,20 +203,20 @@ export const STANDARD_TRANSACTION_COMPONENTS = [
 ] as const
 
 const docs = {
-  workspace: 'docs/PXL/PXL_TRANSACTION_WORKSPACE_STANDARD.md',
-  patterns: 'docs/PXL/PXL_TRANSACTION_WORKSPACE_PATTERNS.md',
-  manifest: 'docs/PXL/PXL_TRANSACTION_WORKSPACE_MANIFEST.md',
-  playbook: 'docs/PXL/PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md',
-  schema: 'docs/PXL/PXL_TRANSACTION_DEFINITION_SCHEMA.md',
-  matrix: 'docs/PXL/PXL_TRANSACTION_MATRIX.md',
-  accountingRules: 'docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md',
-  fieldSourceMatrix: 'docs/PXL/PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md',
-  siFunctional: 'docs/PXL/PXL_SALES_INVOICE_FUNCTIONAL_SPECIFICATION.md',
-  siFields: 'docs/PXL/PXL_SALES_INVOICE_FIELD_MAPPING.md',
-  siDimensions: 'docs/PXL/PXL_SALES_INVOICE_DIMENSION_MAPPING.md',
-  siPosting: 'docs/PXL/PXL_SALES_INVOICE_POSTING_SPECIFICATION.md',
-  siGl: 'docs/PXL/PXL_SALES_INVOICE_GL_MAPPING.md',
-  siTax: 'docs/PXL/PXL_SALES_INVOICE_TAX_MAPPING.md',
+  workspace: 'docs/PXL/12. UI and UX/PXL_TRANSACTION_WORKSPACE_STANDARD.md',
+  patterns: 'docs/PXL/12. UI and UX/PXL_TRANSACTION_WORKSPACE_PATTERNS.md',
+  manifest: 'docs/PXL/04. Transaction Framework/PXL_TRANSACTION_WORKSPACE_MANIFEST.md',
+  playbook: 'docs/PXL/04. Transaction Framework/PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md',
+  schema: 'docs/PXL/04. Transaction Framework/PXL_TRANSACTION_DEFINITION_SCHEMA.md',
+  matrix: 'docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md',
+  accountingRules: 'docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md',
+  fieldSourceMatrix: 'docs/PXL/04. Transaction Framework/PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md',
+  siFunctional: 'docs/PXL/05. Sales/Sales Invoice/PXL_SALES_INVOICE_FUNCTIONAL_SPECIFICATION.md',
+  siFields: 'docs/PXL/05. Sales/Sales Invoice/PXL_SALES_INVOICE_FIELD_MAPPING.md',
+  siDimensions: 'docs/PXL/05. Sales/Sales Invoice/PXL_SALES_INVOICE_DIMENSION_MAPPING.md',
+  siPosting: 'docs/PXL/05. Sales/Sales Invoice/PXL_SALES_INVOICE_POSTING_SPECIFICATION.md',
+  siGl: 'docs/PXL/05. Sales/Sales Invoice/PXL_SALES_INVOICE_GL_MAPPING.md',
+  siTax: 'docs/PXL/05. Sales/Sales Invoice/PXL_SALES_INVOICE_TAX_MAPPING.md',
 } as const
 
 type TransactionSeed = Omit<TransactionWorkspaceDefinition, 'documentation' | 'rollout' | 'fieldSourceMatrix'> & {

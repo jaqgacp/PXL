@@ -226,10 +226,10 @@ if (duplicateRegisterNames.length > 0) fail(`possible competing findings registe
 
 const staleStatusFiles = [
   'AI/AI_STATE.md',
-  'docs/PXL/PXL_ARCHITECTURE_SUMMARY.md',
-  'docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md',
-  'docs/PXL/PXL_CANONICAL_DEMO_DATASET.md',
-  'docs/PXL/PXL_PRODUCT_BACKLOG.md',
+  'docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md',
+  'docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md',
+  'docs/PXL/13. Testing and Validation/PXL_CANONICAL_DEMO_DATASET.md',
+  'docs/PXL/00. Governance/PXL_PRODUCT_BACKLOG.md',
 ]
 for (const relativePath of staleStatusFiles) {
   const markdown = read(relativePath)

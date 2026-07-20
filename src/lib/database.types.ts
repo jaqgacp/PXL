@@ -13042,6 +13042,64 @@ export type Database = {
     }
     Functions: {
       can_admin_company: { Args: { p_company_id: string }; Returns: boolean }
+      fn_can_maintain_tax_reference: { Args: Record<PropertyKey, never>; Returns: boolean }
+      fn_tax_code_upsert: {
+        Args: {
+          p_code: string
+          p_description: string
+          p_tax_type: string
+          p_rate: number
+          p_id?: string | null
+          p_gl_account_id?: string | null
+          p_is_active?: boolean | null
+          p_effective_from?: string | null
+          p_effective_to?: string | null
+          p_reason?: string | null
+        }
+        Returns: string
+      }
+      fn_tax_code_set_active: {
+        Args: { p_id: string; p_is_active: boolean; p_reason?: string | null }
+        Returns: undefined
+      }
+      fn_vat_code_upsert: {
+        Args: {
+          p_tax_code_id: string
+          p_vat_code: string
+          p_description: string
+          p_vat_classification: string
+          p_transaction_type: string
+          p_id?: string | null
+          p_relief_category?: string | null
+          p_is_active?: boolean | null
+          p_effective_from?: string | null
+          p_effective_to?: string | null
+          p_reason?: string | null
+        }
+        Returns: string
+      }
+      fn_vat_code_set_active: {
+        Args: { p_id: string; p_is_active: boolean; p_reason?: string | null }
+        Returns: undefined
+      }
+      fn_atc_code_upsert: {
+        Args: {
+          p_code: string
+          p_description: string
+          p_tax_category: string
+          p_rate: number
+          p_id?: string | null
+          p_is_active?: boolean | null
+          p_effective_from?: string | null
+          p_effective_to?: string | null
+          p_reason?: string | null
+        }
+        Returns: string
+      }
+      fn_atc_code_set_active: {
+        Args: { p_id: string; p_is_active: boolean; p_reason?: string | null }
+        Returns: undefined
+      }
       fn_acknowledge_supplier_debit_memo: {
         Args: { p_sdm_id: string }
         Returns: undefined

@@ -1,5 +1,12 @@
 # PXL — Philippine Accounting ERP
 
+**Status:** Active human repository landing page
+**Authority:** Tier 3 Repository Orientation; domain standards and executed behavior prevail
+**Last Reviewed:** 2026-07-18 documentation cleanup
+**Applies To:** Human setup, stack overview, and repository orientation
+**Read When:** Starting local development or looking for commands
+**Do Not Read For:** AI startup, official findings, or domain authority
+
 React 19 + TypeScript + Vite frontend backed by Supabase (PostgreSQL + PostgREST + Auth + RLS).
 
 ## Current Readiness and Documentation
@@ -84,7 +91,7 @@ npm run dev
 
 Migrations live in `supabase/migrations/` and are applied in filename order. The generated schema summary below is the authoritative map of the current migration chain; avoid copying a migration count or endpoint into operational instructions because both change during hardening work.
 
-For the current object-by-object schema map, use the generated summary in `docs/PXL/PXL_SCHEMA_SUMMARY.md`. Regenerate it after migration changes with:
+For the current object-by-object schema map, use the generated summary in `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`. Regenerate it after migration changes with:
 
 ```bash
 scripts/gen_schema_summary.sh

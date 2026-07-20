@@ -1,5 +1,13 @@
 # PXL ERP Blueprint: Form 2307 Management
 
+**Status:** Retained compliance blueprint; verify against implementation and findings
+**Authority:** Tier 2 Compliance Specification unless Tier 1 accounting/tax/security authority conflicts
+**Owner / Domain:** Compliance
+**Applies To:** Compliance
+**Read When:** Exact BIR/compliance task routed by README.md
+**Do Not Read For:** Unrelated startup, UI, inventory, or Sales Invoice work
+**Last Reviewed:** 2026-07-18 documentation cleanup
+
 ## Module Overview
 The Form 2307 Management module is a centralized clearinghouse for tracking Creditable Withholding Taxes (CWT) under Philippine BIR regulations. It tracks BIR Form 2307s from two critical perspectives: 
 1. **Issued (Payables):** Certificates the company must print and give to Vendors when paying Bills that were subjected to Expanded Withholding Tax (EWT).

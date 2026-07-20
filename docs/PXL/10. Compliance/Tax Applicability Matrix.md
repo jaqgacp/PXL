@@ -1,5 +1,13 @@
 # PXL ERP Blueprint: Tax Applicability Matrix
 
+**Status:** Retained compliance blueprint; verify against implementation and findings
+**Authority:** Tier 2 Compliance Specification unless Tier 1 accounting/tax/security authority conflicts
+**Owner / Domain:** Compliance
+**Applies To:** Compliance
+**Read When:** Exact BIR/compliance task routed by README.md
+**Do Not Read For:** Unrelated startup, UI, inventory, or Sales Invoice work
+**Last Reviewed:** 2026-07-18 documentation cleanup
+
 ## Module Overview
 The Tax Applicability Matrix is the brain of the PXL ERP compliance engine. Updated to strictly adhere to the Philippine **EOPT Act (RA 11976)**, **CREATE Law**, and **TRAIN Law**, this configuration module dictates exactly which tax reports and UI elements are generated based on the company's specific taxpayer profile. By establishing strict rules on Entity Type, VAT Registration, Deduction Methods, and Withholding Agent status, the system dynamically hides irrelevant tax forms—preventing compliance errors and dramatically simplifying the user experience.
 

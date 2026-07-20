@@ -91,14 +91,20 @@ export default function TaxSetupPage() {
   }
   const saveTC = async () => {
     setSaving(true)
-    const payload = { code: tcForm.code, description: tcForm.description, tax_type: tcForm.tax_type, rate: parseFloat(tcForm.rate) }
-    const { error } = editId ? await supabase.from('tax_codes').update(payload).eq('id', editId) : await supabase.from('tax_codes').insert([payload])
+    // Global tax reference is write-governed (MDP-01): mutate only through the RPC.
+    const { error } = await supabase.rpc('fn_tax_code_upsert', {
+      p_code: tcForm.code, p_description: tcForm.description, p_tax_type: tcForm.tax_type,
+      p_rate: parseFloat(tcForm.rate), p_id: editId, p_reason: 'tax setup: save tax code',
+    })
     if (error) alert(error.message)
     else { setSaved(true); fetchAll(); resetForm() }
     setSaving(false)
   }
   const toggleTC = async (r: TaxCode) => {
-    await supabase.from('tax_codes').update({ is_active: !r.is_active }).eq('id', r.id)
+    const { error } = await supabase.rpc('fn_tax_code_set_active', {
+      p_id: r.id, p_is_active: !r.is_active, p_reason: 'tax setup: toggle active',
+    })
+    if (error) alert(error.message)
     fetchAll()
   }
 
@@ -109,14 +115,21 @@ export default function TaxSetupPage() {
   }
   const saveVC = async () => {
     setSaving(true)
-    const payload = { ...vcForm, relief_category: vcForm.relief_category || null }
-    const { error } = editId ? await supabase.from('vat_codes').update(payload).eq('id', editId) : await supabase.from('vat_codes').insert([payload])
+    // Global VAT reference is write-governed (MDP-01): mutate only through the RPC.
+    const { error } = await supabase.rpc('fn_vat_code_upsert', {
+      p_tax_code_id: vcForm.tax_code_id, p_vat_code: vcForm.vat_code, p_description: vcForm.description,
+      p_vat_classification: vcForm.vat_classification, p_transaction_type: vcForm.transaction_type,
+      p_relief_category: vcForm.relief_category || null, p_id: editId, p_reason: 'tax setup: save VAT code',
+    })
     if (error) alert(error.message)
     else { setSaved(true); fetchAll(); resetForm() }
     setSaving(false)
   }
   const toggleVC = async (r: VatCode) => {
-    await supabase.from('vat_codes').update({ is_active: !r.is_active }).eq('id', r.id)
+    const { error } = await supabase.rpc('fn_vat_code_set_active', {
+      p_id: r.id, p_is_active: !r.is_active, p_reason: 'tax setup: toggle active',
+    })
+    if (error) alert(error.message)
     fetchAll()
   }
 

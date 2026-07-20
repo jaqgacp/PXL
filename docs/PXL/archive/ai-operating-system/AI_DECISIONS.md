@@ -77,9 +77,9 @@ Alternatives Considered:
 
 Related Documents:
 
-- `docs/PXL/PXL_PRINCIPLES.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
+- `docs/PXL/00. Governance/PXL_PRINCIPLES.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md`
 - `README.md`
 
 Related Source Files:
@@ -113,11 +113,11 @@ Alternatives Considered:
 
 Related Documents:
 
-- `docs/PXL/PXL_PRINCIPLES.md`
+- `docs/PXL/00. Governance/PXL_PRINCIPLES.md`
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/02. Setup/03. Document & Validation/01. Document Controls/03. Void Controls.md`
-- `docs/PXL/02. Setup/03. Document & Validation/01. Document Controls/04. Reversal Controls.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/04. Transaction Framework/03. Document & Validation/01. Document Controls/03. Void Controls.md`
+- `docs/PXL/04. Transaction Framework/03. Document & Validation/01. Document Controls/04. Reversal Controls.md`
 
 Related Source Files:
 
@@ -150,7 +150,7 @@ Alternatives Considered:
 Related Documents:
 
 - `README.md`
-- `docs/PXL/PXL_PRINCIPLES.md`
+- `docs/PXL/00. Governance/PXL_PRINCIPLES.md`
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
 
 Related Source Files:
@@ -219,7 +219,7 @@ Related Documents:
 
 - `docs/PXL/10. Compliance/Tax Applicability Matrix.md`
 - `docs/PXL/PXL_TAX_RULES_PH.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
 
 Related Source Files:
@@ -254,11 +254,11 @@ Alternatives Considered:
 Related Documents:
 
 - `README.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/02. Setup/02. System Controls/01. Number Series/01. Sales Documents.md`
-- `docs/PXL/02. Setup/02. System Controls/01. Number Series/02. Purchasing Documents.md`
-- `docs/PXL/02. Setup/02. System Controls/01. Number Series/03. Accounting Documents.md`
-- `docs/PXL/02. Setup/02. System Controls/01. Number Series/04. Compliance Documents.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/04. Transaction Framework/02. System Controls/01. Number Series/01. Sales Documents.md`
+- `docs/PXL/04. Transaction Framework/02. System Controls/01. Number Series/02. Purchasing Documents.md`
+- `docs/PXL/04. Transaction Framework/02. System Controls/01. Number Series/03. Accounting Documents.md`
+- `docs/PXL/04. Transaction Framework/02. System Controls/01. Number Series/04. Compliance Documents.md`
 
 Related Source Files:
 
@@ -446,7 +446,7 @@ Status: Approved
 
 Decision:
 
-Three concerns stay in three places: audit findings (`docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`) hold production defects and release blockers only; architecture documents describe how the system works; product enhancements (GL Impact/Financial Summary/Tax Impact/Posting Validation panels, smart defaults, account determination, payment-method behaviour, drilldown, insights, timelines, reconciliation suite) live in `docs/PXL/PXL_PRODUCT_BACKLOG.md`, organized by module with value/dependency/priority/complexity/readiness/phase fields.
+Three concerns stay in three places: audit findings (`docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`) hold production defects and release blockers only; architecture documents describe how the system works; product enhancements (GL Impact/Financial Summary/Tax Impact/Posting Validation panels, smart defaults, account determination, payment-method behaviour, drilldown, insights, timelines, reconciliation suite) live in `docs/PXL/00. Governance/PXL_PRODUCT_BACKLOG.md`, organized by module with value/dependency/priority/complexity/readiness/phase fields.
 
 Alongside every audit session, agents perform a lightweight architectural review of any module they touch: identify extension points toward the Standard Transaction Experience (documented in the backlog), prepare the architecture only when the risk is negligible and it avoids future refactoring, and otherwise record the opportunity in the backlog. Genuine bugs discovered during review become NEW audit findings and are not fixed unless they block the current finding. Future planning must never delay, re-prioritize, or expand the current audit session; audit work always takes priority.
 
@@ -466,7 +466,7 @@ Alternatives Considered:
 
 Related Documents:
 
-- `docs/PXL/PXL_PRODUCT_BACKLOG.md`
+- `docs/PXL/00. Governance/PXL_PRODUCT_BACKLOG.md`
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
 - `AI/AGENT_SYSTEM_PROMPT.md`
 
@@ -501,7 +501,7 @@ Related Documents:
 
 - `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`
 - `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md`
-- `docs/PXL/PXL_PRODUCT_BACKLOG.md`
+- `docs/PXL/00. Governance/PXL_PRODUCT_BACKLOG.md`
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
 
 Related Source Files:
@@ -536,7 +536,7 @@ Alternatives Considered:
 Related Documents:
 
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-DA-019)
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
 - `docs/PXL/10. Compliance/06. Audit & CAS/07. Document Void Register.md`
 - `docs/PXL/10. Compliance/06. Audit & CAS/08. ATP Usage Log.md`
 
@@ -563,7 +563,7 @@ Guardrails that still apply (DEC-008): the pause does not weaken, remove, or byp
 Issue-routing discipline for this initiative (unchanged from DEC-012, restated as the operating rule):
 
 - Functional/accounting/tax/security/posting/GL/data-integrity bug → NEW row in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`, inserted in severity/priority order (Critical → High → Medium → Low) so it appears in the fix queue.
-- Architectural enhancement → `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` (vision-level) or `docs/PXL/PXL_PRODUCT_BACKLOG.md` (feature-level).
+- Architectural enhancement → `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` (vision-level) or `docs/PXL/00. Governance/PXL_PRODUCT_BACKLOG.md` (feature-level).
 - Permanent architectural/business decision → this file.
 
 Business Reason:
@@ -598,7 +598,7 @@ Status: Approved (direct user directive)
 
 Decision:
 
-The "PXL Standard Report Workspace" (`docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md`, user directive 2026-07-13) is the canonical UI, UX, data, reconciliation, drilldown, export, audit, provenance, security, performance, and rollout standard for every current and future PXL report page. It is the report-page sibling to the Sales Invoice-based Transaction Workspace Standard (DEC-013).
+The "PXL Standard Report Workspace" (`docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md`, user directive 2026-07-13) is the canonical UI, UX, data, reconciliation, drilldown, export, audit, provenance, security, performance, and rollout standard for every current and future PXL report page. It is the report-page sibling to the Sales Invoice-based Transaction Workspace Standard (DEC-013).
 
 No additional report pages should be redesigned or implemented as isolated tables or one-off dashboards. Future Accounting, Sales/AR, Purchasing/AP, Banking, Inventory, Fixed Assets, Tax, Compliance, Audit, System, and Management reports must first define purpose, context, filters, authoritative source, modes, reconciliation target, drilldown/drillback path, export metadata, snapshot requirements, audit/provenance, permissions, performance expectations, and test coverage under the standard. Reports that have control-account or source-ledger relationships must not present a green reconciled state without authoritative server-side validation.
 
@@ -620,11 +620,11 @@ Alternatives Considered:
 
 Related Documents:
 
-- `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md`
+- `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md`
 - `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`
 - `docs/PXL/UI_UX_PRINCIPLES.md`
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
 
 Related Source Files:
 
@@ -639,7 +639,7 @@ Decision:
 
 The next milestone is **PXL Accounting Core Ready**. This supersedes DEC-015's temporary transaction-workspace-first ordering. The documented Sales Invoice Workspace and Report Workspace standards remain authoritative references, but implementation rollout is paused until the accounting core, posting engine, tax engine, and master-data governance are production-ready.
 
-The active priority is now `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md`: review and harden the posting engine, design a configuration-driven tax engine, document governed master-data dependencies, verify future transaction accounting readiness, and maintain a production readiness matrix. Do not create additional UI standards, implement report pilots, roll out more transaction workspaces, or build dashboards during this phase unless the change directly fixes an accounting/tax/core-readiness defect.
+The active priority is now `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md`: review and harden the posting engine, design a configuration-driven tax engine, document governed master-data dependencies, verify future transaction accounting readiness, and maintain a production readiness matrix. Do not create additional UI standards, implement report pilots, roll out more transaction workspaces, or build dashboards during this phase unless the change directly fixes an accounting/tax/core-readiness defect.
 
 Business Reason:
 
@@ -657,12 +657,12 @@ Alternatives Considered:
 
 Related Documents:
 
-- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md`
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
 - `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md`
-- `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md`
+- `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md`
 - `AI/AI_WORK_QUEUE.md` (AIQ-017)
 
 Related Source Files:
@@ -679,7 +679,7 @@ Status: Approved (direct user directive)
 
 Decision:
 
-`docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` is the official governed accounting specification for PXL posting behavior. It is the canonical source for transaction business purpose, trigger event, lifecycle, approval requirement, posting trigger, debit accounts, credit accounts, account determination source, tax impact, inventory/fixed-asset/costing/FX impact, master-data dependencies, validations, numbering, audit events, related documents, reversal/void/cancel/lock behavior, affected reports, tests, and known exceptions.
+`docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md` is the official governed accounting specification for PXL posting behavior. It is the canonical source for transaction business purpose, trigger event, lifecycle, approval requirement, posting trigger, debit accounts, credit accounts, account determination source, tax impact, inventory/fixed-asset/costing/FX impact, master-data dependencies, validations, numbering, audit events, related documents, reversal/void/cancel/lock behavior, affected reports, tests, and known exceptions.
 
 Future implementation must not invent posting rules inside transaction modules, report modules, dashboards, or UI pages. Posting behavior must be defined in the matrix first, then implemented through the accounting engine, posting engine, account determination engine, and configuration-driven tax engine.
 
@@ -707,17 +707,17 @@ Existing posting logic is partially unified through shared database primitives, 
 
 Alternatives Considered:
 
-- Continue using `PXL_TRANSACTION_MATRIX.md` alone. Rejected: that matrix is too broad; the accounting rules need a focused posting specification.
+- Continue using `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md` alone. Rejected: that matrix is too broad; the accounting rules need a focused posting specification.
 - Implement an account determination engine immediately. Rejected: the directive is architecture-first and forbids schema/posting changes in this pass.
 - Allow module-specific posting SQL to define behavior. Rejected: it creates inconsistent accounting logic and weakens auditability.
 
 Related Documents:
 
-- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md`
-- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md`
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md`
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
 - `AI/AI_WORK_QUEUE.md` (AIQ-018)
 
@@ -747,8 +747,8 @@ Alternatives Considered:
 Related Documents:
 
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` (PXL-AUD-013, PXL-DA-014)
-- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md`
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` (FINANCIAL-CLOSE-001)
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md` (FINANCIAL-CLOSE-001)
 
 Related Source Files:
 

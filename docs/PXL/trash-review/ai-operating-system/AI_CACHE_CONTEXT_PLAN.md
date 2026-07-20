@@ -1,5 +1,11 @@
 # AI Cache Context Plan for PXL Claude/Fable Sessions
 
+**Status:** TRASH-REVIEW - obsolete AI operating-system material
+**Authority:** Non-authoritative; superseded by AI/AGENT_SYSTEM_PROMPT.md and AI/AI_STATE.md
+**Last Reviewed:** 2026-07-18 documentation cleanup
+**Read When:** Human deletion review only
+**Do Not Read For:** AI startup or current work selection
+
 Created: 2026-07-02
 Repository inspected: https://github.com/jaqgacp/PXL
 
@@ -60,7 +66,7 @@ Therefore, do not modify code for prompt caching yet. If a future Claude API wra
 | File path | Purpose | Cache? | Why or why not |
 | --- | --- | --- | --- |
 | `README.md` | Stack, local setup, migration summary, security model, posting model, module completion criteria, project structure, BIR notes. | Yes | Compact architecture primer. Stable enough for every coding session. |
-| `docs/PXL/PXL_PRINCIPLES.md` | Supreme engineering constitution: accounting-first, Philippine-compliance-first, immutable accounting, audit, RLS, professional ERP UX, no architectural drift. | Yes | Must be in every session. This is the strongest stable instruction file currently present. |
+| `docs/PXL/00. Governance/PXL_PRINCIPLES.md` | Supreme engineering constitution: accounting-first, Philippine-compliance-first, immutable accounting, audit, RLS, professional ERP UX, no architectural drift. | Yes | Must be in every session. This is the strongest stable instruction file currently present. |
 | `docs/PXL/STATUS.md` | Build status, module/page completion, migration status, completed compliance/BIR/audit pages. | Yes, but update-aware | Needed so Claude knows the current build surface. It changes when modules/status change, so keep it later than permanent rules. |
 | `docs/PXL/UI_UX_PRINCIPLES.md` | Enterprise UI/UX/navigation rules and full navigation tree. | Task-specific | Very useful for UI work, but too large and not needed for database/accounting-only sessions. |
 
@@ -68,9 +74,9 @@ Therefore, do not modify code for prompt caching yet. If a future Claude API wra
 
 | File path | Purpose | Cache? | Why or why not |
 | --- | --- | --- | --- |
-| `docs/PXL/PXL_TRANSACTION_MATRIX.md` | Living transaction source of truth: purpose, validation, accounting rules, tax rules, JE impact, reports, status flow, audit status, tests, findings. | Yes for coding; must for transaction work | This is the main map that keeps Claude from re-discovering transaction behavior. It is large but high-value. |
+| `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md` | Living transaction source of truth: purpose, validation, accounting rules, tax rules, JE impact, reports, status flow, audit status, tests, findings. | Yes for coding; must for transaction work | This is the main map that keeps Claude from re-discovering transaction behavior. It is large but high-value. |
 | `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` | Audit findings, severity, status, risks, fix plans, evidence, and recommended fix sessions. | Yes for audit/fix sessions | Essential for production-hardening and avoiding repeated audit diagnosis. Volatile, so place after stable architecture. |
-| `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` | Expected accounting/reporting test scenarios and pgTAP coverage map. | Yes for accounting/fix sessions | Keeps test expectations and pass/fail evidence available. Needed before changing posting, tax, aging, VAT, EWT, 2307, or GL behavior. |
+| `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md` | Expected accounting/reporting test scenarios and pgTAP coverage map. | Yes for accounting/fix sessions | Keeps test expectations and pass/fail evidence available. Needed before changing posting, tax, aging, VAT, EWT, 2307, or GL behavior. |
 | `supabase/tests/*.sql` | Executable pgTAP test scenarios. | Task-specific | Do not cache all tests every time. Include only tests relevant to the current fix, plus the test book. |
 
 ### Architecture, Schema, and Backend Source
@@ -86,10 +92,10 @@ Therefore, do not modify code for prompt caching yet. If a future Claude API wra
 
 | File path | Purpose | Cache? | Why or why not |
 | --- | --- | --- | --- |
-| `docs/PXL/02. Setup/**/*.md` | Company, branch, fiscal calendar, COA, number series, tax setup, document controls, validation rules, feature flags, approvals. | Accounting/setup-specific | Cache when working on setup readiness, roles, posting validation, number series, period controls, or tax setup. |
-| `docs/PXL/02. Setup/04. Accounting Setup/07. GL Posting Configuration.md` | Account determination and posting matrix rules. | Yes for posting/accounting work | High-value for any GL posting change. |
-| `docs/PXL/02. Setup/03. Document & Validation/01. Document Controls/02. Posting Controls.md` | Which documents post and how posting is controlled. | Yes for posting/accounting work | Needed for posting workflows and immutability decisions. |
-| `docs/PXL/02. Setup/03. Document & Validation/02. Validation Rules/03. Posting Validation Rules.md` | Final accounting checks before posting: debit/credit, tax code, open period. | Yes for posting/accounting work | Directly affects production-hardening and validation fixes. |
+| `docs/PXL/04. Transaction Framework/**/*.md` | Company, branch, fiscal calendar, COA, number series, tax setup, document controls, validation rules, feature flags, approvals. | Accounting/setup-specific | Cache when working on setup readiness, roles, posting validation, number series, period controls, or tax setup. |
+| `docs/PXL/02. Accounting Core/Setup/07. GL Posting Configuration.md` | Account determination and posting matrix rules. | Yes for posting/accounting work | High-value for any GL posting change. |
+| `docs/PXL/04. Transaction Framework/03. Document & Validation/01. Document Controls/02. Posting Controls.md` | Which documents post and how posting is controlled. | Yes for posting/accounting work | Needed for posting workflows and immutability decisions. |
+| `docs/PXL/04. Transaction Framework/03. Document & Validation/02. Validation Rules/03. Posting Validation Rules.md` | Final accounting checks before posting: debit/credit, tax code, open period. | Yes for posting/accounting work | Directly affects production-hardening and validation fixes. |
 | `docs/PXL/03. Master Data/**/*.md` | Customers, suppliers, items, services, UOM, payment terms, warehouse stock settings. | Module-specific | Cache only when current task touches master data defaults, tax profiles, accounts, or UI pages. |
 
 ### Tax and Compliance Documents
@@ -109,22 +115,22 @@ Therefore, do not modify code for prompt caching yet. If a future Claude API wra
 
 | File path | Purpose | Cache? | Why or why not |
 | --- | --- | --- | --- |
-| `docs/PXL/09. Accounting/**/*.md` | Journal entries, GL, ledgers, trial balance, subsidiary ledgers, schedules, period management, reversal/posting review. | Accounting-specific | Cache for GL, posting, period close, reversal, schedules, and financial reporting tasks. |
-| `docs/PXL/09. Accounting/01. Journal Entries/*.md` | JE and GL entry behavior. | Accounting-specific | Cache for JE/reversal/GL work. |
-| `docs/PXL/09. Accounting/02. Ledgers/*.md` | General ledger, account detail, trial balance. | Accounting-specific | Cache for reporting and ledger fixes. |
-| `docs/PXL/09. Accounting/03. Subsidiary Ledgers/*.md` | Customer/supplier ledger and control reconciliation. | Accounting-specific | Cache for AR/AP/subledger reconciliation work. |
-| `docs/PXL/09. Accounting/05. Period Management/*.md` | Period closing, locks, posting review, reversal review, amortization/revenue recognition runs, auto reversal. | Accounting-specific | Cache for period/reversal/posting-review work. |
+| `docs/PXL/02. Accounting Core/Module Blueprints/**/*.md` | Journal entries, GL, ledgers, trial balance, subsidiary ledgers, schedules, period management, reversal/posting review. | Accounting-specific | Cache for GL, posting, period close, reversal, schedules, and financial reporting tasks. |
+| `docs/PXL/02. Accounting Core/Module Blueprints/01. Journal Entries/*.md` | JE and GL entry behavior. | Accounting-specific | Cache for JE/reversal/GL work. |
+| `docs/PXL/02. Accounting Core/Module Blueprints/02. Ledgers/*.md` | General ledger, account detail, trial balance. | Accounting-specific | Cache for reporting and ledger fixes. |
+| `docs/PXL/02. Accounting Core/Module Blueprints/03. Subsidiary Ledgers/*.md` | Customer/supplier ledger and control reconciliation. | Accounting-specific | Cache for AR/AP/subledger reconciliation work. |
+| `docs/PXL/02. Accounting Core/Module Blueprints/05. Period Management/*.md` | Period closing, locks, posting review, reversal review, amortization/revenue recognition runs, auto reversal. | Accounting-specific | Cache for period/reversal/posting-review work. |
 | `docs/PXL/11. Reports/**/*.md` | Financial statements, trial balance, tax reports, aging, bank, inventory, asset, management, registers, audit reports. | Report-specific | Cache only for the report being changed plus related accounting/tax docs. |
 
 ### Operational Module Documents
 
 | File path | Purpose | Cache? | Why or why not |
 | --- | --- | --- | --- |
-| `docs/PXL/04. Sales/**/*.md` | Quotations, sales orders, delivery receipts, sales invoices, cash sales, receipts, CM/DM, customer returns, AR, output VAT, SLS. | Module-specific | Cache for Sales/AR tasks only. |
-| `docs/PXL/05. Purchasing/**/*.md` | Purchase orders, receiving, vendor bills, cash purchases, payment vouchers, vendor credits, supplier DM, AP, input VAT, EWT, SLP. | Module-specific | Cache for Purchasing/AP/EWT tasks only. |
-| `docs/PXL/06. Inventory/**/*.md` | Inventory operations, movements, valuation, warehouses, items. | Module-specific | Cache for inventory tasks only. |
-| `docs/PXL/07. Banking & Treasury/**/*.md` | Petty cash, fund transfers, bank adjustments, reconciliation, checks. | Module-specific | Cache for banking/treasury tasks only. |
-| `docs/PXL/08. Fixed Assets/**/*.md` | Asset dashboard, register, acquisition, depreciation, disposal, transfer, impairment, setup. | Module-specific | Cache for fixed asset tasks only. |
+| `docs/PXL/05. Sales/Module Blueprints/**/*.md` | Quotations, sales orders, delivery receipts, sales invoices, cash sales, receipts, CM/DM, customer returns, AR, output VAT, SLS. | Module-specific | Cache for Sales/AR tasks only. |
+| `docs/PXL/06. Purchasing and AP/**/*.md` | Purchase orders, receiving, vendor bills, cash purchases, payment vouchers, vendor credits, supplier DM, AP, input VAT, EWT, SLP. | Module-specific | Cache for Purchasing/AP/EWT tasks only. |
+| `docs/PXL/07. Inventory/**/*.md` | Inventory operations, movements, valuation, warehouses, items. | Module-specific | Cache for inventory tasks only. |
+| `docs/PXL/08. Banking and Treasury/**/*.md` | Petty cash, fund transfers, bank adjustments, reconciliation, checks. | Module-specific | Cache for banking/treasury tasks only. |
+| `docs/PXL/09. Fixed Assets/**/*.md` | Asset dashboard, register, acquisition, depreciation, disposal, transfer, impairment, setup. | Module-specific | Cache for fixed asset tasks only. |
 | `docs/PXL/01. Dashboard/Dashboard.md` | Dashboard behavior. | UI/task-specific | Cache only for dashboard work. |
 
 ### Source Files and Runtime Context
@@ -149,21 +155,21 @@ Recommended order:
 2. `AI/AI_AUTONOMY_PLAYBOOK.md`.
 3. `AI/AI_CONTEXT_INDEX.md`.
 4. `AI/AI_DECISIONS.md`.
-5. `docs/PXL/PXL_PRINCIPLES.md`.
+5. `docs/PXL/00. Governance/PXL_PRINCIPLES.md`.
 6. `README.md`.
-7. `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` once created.
-8. `docs/PXL/PXL_SCHEMA_SUMMARY.md` once created.
+7. `docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md` once created.
+8. `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md` once created.
 9. `docs/PXL/STATUS.md`.
-10. `docs/PXL/PXL_TRANSACTION_MATRIX.md`.
+10. `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`.
 11. `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`.
-12. `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`.
+12. `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md`.
 13. `AI/AI_STATE.md`.
 14. `AI/AI_HANDOFF.md`.
 15. `AI/AI_WORK_QUEUE.md`.
 
 Suggested breakpoints:
 
-- Breakpoint 1: after `AI/AGENT_SYSTEM_PROMPT.md`, `AI/AI_AUTONOMY_PLAYBOOK.md`, `AI/AI_CONTEXT_INDEX.md`, `AI/AI_DECISIONS.md`, `PXL_PRINCIPLES.md`, and `README.md`.
+- Breakpoint 1: after `AI/AGENT_SYSTEM_PROMPT.md`, `AI/AI_AUTONOMY_PLAYBOOK.md`, `AI/AI_CONTEXT_INDEX.md`, `AI/AI_DECISIONS.md`, `docs/PXL/00. Governance/PXL_PRINCIPLES.md`, and `README.md`.
 - Breakpoint 2: after architecture/schema summaries.
 - Breakpoint 3: after transaction matrix, audit findings, and test book.
 - Breakpoint 4: after AI_STATE, AI_HANDOFF, and AI_WORK_QUEUE, if they are reused across multiple requests in the same session.
@@ -174,12 +180,12 @@ If the session is short or API wrapper supports only simple automatic caching, u
 
 Add these to the cached prefix only when relevant:
 
-- `docs/PXL/02. Setup/04. Accounting Setup/07. GL Posting Configuration.md`
-- `docs/PXL/02. Setup/03. Document & Validation/01. Document Controls/02. Posting Controls.md`
-- `docs/PXL/02. Setup/03. Document & Validation/01. Document Controls/04. Reversal Controls.md`
-- `docs/PXL/02. Setup/03. Document & Validation/02. Validation Rules/03. Posting Validation Rules.md`
-- `docs/PXL/02. Setup/03. Document & Validation/02. Validation Rules/04. Period Controls.md`
-- `docs/PXL/09. Accounting/**/*.md` relevant to the task.
+- `docs/PXL/02. Accounting Core/Setup/07. GL Posting Configuration.md`
+- `docs/PXL/04. Transaction Framework/03. Document & Validation/01. Document Controls/02. Posting Controls.md`
+- `docs/PXL/04. Transaction Framework/03. Document & Validation/01. Document Controls/04. Reversal Controls.md`
+- `docs/PXL/04. Transaction Framework/03. Document & Validation/02. Validation Rules/03. Posting Validation Rules.md`
+- `docs/PXL/04. Transaction Framework/03. Document & Validation/02. Validation Rules/04. Period Controls.md`
+- `docs/PXL/02. Accounting Core/Module Blueprints/**/*.md` relevant to the task.
 - `docs/PXL/10. Compliance/Tax Applicability Matrix.md`
 - `docs/PXL/10. Compliance/Form 2307 Management.md`
 - `docs/PXL/10. Compliance/01. Percentage Tax/**/*.md` for PT work.
@@ -194,13 +200,13 @@ Add only the module that matches the current task:
 
 - UI/global navigation work: `docs/PXL/UI_UX_PRINCIPLES.md`
 - Dashboard work: `docs/PXL/01. Dashboard/Dashboard.md`
-- Setup work: `docs/PXL/02. Setup/**/*.md`
+- Setup work: `docs/PXL/04. Transaction Framework/**/*.md`
 - Master data work: `docs/PXL/03. Master Data/**/*.md`
-- Sales/AR work: `docs/PXL/04. Sales/**/*.md`
-- Purchasing/AP work: `docs/PXL/05. Purchasing/**/*.md`
-- Inventory work: `docs/PXL/06. Inventory/**/*.md`
-- Banking/Treasury work: `docs/PXL/07. Banking & Treasury/**/*.md`
-- Fixed Assets work: `docs/PXL/08. Fixed Assets/**/*.md`
+- Sales/AR work: `docs/PXL/05. Sales/Module Blueprints/**/*.md`
+- Purchasing/AP work: `docs/PXL/06. Purchasing and AP/**/*.md`
+- Inventory work: `docs/PXL/07. Inventory/**/*.md`
+- Banking/Treasury work: `docs/PXL/08. Banking and Treasury/**/*.md`
+- Fixed Assets work: `docs/PXL/09. Fixed Assets/**/*.md`
 - Reports work: `docs/PXL/11. Reports/**/*.md`
 
 ### Do Not Cache / Volatile Context
@@ -245,11 +251,11 @@ Skip business module docs unless the selected queue item requires them.
 
 Read:
 
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
-- Relevant `docs/PXL/09. Accounting/` docs
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md`
+- Relevant `docs/PXL/02. Accounting Core/Module Blueprints/` docs
 
 Skip unless required:
 
@@ -262,9 +268,9 @@ Skip unless required:
 
 Read:
 
-- Relevant `docs/PXL/04. Sales/` docs
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- Relevant `docs/PXL/05. Sales/Module Blueprints/` docs
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
 - Customer/master-data docs if the task touches customer defaults
 
 Skip unrelated modules unless the task crosses into inventory, tax, or posting.
@@ -273,10 +279,10 @@ Skip unrelated modules unless the task crosses into inventory, tax, or posting.
 
 Read:
 
-- Relevant `docs/PXL/05. Purchasing/` docs
+- Relevant `docs/PXL/06. Purchasing and AP/` docs
 - `docs/PXL/PXL_TAX_RULES_PH.md`
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
 - Supplier/master-data docs if the task touches supplier defaults
 
 Skip unrelated modules unless the task crosses into VAT/EWT/2307, inventory, or reports.
@@ -297,7 +303,7 @@ Skip unrelated modules unless they are the source transactions for the tax resul
 Read:
 
 - `docs/PXL/UI_UX_PRINCIPLES.md`
-- `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`
+- `docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md`
 - The specific module/page document being changed
 
 Do not load accounting and tax documentation unless the UI change affects posting, tax, audit, lifecycle, reports, or compliance behavior.
@@ -306,8 +312,8 @@ Do not load accounting and tax documentation unless the UI change affects postin
 
 Read:
 
-- `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
 - `README.md`
 - `package.json`
 - Relevant Supabase, build, TypeScript, Vite, or CI files
@@ -319,8 +325,8 @@ Skip business documentation unless the infrastructure change affects business be
 Read:
 
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
 - `AI/AI_DECISIONS.md`
 
 Skip unrelated implementation docs unless named by the finding.
@@ -420,7 +426,7 @@ const stableSystemBlocks = [
   },
   {
     type: "text",
-    text: readFile("docs/PXL/PXL_PRINCIPLES.md"),
+    text: readFile("docs/PXL/00. Governance/PXL_PRINCIPLES.md"),
   },
   {
     type: "text",
@@ -428,21 +434,21 @@ const stableSystemBlocks = [
   },
   {
     type: "text",
-    text: readFile("docs/PXL/PXL_ARCHITECTURE_SUMMARY.md"),
+    text: readFile("docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md"),
     cache_control: { type: "ephemeral", ttl: "1h" },
   },
   {
     type: "text",
-    text: readFile("docs/PXL/PXL_SCHEMA_SUMMARY.md"),
+    text: readFile("docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md"),
     cache_control: { type: "ephemeral", ttl: "1h" },
   },
   {
     type: "text",
     text: [
       readFile("docs/PXL/STATUS.md"),
-      readFile("docs/PXL/PXL_TRANSACTION_MATRIX.md"),
+      readFile("docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md"),
       readFile("docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md"),
-      readFile("docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md"),
+      readFile("docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md"),
     ].join("\n\n"),
     cache_control: { type: "ephemeral" },
   },
@@ -539,14 +545,14 @@ Keep the cached context block stable and reusable. Put permanent and slow-changi
 - AI/AI_STATE.md
 - AI/AI_HANDOFF.md
 - AI/AI_WORK_QUEUE.md
-- docs/PXL/PXL_PRINCIPLES.md
+- docs/PXL/00. Governance/PXL_PRINCIPLES.md
 - README.md
-- docs/PXL/PXL_ARCHITECTURE_SUMMARY.md
-- docs/PXL/PXL_SCHEMA_SUMMARY.md
+- docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md
+- docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md
 - docs/PXL/STATUS.md
-- docs/PXL/PXL_TRANSACTION_MATRIX.md
+- docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md
 - docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md
-- docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md
+- docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md
 - Relevant accounting, posting, schema, tax, or module documents for the current workstream
 
 Send only the current task, current errors, current changed files, current diffs, and requested fixes outside the cached block.
@@ -580,12 +586,12 @@ Create or improve:
 
 | File | Recommendation |
 | --- | --- |
-| `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` | Created 2026-07-02. Concise architecture summary: stack, layout, RLS model, posting/RPC pattern, data flow, commands, source-of-truth links. |
-| `docs/PXL/PXL_SCHEMA_SUMMARY.md` | Create a concise schema/RPC map by module: key tables, views, RPCs, triggers, migration references, test references. This should summarize migrations instead of caching all 60 SQL files. |
-| `docs/PXL/PXL_ACCOUNTING_RULES.md` | Create a concise accounting rules summary: JE invariants, GL/subledger reconciliation rules, immutability, reversal/void conventions, posting preview requirements, period locks, AR/AP aging as-of rules. |
+| `docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md` | Created 2026-07-02. Concise architecture summary: stack, layout, RLS model, posting/RPC pattern, data flow, commands, source-of-truth links. |
+| `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md` | Create a concise schema/RPC map by module: key tables, views, RPCs, triggers, migration references, test references. This should summarize migrations instead of caching all 60 SQL files. |
+| `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md` | Create a concise accounting rules summary: JE invariants, GL/subledger reconciliation rules, immutability, reversal/void conventions, posting preview requirements, period locks, AR/AP aging as-of rules. |
 | `docs/PXL/PXL_TAX_RULES_PH.md` | Create a concise Philippine tax rules summary: VAT, non-VAT gating, input/output VAT, EWT/CWT/FWT, ATC effective dates, 2307/2306, SAWT/QAP, SLSP/RELIEF, PT, income tax, BIR books/CAS. |
 | `docs/PXL/STATUS.md` | Existing file is strong for build status. Improve by adding "current active hardening focus", "latest completed fix session", and links to `AI/AI_STATE.md` and `AI/AI_HANDOFF.md`. |
-| `docs/PXL/PXL_TRANSACTION_MATRIX.md` | Existing file is strong but very large. Keep it as the source of truth; optionally add a short "High-risk active rows" section at top so agents can orient faster. |
+| `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md` | Existing file is strong but very large. Keep it as the source of truth; optionally add a short "High-risk active rows" section at top so agents can orient faster. |
 
 ## AI/AI_DECISIONS.md Governance
 
@@ -687,16 +693,16 @@ For most coding sessions:
    - `AI/AI_AUTONOMY_PLAYBOOK.md`
    - `AI/AI_CONTEXT_INDEX.md`
    - `AI/AI_DECISIONS.md`
-   - `docs/PXL/PXL_PRINCIPLES.md`
+   - `docs/PXL/00. Governance/PXL_PRINCIPLES.md`
    - `README.md`
-   - `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`
-   - `docs/PXL/PXL_SCHEMA_SUMMARY.md`
+   - `docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md`
+   - `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
 
 2. Cache the project state block:
    - `docs/PXL/STATUS.md`
-   - `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+   - `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
    - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`
-   - `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
+   - `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md`
    - `AI/AI_STATE.md`
    - `AI/AI_HANDOFF.md`
    - `AI/AI_WORK_QUEUE.md`
@@ -726,14 +732,14 @@ The target architecture is an AI operating system, not a pile of documents. Each
 
 | File | Responsibility | Avoid overlap with |
 | --- | --- | --- |
-| `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md` | Concise technical architecture summary. | Do not duplicate every migration or module spec. |
-| `docs/PXL/PXL_SCHEMA_SUMMARY.md` | Concise schema/RPC/test map. | Do not paste full SQL migrations. |
-| `docs/PXL/PXL_ACCOUNTING_RULES.md` | Concise accounting rules. | Do not replace the transaction matrix. |
+| `docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md` | Concise technical architecture summary. | Do not duplicate every migration or module spec. |
+| `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md` | Concise schema/RPC/test map. | Do not paste full SQL migrations. |
+| `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md` | Concise accounting rules. | Do not replace the transaction matrix. |
 | `docs/PXL/PXL_TAX_RULES_PH.md` | Concise Philippine tax rules. | Do not duplicate every compliance module blueprint. |
 
 Current risks to manage:
 
-- `PXL_TRANSACTION_MATRIX.md` is valuable but large. Keep it as the full source of truth and add short high-risk summaries instead of asking agents to infer from the whole file every time.
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md` is valuable but large. Keep it as the full source of truth and add short high-risk summaries instead of asking agents to infer from the whole file every time.
 - `PXL_END_TO_END_AUDIT_FINDINGS.md` is valuable but volatile. Cache it for audit/fix sessions, but use AI_STATE and AI_HANDOFF for the immediate next step.
 - Module folders are useful but numerous. Use `AI/AI_CONTEXT_INDEX.md` and work modes to avoid loading unrelated modules.
 - `AI/AI_DECISIONS.md` must stay curated. If it becomes a progress log, it will lose its purpose.
@@ -763,11 +769,11 @@ Read:
 
 Pick the highest-priority unblocked task from AI/AI_WORK_QUEUE.md.
 
-Current recommended task: AIQ-004, create docs/PXL/PXL_ARCHITECTURE_SUMMARY.md.
+Current recommended task: AIQ-004, create docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md.
 
 Requirements:
 
-- Base the summary on README.md, docs/PXL/PXL_PRINCIPLES.md, docs/PXL/STATUS.md, and relevant architecture/setup notes.
+- Base the summary on README.md, docs/PXL/00. Governance/PXL_PRINCIPLES.md, docs/PXL/STATUS.md, and relevant architecture/setup notes.
 - Keep it concise enough to be stable cached context.
 - Link to detailed source documents instead of duplicating long content.
 - Do not implement Claude API prompt caching code yet because this repository currently has no Claude/Anthropic API integration.

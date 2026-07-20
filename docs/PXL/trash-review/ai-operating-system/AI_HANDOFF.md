@@ -1,5 +1,11 @@
 # AI Handoff
 
+**Status:** TRASH-REVIEW - obsolete AI operating-system material
+**Authority:** Non-authoritative; superseded by AI/AGENT_SYSTEM_PROMPT.md and AI/AI_STATE.md
+**Last Reviewed:** 2026-07-18 documentation cleanup
+**Read When:** Human deletion review only
+**Do Not Read For:** AI startup or current work selection
+
 Last updated: 2026-07-15 (Transaction Workspace Rollout Framework foundation)
 
 ## Current Session - Transaction Workspace Rollout Framework
@@ -7,12 +13,12 @@ Last updated: 2026-07-15 (Transaction Workspace Rollout Framework foundation)
 The PXL Transaction Workspace Rollout Framework foundation was created without rolling out another transaction page. New control artifacts:
 
 - `src/lib/transactionWorkspaceRollout.ts`
-- `docs/PXL/PXL_TRANSACTION_WORKSPACE_STANDARD.md`
-- `docs/PXL/PXL_TRANSACTION_WORKSPACE_MANIFEST.md`
-- `docs/PXL/PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`
-- `docs/PXL/PXL_TRANSACTION_DEFINITION_SCHEMA.md`
+- `docs/PXL/12. UI and UX/PXL_TRANSACTION_WORKSPACE_STANDARD.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_WORKSPACE_MANIFEST.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_DEFINITION_SCHEMA.md`
 
-Related standards updated: `PXL_STANDARD_TRANSACTION_WORKSPACE.md`, `PXL_TRANSACTION_EXPERIENCE_STANDARD.md`, `PXL_DESIGN_SYSTEM.md`, `PXL_TRANSACTION_WORKSPACE_DESIGN_STANDARD.md`, `PXL_COMPONENT_LIBRARY.md`, `PXL_TRANSACTION_MATRIX.md`, and `PXL_ACCOUNTING_CORE_READINESS.md`.
+Related standards updated: `PXL_STANDARD_TRANSACTION_WORKSPACE.md`, `PXL_TRANSACTION_EXPERIENCE_STANDARD.md`, `PXL_DESIGN_SYSTEM.md`, `PXL_TRANSACTION_WORKSPACE_DESIGN_STANDARD.md`, `PXL_COMPONENT_LIBRARY.md`, `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`, and `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md`.
 
 Sales Invoice remains the implemented create/edit and read-only view reference pair. Sales Invoice is not marked fully validated/approved-reference in the manifest because full fixture validation across all requested form/view states has not been recorded. Sales Order is the recommended next rollout candidate, but must not be implemented until a future explicit instruction says:
 
@@ -142,8 +148,8 @@ User directed that the Sales Invoice Workspace and Report Workspace standards ar
 
 Completed in this documentation/architecture-alignment pass:
 
-- Added `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` as the active production-readiness control document.
-- Added `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` as the governed posting-behavior source of truth.
+- Added `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md` as the active production-readiness control document.
+- Added `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md` as the governed posting-behavior source of truth.
 - Added DEC-017 in `AI/AI_DECISIONS.md`: PXL Accounting Core Ready supersedes DEC-015's temporary transaction-workspace-first ordering.
 - Added DEC-018 in `AI/AI_DECISIONS.md`: PXL Accounting Rules Matrix is the governed posting source of truth.
 - Added AIQ-017 in `AI/AI_WORK_QUEUE.md` as the active priority.
@@ -175,7 +181,7 @@ Do not:
 
 Recommended next implementation lane:
 
-1. Use `PXL_ACCOUNTING_RULES_MATRIX.md` as the accounting behavior reference before any implementation.
+1. Use `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md` as the accounting behavior reference before any implementation.
 2. Reopen the core Criticals and dependencies: **PXL-DA-009** and **PXL-DA-019**.
 3. Complete safe ATC document-date/version governance, replacing the held-out draft rather than adopting it as-is.
 4. Build controlled EWT remittance / CWT application flow.
@@ -197,7 +203,7 @@ Held-out files remain excluded unless explicitly owned and fixed:
 
 User directed that before implementing or redesigning additional report pages, PXL must define the official report-page equivalent of the Sales Invoice Transaction Workspace Standard. Completed as a documentation and architecture-alignment pass only:
 
-- Added `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md` as the canonical reporting standard.
+- Added `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md` as the canonical reporting standard.
 - Added DEC-016 in `AI/AI_DECISIONS.md`: the PXL Standard Report Workspace is the official UI, UX, data, reconciliation, drilldown, export, audit, provenance, security, performance, and rollout architecture for all PXL reports.
 - The document covers:
   - core reporting philosophy and relationship to transaction workspaces;
@@ -218,7 +224,7 @@ User directed that before implementing or redesigning additional report pages, P
 - No schema, API, business logic, posting, tax, reconciliation, or permission behavior was changed.
 - No audit finding was created because this was architecture documentation and no genuine accounting/tax/security/data-integrity/report-correctness defect was confirmed.
 
-After **PXL Accounting Core Ready**, future report work must use `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md` first. Do not redesign isolated report pages. Select a pilot by production priority and dependency; recommended candidates are Trial Balance, AR Aging, and VAT Reconciliation.
+After **PXL Accounting Core Ready**, future report work must use `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md` first. Do not redesign isolated report pages. Select a pilot by production priority and dependency; recommended candidates are Trial Balance, AR Aging, and VAT Reconciliation.
 
 ## Previous Active Priority (session 73 — Official Transaction Workspace Standard)
 
@@ -259,7 +265,7 @@ User requested the next table-only enhancement after declaring the Transaction W
   - Default pinned columns: `#`, `Item Code`, `Description`.
   - Column metadata now supplies grouping, default widths, sort/filter/export values, and truthful unavailable states for not-yet-stored fields.
   - Refresh button reuses the existing invoice `load()` function.
-- Docs updated: `PXL_STANDARD_TRANSACTION_WORKSPACE.md`, `PXL_TRANSACTION_EXPERIENCE_STANDARD.md`, and `PXL_TRANSACTION_MATRIX.md` now record the saved-view table standard.
+- Docs updated: `PXL_STANDARD_TRANSACTION_WORKSPACE.md`, `PXL_TRANSACTION_EXPERIENCE_STANDARD.md`, and `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md` now record the saved-view table standard.
 - Verification: `npm run build` passes; `npm run lint` passes; `git diff --check` clean. The user-owned held-out `20260710000004`, `20260710000005`, and test `027` were not touched.
 
 Known boundary: persistence is browser-local (`localStorage`) and scoped by workspace/table key (including company for SI), not a database-backed cross-device user preference table. That matches the user's "no schema/API changes" constraint for this UI-only pass; if cross-device per-auth-user preferences become required, add a governed preference table/API as a separate explicit feature.

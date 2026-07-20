@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Generates docs/PXL/PXL_SCHEMA_SUMMARY.md from supabase/migrations/.
+# Generates docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md from supabase/migrations/.
 #
 # Purpose: functions and views are redefined across the migration chain; the
 # expensive question in every fix session is "where is the CURRENT definition
@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-OUT=docs/PXL/PXL_SCHEMA_SUMMARY.md
+OUT=docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md
 declare -A fn_last fn_count vw_last vw_count tb_created tb_alt_count tb_alt_last trg_last trg_table
 
 for f in $(ls supabase/migrations/*.sql | sort); do

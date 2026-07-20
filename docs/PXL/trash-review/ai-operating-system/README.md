@@ -1,5 +1,11 @@
 # AI Operating Files
 
+**Status:** TRASH-REVIEW - obsolete AI operating-system material
+**Authority:** Non-authoritative; superseded by AI/AGENT_SYSTEM_PROMPT.md and AI/AI_STATE.md
+**Last Reviewed:** 2026-07-18 documentation cleanup
+**Read When:** Human deletion review only
+**Do Not Read For:** AI startup or current work selection
+
 This folder contains the AI operating system for PXL: the documents that let Claude, Fable, Codex, or any future AI agent continue work on the repository autonomously, with minimal repeated prompting from the user.
 
 Read these files in the order defined in `AI/AGENT_SYSTEM_PROMPT.md` before starting any task. Treat them as the repository source of truth for AI sessions.

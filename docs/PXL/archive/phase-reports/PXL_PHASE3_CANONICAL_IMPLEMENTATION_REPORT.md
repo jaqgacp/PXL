@@ -3,7 +3,7 @@
 **Status:** Historical Snapshot
 **Report Date:** 2026-07-16
 **Environment:** Hosted project `bskjkogijpbhukjkagfj` and hosted-connected local frontend
-**Not Current Source of Truth:** See `AI/AI_STATE.md`, `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`, and `docs/PXL/PXL_CANONICAL_DEMO_DATASET.md`
+**Not Current Source of Truth:** See `AI/AI_STATE.md`, `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`, and `docs/PXL/13. Testing and Validation/PXL_CANONICAL_DEMO_DATASET.md`
 **Read When:** Historical Phase 3 evidence is specifically required
 
 Date: 2026-07-16

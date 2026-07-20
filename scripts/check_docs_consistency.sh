@@ -15,9 +15,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-DOC=docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md
-BOOK=docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md
-MATRIX=docs/PXL/PXL_TRANSACTION_MATRIX.md
+DOC="docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md"
+BOOK="docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md"
+MATRIX="docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md"
 fail=0
 
 # ── Parse the authoritative index (4-cell rows: ID | Severity | Status | Next) ─

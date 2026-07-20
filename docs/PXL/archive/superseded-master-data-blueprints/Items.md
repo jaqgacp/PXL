@@ -1,0 +1,117 @@
+# PXL ERP Blueprint: Items
+
+**Status:** Historical Superseded Snapshot
+**Authority:** Non-authoritative; retained for provenance only
+**Owner / Domain:** Master Data
+**Applies To:** Master Data
+**Read When:** Historical provenance or cleanup review only
+**Do Not Read For:** Current implementation authority
+**Last Reviewed:** 2026-07-18 documentation cleanup
+
+## Module Overview
+The Items module is the core registry for all tangible goods a company buys, stocks, and sells. Proper classification (Inventory vs. Non-Inventory) governs whether the system tracks stock levels and calculates moving average costs. In the Philippines, defining correct item tax attributes is critical for accurately computing VAT on Sales Invoices, and managing cost of goods properly ensures correct Income Tax calculations.
+
+## What You Will See on the Screen (The Dashboard)
+Opening the "Items" page presents a catalog of all registered products.
+
+### The Action Bar (Top of the page):
+* **Search Bar:** Search by Item Code, Name, or Barcode.
+* **Filter:** Filter by Item Group, Category, or Status.
+* **Customize View:** Toggle visibility of cost, price, and stock quantities.
+* **Export Button:** Export to CSV/Excel.
+* **Print Button:** Print item catalog.
+* **Create New Item Button:** Add a new product.
+* **Import Button:** Bulk upload for rapid stock initialization.
+
+### The Data List (The main table):
+Default columns:
+* Item Code
+* Item Name
+* Category
+* Base UOM
+* Unit Price
+* Stock on Hand (Auto-calculated)
+* Status
+
+---
+
+## What Information We Need to Capture (The Data Fields)
+
+### Section 1: Basic Information
+| Field Name | Description | Required? |
+| :--- | :--- | :--- |
+| Item Code | Text Input. Unique alphanumeric identifier (e.g., ITM-001). | Yes |
+| Barcode | Text Input. Scannable UPC/EAN code. | Optional |
+| Item Name | Text Input. Full product name. | Yes |
+| Item Description | Text Area. Detailed specifications. | Optional |
+| Category | Dropdown from `item_categories` (inherits accounting links). | Yes |
+| Item Type | Dropdown: Inventory (tracked), Non-Inventory (supplies). | Yes |
+
+### Section 2: Units of Measure
+| Field Name | Description | Required? |
+| :--- | :--- | :--- |
+| Default UOM | Dropdown linked to Units of Measure master. | Yes |
+| Purchase UOM | Dropdown linked to Units of Measure master. Default unit when buying. | Optional |
+| Sales UOM | Dropdown linked to Units of Measure master. Default unit when selling. | Optional |
+
+### Section 3: Pricing & Costing
+| Field Name | Description | Required? |
+| :--- | :--- | :--- |
+| Costing Method | Dropdown: Moving Average, FIFO. | Yes |
+| Default Cost | Number Input. Default cost for purchasing. | Optional |
+| Default Price | Number Input. Default unit selling price. | Yes |
+| Default Tax Code | Dropdown linked to Tax Types master. | Yes |
+
+### Section 3.5: Automated Account Determination (GL Mapping)
+| Field Name | Description | Required? |
+| :--- | :--- | :--- |
+| Inventory Account | Dropdown linked to Chart of Accounts (Asset). | Yes |
+| COGS Account | Dropdown linked to Chart of Accounts (Cost of Sales). | Yes |
+| Revenue Account | Dropdown linked to Chart of Accounts (Income). | Yes |
+| Expense Account | Dropdown linked to Chart of Accounts (Expense). | Yes |
+
+### Section 4: Inventory Settings
+| Field Name | Description | Required? |
+| :--- | :--- | :--- |
+| Minimum Stock Level | Number Input. Alerts when stock falls below this quantity. | Optional |
+| Maximum Stock Level | Number Input. Prevents over-ordering. | Optional |
+| Default Warehouse | Dropdown linking to `warehouses`. | Optional |
+
+---
+
+## The Supabase Database Architecture
+
+
+**Critical Database Rule:** A composite unique constraint must be enforced on (company_id, `item_code`) to ensure multi-tenant data integrity.
+
+### Table: `items`
+
+| Column Name | Data Type | Rules | What it stores |
+| :--- | :--- | :--- | :--- |
+| `id` | UUID | Primary Key | System ID for the item. |
+| `company_id` | UUID | Required, Foreign Key | Links to `companies.id`. |
+| `item_code` | Text | Required, Unique | Unique product code. |
+| `barcode` | Text | Nullable, Unique | UPC/EAN barcode. |
+| `item_name` | Text | Required | Product name. |
+| `description` | Text | Nullable | Product specs. |
+| `category_id` | UUID | Required, Foreign Key | Links to `item_categories.id`. |
+| `item_type` | Text | Required | `inventory` or `non_inventory`. |
+| `default_uom_id` | UUID | Required, Foreign Key | Links to `units_of_measure.id`. |
+| `purchase_uom_id` | UUID | Nullable, Foreign Key | Links to `units_of_measure.id`. |
+| `sales_uom_id` | UUID | Nullable, Foreign Key | Links to `units_of_measure.id`. |
+| `costing_method` | Text | Required | `moving_average` or `fifo`. |
+| `default_cost` | Numeric | Default: 0 | Baseline cost. |
+| `default_price` | Numeric | Default: 0 | Default sale price. |
+| `default_tax_code_id` | UUID | Required, Foreign Key | Links to `tax_types.id`. |
+| `inventory_account_id` | UUID | Required, Foreign Key | Links to `chart_of_accounts.id`. |
+| `cogs_account_id` | UUID | Required, Foreign Key | Links to `chart_of_accounts.id`. |
+| `revenue_account_id` | UUID | Required, Foreign Key | Links to `chart_of_accounts.id`. |
+| `expense_account_id` | UUID | Required, Foreign Key | Links to `chart_of_accounts.id`. |
+| `min_stock_level` | Numeric | Default: 0 | Reorder point. |
+| `max_stock_level` | Numeric | Nullable | Max allowed stock. |
+| `default_warehouse_id` | UUID | Nullable, Foreign Key | Links to `warehouses.id`. |
+| `is_active` | Boolean | Default: `true` | Active status. |
+| `created_by` | UUID | Required, Foreign Key | Links to `users.id`. |
+| `updated_by` | UUID | Nullable, Foreign Key | Links to `users.id`. |
+| `created_at` | Timestamp | Auto | Creation date. |
+| `updated_at` | Timestamp | Auto | Last edit date. |

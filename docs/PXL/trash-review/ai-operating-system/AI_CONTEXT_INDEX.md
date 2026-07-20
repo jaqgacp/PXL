@@ -1,5 +1,11 @@
 # AI Context Index
 
+**Status:** TRASH-REVIEW - obsolete AI operating-system material
+**Authority:** Non-authoritative; superseded by AI/AGENT_SYSTEM_PROMPT.md and AI/AI_STATE.md
+**Last Reviewed:** 2026-07-18 documentation cleanup
+**Read When:** Human deletion review only
+**Do Not Read For:** AI startup or current work selection
+
 Purpose: fast navigation map for AI agents working on PXL.
 
 Read this file before searching the repository. The goal is to load the smallest useful context for the task, reduce token usage, and avoid architectural drift.
@@ -25,14 +31,14 @@ Read these when starting a normal coding, audit, or planning session:
 - `AI/AI_WORK_QUEUE.md`
 - `AI/AI_AUTONOMY_PLAYBOOK.md`
 - `AI/AI_DECISIONS.md`
-- `docs/PXL/PXL_PRINCIPLES.md`
+- `docs/PXL/00. Governance/PXL_PRINCIPLES.md`
 - `README.md`
 
 Read `AI/AI_CACHE_CONTEXT_PLAN.md` only when cache setup, prompt structure, or AI workflow rules are relevant.
 
 Read `AI/AI_DOCUMENTATION_RULES.md` before creating, growing, or restructuring any documentation. `AI/AIOS_VERSION.md` defines the current AI Operating System version; verify it exists at session start.
 
-Summary documents that exist: `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`, `docs/PXL/PXL_ACCOUNTING_RULES.md`, and `docs/PXL/PXL_SCHEMA_SUMMARY.md` (generated — regenerate with `scripts/gen_schema_summary.sh`, never hand-edit). `docs/PXL/PXL_PRODUCT_BACKLOG.md` holds future enhancements per DEC-012 — record enhancement ideas there, never in the audit findings. Still missing: `docs/PXL/PXL_TAX_RULES_PH.md`; where that is referenced, use the detailed documents listed in the same work mode instead. Avoid broad repository search unless the mode documents are insufficient — `PXL_SCHEMA_SUMMARY.md` maps every table/function/view/trigger to the migration holding its current definition.
+Summary documents that exist: `docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md`, `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`, and `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md` (generated — regenerate with `scripts/gen_schema_summary.sh`, never hand-edit). `docs/PXL/00. Governance/PXL_PRODUCT_BACKLOG.md` holds future enhancements per DEC-012 — record enhancement ideas there, never in the audit findings. Still missing: `docs/PXL/PXL_TAX_RULES_PH.md`; where that is referenced, use the detailed documents listed in the same work mode instead. Avoid broad repository search unless the mode documents are insufficient — `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md` maps every table/function/view/trigger to the migration holding its current definition.
 
 ## Work Modes
 
@@ -64,14 +70,14 @@ Use for GL, journal entries, posting, reversals, trial balance, financial statem
 
 Read:
 
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
-- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE production-readiness gate before transaction/report expansion, DEC-017)
-- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` (governed posting behavior source of truth, DEC-018)
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
-- `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md` when the task touches reports or financial statements
-- `docs/PXL/09. Accounting/`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE production-readiness gate before transaction/report expansion, DEC-017)
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md` (governed posting behavior source of truth, DEC-018)
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md`
+- `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md` when the task touches reports or financial statements
+- `docs/PXL/02. Accounting Core/Module Blueprints/`
 - `docs/PXL/11. Reports/01. Financial Statements/`
 - `docs/PXL/11. Reports/02. Trial Balance/`
 - `docs/PXL/11. Reports/04. Aging Reports/`
@@ -100,10 +106,10 @@ Use for Sales/AR documents, sales invoices, receipts, credit/debit memos, custom
 
 Read:
 
-- `docs/PXL/04. Sales/`
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/05. Sales/Module Blueprints/`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
 - `docs/PXL/03. Master Data/01. Parties/01. Customer Master.md`
 - `docs/PXL/11. Reports/09. Transaction Registers/02. Sales Invoice Register.md`
 
@@ -125,11 +131,11 @@ Use for Purchasing/AP documents, vendor bills, payment vouchers, vendor credits,
 
 Read:
 
-- `docs/PXL/05. Purchasing/`
+- `docs/PXL/06. Purchasing and AP/`
 - `docs/PXL/PXL_TAX_RULES_PH.md`
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
 - `docs/PXL/03. Master Data/01. Parties/02. Supplier Master.md`
 
 Also read for EWT/2307 work:
@@ -150,15 +156,15 @@ Use for VAT, EWT, CWT, FWT, ATC, Form 2307, Form 2306, SAWT, QAP, SLSP, RELIEF, 
 Read:
 
 - `docs/PXL/PXL_TAX_RULES_PH.md`
-- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE production-readiness gate before transaction/report expansion, DEC-017)
-- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` (governed posting/tax behavior source of truth, DEC-018)
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE production-readiness gate before transaction/report expansion, DEC-017)
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md` (governed posting/tax behavior source of truth, DEC-018)
 - `docs/PXL/10. Compliance/Tax Applicability Matrix.md`
 - `docs/PXL/10. Compliance/Form 2307 Management.md`
 - `docs/PXL/10. Compliance/01. Percentage Tax/`
 - `docs/PXL/10. Compliance/02. VAT/`
 - `docs/PXL/10. Compliance/03. Withholding Tax/`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md`
 
 Load source only when needed:
 
@@ -183,12 +189,12 @@ Use for page layout, navigation, visual consistency, component behavior, tables,
 Read:
 
 - `docs/PXL/UI_UX_PRINCIPLES.md`
-- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE gate: no additional transaction/report rollout until Accounting Core Ready, DEC-017)
-- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` (posting behavior is not defined in UI code, DEC-018)
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE gate: no additional transaction/report rollout until Accounting Core Ready, DEC-017)
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md` (posting behavior is not defined in UI code, DEC-018)
 - `docs/PXL/PXL_STANDARD_TRANSACTION_WORKSPACE.md` (OFFICIAL Phase 2 product vision for all transaction pages, DEC-013; highest product priority after production-critical findings)
-- `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md` (OFFICIAL reporting architecture for all report pages, DEC-016; required before report redesign or implementation)
+- `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md` (OFFICIAL reporting architecture for all report pages, DEC-016; required before report redesign or implementation)
 - `docs/PXL/PXL_TRANSACTION_EXPERIENCE_STANDARD.md` (design blueprint subordinate to the workspace vision; UI_UX_PRINCIPLES stack notes are aspirational — selective adoption per the backlog governs)
-- `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`
+- `docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md`
 - `docs/PXL/STATUS.md`
 - The specific module document for the page being changed.
 - The specific React page/component file being changed.
@@ -208,8 +214,8 @@ Use for build tooling, dependencies, Supabase setup, migrations replay, RLS infr
 
 Read:
 
-- `docs/PXL/PXL_ARCHITECTURE_SUMMARY.md`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/01. Architecture/PXL_ARCHITECTURE_SUMMARY.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
 - `README.md`
 - `package.json`
 - `supabase/config.toml`
@@ -229,8 +235,8 @@ Use for production-hardening, gap analysis, retesting, regression planning, and 
 Read:
 
 - The Findings Status Index at the top of `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` first; load full finding rows only for the finding being worked.
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
 - `AI/AI_DECISIONS.md`
 - The relevant work-mode docs for the finding area.
 
@@ -249,10 +255,10 @@ Use for company setup, branch, fiscal years, COA, number series, tax setup, appr
 
 Read:
 
-- `docs/PXL/02. Setup/`
+- `docs/PXL/04. Transaction Framework/`
 - `docs/PXL/03. Master Data/`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
 - `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` when setup readiness or permissions are involved
 
 Skip unless needed:
@@ -267,11 +273,11 @@ Use for inventory dashboard, stock adjustment, transfer, goods issue, physical c
 
 Read:
 
-- `docs/PXL/06. Inventory/`
+- `docs/PXL/07. Inventory/`
 - `docs/PXL/03. Master Data/03. Inventory Master/`
 - `docs/PXL/11. Reports/06. Inventory Reports/`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
 
 Also read accounting rules if the task changes inventory costing or GL posting.
 
@@ -281,11 +287,11 @@ Use for petty cash, fund transfers, inter-branch transfers, bank adjustments, ba
 
 Read:
 
-- `docs/PXL/07. Banking & Treasury/`
+- `docs/PXL/08. Banking and Treasury/`
 - `docs/PXL/11. Reports/05. Bank Reports/`
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
 
 Also read tax rules for bank adjustments with FWT or check vouchers with EWT/2307.
 
@@ -295,11 +301,11 @@ Use for asset categories, asset register, acquisition, depreciation, disposal, t
 
 Read:
 
-- `docs/PXL/08. Fixed Assets/`
+- `docs/PXL/09. Fixed Assets/`
 - `docs/PXL/11. Reports/07. Fixed Asset Reports/`
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
 
 Also read tax rules for book-vs-tax depreciation or tax-sensitive disposal work.
 
@@ -310,14 +316,14 @@ Use for financial statements, trial balance, tax reports, aging, bank reports, i
 Read:
 
 - `docs/PXL/11. Reports/`
-- `docs/PXL/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE gate: reports wait until Accounting Core Ready, DEC-017)
-- `docs/PXL/PXL_ACCOUNTING_RULES_MATRIX.md` (report impact must reconcile to governed posting behavior, DEC-018)
-- `docs/PXL/PXL_STANDARD_REPORT_WORKSPACE.md` (OFFICIAL report workspace architecture, DEC-016)
-- `docs/PXL/PXL_ACCOUNTING_RULES.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md` (ACTIVE gate: reports wait until Accounting Core Ready, DEC-017)
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md` (report impact must reconcile to governed posting behavior, DEC-018)
+- `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md` (OFFICIAL report workspace architecture, DEC-016)
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES.md`
 - `docs/PXL/PXL_TAX_RULES_PH.md` if tax reports are involved
-- `docs/PXL/PXL_TRANSACTION_MATRIX.md`
-- `docs/PXL/PXL_SCHEMA_SUMMARY.md`
-- `docs/PXL/PXL_ACCOUNTING_TEST_BOOK.md` if report behavior has tests
+- `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_MATRIX.md`
+- `docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md`
+- `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md` if report behavior has tests
 
 Skip unrelated operational module docs unless drilldown or source transaction logic is part of the task.
 

@@ -58,7 +58,7 @@ Use this authority order when sources disagree:
 2. Tier 1 governing standards and approved transaction/accounting/tax definitions.
 3. `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` for verified defects and required fixes.
 4. `AI/AI_STATE.md` for current work selection and concise operational handoff.
-5. `docs/PXL/PXL_PRODUCT_BACKLOG.md` for approved implementation work and enhancements.
+5. `docs/PXL/00. Governance/PXL_PRODUCT_BACKLOG.md` for approved implementation work and enhancements.
 6. Tier 2 domain specifications and Tier 3 operational plans.
 7. Historical reports, generated summaries, and archived notes as evidence only.
 
@@ -72,7 +72,7 @@ Maintain one source of truth per subject:
 
 - Current work and next-agent scope: `AI/AI_STATE.md`.
 - Official defects: the central findings register.
-- Long-term implementation and enhancements: `PXL_PRODUCT_BACKLOG.md`.
+- Long-term implementation and enhancements: `docs/PXL/00. Governance/PXL_PRODUCT_BACKLOG.md`.
 - Product rules: the appropriate governing standard.
 - Historical evidence: `docs/PXL/archive/`.
 - Suspected obsolete or duplicate material: `docs/PXL/trash-review/`.
@@ -83,7 +83,7 @@ Phase reports are historical evidence, not current status sources. Specification
 
 ## Domain Boundaries
 
-For BIR or compliance work, start with `docs/PXL/10. Compliance/README.md`, then open only the one or two routed domain documents. For Sales Invoice work, use the finding’s file map and distinguish the implemented UI from the approved Form and View UX standards. Approved UX is not proof of rollout. Missing backend sources, persistence, schema, seed fixtures, and future enhancements must remain explicit.
+For BIR or compliance work, start with `docs/PXL/10. Compliance/README.md`, then open only the one or two routed domain documents. For Sales Invoice work, use the finding’s file map and `docs/PXL/05. Sales/README.md`; distinguish UI conformance from source-backed Sales Invoice business completeness. Missing backend sources, persistence, schema, seed fixtures, and future enhancements must remain explicit.
 
 The Sales Invoice rollout order is: resolve backend/security blockers; complete data/workflow prerequisites; implement Form UX; validate save, approval, posting, tax, GL, inventory, and relationships; implement View UX; then roll the standard to other transactions.
 

@@ -132,20 +132,30 @@ test('workspace is fluid and module families vary only through accent tokens', (
 })
 
 test('transaction UI documentation has exactly two current authorities', () => {
-  const standard = readFileSync(join(root, 'docs/PXL/PXL_TRANSACTION_WORKSPACE_STANDARD.md'), 'utf8')
-  const patterns = readFileSync(join(root, 'docs/PXL/PXL_TRANSACTION_WORKSPACE_PATTERNS.md'), 'utf8')
+  const standard = readFileSync(join(root, 'docs/PXL/12. UI and UX/PXL_TRANSACTION_WORKSPACE_STANDARD.md'), 'utf8')
+  const patterns = readFileSync(join(root, 'docs/PXL/12. UI and UX/PXL_TRANSACTION_WORKSPACE_PATTERNS.md'), 'utf8')
   assert.match(standard, /Sole authoritative transaction-workspace UI architecture/)
   assert.match(patterns, /Sole authoritative transaction-content variation standard/)
 
   const superseded = [
-    'PXL_STANDARD_TRANSACTION_WORKSPACE.md', 'PXL_TRANSACTION_WORKSPACE_DESIGN_STANDARD.md',
-    'PXL_TRANSACTION_EXPERIENCE_STANDARD.md', 'PXL_SALES_INVOICE_UX_STANDARD.md',
-    'PXL_SALES_INVOICE_VIEW_UX_STANDARD.md', 'PXL_DESIGN_SYSTEM.md', 'PXL_COMPONENT_LIBRARY.md',
-    'PXL_BUTTON_STANDARD.md', 'PXL_CARD_STANDARD.md', 'PXL_COLOR_SYSTEM.md', 'PXL_FORM_STANDARD.md',
-    'PXL_TABLE_STANDARD.md', 'PXL_TAB_STANDARD.md', 'PXL_TYPOGRAPHY_STANDARD.md', 'UI_UX_PRINCIPLES.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_STANDARD_TRANSACTION_WORKSPACE.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_TRANSACTION_WORKSPACE_DESIGN_STANDARD.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_TRANSACTION_EXPERIENCE_STANDARD.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_SALES_INVOICE_UX_STANDARD.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_SALES_INVOICE_VIEW_UX_STANDARD.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_DESIGN_SYSTEM.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_COMPONENT_LIBRARY.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_BUTTON_STANDARD.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_CARD_STANDARD.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_COLOR_SYSTEM.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_FORM_STANDARD.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_TABLE_STANDARD.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_TAB_STANDARD.md',
+    'docs/PXL/archive/superseded-ui-standards/PXL_TYPOGRAPHY_STANDARD.md',
+    'docs/PXL/archive/superseded-ui-standards/UI_UX_PRINCIPLES.md',
   ]
   for (const file of superseded) {
-    const source = readFileSync(join(root, 'docs/PXL', file), 'utf8')
+    const source = readFileSync(join(root, file), 'utf8')
     assert.match(source, /Status:\*\* SUPERSEDED|Status: SUPERSEDED/, `${file} must be explicitly non-authoritative`)
   }
 })
