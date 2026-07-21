@@ -1,7 +1,7 @@
 -- CAS-NUMBERING-001 / CAS-DAT-GOLDEN-001 / CAS-E2E-001
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
-SELECT plan(31);
+SELECT plan(34);
 
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -400,6 +400,37 @@ SELECT cmp_ok(
    WHERE id = ((SELECT value FROM t_res WHERE key = 'audit_package')->>'snapshot_id')::uuid),
   '>=', 1,
   'audit package links the CAS DAT export history while books remain separately reconciled'
+);
+
+-- PXL-AUD-066: number/void evidence is selected by DOCUMENT PERIOD, so a package
+-- generated after the fact for July still represents July's documents, and events
+-- that actually occurred in a later period do not leak into the July package.
+SELECT ok(
+  EXISTS (
+    SELECT 1 FROM jsonb_array_elements(
+      (SELECT source_payload->'number_issuances' FROM report_snapshots
+       WHERE id = ((SELECT value FROM t_res WHERE key = 'audit_package')->>'snapshot_id')::uuid)
+    ) e
+    WHERE e->>'document_number' = 'SI-000001' AND e->>'status' = 'voided'),
+  'the voided document number is included by document period even though the void was recorded later'
+);
+SELECT ok(
+  NOT EXISTS (
+    SELECT 1 FROM jsonb_array_elements(
+      (SELECT source_payload->'number_issuances' FROM report_snapshots
+       WHERE id = ((SELECT value FROM t_res WHERE key = 'audit_package')->>'snapshot_id')::uuid)
+    ) e
+    WHERE e->>'document_number' = 'JE-REV-SI-000001'),
+  'a reversal JE dated in a later period does not leak into the historical July package (no event-time bleed)'
+);
+SELECT is(
+  (SELECT DISTINCT e->>'document_date'
+   FROM jsonb_array_elements(
+     (SELECT source_payload->'void_events' FROM report_snapshots
+      WHERE id = ((SELECT value FROM t_res WHERE key = 'audit_package')->>'snapshot_id')::uuid)
+   ) e),
+  '2026-07-10',
+  'the void event is placed in its own document period, not its occurrence date'
 );
 
 SELECT * FROM finish();

@@ -12,7 +12,7 @@ This is a concise status dashboard only. It records where each module and engine
 
 ## Overall Program Result
 
-**Partially Ready — Blocked.** PXL is **not production-ready** and **not pilot-ready** while active Critical and High findings remain (checksum: 80 Retested Passed / 1 In Progress / 6 Open — 87 findings). One Critical (`PXL-AUD-055`) and four High (`PXL-AUD-053`, `PXL-AUD-059`, `PXL-AUD-061`, `PXL-AUD-066`) findings are open or in progress. `PXL-AUD-063` (governed global BIR write policy) closed on 2026-07-20 — a single control, which does not certify the Compliance module, Tax Engine, or Permissions/RLS Engine. The certification framework (this dashboard and the two standards) is complete; broader module and engine certification execution has not yet begun. No module or engine is Certified.
+**Partially Ready — Blocked.** PXL is **not production-ready** and **not pilot-ready** while active Critical and High findings remain (checksum: 81 Retested Passed / 1 In Progress / 5 Open — 87 findings). One Critical (`PXL-AUD-055`) and three High (`PXL-AUD-053`, `PXL-AUD-059`, `PXL-AUD-061`) findings are open or in progress. `PXL-AUD-066` (historical CAS evidence date semantics) closed on 2026-07-21 — CAS audit packages now select number/void evidence by document period and the full deterministic lane is green at 60 files / 1,115 assertions; this is a single control that does not on its own certify the Compliance module or Tax Engine. `PXL-AUD-063` (governed global BIR write policy) closed on 2026-07-20. The certification framework (this dashboard and the two standards) is complete; broader module and engine certification execution has not yet begun. No module or engine is Certified.
 
 The strongest implemented cores (Sales Invoice, Official Receipt, Vendor Bill, Payment Voucher) have atomic save/post RPCs, immutability, and pgTAP coverage, but none has completed all mandatory certification gates. Banking, fixed assets, returns, approvals, schedules, statutory generators, backup/restore, and CAS artifacts are not proven complete.
 
@@ -20,7 +20,7 @@ The strongest implemented cores (Sales Invoice, Official Receipt, Vendor Bill, P
 
 | # | Module | Status | Governing Certification Phase | Primary Open Blockers |
 | --- | --- | --- | --- | --- |
-| 1 | Setup and Master Data | In Progress | Phase 1 | Admin-write hardening ongoing; dimension masters unproven — see [`PXL_MASTER_DATA_GAP_REGISTER.md`](../01. Architecture/PXL_MASTER_DATA_GAP_REGISTER.md) (35 gaps: 1 Critical, 11 High) |
+| 1 | Setup and Master Data | In Progress | Phase 1 | Progressing via MDP packages: MD-29/30 (governance/audit), MD-09..MD-13 (COA enrichment), and MD-01/MD-04-UOM/MD-05 (company-setup seed templates) resolved. Remaining: access control (MDP-03), fiscal/series/config provisioning (MDP-06/07), dimensions, and the provisioning wizard (MDP-08) — see [`PXL_MASTER_DATA_GAP_REGISTER.md`](../01. Architecture/PXL_MASTER_DATA_GAP_REGISTER.md). Not certified. |
 | 2 | Accounting Core | In Progress | Phase 1 | Posting invariants not proven across all posting transactions |
 | 3 | Sales and Accounts Receivable | In Progress | Phase 2 | `PXL-AUD-053` SI completeness; returns/credit reconciliation unproven |
 | 4 | Purchasing and Accounts Payable | In Progress | Phase 3 | Three-way match, returns, over-receipt controls unproven |
@@ -28,7 +28,7 @@ The strongest implemented cores (Sales Invoice, Official Receipt, Vendor Bill, P
 | 6 | Banking and Treasury | Not Started | Phase 5 | Module not proven complete |
 | 7 | Fixed Assets | Not Started | Phase 6 | Lifecycle/reconciliation not proven |
 | 8 | Accounting Schedules | Not Started | Phase 6 | Generation, duplicate-run, closed-period behavior unproven |
-| 9 | Philippine Compliance and Tax | Blocked | Phase 7 | `PXL-AUD-066` CAS date semantics (`PXL-AUD-063` BIR write policy closed) |
+| 9 | Philippine Compliance and Tax | Blocked | Phase 7 | Phase 7 not executed; CAS document-period evidence now governed (`PXL-AUD-066` closed) and `PXL-AUD-063` BIR write policy closed — module still gated by Phase 7 execution and Critical `PXL-AUD-055` |
 | 10 | Reports and Financial Statements | In Progress | Phase 8 | Reconciliation and drill-down not certified; report probes only |
 | 11 | Administration and Security | Blocked | Phase 1 | `PXL-AUD-055` previously exposed service-role key (Critical) |
 
@@ -41,17 +41,17 @@ The strongest implemented cores (Sales Invoice, Official Receipt, Vendor Bill, P
 | 3 | AR Engine | In Progress | Subledger-to-control reconciliation not certified across scenarios |
 | 4 | AP Engine | In Progress | Subledger-to-control reconciliation not certified across scenarios |
 | 5 | Payment and Application Engine | In Progress | Over-application and unapplied-cash controls not certified end-to-end |
-| 6 | Tax Engine | Blocked | `PXL-AUD-066`; ledger-to-GL reconciliation incomplete (BIR config writes now governed) |
+| 6 | Tax Engine | Blocked | ledger-to-GL reconciliation incomplete (BIR config writes governed; CAS document-period evidence governed with `PXL-AUD-066` closed) |
 | 7 | Document Conversion Engine | Not Started | Quote/order/delivery/receipt chains not certified |
-| 8 | Number Series Engine | In Progress | Registry and concurrency proven; full transaction coverage pending |
+| 8 | Number Series Engine | In Progress | Registry and concurrency proven; full transaction coverage pending. Default series auto-provisioning per BIR document type / branch added (MDP-06) |
 | 9 | Approval and Workflow Engine | In Progress | SOD separation not fully integrated or proven |
-| 10 | Period Lock and Closing Engine | In Progress | Year-end close and audited reopening not certified |
+| 10 | Period Lock and Closing Engine | In Progress | Year-end close and audited reopening not certified. Automatic fiscal-year + 12-period generation (with lock flag) added (MDP-06); posting-period enforcement and close remain Phase 8 |
 | 11 | Reversal, Void, and Correction Engine | In Progress | Coverage not proven across all correction paths |
-| 12 | Audit and Immutability Engine | In Progress | Immutability proven for core; not across all transactions |
+| 12 | Audit and Immutability Engine | In Progress | Immutability proven for core; not across all transactions. Master-data audit coverage completed for the MDP-02 scope (`units_of_measure`/`item_categories`/`percentage_tax_codes` now trigger-audited; global statutory tables RPC-audited) — membership/config/fiscal audit still pending in MDP-03/06/07 |
 | 13 | Permissions and RLS Engine | Blocked | `PXL-AUD-055` (global BIR write policy `PXL-AUD-063` now governed) |
 | 14 | Dimension Engine | Not Started | Validation, propagation, non-double-counting unproven |
 | 15 | Currency Engine | Deferred | Multi-currency scope not currently supported for production |
-| 16 | Reporting and Reconciliation Engine | In Progress | Report-to-target reconciliation not certified |
+| 16 | Reporting and Reconciliation Engine | In Progress | Report-to-target reconciliation not certified. COA now carries FS classification (`fs_statement`/`fs_group`), control-account/subledger, and cash-flow metadata (MDP-04) enabling configurable statement grouping; FS/cash-flow rendering remains Phase 8 |
 | 17 | Attachment and Document Traceability Engine | Not Started | Access-boundary and traceability evidence not gathered |
 | 18 | Backup and Recovery Process | Not Started | No successful restore test on record |
 
@@ -83,4 +83,4 @@ None of the following are yet certified. Each must show explicit numbers from th
 
 ## Next Executable Phase
 
-**Phase 1 — Setup and Master Data plus foundational engines**, executed as focused implementation prompts one bounded scope at a time. `PXL-AUD-063` (global BIR write policy) is resolved; the remaining security prerequisite blocking Phase 1 completion is the active Critical `PXL-AUD-055`, which must be resolved before Administration and Security or the Permissions and RLS Engine can leave **Blocked**. The current bounded task in `AI/AI_STATE.md` is `PXL-AUD-066` (CAS document-period evidence semantics).
+**Phase 1 — Setup and Master Data plus foundational engines**, executed as focused implementation prompts one bounded scope at a time. `PXL-AUD-063` (global BIR write policy) is resolved; the remaining security prerequisite blocking Phase 1 completion is the active Critical `PXL-AUD-055`, which must be resolved before Administration and Security or the Permissions and RLS Engine can leave **Blocked**. The current bounded task in `AI/AI_STATE.md` is `PXL-AUD-061` (formalize the named deterministic test lanes and lock in the restored full lane); `PXL-AUD-066` (CAS document-period evidence semantics) closed on 2026-07-21.

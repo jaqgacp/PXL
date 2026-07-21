@@ -13042,7 +13042,6 @@ export type Database = {
     }
     Functions: {
       can_admin_company: { Args: { p_company_id: string }; Returns: boolean }
-      fn_can_maintain_tax_reference: { Args: Record<PropertyKey, never>; Returns: boolean }
       fn_tax_code_upsert: {
         Args: {
           p_code: string

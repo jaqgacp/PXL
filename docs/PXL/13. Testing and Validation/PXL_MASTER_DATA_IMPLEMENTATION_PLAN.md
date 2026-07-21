@@ -20,9 +20,17 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 
 ## Package Register
 
-### MDP-01 — Tax-Reference Write Governance ✅ DONE (2026-07-20)
+### MDP-01 — Tax-Reference Write Governance ✅ DONE & FROZEN AS CANONICAL TEMPLATE (2026-07-21)
 
-**Status: implemented and Retested Passed as PXL-AUD-068** — migration `20260721000001_mdp01_tax_reference_write_governance.sql`, test `060`, and `src/pages/TaxSetupPage.tsx` rewired to the RPCs. Working-tree reality differed from the assumptions below: writes were already `is_any_company_admin()`-gated (not `USING(true)`), the audit trigger already covered these tables, and a live UI writer (`TaxSetupPage`) existed. Delivered model: tables read-only, mutations via governed SECURITY DEFINER RPCs with authority `is_any_company_admin() OR fn_is_bir_config_maintainer()` (preserving current admins), existing audit trigger retained (no double-logging). Residual: restricting to maintainer-only is a follow-up product decision. Original plan preserved below for provenance.
+**Status: implemented, Retested Passed as PXL-AUD-068, and FROZEN as the reusable Master-Data governance template.** Migrations `20260721000001_mdp01_tax_reference_write_governance.sql` + `20260721000002_mdp01_template_refinement.sql`, test `060` (29/29), and `src/pages/TaxSetupPage.tsx` on the RPCs. The 2026-07-21 template refinement made MDP-01 structurally identical to PXL-AUD-063 and resolved the independent-review findings.
+
+**Canonical governance pattern (every future Master-Data statutory package inherits this, no interpretation required):**
+1. **RLS** — `authenticated` READ-ONLY (`SELECT`); no write policy, so direct client writes are denied by default.
+2. **Authority (DECISION: Option A — MAINTAINER-ONLY)** — one shared helper `fn_is_bir_config_maintainer()` backed by one shared allowlist `bir_config_maintainers` (empty ⇒ closed by default). Rationale: global statutory reference data is shared by every tenant, so it must **not** be governed by tenant membership; allowing any tenant admin to mutate it is the cross-tenant integrity hole MD-29 identified. This matches PXL-AUD-063 ("no tenant role may mutate shared statutory config"). The tenant-admin path and the divergent `fn_can_maintain_tax_reference()` wrapper were removed. The `bir_config_*` names are historical (AUD-063 was first) but are THE canonical shared statutory-config surface; a neutral rename is a deferred cosmetic that would re-touch the closed AUD-063 finding.
+3. **Write path** — SECURITY DEFINER RPCs that (a) check the authority helper, (b) validate + **normalize** input (`upper(btrim())` on statutory codes, so equivalent inputs yield identical stored values), (c) capture old/new via `%ROWTYPE`, and (d) `PERFORM fn_log_bir_config_change(...)` recording a free-text `_change_reason` **end-to-end**. The generic `fn_audit_trigger` is removed from governed tables to prevent double-logging (the exclusion MDP-02 anticipates). Soft-deactivate via `set_active`; `DELETE` stays denied by RLS.
+4. **Least privilege** — `REVOKE ALL … FROM PUBLIC`; `GRANT EXECUTE` only on the governed surface to `authenticated`; the audit helper is granted to nobody.
+
+**No residual remains.** Original plan preserved below for provenance.
 
 - **Business objective:** Prevent any authenticated user from altering shared statutory tax rates; make tax configuration trustworthy across all tenants.
 - **Gap IDs included:** MD-29 (Critical).
@@ -48,7 +56,10 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Rollback / recovery:** Forward-only; a compensating migration reinstating prior policies is the documented rollback. Idempotent guards (`DROP POLICY IF EXISTS`, `CREATE OR REPLACE`) make replay safe. No data is destroyed.
 - **Relationship to PXL-AUD-063:** Same defect class and same reusable controls (read-only RLS, maintainer allowlist, `SECURITY DEFINER` RPCs, `sys_audit_logs`, `REVOKE PUBLIC`). **Difference:** PXL-AUD-063 governed BIR *form/mapping metadata*; MDP-01 governs the *tax-rate reference tables that feed computation*, which are consumed by company-scoped withholding codes and effective-dated — so the design must preserve read/FK access and effective-date semantics, and decide whether tax-config maintainers are the same authority as BIR-config maintainers or a distinct role. Do not duplicate the BIR controls; extend the proven pattern to the tax-rate tables only.
 
-### MDP-02 — Master-Data Audit Coverage
+### MDP-02 — Master-Data Audit Coverage ✅ DONE (2026-07-21)
+
+**Status: implemented (gap MD-30 resolved).** Migration `20260721000004_mdp02_master_data_audit_coverage.sql`, test `061` (26/26). The coverage inventory found the working tree already far ahead of the plan's base assumption: COA, payment_terms, number_series, departments, cost_centers, warehouses, bank_accounts, compliance_profiles, employees, approval_workflows, sys_feature_enablement, and all party/item/transaction masters were already `fn_audit_trigger`-covered, and the global statutory tables (`tax_codes`/`vat_codes`/`atc_codes`/`bir_forms`/`bir_form_mappings`) are correctly RPC-audited (MDP-01/PXL-AUD-063) — so they were consciously excluded to avoid double-logging. The genuinely uncovered masters in scope were exactly three company-scoped tables — `units_of_measure`, `item_categories`, `percentage_tax_codes` — now attached to the existing `fn_audit_trigger` (reused mechanism, no new pattern, no double-logging). `ewt_codes`/`fwt_codes`/`ref_atc_codes` do not exist (consolidated earlier). Membership/config/fiscal-calendar audit is deferred to their owning packages (MDP-03/06/07). No schema/RLS change, no backfill.
+
 - **Business objective:** Capture every reference/config master change in the authoritative audit trail.
 - **Gap IDs included:** MD-30 (High).
 - **Scope:** Extend `fn_audit_trigger` coverage to COA, UOM, item categories, payment terms, number series, dimensions (departments, cost centers, warehouses), bank accounts, and the tax-code masters not already RPC-audited.
@@ -96,7 +107,10 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 5 (approval & permissions), 14 (cross-company blocked), 21; Permissions/RLS Engine (foundational).
 - **Rollback / recovery:** Higher-risk rollback — the migration must be reversible (retain old policies until the new model is proven) and backfill must be idempotent; recovery plan: revert to the four-role policies. Rehearse rollback on a clean replay before hosted apply.
 
-### MDP-04 — Chart of Accounts Enrichment
+### MDP-04 — Chart of Accounts Enrichment ✅ DONE (2026-07-21)
+
+**Status: implemented (gaps MD-09..MD-13 resolved).** Migration `20260721000005_mdp04_coa_enrichment.sql`, test `062` (23/23). Additive-only enrichment of `chart_of_accounts`: generated `fs_statement` (BS/IS), `fs_group`/`fs_subgroup`, `is_control_account`/`allow_subledger`/`subledger_type`, `cash_flow_category`, `is_tax_account`/`cost_behavior`/`is_capitalizable`/`is_operating_expense`, and `effective_from`/`effective_to` with vocabulary + order CHECK constraints. A `BEFORE INSERT/UPDATE` trigger auto-classifies `fs_group`/cash-flow (filling only NULLs, preserving refinements), and `fn_sync_coa_control_accounts` reconciles control/subledger/tax flags with `company_accounting_config` (reusable by MDP-05/07). Existing hierarchy, posting-vs-header, RLS, and audit coverage are unchanged; effective-date **enforcement** in the posting path is deferred to Phase 8 to preserve current posting logic. No engineering findings discovered.
+
 - **Business objective:** Give the COA the classification metadata needed for configurable, statutory financial statements and clean subledger control.
 - **Gap IDs included:** MD-09, MD-10, MD-11, MD-12, MD-13 (MD-09/10 High; rest Medium).
 - **Scope:** Add FS classification/grouping (group, subgroup), control-account and allow-subledger flags, cash-flow classification, tax/direct-indirect/capitalizable/opex flags, and effective/active dates to `chart_of_accounts`, with sane backfill.
@@ -120,7 +134,10 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 2, 3, 6, 15; Reporting & Reconciliation and Posting engines.
 - **Rollback / recovery:** Columns are additive; rollback drops them. Backfill is deterministic and re-runnable; no posted data altered.
 
-### MDP-05 — Company Setup Defaults & Seed Templates
+### MDP-05 — Company Setup Defaults & Seed Templates ✅ DONE (2026-07-21)
+
+**Status: implemented (gaps MD-01, MD-04-UOM, MD-05 resolved).** Migration `20260721000006_mdp05_company_setup_defaults.sql`, test `063` (25/25). Added global read-only `coa_templates`/`coa_template_lines` (seeded PH_STANDARD template of 39 accounts carrying MDP-04 classification), and three admin-gated `SECURITY DEFINER` seed functions: `fn_seed_company_coa` (default template selection by `entity_type`, resolves parent hierarchy), `fn_seed_company_uom` (15-unit set), and `fn_seed_company_percentage_tax_codes`. Inventory finding: EWT/FWT are global `atc_codes` (no per-company table), so only `percentage_tax_codes` is seeded. All idempotent (ON CONFLICT on existing (company_id, code) keys), company-isolated, and audited via existing triggers. Deliberately excluded per scope: the provisioning **wizard/orchestrator** (MDP-08), fiscal periods/number series (MDP-06), and accounting-config/compliance (MDP-07). No RLS/posting change; no engineering findings.
+
 - **Business objective:** Let a new company start with a usable Philippine COA, UOM set, and withholding codes instead of an empty database.
 - **Gap IDs included:** MD-01 (High), MD-04, MD-05 (Medium).
 - **Scope:** Entity-type COA template(s) carrying MDP-04 classification; default UOM set; default withholding (EWT/FWT/PT) codes; idempotent seed functions callable at provisioning.
@@ -144,7 +161,10 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 2, 3, 7; Tax and Posting engines.
 - **Rollback / recovery:** Templates/seed functions are additive; rollback drops them. Seeded rows for a company can be removed via the same idempotent key; no other company affected.
 
-### MDP-06 — Fiscal Calendar & Number Series Auto-Provisioning
+### MDP-06 — Fiscal Calendar & Number Series Auto-Provisioning ✅ DONE (2026-07-21)
+
+**Status: implemented (gaps MD-02, MD-03 resolved).** Migration `20260721000007_mdp06_fiscal_series_provisioning.sql`, test `064` (24/24). Added admin-gated `SECURITY DEFINER` functions: `fn_generate_fiscal_periods` (12 idempotent monthly periods), `fn_create_fiscal_year` (configurable start, derives is_calendar/end_date, generates periods), and `fn_provision_number_series` (default series per BIR-registered document type — SI/CS/OR — branch-aware, idempotent). Also completed MDP-02's deferred audit coverage for `fiscal_years`/`fiscal_periods` (reusing `fn_audit_trigger`; `number_series` already covered). Deliberate design: **explicit provisioning functions, not an INSERT trigger on `fiscal_years`**, so existing manual fiscal-year/period paths (e.g. CAS test 027) keep working. Excluded per scope: year-end close (Phase 8), numbering internals, posting-period validation, and the wizard (MDP-08). No RLS/posting change; no engineering findings.
+
 - **Business objective:** Ensure a company can post and number documents immediately after setup.
 - **Gap IDs included:** MD-02, MD-03 (both High).
 - **Scope:** Auto-generate 12 fiscal periods on fiscal-year creation with lock controls; provision default number series per BIR-registered document type/branch.

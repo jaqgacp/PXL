@@ -1194,3 +1194,65 @@ Scenario: global `tax_codes`, `vat_codes`, and `atc_codes` are read-only for ord
 | 4 | Call the governed RPCs as a company admin and as a global maintainer | Create/update/set_active succeed; exactly one audit row per mutation (no double-logging), recording the acting user. |
 | 5 | Upsert with an invalid tax_type | Raises `23514` and leaves no row and no audit entry (atomic rollback). |
 | 6 | Exercise PXL-AUD-063 governance as an ordinary user | Still denied — the reused BIR governance surface is intact. |
+
+## MASTER-DATA-AUDIT-COVERAGE-001 - Master-Data Audit Coverage (MDP-02)
+
+Status: Executed Passing (2026-07-21) in `supabase/tests/061_mdp02_master_data_audit_coverage_test.sql`, 26 assertions after a clean `supabase db reset` replay including migration `20260721000004_mdp02_master_data_audit_coverage.sql`. Related gap: MD-30.
+
+Scenario: the three previously uncovered company-scoped reference/config masters — `units_of_measure`, `item_categories`, and `percentage_tax_codes` — are brought under the existing `fn_audit_trigger`, capturing every insert/update/delete in `sys_audit_logs` without duplicating existing mechanisms or double-logging the MDP-01/PXL-AUD-063 RPC-audited global tables.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Insert a row in each master as a company admin | Exactly one `sys_audit_logs` row per insert with action `INSERT`, after-image, actor (`auth.uid()`), company context, and timestamp; no before-image and no fabricated `_change_reason`. |
+| 2 | Update a row in each master | Exactly one additional audit row with action `UPDATE` capturing both before and after values. |
+| 3 | Delete a row in each master | Exactly one audit row with action `DELETE`, the before-image, and a null after-image. |
+| 4 | Insert then `ROLLBACK` to a savepoint | The audit row is visible before rollback and gone after — audit is atomic with the mutation (no orphan). |
+| 5 | Inspect trigger catalog | Each of the three masters carries exactly one audit trigger; the RPC-audited global tables (`tax_codes`/`vat_codes`/`atc_codes`/`bir_forms`/`bir_form_mappings`) carry none (no double-logging). |
+
+## COA-ENRICHMENT-001 - Chart of Accounts Enrichment (MDP-04)
+
+Status: Executed Passing (2026-07-21) in `supabase/tests/062_mdp04_coa_enrichment_test.sql`, 23 assertions after a clean `supabase db reset` replay including migration `20260721000005_mdp04_coa_enrichment.sql`. Related gaps: MD-09, MD-10, MD-11, MD-12, MD-13.
+
+Scenario: `chart_of_accounts` is enriched with financial-statement classification (generated `fs_statement`, `fs_group`/`fs_subgroup`), control-account/subledger governance reconciled with `company_accounting_config`, cash-flow classification, cost/tax flags, and an effective-date window — all additively, preserving existing hierarchy, posting-vs-header behaviour, and audit coverage.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Insert accounts of each type | `fs_statement` is generated (asset/liability/equity → balance_sheet; revenue/expense → income_statement); `fs_group` and P&L `cash_flow_category` auto-default while explicit values are preserved. |
+| 2 | Call `fn_sync_coa_control_accounts(company)` | The AR/AP/cash/tax accounts named in `company_accounting_config` are flagged `is_control_account`/`allow_subledger` with the correct `subledger_type`; tax accounts are flagged `is_tax_account`; non-configured accounts are untouched. |
+| 3 | Group accounts by `fs_statement` | Accounts roll up into balance-sheet and income-statement groups for reporting. |
+| 4 | Inspect hierarchy and posting flags | Header accounts remain non-postable with child accounts under `parent_id`; detail accounts remain postable (posting logic preserved). |
+| 5 | Write invalid `fs_group`/`subledger_type`/`cash_flow_category`, or `effective_to` < `effective_from` | Rejected by CHECK constraint (`23514`); a valid effective window is accepted. |
+| 6 | Insert a legacy-shaped account (no new columns) and edit a classification field | Insert still succeeds (backward compatible); the edit is captured in `sys_audit_logs` (MDP-02 coverage intact). |
+
+## COMPANY-SETUP-DEFAULTS-001 - Company Setup Defaults & Seed Templates (MDP-05)
+
+Status: Executed Passing (2026-07-21) in `supabase/tests/063_mdp05_company_setup_defaults_test.sql`, 25 assertions after a clean `supabase db reset` replay including migration `20260721000006_mdp05_company_setup_defaults.sql`. Related gaps: MD-01, MD-04 (default UOM), MD-05.
+
+Scenario: reusable backend seed capabilities let a company start with a usable Philippine COA, UOM set, and percentage-tax codes — via global read-only `coa_templates`/`coa_template_lines` and admin-gated `SECURITY DEFINER` seed functions, without a wizard, UX, or company-creation change.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | `fn_seed_company_coa(company)` with default template selection | Resolves the PH_STANDARD template from `entity_type` and seeds a balanced, classified COA (all five types, generated `fs_statement`, header non-postable, parent hierarchy resolved, control/tax flags inherited). |
+| 2 | Call the seed functions twice | Idempotent — re-seeding COA/UOM/PT inserts no duplicates. |
+| 3 | Seed company A, inspect company B | Company isolation preserved — B is untouched. |
+| 4 | `fn_seed_company_uom` / `fn_seed_company_percentage_tax_codes` | Standard UOM set and the PT-3 percentage-tax code are seeded; re-seeding inserts nothing. |
+| 5 | Seed inside a savepoint, then roll back | The seeded COA is removed (atomic rollback). |
+| 6 | Seed as a non-admin member | Rejected (`42501`); seed functions self-check `can_admin_company`. |
+| 7 | Inspect classification and audit trail | Seeded accounts carry MDP-04 classification; seed inserts are captured in `sys_audit_logs` (MDP-02 provenance). |
+
+## FISCAL-SERIES-PROVISIONING-001 - Fiscal Calendar & Number Series Auto-Provisioning (MDP-06)
+
+Status: Executed Passing (2026-07-21) in `supabase/tests/064_mdp06_fiscal_series_provisioning_test.sql`, 24 assertions after a clean `supabase db reset` replay including migration `20260721000007_mdp06_fiscal_series_provisioning.sql`. Related gaps: MD-02, MD-03.
+
+Scenario: reusable admin-gated backend functions provision a company's fiscal calendar and default document numbering — `fn_create_fiscal_year` (configurable start + 12 monthly periods), `fn_generate_fiscal_periods`, and `fn_provision_number_series` (per BIR-registered document type, branch-aware) — without a wizard, UI, posting-period validation, or numbering-engine change.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | `fn_create_fiscal_year(company, '2026-01-01')` | Creates a calendar fiscal year (ends Dec 31) and generates 12 open monthly periods spanning Jan–Dec. |
+| 2 | `fn_create_fiscal_year(company, '2026-07-01')` | Creates a non-calendar fiscal year (ends Jun 30) with periods starting on the configured date. |
+| 3 | Re-run creation / period generation | Idempotent — same fiscal-year id returned, no duplicate periods. |
+| 4 | `fn_provision_number_series(company, branch)` | Provisions one series per BIR-registered document type (SI/CS/OR) with a sane default shape; a second branch gets its own series; re-running creates no duplicates. |
+| 5 | Provision company A, inspect company B | Company isolation preserved. |
+| 6 | Provision inside a savepoint, then roll back | Fiscal year and periods removed (atomic). |
+| 7 | Provision as a non-admin member | Rejected (`42501`). |
+| 8 | Inspect audit trail | Fiscal year, periods, and series creation captured in `sys_audit_logs` (fiscal-table audit added here; number_series already covered). |
