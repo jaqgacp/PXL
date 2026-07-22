@@ -28,25 +28,25 @@ Scope legend: **Global** = single shared reference (no `company_id`); **Company*
 
 | Entity | Present | Scope | Headline assessment |
 | --- | --- | --- | --- |
-| Company (`companies`) | Yes | Company | Rich legal/tax identity; **no functional-currency field**; no automatic provisioning of dependent setup |
+| Company (`companies`) | Yes | Company | Rich legal/tax identity; explicit functional/reporting currency added (MDP-07, MD-31); dependent-setup auto-provisioning delivered as backend capabilities (wizard = MDP-08) |
 | Branch (`branches`) | Yes | Company | Strong (TIN branch code, RDO, tax-reg override); adequate |
 | Department (`departments`) | Yes | Company | Adequate; hierarchical |
 | Cost Center (`cost_centers`) | Yes | Company | Adequate; typed, effective-dated |
 | Warehouse (`warehouses`) + Zones | Yes | Company | Good (GL inventory/variance accounts, zones) |
-| Location (dimension) | **—** | — | **Missing master** (used by SI dimensions, ungoverned) |
-| Project (dimension) | **—** | — | **Missing master** (ungoverned for SI per PXL-AUD-053) |
-| Functional Entity (dimension) | **—** | — | **Missing master** (ungoverned for SI) |
+| Location (`locations`) | Yes | Company | Governed master added (MDP-09, MD-15); branch-aware, hierarchical, effective-dated; transaction-line propagation = transaction packages |
+| Project (`projects`) | Yes | Company | Governed master added (MDP-09, MD-14); branch-aware, hierarchical, effective-dated; propagation = transaction packages / PXL-AUD-053 |
+| Functional Entity (`functional_entities`) | Yes | Company | Governed master added (MDP-09, MD-16); branch-aware, hierarchical, effective-dated |
 | Chart of Accounts (`chart_of_accounts`) | Yes | Company | **Thin**: no FS classification, control-account/subledger flags, cash-flow class, effective dates |
-| Customers (`customers`) | Yes | Company | Good (tax type, CWT default, terms/currency/GL); group is free text; single contact |
-| Suppliers (`suppliers`) | Yes | Company | Good (EWT default/ATC); group free text; single contact |
-| Contacts | **—** | — | **Missing** multi-contact master |
+| Customers (`customers`) | Yes | Company | Good (tax type, CWT default, terms/currency/GL); governed group FK + multi-contact + TIN dup detection (MDP-10); legacy free-text group preserved |
+| Suppliers (`suppliers`) | Yes | Company | Good (EWT default/ATC); governed group FK + multi-contact + TIN dup detection (MDP-10); legacy free-text group preserved |
+| Contacts (`party_contacts`) | Yes | Company | Governed multi-contact master added (MDP-10, MD-18); customer XOR supplier, one primary per party |
 | Items / Services (`items`) | Yes | Company | Service handled via `item_type`; costing nullable; no negative-stock policy field |
 | Item Categories (`item_categories`) | Yes | Company | Good (account defaults, hierarchy) |
 | Units of Measure (`units_of_measure`) | Yes | Company | Structure supports conversion; **no default set provisioned** |
-| Customer Groups | **—** (free text) | — | **No governed group master** |
-| Supplier Groups | **—** (free text) | — | **No governed group master** |
+| Customer Groups (`customer_groups`) | Yes | Company | Governed master added (MDP-10, MD-17); legacy free text preserved as fallback |
+| Supplier Groups (`supplier_groups`) | Yes | Company | Governed master added (MDP-10, MD-17); legacy free text preserved as fallback |
 | Payment Terms (`payment_terms`) | Yes | Company | Adequate (days, downpayment) |
-| Payment Methods (`ref_payment_modes`) | Yes | Global | Adequate; no company scope / GL mapping per mode |
+| Payment Methods (`ref_payment_modes` + `company_payment_modes`) | Yes | Global + Company | Global modes + company-scoped GL-mapped modes added (MDP-11, MD-26) |
 | Tax Codes (`tax_codes`) | Yes | Global | Effective-dated; **ungoverned authenticated writes** |
 | VAT Codes (`vat_codes`) | Yes | Global | Effective-dated; **ungoverned authenticated writes** |
 | EWT Codes (`ewt_codes`) | Yes | Company | Governed writes (company-member); adequate |
@@ -54,19 +54,19 @@ Scope legend: **Global** = single shared reference (no `company_id`); **Company*
 | Percentage Tax (`percentage_tax_codes`) | Yes | Company | Adequate |
 | ATC Codes (`atc_codes` + `ref_atc_codes`) | Yes | Global | **Two parallel ATC representations**; `atc_codes` ungoverned writes |
 | Currencies (`currencies`) + rates | Yes | Global + Company | Present; multi-currency not wired into transactions (future) |
-| Banks (reference) | **—** | — | **No bank master**; `bank_accounts.bank_name` is free text |
+| Banks (`ref_banks`) | Yes | Global | Read-only bank reference master added (MDP-11, MD-25); `bank_accounts.bank_id` links to it; `bank_name` preserved as fallback |
 | Bank Accounts (`bank_accounts`) | Yes | Company | Good (GL mapping, opening balance) |
 | Fiscal Calendar (`fiscal_years` / `fiscal_periods`) | Yes | Company | Solid; **no auto-generation of periods** |
 | Number Series (`number_series`) | Yes | Company | Strong (ATP fields, reset); **not auto-provisioned** |
 | Document Types (`ref_document_types`) | Yes | Global | Adequate (BIR-registered flag) |
 | Employees (`employees`) | Yes | Company | Rich (gov IDs); not linked to `auth.users`; no auto-numbering |
-| Salespersons | **—** | — | **No master** (no sales attribution dimension) |
+| Salespersons (`employees.is_salesperson`) | Yes | Company | Governed salesperson/buyer designation on employees (MDP-11, MD-20) + `fn_is_valid_attribution`; SI `salesperson_id` FK unchanged |
 | Users / Memberships (`user_company_memberships`) | Yes | Company | 4 fixed roles; **company-level only, no branch scope** |
 | Roles / Permissions | **—** (text enum) | — | **No granular role/permission master** |
 | Approval Matrix (`approval_workflows` + steps + instances) | Yes | Company | Infrastructure present; **not integrated/proven**; no role-based approver assignment |
-| Company Preferences (`company_accounting_config`) | Yes | Company | Control accounts held here; **not auto-created/guided** |
+| Company Preferences (`company_accounting_config`) | Yes | Company | Control accounts held here; auto-provisioned + validated + audit-covered (MDP-07, MD-06); guided wizard = MDP-08 |
 | System Preferences (`sys_feature_enablement` / `ref_feature_definitions`) | Yes | Global + Company | Feature-flag model present; adequate |
-| Compliance Profile (`compliance_profiles`) | Yes | Company | Rich statutory profile; **not auto-created/guided** |
+| Compliance Profile (`compliance_profiles`) | Yes | Company | Rich statutory profile; auto-provisioned from tax_registration (MDP-07, MD-07); guided wizard = MDP-08 |
 | RDO (`ref_rdo_codes`) | Yes | Global | Adequate reference |
 | Reason / Void codes (`ref_reason_codes`, `void_reason_codes`) | Yes | Global/Company | Present |
 | Audit log (`sys_audit_logs`) | Yes | Global | Master-data coverage completed for MDP-02 scope (MD-30 resolved); global statutory tables are RPC-audited |
@@ -94,33 +94,33 @@ The authoritative, actionable list. Checklist refs point to sections of the Prod
 | MD-08 | No unified company provisioning wizard orchestrating COA, periods, series, UOM, tax codes, config, and profile | Company | High | Large | 1 | §1, §7 | Build a guided provisioning flow (umbrella for MD-01–07) |
 | MD-09 | ~~COA lacks FS classification / statement grouping~~ **RESOLVED 2026-07-21 (MDP-04).** Added generated `fs_statement` (BS/IS from account_type) plus `fs_group`/`fs_subgroup` with an auto-classification invariant and backfill (migration `20260721000005`, test 062). | COA | **High → resolved** | Medium | 1 / 8 | §1, §5 | Done. |
 | MD-10 | ~~COA lacks explicit control-account and allow-subledger flags~~ **RESOLVED 2026-07-21 (MDP-04).** Added `is_control_account`/`allow_subledger`/`subledger_type` and `fn_sync_coa_control_accounts` reconciling them with `company_accounting_config` (migration `20260721000005`, test 062). | COA | **High → resolved** | Medium | 1 | §1 | Done. |
-| MD-14 | No Project dimension master | Dimensions | High | Medium | 1 | §1, §5 | Add governed Project master with effective dates and propagation |
-| MD-15 | No Location dimension master | Dimensions | High | Medium | 1 | §1, §5 | Add governed Location master |
+| MD-14 | ~~No Project dimension master~~ **RESOLVED 2026-07-22 (MDP-09).** Added governed company-scoped `projects` master (branch-aware, hierarchical, effective-dated, `is_active`) with a reusable `fn_is_valid_dimension` checker; transaction-line propagation deferred to the transaction packages (migration `20260722000001`, test 066). | Dimensions | **High → resolved** | Medium | 1 | §1, §5 | Done (master + validation; propagation = transaction packages). |
+| MD-15 | ~~No Location dimension master~~ **RESOLVED 2026-07-22 (MDP-09).** Added governed `locations` master (same shape/governance as MD-14; migration `20260722000001`, test 066). | Dimensions | **High → resolved** | Medium | 1 | §1, §5 | Done. |
 | MD-27 | Role model limited to owner/admin/member/viewer; no accountant/approver/encoder roles or granular permission master | Roles/Permissions | High | Large | 1 | §1, §13 | Introduce a permission/role master supporting SOD |
 | MD-28 | User access is company-level only; no branch-level scoping | Memberships | High | Medium | 1 | §1, §13 | Add branch scoping to memberships and RLS |
 | MD-30 | ~~Reference/config master changes are not audit-trigger covered~~ **RESOLVED 2026-07-21 (MDP-02).** Inventory found most masters (COA, payment_terms, number_series, departments, cost_centers, warehouses, bank_accounts, compliance_profiles, …) already `fn_audit_trigger`-covered and the global statutory tables correctly RPC-audited (MDP-01/PXL-AUD-063). The three genuinely uncovered company-scoped masters — `units_of_measure`, `item_categories`, `percentage_tax_codes` — now carry `fn_audit_trigger` (migration `20260721000004`, test 061 = 26/26); no double-logging. | Audit / masters | **High → resolved** | Medium | 1 | §1, §13 | Done. Membership/config/fiscal audit remains with their owning packages (MDP-03/06/07). |
 | MD-04 | ~~No default per-company UOM set~~ **RESOLVED 2026-07-21 (MDP-05).** Added `fn_seed_company_uom` seeding a standard 15-unit set, idempotent and admin-gated (migration `20260721000006`, test 063). | UOM | **Medium → resolved** | Small | 1 | §1 | Done. |
 | MD-05 | ~~No default per-company EWT/FWT/PT code provisioning~~ **RESOLVED 2026-07-21 (MDP-05).** Inventory confirmed EWT/FWT are global `atc_codes` (no per-company table); the only company-scoped withholding master is `percentage_tax_codes`, now seeded by `fn_seed_company_percentage_tax_codes` (migration `20260721000006`, test 063). | Tax codes | **Medium → resolved** | Medium | 1 / 7 | §1, §14 | Done. |
-| MD-06 | `company_accounting_config` not auto-created or guided | Company prefs | Medium | Small | 1 | §1 | Create at provisioning; surface in guided setup |
-| MD-07 | `compliance_profiles` not auto-created or guided | Compliance profile | Medium | Small | 1 / 7 | §1, §14 | Create at provisioning; guide tax-registration choices |
+| MD-06 | ~~`company_accounting_config` not auto-created or guided~~ **RESOLVED 2026-07-22 (MDP-07).** Added admin-gated `fn_provision_company_accounting_config` (idempotent create + control-account mapping from the company COA by canonical code, fill-NULL-only) and `fn_validate_company_accounting_config`; completed the deferred audit coverage of `company_accounting_config` (migration `20260721000008`, test 065). Guided *wizard* remains MDP-08. | Company prefs | **Medium → resolved** | Small | 1 | §1 | Done (backend capability; wizard = MDP-08). |
+| MD-07 | ~~`compliance_profiles` not auto-created or guided~~ **RESOLVED 2026-07-22 (MDP-07).** Added admin-gated `fn_provision_compliance_profile` deriving the default profile from `companies.tax_registration` (VAT / non-VAT / exempt), idempotent, regenerating the tax calendar via the existing trigger (migration `20260721000008`, test 065). | Compliance profile | **Medium → resolved** | Small | 1 / 7 | §1, §14 | Done (backend capability). |
 | MD-11 | ~~COA lacks cash-flow classification~~ **RESOLVED 2026-07-21 (MDP-04).** Added `cash_flow_category` (operating/investing/financing) with P&L→operating default; cash-flow statement rendering remains Phase 8 (migration `20260721000005`, test 062). | COA | **Medium → resolved** | Medium | 1 / 8 | §5 | Done. |
 | MD-12 | ~~COA lacks tax classification / direct-indirect / capitalizable / opex flags~~ **RESOLVED 2026-07-21 (MDP-04).** Added `is_tax_account` (config-reconciled), `cost_behavior` (direct/indirect), `is_capitalizable`, `is_operating_expense` (migration `20260721000005`, test 062). | COA | **Medium → resolved** | Small | 1 | §1 | Done. |
 | MD-13 | ~~COA lacks effective/active date window~~ **RESOLVED 2026-07-21 (MDP-04).** Added `effective_from`/`effective_to` with an order CHECK; posting-path enforcement deferred to Phase 8 to preserve current posting logic (migration `20260721000005`, test 062). | COA | **Medium → resolved** | Small | 1 | §1 | Done. |
-| MD-16 | No Functional Entity dimension master | Dimensions | Medium | Medium | 1 | §1 | Add governed master if retained in scope |
-| MD-17 | Customer/Supplier groups are free text (no governed group masters) | Parties | Medium | Small | 1 | §1 | Add customer/supplier group masters |
-| MD-18 | No multi-contact master (single embedded contact only) | Contacts | Medium | Medium | 1 | §1 | Add contacts master linked to parties |
-| MD-19 | Party uniqueness enforced by code but not by TIN | Parties | Medium | Small | 1 | §1 | Add TIN duplicate detection/warning |
-| MD-20 | No Salesperson master (no sales attribution/commission dimension) | Salespersons | Medium | Small | 1 / 2 | §1, §5 | Add salesperson master (may derive from employees) |
+| MD-16 | ~~No Functional Entity dimension master~~ **RESOLVED 2026-07-22 (MDP-09).** Added governed `functional_entities` master (same shape/governance as MD-14/15; migration `20260722000001`, test 066). | Dimensions | **Medium → resolved** | Medium | 1 | §1 | Done. |
+| MD-17 | ~~Customer/Supplier groups are free text (no governed group masters)~~ **RESOLVED 2026-07-22 (MDP-10).** Added governed `customer_groups`/`supplier_groups` + additive `customer_group_id`/`supplier_group_id` FKs; legacy free-text preserved and non-destructively backfilled (migration `20260722000002`, test 067). | Parties | **Medium → resolved** | Small | 1 | §1 | Done. |
+| MD-18 | ~~No multi-contact master (single embedded contact only)~~ **RESOLVED 2026-07-22 (MDP-10).** Added `party_contacts` (customer XOR supplier, one-primary-per-party, company-isolation guard); embedded `contact_person` preserved and backfilled as primary (migration `20260722000002`, test 067). | Contacts | **Medium → resolved** | Medium | 1 | §1 | Done. |
+| MD-19 | ~~Party uniqueness enforced by code but not by TIN~~ **RESOLVED 2026-07-22 (MDP-10).** TIN normalization/canonical format was already implemented; added `fn_party_tin_duplicates` side-effect-free detection (per company + party type, with exclusion + input normalization). No hard unique — legitimate branch/dual-role duplicates exist (migration `20260722000002`, test 067). | Parties | **Medium → resolved** | Small | 1 | §1 | Done (detection; caller decides per policy). |
+| MD-20 | ~~No Salesperson master (no sales attribution/commission dimension)~~ **RESOLVED 2026-07-22 (MDP-11).** Delivered as a governed designation on the `employees` master (`is_salesperson`/`is_buyer` flags + `fn_is_valid_attribution` checker), not a duplicate table — `sales_invoices.salesperson_id` already → `employees(id)` (migration `20260722000003`, test 068). | Salespersons | **Medium → resolved** | Small | 1 / 2 | §1, §5 | Done (employee designation; commission = future). |
 | MD-21 | No explicit negative-stock policy field (company/item) | Items | Medium | Small | 4 | §3 | Add policy field; default block |
 | MD-22 | `costing_method` nullable; no company default costing policy | Items | Medium | Small | 4 | §1, §3 | Enforce a costing method with a company default |
-| MD-25 | No bank reference master; `bank_accounts.bank_name` is free text | Banks | Medium | Small | 1 / 5 | §1, §4 | Add bank reference master |
-| MD-31 | Company has no functional-currency field (implicit PHP) | Company | Medium | Small | 1 | §1 | Add explicit functional currency |
+| MD-25 | ~~No bank reference master; `bank_accounts.bank_name` is free text~~ **RESOLVED 2026-07-22 (MDP-11).** Added global read-only `ref_banks` master (seeded PH banks, MDP-01 governance) + additive `bank_accounts.bank_id` FK; legacy `bank_name` preserved and best-effort backfilled (migration `20260722000003`, test 068). | Banks | **Medium → resolved** | Small | 1 / 5 | §1, §4 | Done. |
+| MD-31 | ~~Company has no functional-currency field (implicit PHP)~~ **RESOLVED 2026-07-22 (MDP-07).** Added explicit `companies.functional_currency_code` and `reporting_currency_code` (default PHP, FK to `currencies`); multi-currency transaction processing remains future work (migration `20260721000008`, test 065). | Company | **Medium → resolved** | Small | 1 | §1 | Done. |
 | MD-32 | Two parallel ATC representations (`atc_codes` vs `ref_atc_codes`) risk divergence | ATC codes | Medium | Medium | 1 / 7 | §14 | Consolidate or define one authoritative source |
 | MD-33 | Approval workflow infrastructure not integrated/proven; no role-based approver assignment | Approval matrix | Medium | Medium | 2 | §2 | Integrate and prove approval routing with SOD |
 | MD-34 | No master-data import templates/tooling for onboarding | Import/Export | Medium | Large | 1 / 11 | §10, §11 | Provide validated import templates |
 | MD-23 | No multi-UOM conversion at the item level | Items/UOM | Low | Medium | 4 | §3 | Add item UOM conversions (partly future) |
 | MD-24 | No item attachments/images/multiple barcodes | Items | Low | Small | 4 | §7 | Add item media/barcodes |
-| MD-26 | `ref_payment_modes` lacks company scope and GL mapping per mode | Payment methods | Low | Small | 5 | §4 | Add company scoping / GL mapping |
+| MD-26 | ~~`ref_payment_modes` lacks company scope and GL mapping per mode~~ **RESOLVED 2026-07-22 (MDP-11).** Added `company_payment_modes` (company-scoped, references global `ref_payment_modes`, mapped to a postable same-company GL account via `fn_company_payment_mode_gl_guard`); global `ref_payment_modes` and existing `payment_mode_id` FKs untouched (migration `20260722000003`, test 068). | Payment methods | **Low → resolved** | Small | 5 | §4 | Done. |
 | MD-35 | No standardized master-data export | Import/Export | Low | Medium | 8 / 9 | §10 | Provide governed master-data export |
 
 **Totals by severity:** Critical 1 · High 11 · Medium 19 · Low 4 · **Total 35**.

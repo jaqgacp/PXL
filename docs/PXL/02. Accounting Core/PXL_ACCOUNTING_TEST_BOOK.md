@@ -1256,3 +1256,70 @@ Scenario: reusable admin-gated backend functions provision a company's fiscal ca
 | 6 | Provision inside a savepoint, then roll back | Fiscal year and periods removed (atomic). |
 | 7 | Provision as a non-admin member | Rejected (`42501`). |
 | 8 | Inspect audit trail | Fiscal year, periods, and series creation captured in `sys_audit_logs` (fiscal-table audit added here; number_series already covered). |
+
+## COMPANY-CONFIG-PROVISIONING-001 - Company Accounting & Compliance Configuration Provisioning (MDP-07)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/065_mdp07_company_config_compliance_test.sql`, 24 assertions after a clean `supabase db reset` replay including migration `20260721000008_mdp07_company_config_compliance_currency.sql`. Related gaps: MD-06, MD-07, MD-31.
+
+Scenario: reusable admin-gated backend functions provision and validate a company's accounting config, compliance profile, and explicit functional/reporting currency — `fn_provision_company_accounting_config` (idempotent create + control-account mapping from the company COA by canonical code, fill-NULL-only, reusing MDP-04 `fn_sync_coa_control_accounts`), `fn_validate_company_accounting_config`, and `fn_provision_compliance_profile` (derived from `companies.tax_registration`) — without a wizard, UI, posting-logic, or tax-calculation change.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect a new company's currency | Defaults to PHP functional and reporting currency; an invalid currency code is rejected by the `currencies` FK (`23503`). |
+| 2 | `fn_provision_company_accounting_config(company)` | Creates the config row and maps AR/cash/output-VAT/CWT/AP/input-VAT/EWT-payable accounts from the company COA by canonical code. |
+| 3 | Re-run provisioning | Idempotent — same config id, no duplicate row; a manually mapped account is preserved (fills NULLs only). |
+| 4 | `fn_validate_company_accounting_config(company)` | Clean config returns no problems; wrong-type, cross-company, and missing-config mappings are each flagged. |
+| 5 | Inspect COA control flags / audit trail | Mapped AR account is flagged as a control account (sync ran); config creation is captured in `sys_audit_logs` (MDP-02 deferral completed). |
+| 6 | `fn_provision_compliance_profile(company)` | A VAT company gets a VAT-registered quarterly profile; a non-VAT company gets a percentage-tax 3% profile; the tax calendar is regenerated (existing trigger). |
+| 7 | Provision company A, inspect company B | Company isolation preserved; provisioning inside a savepoint rolls back atomically. |
+| 8 | Provision/validate as a non-admin member | Rejected (`42501`); all functions self-check `can_admin_company`. |
+
+## DIMENSION-MASTERS-001 - Dimension Masters: Project, Location, Functional Entity (MDP-09)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/066_mdp09_dimension_masters_test.sql`, 32 assertions after a clean `supabase db reset` replay including migration `20260722000001_mdp09_dimension_masters.sql`. Related gaps: MD-14, MD-15, MD-16.
+
+Scenario: three governed company-scoped analytical-dimension masters — `projects`, `locations`, `functional_entities` — each branch-aware, self-referencing hierarchical, effective-dated, and `is_active`-lifecycled, with member-gated RLS, audit coverage, a reusable side-effect-free `fn_is_valid_dimension` checker for future transaction packages, and admin-gated default provisioning — without any UI, transaction-form, posting, or report change.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Create parent + child of each master | CRUD works; codes are unique within a company (`23505` on duplicate). |
+| 2 | Set a self-parent / a cycle / a cross-company parent | Each rejected by `fn_dimension_hierarchy_guard` (`23514`). |
+| 3 | Insert with `valid_to` before `valid_from` / unknown `branch_id` | Effective-window CHECK (`23514`); branch FK (`23503`). |
+| 4 | `fn_is_valid_dimension(type,id,company,branch,as_of)` | True for an active in-window same-company dimension; false for a different company, an inactive row, an out-of-window date, or a mismatched branch; NULL id is valid; an unknown type raises (`22023`). |
+| 5 | Read as an admin of another company | RLS scopes reads to the caller's companies (isolation). |
+| 6 | `fn_provision_company_dimension_defaults(company)` twice | Idempotently scaffolds a Head Office location + a General functional entity; admin-gated. |
+| 7 | Inspect audit trail; provision inside a savepoint then roll back | Creation captured in `sys_audit_logs`; rollback removes the row (atomic). |
+| 8 | Write as a non-member / member / non-admin | Non-member insert rejected (`42501`); a member can insert; default provisioning is admin-only (`42501`). |
+
+## PARTY-MASTERS-ENRICHMENT-001 - Party Masters Enrichment: Groups, Contacts, TIN Control (MDP-10)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/067_mdp10_party_masters_enrichment_test.sql`, 30 assertions after a clean `supabase db reset` replay including migration `20260722000002_mdp10_party_masters_enrichment.sql`. Related gaps: MD-17, MD-18, MD-19.
+
+Scenario: governed company-scoped `customer_groups`/`supplier_groups` masters (legacy free-text `*_group` preserved as fallback and backfilled), a `party_contacts` multi-contact master (a contact belongs to a customer XOR a supplier, at most one primary per party, company-isolation guard), and side-effect-free `fn_party_tin_duplicates` detection — without any UI, transaction-form, posting, or tax change. Note: Philippine TIN normalization and the canonical `XXX-XXX-XXX-XXXXX` format already exist, so MD-19 is duplicate detection only (no hard unique — legitimate branch/dual-role duplicates exist).
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Link a customer to a governed group; inspect the legacy column | The `customer_group_id` FK resolves to the group name; the legacy free-text `customer_group` is preserved (non-destructive). |
+| 2 | Insert a duplicate `group_code` in a company | Rejected (`23505`); group codes are unique per company. |
+| 3 | Add multiple contacts to one party; add a second primary | Multiple contacts allowed; a second primary is rejected by the partial unique index (`23505`). |
+| 4 | Insert a contact with both/neither party, or a mismatched company | Both/neither rejected by the XOR CHECK (`23514`); a company mismatch rejected by the isolation guard (`23514`). |
+| 5 | `fn_party_tin_duplicates(company, type, tin, exclude)` | Finds same-company, same-type parties sharing a normalized TIN; honors the exclusion id; is company- and party-type-scoped; normalizes the input; an unknown type raises (`22023`). |
+| 6 | Inspect stored party TIN; toggle a group inactive | TIN is stored canonical `XXX-XXX-XXX-XXXXX` (regression); groups support active/inactive lifecycle. |
+| 7 | Inspect audit trail; insert inside a savepoint then roll back | Group and contact creation captured in `sys_audit_logs`; rollback removes the row (atomic). |
+| 8 | Read/write as member of A vs non-member | A member of A cannot see Company B rows (RLS isolation); a member can create; a non-member is rejected (`42501`). |
+
+## ATTRIBUTION-REFERENCE-MASTERS-001 - Attribution & Reference Masters: Salesperson, Bank, Payment Modes (MDP-11)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/068_mdp11_attribution_reference_masters_test.sql`, 28 assertions after a clean `supabase db reset` replay including migration `20260722000003_mdp11_attribution_reference_masters.sql`. Related gaps: MD-20, MD-25, MD-26.
+
+Scenario: governed salesperson/buyer **designation** on the `employees` master (`is_salesperson`/`is_buyer` + reusable `fn_is_valid_attribution`, reusing the existing `sales_invoices.salesperson_id` FK, not a duplicate table); a global read-only `ref_banks` reference master with an additive `bank_accounts.bank_id` link (legacy `bank_name` preserved); and company-scoped `company_payment_modes` mapping a global `ref_payment_modes` entry to a postable same-company GL account — reference masters only, no posting/tax/banking/AR-AP redesign.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Flag employees; `fn_is_valid_attribution(kind, employee, company)` | True for an active designated salesperson/buyer of the company; false for a different company, an undesignated or inactive employee; NULL employee is valid; an unknown kind raises (`22023`). |
+| 2 | Inspect `ref_banks`; insert as an authenticated user | Seeded with PH banks; read-only (deny-by-default writes, `42501`). |
+| 3 | Link a bank account via `bank_id`; inspect `bank_name` | `bank_id` resolves to the `ref_banks` name; the legacy free-text `bank_name` is preserved; an unknown `bank_id` is rejected (`23503`). |
+| 4 | Create a `company_payment_modes` row; map a cross-company / non-postable GL account | Valid same-company postable mapping succeeds; cross-company and non-postable GL accounts are rejected by `fn_company_payment_mode_gl_guard` (`23514`); a mode is unique per company (`23505`). |
+| 5 | Toggle a mode inactive; inspect audit trail | Active/inactive lifecycle works; creation captured in `sys_audit_logs`. |
+| 6 | Insert inside a savepoint then roll back | Rollback removes the row (atomic). |
+| 7 | Read/write as member of A vs member-of-A-only vs non-member | Company B rows are invisible to a member of A (RLS isolation); a member can create; a non-member's write is rejected. |

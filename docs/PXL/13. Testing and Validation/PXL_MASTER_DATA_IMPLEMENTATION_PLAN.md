@@ -188,7 +188,10 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 2, 6, 12; Period Lock and Number Series engines.
 - **Rollback / recovery:** Functions additive; rollback drops them. Generated periods/series for a company can be removed if unused; guard against deleting periods with posted journals.
 
-### MDP-07 — Company Configuration, Compliance & Currency Provisioning
+### MDP-07 — Company Configuration, Compliance & Currency Provisioning ✅ DONE (2026-07-22)
+
+**Status: implemented (gaps MD-06, MD-07, MD-31 resolved).** Migration `20260721000008_mdp07_company_config_compliance_currency.sql`, test `065` (24/24). Additive-only: (1) explicit `companies.functional_currency_code` / `reporting_currency_code` (default PHP, FK to `currencies`) for MD-31; (2) admin-gated `SECURITY DEFINER` `fn_provision_company_accounting_config` that idempotently creates the config row and maps control accounts from the company's own COA by the canonical PH_STANDARD codes (fills NULLs only, so manual mappings survive), then reconciles COA flags via the reused MDP-04 `fn_sync_coa_control_accounts`; (3) `fn_validate_company_accounting_config` returning the set of coherence problems (missing row, cross-company account, non-postable account, wrong account_type, inactive currency); (4) `fn_provision_compliance_profile` deriving a default compliance profile from `companies.tax_registration` (VAT → VAT-registered quarterly; non-VAT → percentage-tax 3% quarterly), which also regenerates the tax calendar via the existing trigger. Completed MDP-02's deferred audit coverage of `company_accounting_config` (reused `fn_audit_trigger`; `compliance_profiles` was already covered). Deliberately excluded per scope: the provisioning **wizard** (MDP-08), multi-currency transaction processing (future), and COA/UOM/tax seeding (MDP-05). No RLS change to existing tables, no posting/tax-calculation change. No engineering findings discovered.
+
 - **Business objective:** Auto-create and guide the accounting config, compliance profile, and functional currency a company needs to transact and file.
 - **Gap IDs included:** MD-06, MD-07, MD-31 (all Medium).
 - **Scope:** Default `company_accounting_config`, default `compliance_profiles`, an explicit company functional-currency field, and guided setup wiring.
@@ -236,7 +239,10 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 1, 2, 6, 19, 20; all Setup engines.
 - **Rollback / recovery:** Orchestration must be transactional — a failed run leaves no partial company setup; recovery is re-run after fixing input.
 
-### MDP-09 — Dimension Masters: Project, Location, Functional Entity
+### MDP-09 — Dimension Masters: Project, Location, Functional Entity ✅ DONE (2026-07-22)
+
+**Status: implemented (gaps MD-14, MD-15, MD-16 resolved).** Migration `20260722000001_mdp09_dimension_masters.sql`, test `066` (32/32). Added three governed company-scoped masters — `projects`, `locations`, `functional_entities` — each branch-aware, self-referencing hierarchical (with a shared `fn_dimension_hierarchy_guard` enforcing no self-parent, same-company parent, and acyclic chains), effective-dated (`valid_from`/`valid_to` + window CHECK), `is_active` lifecycle, per-type vocabulary, and `UNIQUE(company_id, code)`; modeled on the existing `cost_centers` shape. Member-gated RLS (mirrors departments/cost_centers), audit coverage via the reused MDP-02 `fn_audit_trigger`, a reusable side-effect-free `fn_is_valid_dimension(type,id,company,branch,as_of)` checker for future transaction packages, and an admin-gated idempotent `fn_provision_company_dimension_defaults` (Head Office location + General functional entity) for the future MDP-08 wizard. Deliberately excluded per this session's scope: transaction-line propagation, posting/tax changes, reports, and Sales Invoice UX (owned by PXL-AUD-053) — `fn_is_valid_dimension` is provided as the contract those future packages call, but nothing is wired into posting here. No RLS change to existing tables; no engineering findings.
+
 - **Business objective:** Govern the analytical dimensions currently ungoverned for transactions and reporting.
 - **Gap IDs included:** MD-14, MD-15 (High), MD-16 (Medium).
 - **Scope:** Three governed masters with effective dates, validity, company scope, and propagation to journal lines and reporting.
@@ -260,7 +266,10 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 2, 3, 15, 16; Dimension and Reporting engines.
 - **Rollback / recovery:** New tables/columns are additive; rollback drops them; no posted data lost (dimensions nullable on lines).
 
-### MDP-10 — Party Masters Enrichment
+### MDP-10 — Party Masters Enrichment ✅ DONE (2026-07-22)
+
+**Status: implemented (gaps MD-17, MD-18, MD-19 resolved).** Migration `20260722000002_mdp10_party_masters_enrichment.sql`, test `067` (30/30). Added governed company-scoped `customer_groups`/`supplier_groups` masters + additive nullable `customers.customer_group_id`/`suppliers.supplier_group_id` FKs (legacy free-text `*_group` columns **preserved** and safely backfilled, non-destructive); a `party_contacts` multi-contact master linked to a customer XOR a supplier (CHECK + `fn_party_contact_company_guard` isolation, at-most-one-primary partial unique indexes; the single embedded `contact_person` preserved and backfilled as primary); and `fn_party_tin_duplicates(company,type,tin,exclude)` side-effect-free duplicate detection. **Inventory correction to the plan:** Philippine TIN normalization and the canonical `XXX-XXX-XXX-XXXXX` format are **already fully implemented** (`20260715000001_philippine_tin_standard.sql`), so MD-19 reduced to duplicate *detection* only — no hard unique constraint (legitimate branch/dual-role duplicates exist). Member-gated RLS (mirrors customers/suppliers), audit coverage via the reused MDP-02 `fn_audit_trigger`. No posting/tax change; existing party records preserved and never rewritten; no engineering findings.
+
 - **Business objective:** Bring customer/supplier masters to professional completeness (groups, contacts, TIN control).
 - **Gap IDs included:** MD-17, MD-18, MD-19 (all Medium).
 - **Scope:** Customer/supplier group masters; a contacts master linked to parties; TIN duplicate detection/warning; backfill of existing free-text groups.
@@ -284,7 +293,10 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 2, 3; AR/AP engines.
 - **Rollback / recovery:** Additive; rollback drops new tables/rules and restores free-text group reliance; backfill is reversible.
 
-### MDP-11 — Attribution & Reference Masters
+### MDP-11 — Attribution & Reference Masters ✅ DONE (2026-07-22)
+
+**Status: implemented (gaps MD-20, MD-25, MD-26 resolved).** Migration `20260722000003_mdp11_attribution_reference_masters.sql`, test `068` (28/28). Added: (MD-20) governed salesperson/buyer **designation** on the `employees` master — `is_salesperson`/`is_buyer` flags + reusable `fn_is_valid_attribution(kind,employee,company)` checker — rather than a duplicate table, because `sales_invoices.salesperson_id` already → `employees(id)` (that FK/SI validation is unchanged); (MD-25) global read-only `ref_banks` reference master (MDP-01 governance, seeded PH banks) + additive nullable `bank_accounts.bank_id` FK with legacy `bank_name` preserved and best-effort backfilled; (MD-26) `company_payment_modes` company-scoped master referencing global `ref_payment_modes`, each mapped to a **postable same-company GL account** enforced by `fn_company_payment_mode_gl_guard`, member-gated + audited. **Boundary respected:** `ref_payment_modes` and every existing `payment_mode_id` FK, plus banking/treasury/AR-AP/ownership, are untouched — reusable reference masters only. Member-gated RLS, MDP-02 audit reuse. No posting/tax change; existing records preserved; no engineering findings.
+
 - **Business objective:** Add the small reference masters professional operations expect (salesperson, bank, richer payment modes).
 - **Gap IDs included:** MD-20, MD-25 (Medium), MD-26 (Low).
 - **Scope:** Salesperson master (may derive from employees); bank reference master; company-scoped payment modes with GL mapping.
@@ -414,11 +426,11 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 | 4 | MDP-04 Chart of Accounts Enrichment | Med–Large | none | Foundation for FS and for provisioning templates |
 | 5 | MDP-06 Fiscal Calendar & Number Series | Medium | none | Independent; unblocks posting/numbering |
 | 6 | MDP-05 Company Setup Defaults & Templates | Large | MDP-04 | Seeds usable COA/UOM/withholding |
-| 7 | MDP-07 Config, Compliance & Currency | Medium | MDP-04, 05, 01 | Completes transactable-company config |
+| 7 | MDP-07 Config, Compliance & Currency ✅ DONE | Medium | MDP-04, 05, 01 | Completes transactable-company config |
 | 8 | MDP-08 Guided Provisioning Wizard | Large | MDP-05, 06, 07 | Orchestrates the seed capabilities |
-| 9 | MDP-09 Dimension Masters | Med–Large | coordinate PXL-AUD-053 | Governs Project/Location/Functional Entity |
-| 10 | MDP-10 Party Masters Enrichment | Medium | none | Groups, contacts, TIN control |
-| 11 | MDP-11 Attribution & Reference Masters | Small–Med | none | Salesperson, bank, payment modes |
+| 9 | MDP-09 Dimension Masters ✅ DONE | Med–Large | coordinate PXL-AUD-053 | Governs Project/Location/Functional Entity |
+| 10 | MDP-10 Party Masters Enrichment ✅ DONE | Medium | none | Groups, contacts, TIN control |
+| 11 | MDP-11 Attribution & Reference Masters ✅ DONE | Small–Med | none | Salesperson, bank, payment modes |
 | 12 | MDP-12 Tax Reference Consolidation | Medium | MDP-01 | Removes ATC divergence risk |
 | 13 | MDP-13 Item Master Inventory Readiness | Medium | before Phase 4 | Prepares item master for Inventory phase |
 | 14 | MDP-14 Approval Matrix Integration | Medium | MDP-03 | Role-based approvals (Phase 2) |
