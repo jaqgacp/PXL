@@ -2,14 +2,20 @@
 
 **Status:** Active domain index
 **Authority:** Tier 2 Navigation; Sales Invoice specifications retain authority in their own files
-**Last Reviewed:** 2026-07-18
+**Last Reviewed:** 2026-07-22
 **Applies To:** Sales transactions, receivables, sales tax review, sales registers, and Sales Invoice implementation specifications
 **Read When:** A task changes Sales or Sales Invoice behavior
 **Do Not Read For:** Universal transaction UI architecture; use `../12. UI and UX/README.md`
 
 ## Sales Invoice Authorities
 
-Sales Invoice is an implementation of the transaction framework, not a universal UI standard. `PXL-AUD-053` remains the active completeness gate.
+Sales Invoice is an implementation of the transaction framework, not a universal UI standard. `PXL-AUD-053` is `Retested Passed`; the authoritative field-source matrix is `END_TO_END_VALIDATED` for the supported Sales Invoice scope.
+
+The certified path covers create/edit, server validation, posting, AR/revenue/output VAT/COGS/inventory, expected-CWT timing, void/reversal, Credit Memo and Receipt relationships, Customer Ledger, AR Aging, GL, VAT, Trial Balance, Financial Statements through posted GL, the Sales Invoice register, search, API/view sources, exports, and audit evidence. Project, Location, and Functional Entity are supported at header and line-override level and propagate through preview, posting, inventory where applicable, reporting, API/export sources, audit, and reversal.
+
+Explicit exclusions remain unsupported rather than partially implied: foreign-currency SI (the server accepts PHP only), Delivery Receipt conversion, price levels/default discount policies, deferred revenue, a distinct cancel/revision/posting-version model, SI integration/import metadata, attachments, and categorized internal notes. Live customer/item/workflow presentation enrichments remain classified partial in the field-source matrix and are not consumed as posting or reporting truth.
+
+Certification evidence: focused test 054 passes 42/42; Sales Invoice draft-state tests pass 4/4; the full 74-file database suite passes 1,588 assertions; canonical tests 055/057/058 pass 88/88; documentation, lint, build/secret guard, and diff validation pass.
 
 | Need | Read |
 | --- | --- |

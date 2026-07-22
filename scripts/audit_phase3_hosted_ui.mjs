@@ -191,9 +191,10 @@ const output = {
 };
 
 await page.goto(baseUrl, { waitUntil: 'networkidle' });
-if (await page.locator('input[type="email"]').count()) {
-  await page.locator('input[type="email"]').fill(email);
-  await page.locator('input[type="password"]').fill(password);
+if (await page.getByLabel('Email').count()) {
+  // PXL-AUD-060: login fields resolve by accessible label, not CSS selectors.
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password').fill(password);
   await page.getByRole('button', { name: 'Sign in' }).click();
   await page.waitForSelector('select[title="Company"]', { timeout: 15000 });
 }
@@ -258,5 +259,23 @@ for (const [route, expected] of reportProbes) {
   output.reports.push(await probeRoute(page, 'ABC Trading Corporation', route, expected, true));
 }
 
+const failedCompanyProbes = output.companyProbes.filter((probe) => probe.status !== 'Passed');
+const failedReports = output.reports.filter((probe) => probe.status !== 'Passed');
+const failedDetailTabs = output.salesInvoiceDetail.tabs?.filter((tab) => tab.status !== 'Passed') || [];
+const detailFailed = output.salesInvoiceDetail.status === 'Failed'
+  || output.salesInvoiceDetail.externalReferenceVisible === false
+  || output.salesInvoiceDetail.readOnly === false
+  || failedDetailTabs.length > 0;
+output.summary = {
+  companyProbes: `${output.companyProbes.length - failedCompanyProbes.length}/${output.companyProbes.length} passed`,
+  reports: `${output.reports.length - failedReports.length}/${output.reports.length} passed`,
+  salesInvoiceDetail: detailFailed ? 'Failed' : 'Passed',
+  pageErrors: output.pageErrors.length,
+};
+
 console.log(JSON.stringify(output, null, 2));
 await browser.close();
+
+if (failedCompanyProbes.length > 0 || failedReports.length > 0 || detailFailed || output.pageErrors.length > 0) {
+  process.exitCode = 1;
+}

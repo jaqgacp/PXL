@@ -6,7 +6,7 @@ import { StatusBadge } from '@/components/ui/shared'
 // ── Types ─────────────────────────────────────────────────────
 type RegTab = 'si' | 'or' | 'cm' | 'dm'
 
-type SIRow = { si_number: string; date: string; customer_name_snapshot: string; customer_tin_snapshot: string; total_taxable_amount: number; total_zero_rated_amount: number; total_exempt_amount: number; total_vat_amount: number; total_amount: number; status: string; memo: string | null }
+type SIRow = { si_number: string; date: string; customer_name_snapshot: string; customer_tin_snapshot: string; project_code: string | null; project_name: string | null; location_code: string | null; location_name: string | null; functional_entity_code: string | null; functional_entity_name: string | null; total_taxable_amount: number; total_zero_rated_amount: number; total_exempt_amount: number; total_vat_amount: number; total_amount: number; status: string; memo: string | null }
 type ORRow = { receipt_number: string; receipt_date: string; customer_name_snapshot: string; customer_tin_snapshot: string; total_amount: number; total_cwt: number; remarks: string | null; status: string; reference_number: string | null }
 type CMRow = { cm_number: string; cm_date: string; customer_name_snapshot: string; customer_tin_snapshot: string; total_net_amount: number; total_vat_amount: number; total_amount: number; remarks: string | null; status: string; reason_description: string | null }
 type DMRow = { dm_number: string; dm_date: string; customer_name_snapshot: string; customer_tin_snapshot: string; total_net_amount: number; total_vat_amount: number; total_amount: number; remarks: string | null; status: string; reason_description: string | null }
@@ -43,7 +43,7 @@ export default function SalesRegistersPage() {
 
     if (tab === 'si') {
       const { data } = await supabase.from('vw_sales_invoice_register')
-        .select('si_number,date,customer_name_snapshot,customer_tin_snapshot,total_taxable_amount,total_zero_rated_amount,total_exempt_amount,total_vat_amount,total_amount,status,memo')
+        .select('si_number,date,customer_name_snapshot,customer_tin_snapshot,project_code,project_name,location_code,location_name,functional_entity_code,functional_entity_name,total_taxable_amount,total_zero_rated_amount,total_exempt_amount,total_vat_amount,total_amount,status,memo')
         .eq('company_id', companyId).gte('date', dateFrom).lte('date', dateTo)
         .order('date').order('si_number')
       setSIRows(data as SIRow[] || [])
@@ -118,7 +118,7 @@ export default function SalesRegistersPage() {
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    {['Date','SI Number','Customer Name','TIN','Vatable','Zero-Rated','Exempt','Output VAT','Total','Status'].map(h => (
+                    {['Date','SI Number','Customer Name','TIN','Project','Location','Functional Entity','Vatable','Zero-Rated','Exempt','Output VAT','Total','Status'].map(h => (
                       <th key={h} className={`px-4 py-2.5 text-[11px] font-semibold uppercase tracking-wide text-gray-500 whitespace-nowrap ${['Vatable','Zero-Rated','Exempt','Output VAT','Total'].includes(h) ? 'text-right' : 'text-left'}`}>{h}</th>
                     ))}
                   </tr>
@@ -130,6 +130,9 @@ export default function SalesRegistersPage() {
                       <td className={`px-4 py-2 font-mono text-xs font-semibold whitespace-nowrap ${r.status === 'cancelled' ? 'line-through text-gray-400' : 'text-gray-900'}`}>{r.si_number}</td>
                       <td className="px-4 py-2 text-xs text-gray-900 max-w-[160px] truncate">{r.customer_name_snapshot}</td>
                       <td className="px-4 py-2 font-mono text-xs text-gray-500">{r.customer_tin_snapshot || '—'}</td>
+                      <td className="px-4 py-2 text-xs text-gray-600 whitespace-nowrap">{r.project_code ? `${r.project_code} · ${r.project_name}` : '—'}</td>
+                      <td className="px-4 py-2 text-xs text-gray-600 whitespace-nowrap">{r.location_code ? `${r.location_code} · ${r.location_name}` : '—'}</td>
+                      <td className="px-4 py-2 text-xs text-gray-600 whitespace-nowrap">{r.functional_entity_code ? `${r.functional_entity_code} · ${r.functional_entity_name}` : '—'}</td>
                       <td className="px-4 py-2 text-right font-mono text-xs tabular-nums">{r.total_taxable_amount ? fmt(Number(r.total_taxable_amount)) : '—'}</td>
                       <td className="px-4 py-2 text-right font-mono text-xs tabular-nums text-gray-500">{r.total_zero_rated_amount ? fmt(Number(r.total_zero_rated_amount)) : '—'}</td>
                       <td className="px-4 py-2 text-right font-mono text-xs tabular-nums text-gray-500">{r.total_exempt_amount ? fmt(Number(r.total_exempt_amount)) : '—'}</td>
@@ -141,7 +144,7 @@ export default function SalesRegistersPage() {
                 </tbody>
                 <tfoot className="border-t-2 border-gray-300 bg-gray-50">
                   <tr>
-                    <td colSpan={4} className="px-4 py-2.5 text-xs font-semibold text-gray-700">{siRows.filter(r => r.status === 'posted').length} posted / {siRows.filter(r => r.status === 'cancelled').length} voided</td>
+                    <td colSpan={7} className="px-4 py-2.5 text-xs font-semibold text-gray-700">{siRows.filter(r => r.status === 'posted').length} posted / {siRows.filter(r => r.status === 'cancelled').length} voided</td>
                     {['total_taxable_amount','total_zero_rated_amount','total_exempt_amount','total_vat_amount','total_amount'].map(field => {
                       const total = siRows.filter(r => r.status === 'posted').reduce((s, r) => s + Number(r[field as keyof SIRow] || 0), 0)
                       return <td key={field} className={`px-4 py-2.5 text-right font-mono text-xs tabular-nums font-bold ${field === 'total_vat_amount' ? 'text-blue-700' : 'text-gray-900'}`}>{fmt(total)}</td>

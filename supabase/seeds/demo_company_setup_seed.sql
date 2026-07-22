@@ -16,7 +16,7 @@
 --     column cannot carry an explicit marker; the demo company name itself
 --     ("PXL Demo Trading Corporation") is the marker.
 --
--- Run (local):  psql postgresql://postgres:postgres@127.0.0.1:54322/postgres \
+-- Run (local):  psql "$PXL_LOCAL_DATABASE_URL" \
 --                 -f supabase/seeds/demo_company_setup_seed.sql
 -- Run (hosted): execute this file's contents through the Supabase management
 --               API SQL endpoint (see AI_HANDOFF.md) or the SQL editor.

@@ -6,13 +6,13 @@
 **Applies To:** Sequencing and scoping of every Master Data implementation session
 **Read When:** Selecting or scoping the next Master Data implementation package
 **Do Not Read For:** Gap detail (use [`../01. Architecture/PXL_MASTER_DATA_GAP_REGISTER.md`](../01. Architecture/PXL_MASTER_DATA_GAP_REGISTER.md)), certification method (use the certification standards), defect status (use [`../PXL_END_TO_END_AUDIT_FINDINGS.md`](../PXL_END_TO_END_AUDIT_FINDINGS.md)), or current bounded task (use `AI/AI_STATE.md`)
-**Last Reviewed:** 2026-07-20 roadmap revision 2 — enriched per-package specs (scope/exclusions, dependent modules & engines, separated impact dimensions, certification gates, rollback); validated against the current local working tree
+**Last Reviewed:** 2026-07-22 roadmap/state reconciliation after MDP-03
 
 ## Purpose
 
 This roadmap converts the 35 gaps in the [Master Data Gap Register](../01. Architecture/PXL_MASTER_DATA_GAP_REGISTER.md) into **15 bounded implementation packages** (MDP-01 … MDP-15) covering every gap with no overlap. Each package is independently reviewable, testable, and certifiable, and is scoped small enough for one controlled implementation session where practical. This document plans; it implements nothing and changes no certification status. It follows the gates in [`PXL_MODULE_CERTIFICATION_STANDARD.md`](PXL_MODULE_CERTIFICATION_STANDARD.md), the engine contracts in [`PXL_ENGINE_CERTIFICATION_STANDARD.md`](PXL_ENGINE_CERTIFICATION_STANDARD.md), and the capability expectations in [`PXL_PRODUCT_COMPLETENESS_CHECKLIST.md`](PXL_PRODUCT_COMPLETENESS_CHECKLIST.md).
 
-Source-of-truth note: this revision was validated against the current local working tree. The gap register (severity Critical 1 / High 11 / Medium 19 / Low 4 = 35; IDs MD-01…MD-35 contiguous) and the five certification framework documents currently exist as **untracked** local files that are complete and internally consistent; they are treated as authoritative. No committed-versus-uncommitted conflict was found among the authority set.
+Source-of-truth note: this revision was validated against the current local working tree. The gap register still covers 35 gaps (IDs MD-01…MD-35 contiguous); completed package status is based on actual migrations/tests in `supabase/migrations` and `supabase/tests`, not on the original package order. Local documentation and the MDP-12/MDP-13/MDP-15/MDP-03 migration/test files may be uncommitted; treat them as existing work to preserve unless explicitly directed otherwise.
 
 ## Packaging method
 
@@ -48,9 +48,9 @@ Gaps were grouped by the object they change and the concern they serve, so each 
   - *Reporting:* none directly; protects the integrity of every tax report that reads these codes.
 - **Regression risks:** Low. Only risk is a hidden server path that writes these tables as `authenticated` (none found in discovery) — confirm before locking. Company-scoped code tables reference `tax_codes`/`atc_codes` by FK for reads; read access is preserved.
 - **Deliverables:** A formal finding raised in [`../PXL_END_TO_END_AUDIT_FINDINGS.md`](../PXL_END_TO_END_AUDIT_FINDINGS.md) for the ungoverned tax-reference writes; one migration governing the three tables; one pgTAP test.
-- **Acceptance criteria:** Direct authenticated INSERT/UPDATE/DELETE denied; governed RPC writes succeed only for a provisioned maintainer and are audited; reads preserved for ordinary users; the internal audit helper is not directly callable; clean `supabase db reset` replay passes; full pgTAP lane shows no new failures beyond the known PXL-AUD-066 held-out CAS assertions.
+- **Acceptance criteria:** Direct authenticated INSERT/UPDATE/DELETE denied; governed RPC writes succeed only for a provisioned maintainer and are audited; reads preserved for ordinary users; the internal audit helper is not directly callable; clean `supabase db reset` replay passes; the full governed pgTAP lane remains green with no held-out test file.
 - **Required automated tests:** pgTAP covering unauthorized/no-authority denial, governed write + audit-row assertion, rollback-on-failure (no orphan audit row), read preserved, and audit-helper spoof denial.
-- **Required manual validation:** Re-query policy posture locally; confirm no tax-setup route regressed. **Hosted `pg_policies` re-query is deferred** — it rides the same authorized-operator step that gates **PXL-AUD-055** (externally blocked key rotation); local clean-replay evidence stands in the interim, and the finding stays open on the hosted-confirmation dependency exactly as PXL-AUD-063 did.
+- **Required manual validation:** Re-query policy posture locally; confirm no tax-setup route regressed. The former PXL-AUD-055 operator dependency is resolved, but the hosted `pg_policies` re-query has not been executed and remains separate read-only certification evidence; local clean-replay evidence must not be presented as hosted proof.
 - **Checklist sections:** §13 Security & Audit, §14 Localization.
 - **Certification gates affected:** Gates 7 (tax correct), 13/14 (immutability, cross-company blocked), 21 (no Critical/High), 22 (documented limitations); Tax Engine and Permissions/RLS Engine invariants.
 - **Rollback / recovery:** Forward-only; a compensating migration reinstating prior policies is the documented rollback. Idempotent guards (`DROP POLICY IF EXISTS`, `CREATE OR REPLACE`) make replay safe. No data is destroyed.
@@ -58,7 +58,7 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 
 ### MDP-02 — Master-Data Audit Coverage ✅ DONE (2026-07-21)
 
-**Status: implemented (gap MD-30 resolved).** Migration `20260721000004_mdp02_master_data_audit_coverage.sql`, test `061` (26/26). The coverage inventory found the working tree already far ahead of the plan's base assumption: COA, payment_terms, number_series, departments, cost_centers, warehouses, bank_accounts, compliance_profiles, employees, approval_workflows, sys_feature_enablement, and all party/item/transaction masters were already `fn_audit_trigger`-covered, and the global statutory tables (`tax_codes`/`vat_codes`/`atc_codes`/`bir_forms`/`bir_form_mappings`) are correctly RPC-audited (MDP-01/PXL-AUD-063) — so they were consciously excluded to avoid double-logging. The genuinely uncovered masters in scope were exactly three company-scoped tables — `units_of_measure`, `item_categories`, `percentage_tax_codes` — now attached to the existing `fn_audit_trigger` (reused mechanism, no new pattern, no double-logging). `ewt_codes`/`fwt_codes`/`ref_atc_codes` do not exist (consolidated earlier). Membership/config/fiscal-calendar audit is deferred to their owning packages (MDP-03/06/07). No schema/RLS change, no backfill.
+**Status: implemented (gap MD-30 resolved).** Migration `20260721000004_mdp02_master_data_audit_coverage.sql`, test `061` (26/26). The coverage inventory found the working tree already far ahead of the plan's base assumption: COA, payment_terms, number_series, departments, cost_centers, warehouses, bank_accounts, compliance_profiles, employees, approval_workflows, sys_feature_enablement, and all party/item/transaction masters were already `fn_audit_trigger`-covered, and the global statutory tables (`tax_codes`/`vat_codes`/`atc_codes`/`bir_forms`/`bir_form_mappings`) are correctly RPC-audited (MDP-01/PXL-AUD-063) — so they were consciously excluded to avoid double-logging. The genuinely uncovered masters in scope were exactly three company-scoped tables — `units_of_measure`, `item_categories`, `percentage_tax_codes` — now attached to the existing `fn_audit_trigger` (reused mechanism, no new pattern, no double-logging). `ewt_codes`/`fwt_codes`/`ref_atc_codes` do not exist (consolidated earlier). MDP-06/07/03 later completed the fiscal/config/membership and role-scope audit deferrals. No schema/RLS change, no backfill.
 
 - **Business objective:** Capture every reference/config master change in the authoritative audit trail.
 - **Gap IDs included:** MD-30 (High).
@@ -84,6 +84,9 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Rollback / recovery:** Drop the added triggers; purely additive, no data change.
 
 ### MDP-03 — Access Control & Segregation-of-Duties Model
+
+**Status: implemented (gaps MD-27, MD-28 resolved).** Migration `20260722000007_mdp03_master_data_access_sod.sql`, test `072` (35/35), plus focused RLS regressions `011`/`013`/`014` and MDP-15 regression `071`; the current full pgTAP lane is green at 74 files / 1,568 assertions after MDP-14. Added a reusable `master_data_permissions` catalog for all MDP-15 registered masters, role mappings for existing `owner`/`admin`/`member`/`viewer` behavior, custom role-code compatibility on `user_company_memberships.role`, advisory `master_data_sod_conflicts`, optional `user_company_branch_scopes`, branch-aware helper/RLS rewiring for company-scoped masters, branch-filtered master-data export, hardened direct access to the renamed MDP-15 export implementation, and audit triggers for memberships, permissions, SOD metadata, and branch scopes. Existing user role semantics are preserved: owner/admin retain all master-data authority; members retain operational create/edit only; viewers remain read/export-only. MDP-14 now consumes this permission/SOD foundation for approval routing.
+
 - **Business objective:** Provide professional role/permission control with branch-level scoping and enforceable SOD.
 - **Gap IDs included:** MD-27, MD-28 (both High).
 - **Scope:** A granular permission/role model beyond the four fixed membership roles; branch-level scoping of user access; supporting helpers and RLS updates; backfill of existing memberships to preserve current behavior.
@@ -136,7 +139,7 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 
 ### MDP-05 — Company Setup Defaults & Seed Templates ✅ DONE (2026-07-21)
 
-**Status: implemented (gaps MD-01, MD-04-UOM, MD-05 resolved).** Migration `20260721000006_mdp05_company_setup_defaults.sql`, test `063` (25/25). Added global read-only `coa_templates`/`coa_template_lines` (seeded PH_STANDARD template of 39 accounts carrying MDP-04 classification), and three admin-gated `SECURITY DEFINER` seed functions: `fn_seed_company_coa` (default template selection by `entity_type`, resolves parent hierarchy), `fn_seed_company_uom` (15-unit set), and `fn_seed_company_percentage_tax_codes`. Inventory finding: EWT/FWT are global `atc_codes` (no per-company table), so only `percentage_tax_codes` is seeded. All idempotent (ON CONFLICT on existing (company_id, code) keys), company-isolated, and audited via existing triggers. Deliberately excluded per scope: the provisioning **wizard/orchestrator** (MDP-08), fiscal periods/number series (MDP-06), and accounting-config/compliance (MDP-07). No RLS/posting change; no engineering findings.
+**Status: implemented (gaps MD-01, MD-04-UOM, MD-05 resolved).** Migration `20260721000006_mdp05_company_setup_defaults.sql`, test `063` (25/25). Added global read-only `coa_templates`/`coa_template_lines` (seeded PH_STANDARD template carrying MDP-04 classification), and three admin-gated `SECURITY DEFINER` seed functions: `fn_seed_company_coa` (default template selection by `entity_type`, resolves parent hierarchy), `fn_seed_company_uom` (15-unit set), and `fn_seed_company_percentage_tax_codes`. MDP-08 later extended PH_STANDARD from 39 to 41 accounts with canonical Supplier Down Payments (asset) and Customer Advances (liability) accounts required by the existing posting contracts; test 063 was updated and remains 25/25. Inventory finding: EWT/FWT are global `atc_codes` (no per-company table), so only `percentage_tax_codes` is seeded. All idempotent (ON CONFLICT on existing `(company_id, code)` keys), company-isolated, and audited via existing triggers. No posting change; no engineering findings.
 
 - **Business objective:** Let a new company start with a usable Philippine COA, UOM set, and withholding codes instead of an empty database.
 - **Gap IDs included:** MD-01 (High), MD-04, MD-05 (Medium).
@@ -190,7 +193,7 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 
 ### MDP-07 — Company Configuration, Compliance & Currency Provisioning ✅ DONE (2026-07-22)
 
-**Status: implemented (gaps MD-06, MD-07, MD-31 resolved).** Migration `20260721000008_mdp07_company_config_compliance_currency.sql`, test `065` (24/24). Additive-only: (1) explicit `companies.functional_currency_code` / `reporting_currency_code` (default PHP, FK to `currencies`) for MD-31; (2) admin-gated `SECURITY DEFINER` `fn_provision_company_accounting_config` that idempotently creates the config row and maps control accounts from the company's own COA by the canonical PH_STANDARD codes (fills NULLs only, so manual mappings survive), then reconciles COA flags via the reused MDP-04 `fn_sync_coa_control_accounts`; (3) `fn_validate_company_accounting_config` returning the set of coherence problems (missing row, cross-company account, non-postable account, wrong account_type, inactive currency); (4) `fn_provision_compliance_profile` deriving a default compliance profile from `companies.tax_registration` (VAT → VAT-registered quarterly; non-VAT → percentage-tax 3% quarterly), which also regenerates the tax calendar via the existing trigger. Completed MDP-02's deferred audit coverage of `company_accounting_config` (reused `fn_audit_trigger`; `compliance_profiles` was already covered). Deliberately excluded per scope: the provisioning **wizard** (MDP-08), multi-currency transaction processing (future), and COA/UOM/tax seeding (MDP-05). No RLS change to existing tables, no posting/tax-calculation change. No engineering findings discovered.
+**Status: implemented (gaps MD-06, MD-07, MD-31 resolved).** Migration `20260721000008_mdp07_company_config_compliance_currency.sql`, test `065` (24/24). Additive-only: (1) explicit `companies.functional_currency_code` / `reporting_currency_code` (default PHP, FK to `currencies`) for MD-31; (2) admin-gated `SECURITY DEFINER` `fn_provision_company_accounting_config` that idempotently creates the config row and maps control accounts from the company's own COA by canonical codes (fills NULLs only, so manual mappings survive), then reconciles COA flags via the reused MDP-04 `fn_sync_coa_control_accounts`; (3) `fn_validate_company_accounting_config` returning coherence problems; (4) `fn_provision_compliance_profile` deriving a default profile from `companies.tax_registration`. MDP-08 later completed all nine current accounting mappings and corrected the validator's account-type expectations to match established posting behavior: Customer Advances is a liability/receivable-subledger control and Supplier Down Payments is an asset/payable-subledger control. Test 065 remains 24/24 and test 073 covers both mappings. No posting/tax-calculation change and no new finding was warranted; the correction closes an integration defect in the completed package contract.
 
 - **Business objective:** Auto-create and guide the accounting config, compliance profile, and functional currency a company needs to transact and file.
 - **Gap IDs included:** MD-06, MD-07, MD-31 (all Medium).
@@ -215,26 +218,28 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 2, 6, 7; Tax and Currency engines.
 - **Rollback / recovery:** Additive columns/defaults; rollback drops the currency column and defaults; existing PHP-implicit behavior unaffected.
 
-### MDP-08 — Guided Company Provisioning Wizard
+### MDP-08 — Guided Company Provisioning Wizard ✅ DONE (2026-07-22)
+
+**Status: implemented (gap MD-08 resolved).** Migration `20260722000008_mdp08_guided_company_provisioning.sql`, test `073` (50/50), and guided UI integration in `CompanyProvisioningWizard.tsx` / `CompanySetupPage.tsx`; current full pgTAP lane green at 74 files / 1,568 assertions after MDP-14. Added versioned, country/localization-aware company templates; an ordered extensible module registry over the existing MDP-05/06/07/09/11/13 primitives; deterministic side-effect-free request validation; MDP-03 `companies.create` enforcement with zero-company bootstrap; atomic/idempotent `fn_provision_company`; audited provisioning runs including retained failure metadata; company-code/TIN/fiscal/template/reference validation; and the PH_STANDARD template. The five-step UI captures company/tax/fiscal/currency/branch/warehouse/address/signatory inputs, validates server-side, and opens the existing setup checklist after success. Existing CSV company onboarding now calls the same service, so the application has no competing bare-company create path. No posting, inventory movement, approval, tax-engine, transaction-import, or unrelated API behavior changed.
 - **Business objective:** A single guided flow that stands up a fully transactable company from the underlying seed/provisioning capabilities.
 - **Gap IDs included:** MD-08 (High, umbrella).
 - **Scope:** An orchestration function/flow assembling COA, periods, series, UOM, tax codes, config, compliance, and currency into one guided, idempotent provisioning path.
-- **Exclusions:** The underlying capabilities themselves (MDP-05/06/07 deliver them); import tooling (MDP-15).
+- **Exclusions:** Posting and transaction readiness; inventory movements; approval routing; generic master-data import/export internals (MDP-15).
 - **Prerequisites:** MDP-05, MDP-06, MDP-07.
 - **Dependent modules & engines:** all Setup engines; Setup & Master Data module.
 - **Complexity:** Large.
 - **Impact:**
-  - *Database:* orchestration function only.
+  - *Database:* template/module/run metadata plus validation and atomic orchestration RPCs.
   - *UI:* **new multi-step wizard.**
   - *Security & RLS:* admin-gated; atomic provisioning.
   - *Audit:* provisioning provenance.
-  - *Migration & seed:* orchestration; no new base data.
+  - *Migration & seed:* PH_STANDARD company template and module composition; two missing PH_STANDARD control accounts.
   - *Reporting:* none directly.
 - **Regression risks:** Medium — relies on prior packages; partial provisioning must be atomic/idempotent.
 - **Deliverables:** Provisioning wizard orchestrating all setup defaults.
-- **Acceptance criteria:** One guided flow produces a company that can post an end-to-end document with no manual setup; re-run is safe.
-- **Required automated tests:** Integration test: full provisioning → post a document.
-- **Required manual validation:** Complete the wizard for each entity type.
+- **Acceptance criteria:** One guided flow atomically creates a complete configured company from a reusable template; duplicate/retry behavior is deterministic and no failed run retains partial business setup. Posting certification remains outside MDP-08.
+- **Required automated tests:** Full provisioning, permission enforcement, template selection, validation failures, duplicate prevention, idempotency, company isolation, audit, and rollback.
+- **Required manual validation:** Browser/hosted walkthrough remains part of later Setup & Master Data module certification, not this backend-first package freeze.
 - **Checklist sections:** §1 Master Data, §7 UX.
 - **Certification gates affected:** Gates 1, 2, 6, 19, 20; all Setup engines.
 - **Rollback / recovery:** Orchestration must be transactional — a failed run leaves no partial company setup; recovery is re-run after fixing input.
@@ -320,7 +325,10 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 2, 3; Payment engine (indirect).
 - **Rollback / recovery:** Additive; rollback drops new masters/columns; existing free-text/global payment modes still function.
 
-### MDP-12 — Tax Reference Consolidation
+### MDP-12 — Tax Reference Consolidation ✅ DONE (2026-07-22)
+
+**Status: implemented / verified (gap MD-32 was already resolved by prior work).** Migration `20260722000004_mdp12_tax_reference_consolidation.sql`, test `069` (16/16). **Inventory correction — the plan was stale:** the "two parallel ATC representations" no longer exist. `ref_atc_codes` was created (`20260629000007`) then **dropped** (`20260629000014`) with its data + FKs (`receipt_lines.atc_code_id`, `form_2307_tracking.atc_code_id`) migrated/repointed to `atc_codes`; `ewt_codes`/`fwt_codes` were also consolidated away (`20260714000003`). `atc_codes` is the single authoritative ATC source, and `tax_codes`/`vat_codes`/`atc_codes` already share one governance+versioning pattern (effective dating, `supersedes_*`, version-aware uniqueness, immutability-after-use, `fn_tax_code_version_asof`/`fn_atc_version_asof` resolvers, MDP-01 read-only + RPC audit). Every expected-scope item already existed, so building new tables/resolvers would duplicate functionality. This package therefore adds ONLY a thin, additive, **read-only consolidation surface** — `vw_tax_reference_catalog` (unifies `tax_codes` ∪ `atc_codes` with a computed `is_current`) and `fn_tax_reference_asof(reference_type, code, tax_category, as_of)` (a facade delegating to the existing resolvers) — plus a regression test that locks the consolidated invariants. No tax-engine/posting change; no new source of truth; no engineering findings.
+
 - **Business objective:** Remove the risk of divergence between the two parallel ATC representations.
 - **Gap IDs included:** MD-32 (Medium).
 - **Scope:** Consolidate `atc_codes` and `ref_atc_codes` to one authoritative source; repoint FKs; deprecate the duplicate.
@@ -344,7 +352,10 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 7, 15; Tax and Reporting engines.
 - **Rollback / recovery:** Data-migrating — must be reversible with the pre-consolidation snapshot retained; rehearse on clean replay; keep the deprecated table until consumers are verified.
 
-### MDP-13 — Item Master Inventory Readiness
+### MDP-13 — Item Master Inventory Readiness ✅ DONE (2026-07-22)
+
+**Status: implemented (gaps MD-21, MD-22, MD-23, MD-24 resolved).** Migration `20260722000005_mdp13_item_master_inventory_readiness.sql`, test `070` (41/41). Added: (MD-21/22) `company_inventory_config` (company default costing method + negative-stock policy + default warehouse; admin-gated, guarded, audited) with `fn_provision_company_inventory_config` / `fn_validate_company_inventory_config` (MDP-07 pattern), item-level `negative_stock_policy` override, and never-NULL resolvers `fn_item_costing_method` / `fn_item_negative_stock_policy` (item override → company default → literal); (reorder) additive `max_stock_level`/`safety_stock`/`reorder_quantity` (non-negative CHECK) alongside the existing `min_stock_level`/`reorder_point`, plus `preferred_supplier_id` (same-company guard), `track_serial`/`track_batch` capability flags; (MD-23) `item_uom_conversions` (per-item alternate UOMs, factor>0, one-per-UOM); (MD-24) `item_barcodes` (multi-barcode, one-primary, unique-per-company; single `items.barcode` preserved) and `item_media` (image/document metadata, one-primary). All child masters share a company-isolation guard (`fn_item_child_company_guard`), member-gated RLS, and MDP-02 audit. No inventory movement/valuation/costing engine, no UI, no posting change; existing items untouched (resolvers avoid destructive `costing_method` backfill). No engineering findings.
+
 - **Business objective:** Complete item-master fields that Phase 4 (Inventory) certification will depend on.
 - **Gap IDs included:** MD-21, MD-22 (Medium), MD-23, MD-24 (Low).
 - **Scope:** Negative-stock policy field (company/item); enforced costing method with a company default; item UOM conversions; item media/barcodes.
@@ -368,49 +379,42 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 - **Certification gates affected:** Gates 2, 9; Inventory Engine (invariants 10, 21).
 - **Rollback / recovery:** Additive; rollback drops fields; costing backfill is deterministic and does not alter posted movements.
 
-### MDP-14 — Approval Matrix Integration
-- **Business objective:** Make the existing approval infrastructure a usable, role-based approval matrix.
-- **Gap IDs included:** MD-33 (Medium).
-- **Scope:** Role-based approver assignment; integrate approval routing on at least one document type; SOD enforcement (creator ≠ approver where configured).
-- **Exclusions:** Building the role model (MDP-03 delivers it); rolling approval to every document type (incremental after proof).
-- **Prerequisites:** MDP-03 (role model).
-- **Dependent modules & engines:** Approval & Workflow Engine, Permissions Engine; Sales/AR and other transaction modules.
-- **Complexity:** Medium.
-- **Impact:**
-  - *Database:* approver-assignment config; instance wiring.
-  - *UI:* approval config + inbox.
-  - *Security & RLS:* SOD enforcement.
-  - *Audit:* approval events.
-  - *Migration & seed:* config tables.
-  - *Reporting:* approval status visibility.
-- **Regression risks:** Medium — must not block posting where approval is unconfigured; SOD must be provable.
-- **Deliverables:** Role-based approver assignment; integrated routing on one document type.
-- **Acceptance criteria:** Approval routes by role; SOD prevents self-approval where configured; unconfigured documents post normally.
-- **Required automated tests:** pgTAP/integration on routing and SOD.
-- **Required manual validation:** Route a document through approval as different roles.
-- **Checklist sections:** §2 Transactions, §13 Security.
-- **Certification gates affected:** Gates 4, 5; Approval & Workflow Engine.
-- **Rollback / recovery:** Config-driven; rollback disables routing and restores direct approval; no posted data affected.
+### MDP-14 — Approval Matrix Integration ✅ DONE (2026-07-22)
 
-### MDP-15 — Master-Data Import/Export Tooling
+**Status: implemented (gap MD-33 resolved).** Migration `20260722000009_mdp14_approval_matrix_integration.sql`, focused test `074` (61/61), targeted tests 011/014/050/071/072/073 (171/171), and complete pgTAP lane 74 files / 1,568 assertions. The implementation extends the existing workflow/step/instance tables rather than creating a second approval system; adds an audited `approval_requests` lifecycle header; maps steps to existing membership role codes or users; resolves company, optional branch, module/record, action, amount, currency, requester context, effective dates, and active state; and exposes server-authoritative decision, submission, approve, reject, withdraw, status, and inbox RPCs.
+
+- **Business objective:** Make the existing approval infrastructure a usable, role-based approval matrix.
+- **Gap IDs included:** MD-33 (Medium), resolved.
+- **Implemented scope:** Deterministic multi-level role/user routing; MDP-03 permission, branch-scope, and enforced/advisory SOD integration; requester/approver separation; inactive-user and missing-approver validation; version-bound stale-request protection; duplicate actionable-request uniqueness; row locking and lifecycle guards; MDP-02 audit reuse; role-aware configuration and inbox exposure on the existing page; opt-in approval enforcement for configured MDP-15 import commits.
+- **Rule precedence:** Highest constrained-criteria count first; then branch, document, action, requester user, requester role, currency, non-`always` condition, highest matching amount threshold, explicit priority, newest effective start, creation time, and UUID. This guarantees a more specific valid rule wins before broader fallback rules.
+- **Default behavior:** No approval rules are seeded. Preview imports and all unconfigured workflows retain prior behavior. MDP-08 provisioning remains compatible and does not create unsafe rules.
+- **Exclusions:** Authentication/RLS redesign; new role model; posting/inventory/tax changes; transaction-wide rollout; approval bypass; transaction workspace redesign.
+- **Dependent modules & engines:** Approval & Workflow Engine, Permissions/RLS Engine, Audit Engine; future transaction consumers.
+- **UI:** Existing Approval Workflow page now supports current rule criteria, role-code steps, permission-aware maintenance, and the server-filtered inbox. It does not claim transaction-wide support.
+- **Security and concurrency:** Request/instance mutations are RPC-only; tenant/branch permissions and route eligibility are rechecked server-side; approvals lock the request and current instance; stale, repeated, self, wrong-role, inactive-user, and invalid-state actions are denied.
+- **Rollback / recovery:** Additive/configuration-first. Removing or deactivating a rule restores unconfigured behavior; no default rules or posted-data changes are introduced. Migration replay was executed a second time with `ON_ERROR_STOP=1` and passed.
+- **Certification impact:** All Master Data implementation packages are complete, but Setup & Master Data is not Certified. Approval & Workflow and Permissions/RLS also remain uncertified; AUD-055 remains active and broad transaction rollout is deferred.
+
+### MDP-15 — Master-Data Import/Export Tooling ✅ DONE
 - **Business objective:** Enable practical onboarding import and non-trapping export of master data.
 - **Gap IDs included:** MD-34 (Medium), MD-35 (Low).
-- **Scope:** Validated master-data import templates with error reporting and safe rollback; standardized master-data export.
-- **Exclusions:** Transaction/opening-balance import (Phase 11); report export (Phase 8).
+- **Implemented evidence:** migration `20260722000006_mdp15_master_data_import_export.sql`; test `supabase/tests/071_mdp15_master_data_import_export_test.sql` (38 assertions, passed 2026-07-22 after clean local migration replay).
+- **Scope:** Backend-first validated master-data import templates with error reporting, preview, idempotent commit, rollback-safe execution, company isolation, import/export operation audit, and standardized deterministic JSON export.
+- **Exclusions:** Transaction/opening-balance import (Phase 11); report export (Phase 8); UI wizard/screens.
 - **Prerequisites:** All master schemas finalized (MDP-04, 05, 07, 09, 10, 11, 13) so templates match the final shape.
 - **Dependent modules & engines:** all master-owning modules; Attachment & Traceability Engine (provenance).
 - **Complexity:** Large.
 - **Impact:**
-  - *Database:* staging/validation structures.
-  - *UI:* import/export screens.
+  - *Database:* registry, import batch/row logs, export logs, validation/import/export RPCs.
+  - *UI:* none in this package; future screens can call the backend RPCs.
   - *Security & RLS:* import must respect RLS and governance (no bypass).
   - *Audit:* import provenance.
   - *Migration & seed:* tooling, not base data.
   - *Reporting:* export formats.
 - **Regression risks:** Low (additive) — but import must validate and roll back cleanly and never bypass governance/RLS.
-- **Deliverables:** Validated import templates; standardized export.
-- **Acceptance criteria:** A client's master data imports with error reporting and safe rollback; exports match on-screen values.
-- **Required automated tests:** Import validation + rollback tests; export parity checks.
+- **Deliverables:** `master_data_import_registry`, import templates, `fn_validate_master_data_import`, `fn_import_master_data`, `fn_export_master_data`, `fn_export_master_data_package`, import/export audit logs.
+- **Acceptance criteria:** Representative current masters validate/import with row-level errors, preview no-op, duplicate handling, idempotency, rollback on commit failure, company isolation, hierarchy preservation, deterministic export hash/logging, and statutory tax references remain governed/export-only.
+- **Required automated tests:** Done in test 071: import validation + rollback tests; export completeness/hash checks; isolation and hierarchy regression.
 - **Required manual validation:** Import a sample dataset and export it back.
 - **Checklist sections:** §10 Import/Export, §11 Opening Balance & Migration.
 - **Certification gates affected:** Gates 2, 22; Attachment & Traceability Engine; supports client-exit operational requirements.
@@ -420,32 +424,34 @@ Gaps were grouped by the object they change and the concern they serve, so each 
 
 | Seq | Package | Complexity | Key dependency | Rationale |
 | --- | --- | --- | --- | --- |
-| 1 | MDP-01 Tax-Reference Write Governance | Small | none | Closes the sole Critical gap; protects tax integrity; proven pattern |
-| 2 | MDP-02 Master-Data Audit Coverage | Small–Med | after MDP-01 | Cheap, high governance value; strengthens all later work |
-| 3 | MDP-03 Access Control & SOD | Large | none | Foundational security; unblocks approvals; highest risk, do early with full regression |
-| 4 | MDP-04 Chart of Accounts Enrichment | Med–Large | none | Foundation for FS and for provisioning templates |
-| 5 | MDP-06 Fiscal Calendar & Number Series | Medium | none | Independent; unblocks posting/numbering |
-| 6 | MDP-05 Company Setup Defaults & Templates | Large | MDP-04 | Seeds usable COA/UOM/withholding |
+| 1 | MDP-01 Tax-Reference Write Governance ✅ DONE | Small | none | Closes the sole Critical gap; protects tax integrity; proven pattern |
+| 2 | MDP-02 Master-Data Audit Coverage ✅ DONE | Small–Med | after MDP-01 | Cheap, high governance value; strengthens all later work |
+| 3 | MDP-03 Access Control & SOD ✅ DONE | Large | none | Foundational security; unblocks approvals; highest risk, validated with full regression |
+| 4 | MDP-04 Chart of Accounts Enrichment ✅ DONE | Med–Large | none | Foundation for FS and for provisioning templates |
+| 5 | MDP-06 Fiscal Calendar & Number Series ✅ DONE | Medium | none | Independent; unblocks posting/numbering |
+| 6 | MDP-05 Company Setup Defaults & Templates ✅ DONE | Large | MDP-04 | Seeds usable COA/UOM/withholding |
 | 7 | MDP-07 Config, Compliance & Currency ✅ DONE | Medium | MDP-04, 05, 01 | Completes transactable-company config |
-| 8 | MDP-08 Guided Provisioning Wizard | Large | MDP-05, 06, 07 | Orchestrates the seed capabilities |
+| 8 | MDP-08 Guided Provisioning Wizard ✅ DONE | Large | MDP-03, 05, 06, 07, 09, 11, 13 | Atomic template orchestration and guided UI delivered |
 | 9 | MDP-09 Dimension Masters ✅ DONE | Med–Large | coordinate PXL-AUD-053 | Governs Project/Location/Functional Entity |
 | 10 | MDP-10 Party Masters Enrichment ✅ DONE | Medium | none | Groups, contacts, TIN control |
 | 11 | MDP-11 Attribution & Reference Masters ✅ DONE | Small–Med | none | Salesperson, bank, payment modes |
-| 12 | MDP-12 Tax Reference Consolidation | Medium | MDP-01 | Removes ATC divergence risk |
-| 13 | MDP-13 Item Master Inventory Readiness | Medium | before Phase 4 | Prepares item master for Inventory phase |
-| 14 | MDP-14 Approval Matrix Integration | Medium | MDP-03 | Role-based approvals (Phase 2) |
-| 15 | MDP-15 Master-Data Import/Export | Large | schemas final | Onboarding import + export; runs last |
+| 12 | MDP-12 Tax Reference Consolidation ✅ DONE | Medium | MDP-01 | Removes ATC divergence risk (already consolidated; verified) |
+| 13 | MDP-13 Item Master Inventory Readiness ✅ DONE | Medium | before Phase 4 | Prepares item master for Inventory phase |
+| 14 | MDP-14 Approval Matrix Integration ✅ DONE | Medium | MDP-03 | Role-based, version-bound approval foundation and bounded MDP-15 import integration delivered |
+| 15 | MDP-15 Master-Data Import/Export ✅ DONE | Large | schemas final | Backend import/export foundation implemented after schema-shaping packages |
+
+Current remaining Master Data implementation packages: **none**. All 15 packages are implemented and validated. Module certification remains a separate evidence review.
 
 ## Roadmap-level notes
 
-- **Dependencies:** the only hard chains are MDP-04 → MDP-05 → (MDP-07, MDP-08); MDP-01 → MDP-12; MDP-03 → MDP-14; and MDP-15 after all schema-changing masters. MDP-02, MDP-06, MDP-09, MDP-10, MDP-11, MDP-13 are largely independent and can be reordered around capacity.
-- **Highest regression risk:** MDP-03 (repo-wide RLS/permission change) — must run the full isolation/RLS lane; then MDP-08 and MDP-04 by breadth of consumers.
-- **Hosted validation dependency:** MDP-01 (like PXL-AUD-063) can be fully proven locally but its hosted `pg_policies` confirmation rides the authorized-operator step that also gates **PXL-AUD-055** (externally deferred key rotation). Plan MDP-01 to land with local clean-replay evidence and an open hosted-confirmation dependency, not a blocked implementation.
+- **Dependencies:** completed chains include MDP-04 → MDP-05 → MDP-07 → MDP-08, MDP-01 → MDP-12, all schema-shaping masters through MDP-13, backend import/export through MDP-15, access/SOD foundation through MDP-03, and approval integration through MDP-14.
+- **Highest remaining regression risk:** Broad transaction adoption of the approval foundation is deferred and must be certified per consumer; it is not a remaining Master Data implementation package.
+- **Hosted validation dependency:** MDP-01 and PXL-AUD-063 are locally proven and recorded Retested Passed. The former PXL-AUD-055 operator dependency is resolved; the hosted policy re-query is still unexecuted and remains separate read-only certification evidence, not a remaining MDP implementation package.
 - **Certification linkage:** completing these packages advances Setup & Master Data and the Permissions/RLS, Dimension, and (via MDP-01/12) Tax engines toward their gates; **no package certifies a module on its own**, and status changes only in [`PXL_CERTIFICATION_MATRIX.md`](PXL_CERTIFICATION_MATRIX.md) after the standards' evidence is met.
 
 ## Call-outs
 
 - **Packages identified:** 15 (MDP-01 … MDP-15), covering all 35 gaps (MD-01 … MD-35) with no overlap.
-- **Highest-risk package:** MDP-03 (Access Control & SOD) — changes access control across every table.
-- **Smallest safe first package:** MDP-01 (Tax-Reference Write Governance) — one migration + one test, on a pattern already proven under PXL-AUD-063.
-- **First implementation session:** MDP-01, beginning by raising the formal finding for the ungoverned `tax_codes`/`vat_codes`/`atc_codes` writes.
+- **Highest-risk packages completed:** MDP-08 (Guided Company Provisioning) and MDP-14 (Approval Matrix Integration), validated with 50 and 61 focused assertions respectively plus the complete 74-file / 1,568-assertion lane.
+- **Recommended next action:** Setup & Master Data Module Certification Review.
+- **Remaining implementation package:** None.

@@ -1,58 +1,33 @@
 -- Phase 3 hosted-safe canonical dataset verification.
--- This file creates temporary session tables only and does not mutate hosted data.
+-- Pure read path: psql generates one count SELECT per public base table.
 
-CREATE TEMPORARY TABLE phase3_table_counts (
-  table_name text,
-  has_company_id boolean,
-  hosted_rows bigint,
-  canonical_rows bigint
-);
+\set ON_ERROR_STOP on
+BEGIN TRANSACTION READ ONLY;
 
-DO $phase3$
-DECLARE
-  table_record record;
-  hosted_count bigint;
-  canonical_count bigint;
-BEGIN
-  FOR table_record IN
-    SELECT
-      tables.table_name,
-      EXISTS (
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND table_name = tables.table_name
-          AND column_name = 'company_id'
-      ) AS has_company_id
-    FROM information_schema.tables AS tables
-    WHERE tables.table_schema = 'public'
-      AND tables.table_type = 'BASE TABLE'
-    ORDER BY tables.table_name
-  LOOP
-    EXECUTE format('SELECT count(*) FROM public.%I', table_record.table_name)
-      INTO hosted_count;
-
-    IF table_record.has_company_id THEN
-      EXECUTE format(
-        'SELECT count(*) FROM public.%I AS source JOIN public.companies AS company ON company.id = source.company_id WHERE company.trade_name LIKE %L',
-        table_record.table_name,
-        'DEMO-%'
-      ) INTO canonical_count;
-    ELSE
-      canonical_count := NULL;
-    END IF;
-
-    INSERT INTO phase3_table_counts
-    VALUES (
-      table_record.table_name,
-      table_record.has_company_id,
-      hosted_count,
-      canonical_count
-    );
-  END LOOP;
+SELECT CASE
+  WHEN EXISTS (
+    SELECT 1
+    FROM information_schema.columns
+    WHERE table_schema = tables.table_schema
+      AND table_name = tables.table_name
+      AND column_name = 'company_id'
+  ) THEN format(
+    'SELECT %L::text AS table_name, true AS has_company_id, count(*)::bigint AS hosted_rows, count(*) FILTER (WHERE company.trade_name LIKE ''DEMO-%%'')::bigint AS canonical_rows FROM %I.%I AS source LEFT JOIN public.companies AS company ON company.id = source.company_id',
+    tables.table_name,
+    tables.table_schema,
+    tables.table_name
+  )
+  ELSE format(
+    'SELECT %L::text AS table_name, false AS has_company_id, count(*)::bigint AS hosted_rows, NULL::bigint AS canonical_rows FROM %I.%I',
+    tables.table_name,
+    tables.table_schema,
+    tables.table_name
+  )
 END
-$phase3$;
+FROM information_schema.tables AS tables
+WHERE tables.table_schema = 'public'
+  AND tables.table_type = 'BASE TABLE'
+ORDER BY tables.table_name
+\gexec
 
-SELECT *
-FROM phase3_table_counts
-ORDER BY table_name;
+COMMIT;

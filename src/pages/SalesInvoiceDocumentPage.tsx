@@ -34,6 +34,8 @@ type SIRow = {
   due_date: string | null; currency_code: string
   vat_price_basis: 'exclusive' | 'inclusive'
   department_id: string | null; cost_center_id: string | null
+  project_id: string | null; location_id: string | null
+  functional_entity_id: string | null
   warehouse_id: string | null; salesperson_id: string | null
   account_owner_id: string | null
   reference: string | null; memo: string | null
@@ -55,6 +57,7 @@ type LineRow = {
   net_amount: number; vat_code_id: string | null; vat_amount: number; total_amount: number
   revenue_account_id: string | null
   warehouse_id: string | null; department_id: string | null; cost_center_id: string | null
+  project_id: string | null; location_id: string | null; functional_entity_id: string | null
   salesperson_id: string | null; inventory_account_id: string | null; cogs_account_id: string | null
   unit_cost: number | null; inventory_cost: number | null; inventory_transaction_id: string | null
   remarks: string | null; source_document_type: string | null; source_line_id: string | null
@@ -78,10 +81,13 @@ type UomRef = { code: string; description: string }
 type VatRef = { code: string; classification: string; rate: number }
 type DepartmentRef = { code: string; name: string }
 type CostCenterRef = { code: string; name: string }
+type DimensionRef = { code: string; name: string }
 type WarehouseRef = { code: string; name: string }
 type EmployeeRef = { number: string; name: string }
 type VoidReason = { id: string; code: string; description: string }
-type Collection = { paid: number; cwt: number; balance: number; receiptCount: number; status: string | null }
+type Collection = { paid: number; cwt: number; credit: number; balance: number; receiptCount: number; status: string | null }
+type CreditMemoRef = { id: string; cm_number: string; cm_date: string; total_amount: number; status: string }
+type SalesOrderSourceRef = { id: string; so_number: string; so_date: string; total_amount: number; approval_status: string; fulfillment_status: string }
 type ApprovalRow = {
   id: string; status: string; required_approver_type: string
   required_approver_id: string | null; actual_approver_id: string | null
@@ -134,6 +140,9 @@ export default function SalesInvoiceDocumentPage() {
   const [vatCodes, setVatCodes] = useState<Record<string, VatRef>>({})
   const [departments, setDepartments] = useState<Record<string, DepartmentRef>>({})
   const [costCenters, setCostCenters] = useState<Record<string, CostCenterRef>>({})
+  const [projects, setProjects] = useState<Record<string, DimensionRef>>({})
+  const [locations, setLocations] = useState<Record<string, DimensionRef>>({})
+  const [functionalEntities, setFunctionalEntities] = useState<Record<string, DimensionRef>>({})
   const [warehouses, setWarehouses] = useState<Record<string, WarehouseRef>>({})
   const [employees, setEmployees] = useState<Record<string, EmployeeRef>>({})
   const [branchName, setBranchName] = useState('')
@@ -145,7 +154,7 @@ export default function SalesInvoiceDocumentPage() {
   const [recentInvoices, setRecentInvoices] = useState<RecentInvoice[]>([])
   const [recentPayments, setRecentPayments] = useState<RecentPayment[]>([])
   const [agingBalances, setAgingBalances] = useState<AgingBalance[]>([])
-  const [collection, setCollection] = useState<Collection>({ paid: 0, cwt: 0, balance: 0, receiptCount: 0, status: null })
+  const [collection, setCollection] = useState<Collection>({ paid: 0, cwt: 0, credit: 0, balance: 0, receiptCount: 0, status: null })
   const [approvals, setApprovals] = useState<ApprovalRow[]>([])
   const [relatedRows, setRelatedRows] = useState<RelatedDocRow[]>([])
   const [accountingImpact, setAccountingImpact] = useState<ServerGLImpact | null>(null)
@@ -170,7 +179,7 @@ export default function SalesInvoiceDocumentPage() {
     setSi(inv)
 
     const todayIso = new Date().toISOString().slice(0, 10)
-    const [lineRes, accRes, itemRes, uomRes, vatRes, deptRes, ccRes, whRes, empRes, brRes, termRes, custRes, jeRes, rlRes, reasonRes, apprRes, seriesRes, customerInvoiceRes, customerReceiptRes, agingRes, impactRes] = await Promise.all([
+    const [lineRes, accRes, itemRes, uomRes, vatRes, deptRes, ccRes, projectRes, locationRes, entityRes, whRes, empRes, brRes, termRes, custRes, jeRes, rlRes, cmRes, reasonRes, apprRes, seriesRes, customerInvoiceRes, customerReceiptRes, agingRes, impactRes] = await Promise.all([
       supabase.from('sales_invoice_lines').select('*').eq('sales_invoice_id', id).order('line_number'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', inv.company_id),
       supabase.from('items').select('id,item_code,description,description_long').eq('company_id', inv.company_id),
@@ -178,6 +187,9 @@ export default function SalesInvoiceDocumentPage() {
       supabase.from('vat_codes').select('id,vat_code,vat_classification,tax_codes(rate)'),
       supabase.from('departments').select('id,department_code,department_name').eq('company_id', inv.company_id),
       supabase.from('cost_centers').select('id,cost_center_code,cost_center_name').eq('company_id', inv.company_id),
+      supabase.from('projects').select('id,project_code,project_name').eq('company_id', inv.company_id),
+      supabase.from('locations').select('id,location_code,location_name').eq('company_id', inv.company_id),
+      supabase.from('functional_entities').select('id,entity_code,entity_name').eq('company_id', inv.company_id),
       supabase.from('warehouses').select('id,warehouse_code,warehouse_name').eq('company_id', inv.company_id),
       supabase.from('employees').select('id,employee_number,first_name,last_name').eq('company_id', inv.company_id),
       supabase.from('branches').select('id,branch_name').eq('id', inv.branch_id).maybeSingle(),
@@ -186,6 +198,7 @@ export default function SalesInvoiceDocumentPage() {
       supabase.from('journal_entries').select('id,je_number,je_date,status,total_debit')
         .eq('company_id', inv.company_id).eq('reference_doc_type', 'SI').eq('reference_doc_id', inv.id).order('je_date'),
       supabase.from('receipt_lines').select('receipt_id,payment_amount,cwt_amount').eq('invoice_id', inv.id),
+      supabase.from('credit_memos').select('id,cm_number,cm_date,total_amount,status').eq('invoice_id', inv.id).in('status', ['approved', 'applied']).order('cm_date'),
       supabase.from('void_reason_codes').select('id,code,description').eq('is_active', true).order('code'),
       supabase.from('approval_instances').select('*').eq('source_document_id', inv.id).order('step_sequence'),
       supabase.from('number_series').select('prefix,number_length,reset_frequency').eq('company_id', inv.company_id).eq('branch_id', inv.branch_id).eq('document_code', 'SI').eq('is_active', true).limit(1).maybeSingle(),
@@ -195,7 +208,26 @@ export default function SalesInvoiceDocumentPage() {
       supabase.rpc('fn_preview_gl_impact', { p_source_doc_type: 'SI', p_source_doc_id: inv.id, p_posting_date: inv.date }),
     ])
 
-    setLines((lineRes.data ?? []) as unknown as LineRow[])
+    const loadedLines = (lineRes.data ?? []) as unknown as LineRow[]
+    setLines(loadedLines)
+    const sourceLineIds = loadedLines
+      .filter(line => line.source_document_type === 'sales_order' && line.source_line_id)
+      .map(line => line.source_line_id as string)
+    let sourceOrders: SalesOrderSourceRef[] = []
+    if (sourceLineIds.length > 0) {
+      const { data: sourceLinks } = await supabase
+        .from('sales_order_lines')
+        .select('sales_order_id')
+        .in('id', sourceLineIds)
+      const sourceOrderIds = [...new Set((sourceLinks ?? []).map(link => link.sales_order_id))]
+      if (sourceOrderIds.length > 0) {
+        const { data: sourceOrderRows } = await supabase
+          .from('sales_orders')
+          .select('id,so_number,so_date,total_amount,approval_status,fulfillment_status')
+          .in('id', sourceOrderIds)
+        sourceOrders = (sourceOrderRows ?? []) as SalesOrderSourceRef[]
+      }
+    }
     const map: Record<string, AccountRef> = {}
     for (const a of accRes.data ?? []) map[a.id] = { code: a.account_code, name: a.account_name }
     setAccounts(map)
@@ -217,6 +249,15 @@ export default function SalesInvoiceDocumentPage() {
     const costCenterMap: Record<string, CostCenterRef> = {}
     for (const costCenter of ccRes.data ?? []) costCenterMap[costCenter.id] = { code: costCenter.cost_center_code, name: costCenter.cost_center_name }
     setCostCenters(costCenterMap)
+    const projectMap: Record<string, DimensionRef> = {}
+    for (const project of projectRes.data ?? []) projectMap[project.id] = { code: project.project_code, name: project.project_name }
+    setProjects(projectMap)
+    const locationMap: Record<string, DimensionRef> = {}
+    for (const location of locationRes.data ?? []) locationMap[location.id] = { code: location.location_code, name: location.location_name }
+    setLocations(locationMap)
+    const functionalEntityMap: Record<string, DimensionRef> = {}
+    for (const entity of entityRes.data ?? []) functionalEntityMap[entity.id] = { code: entity.entity_code, name: entity.entity_name }
+    setFunctionalEntities(functionalEntityMap)
     const warehouseMap: Record<string, WarehouseRef> = {}
     for (const warehouse of whRes.data ?? []) warehouseMap[warehouse.id] = { code: warehouse.warehouse_code, name: warehouse.warehouse_name }
     setWarehouses(warehouseMap)
@@ -275,19 +316,37 @@ export default function SalesInvoiceDocumentPage() {
     const linkedReceipts = receiptIds
       .map(receiptId => postedReceiptsById.get(receiptId))
       .filter((receipt): receipt is RecentPayment => Boolean(receipt))
-    const balance = num(inv.total_amount) - paid - cwtColl
+    const creditMemos = (cmRes.data ?? []) as CreditMemoRef[]
+    const appliedCredit = creditMemos
+      .filter(creditMemo => creditMemo.status === 'applied')
+      .reduce((sum, creditMemo) => sum + num(creditMemo.total_amount), 0)
+    const balance = num(inv.total_amount) - paid - cwtColl - appliedCredit
+    const totalApplied = paid + cwtColl + appliedCredit
     const collStatus = inv.status !== 'posted' ? null
-      : balance <= 0.005 && (paid + cwtColl) > 0 ? 'Paid'
-      : (paid + cwtColl) > 0 ? 'Partially Paid' : 'Open'
-    setCollection({ paid, cwt: cwtColl, balance, receiptCount: receiptIds.length, status: collStatus })
+      : balance <= 0.005 && totalApplied > 0 ? 'Paid'
+      : totalApplied > 0 ? 'Partially Paid' : 'Open'
+    setCollection({ paid, cwt: cwtColl, credit: appliedCredit, balance, receiptCount: receiptIds.length, status: collStatus })
 
     // Related-document chain (§16).
     const posted = inv.status === 'posted'
     const rows: RelatedDocRow[] = [
       { key: 'quo', relationship: 'Source Quotation', docType: 'Quotation', direction: 'upstream', note: 'Not linked on this document' },
-      { key: 'so', relationship: 'Source Sales Order', docType: 'Sales Order', direction: 'upstream', note: 'Not linked on this document' },
+      ...sourceOrders.map(order => ({
+        key: `so-${order.id}`,
+        relationship: 'Source Sales Order',
+        docType: 'Sales Order',
+        direction: 'upstream' as const,
+        number: order.so_number,
+        date: order.so_date,
+        status: order.fulfillment_status,
+        amount: num(order.total_amount),
+        href: '/sales-orders',
+      })),
+      ...(sourceOrders.length === 0
+        ? [{ key: 'so', relationship: 'Source Sales Order', docType: 'Sales Order', direction: 'upstream' as const, note: 'Not linked on this document' }]
+        : []),
       { key: 'dr', relationship: 'Source Delivery Receipt', docType: 'Delivery Receipt', direction: 'upstream', note: 'Not linked on this document' },
-      { key: 'si', relationship: 'This document', docType: 'Sales Invoice', direction: 'current', number: inv.si_number, date: inv.date, status: statusToShared[inv.status], amount: num(inv.total_amount), appliedAmount: paid + cwtColl, openBalance: balance },
+      { key: 'si', relationship: 'This document', docType: 'Sales Invoice', direction: 'current', number: inv.si_number, date: inv.date, status: statusToShared[inv.status], amount: num(inv.total_amount), appliedAmount: totalApplied, openBalance: balance },
       ...linkedReceipts.map(receipt => {
         const application = appliedByReceipt.get(receipt.id) ?? { payment: 0, cwt: 0 }
         const applied = application.payment + application.cwt
@@ -308,7 +367,22 @@ export default function SalesInvoiceDocumentPage() {
       ...(linkedReceipts.length === 0
         ? [{ key: 'or', relationship: 'Collection', docType: 'Official Receipt', direction: 'downstream' as const, action: posted ? { label: 'Create Receipt', href: '/receipts' } : null }]
         : []),
-      { key: 'cm', relationship: 'Adjustment', docType: 'Credit Memo', direction: 'downstream', action: posted ? { label: 'Create Credit Memo', href: '/credit-memos' } : null },
+      ...creditMemos.map(creditMemo => ({
+        key: `cm-${creditMemo.id}`,
+        relationship: 'Adjustment',
+        docType: 'Credit Memo',
+        direction: 'downstream' as const,
+        number: creditMemo.cm_number,
+        date: creditMemo.cm_date,
+        status: creditMemo.status,
+        amount: num(creditMemo.total_amount),
+        appliedAmount: creditMemo.status === 'applied' ? num(creditMemo.total_amount) : 0,
+        openBalance: balance,
+        href: '/credit-memos',
+      })),
+      ...(creditMemos.length === 0
+        ? [{ key: 'cm', relationship: 'Adjustment', docType: 'Credit Memo', direction: 'downstream' as const, action: posted ? { label: 'Create Credit Memo', href: '/credit-memos' } : null }]
+        : []),
       { key: 'dm', relationship: 'Adjustment', docType: 'Debit Memo', direction: 'downstream' },
       { key: 'ret', relationship: 'Return', docType: 'Customer Return', direction: 'downstream' },
       ...(jeRes.data ?? []).map(je => ({
@@ -449,6 +523,9 @@ export default function SalesInvoiceDocumentPage() {
   const termLabel = (tid: string | null) => (tid && termsName[tid]) || '—'
   const departmentLabel = (id?: string | null) => id && departments[id] ? `${departments[id].code} ${departments[id].name}` : null
   const costCenterLabel = (id?: string | null) => id && costCenters[id] ? `${costCenters[id].code} ${costCenters[id].name}` : null
+  const projectLabel = (id?: string | null) => id && projects[id] ? `${projects[id].code} ${projects[id].name}` : null
+  const locationLabel = (id?: string | null) => id && locations[id] ? `${locations[id].code} ${locations[id].name}` : null
+  const functionalEntityLabel = (id?: string | null) => id && functionalEntities[id] ? `${functionalEntities[id].code} ${functionalEntities[id].name}` : null
   const warehouseLabel = (id?: string | null) => id && warehouses[id] ? `${warehouses[id].code} ${warehouses[id].name}` : null
   const employeeLabel = (id?: string | null) => id && employees[id] ? `${employees[id].number} ${employees[id].name}` : null
   const assignedContextFields = [
@@ -456,6 +533,9 @@ export default function SalesInvoiceDocumentPage() {
     { label: 'Salesperson', value: employeeLabel(si.salesperson_id) },
     { label: 'Department', value: departmentLabel(si.department_id) },
     { label: 'Cost Center', value: costCenterLabel(si.cost_center_id) },
+    { label: 'Project', value: projectLabel(si.project_id) },
+    { label: 'Location', value: locationLabel(si.location_id) },
+    { label: 'Functional Entity', value: functionalEntityLabel(si.functional_entity_id) },
     { label: 'Default Warehouse', value: warehouseLabel(si.warehouse_id) },
   ].filter(field => field.value)
   const availableCredit = customer?.credit_limit != null && customerOutstanding != null
@@ -522,6 +602,9 @@ export default function SalesInvoiceDocumentPage() {
   const lineWarehouse = (line: LineRow) => warehouseLabel(line.warehouse_id) || ''
   const lineDepartment = (line: LineRow) => departmentLabel(line.department_id || si.department_id) || ''
   const lineCostCenter = (line: LineRow) => costCenterLabel(line.cost_center_id || si.cost_center_id) || ''
+  const lineProject = (line: LineRow) => projectLabel(line.project_id || si.project_id) || ''
+  const lineLocation = (line: LineRow) => locationLabel(line.location_id || si.location_id) || ''
+  const lineFunctionalEntity = (line: LineRow) => functionalEntityLabel(line.functional_entity_id || si.functional_entity_id) || ''
   const lineRevenueAccount = (line: LineRow) => {
     if (!line.revenue_account_id) return 'Unmapped'
     const account = accounts[line.revenue_account_id]
@@ -538,6 +621,9 @@ export default function SalesInvoiceDocumentPage() {
     { key: 'warehouse', header: 'Warehouse', group: 'inventory', defaultWidth: 130, sortValue: lineWarehouse, filterValue: lineWarehouse, exportValue: lineWarehouse, render: line => lineWarehouse(line) || emptyLineValue },
     { key: 'department', header: 'Department', group: 'dimensions', defaultWidth: 130, sortValue: lineDepartment, filterValue: lineDepartment, exportValue: lineDepartment, render: line => lineDepartment(line) || emptyLineValue },
     { key: 'cost_center', header: 'Cost Center', group: 'dimensions', defaultWidth: 130, sortValue: lineCostCenter, filterValue: lineCostCenter, exportValue: lineCostCenter, render: line => lineCostCenter(line) || emptyLineValue },
+    { key: 'project', header: 'Project', group: 'dimensions', defaultWidth: 140, sortValue: lineProject, filterValue: lineProject, exportValue: lineProject, render: line => lineProject(line) || emptyLineValue },
+    { key: 'location', header: 'Location', group: 'dimensions', defaultWidth: 140, sortValue: lineLocation, filterValue: lineLocation, exportValue: lineLocation, render: line => lineLocation(line) || emptyLineValue },
+    { key: 'functional_entity', header: 'Functional Entity', group: 'dimensions', defaultWidth: 160, sortValue: lineFunctionalEntity, filterValue: lineFunctionalEntity, exportValue: lineFunctionalEntity, render: line => lineFunctionalEntity(line) || emptyLineValue },
     { key: 'price', header: 'Unit Price', group: 'sales', align: 'right', defaultWidth: 112, sortValue: line => num(line.unit_price), filterValue: line => num(line.unit_price), exportValue: line => num(line.unit_price), render: line => <AmountCell amount={num(line.unit_price)} /> },
     { key: 'disc_pct', header: 'Discount %', group: 'sales', align: 'right', defaultWidth: 104, sortValue: line => num(line.discount_percent), filterValue: line => num(line.discount_percent), exportValue: line => num(line.discount_percent), render: line => <span className="font-mono">{num(line.discount_percent)}%</span> },
     { key: 'disc_amt', header: 'Discount Amount', group: 'sales', align: 'right', defaultWidth: 132, sortValue: line => num(line.discount_amount), filterValue: line => num(line.discount_amount), exportValue: line => num(line.discount_amount), render: line => <AmountCell amount={num(line.discount_amount)} /> },
@@ -557,7 +643,7 @@ export default function SalesInvoiceDocumentPage() {
     { key: 'branch', header: 'Branch', group: 'dimensions', defaultWidth: 130, sortValue: () => branchName, filterValue: () => branchName, exportValue: () => branchName, render: () => branchName || '—' },
     { key: 'remarks', header: 'Remarks', group: 'reference', defaultWidth: 120, sortValue: line => line.remarks || '', filterValue: line => line.remarks || '', exportValue: line => line.remarks || '', render: line => line.remarks || emptyLineValue },
     { key: 'reference', header: 'External Reference', group: 'reference', defaultWidth: 150, sortValue: () => si.reference || '', filterValue: () => si.reference || '', exportValue: () => si.reference || '', render: () => si.reference || emptyLineValue },
-    { key: 'source_doc', header: 'Source Document', group: 'audit', defaultWidth: 140, sortValue: () => si.reference || '', filterValue: () => si.reference || '', exportValue: () => si.reference || '', render: () => si.reference || emptyLineValue },
+    { key: 'source_doc', header: 'Source Document', group: 'audit', defaultWidth: 180, sortValue: line => line.source_document_type || '', filterValue: line => `${line.source_document_type || ''} ${line.source_line_id || ''}`, exportValue: line => line.source_document_type && line.source_line_id ? `${line.source_document_type}:${line.source_line_id}` : '', render: line => line.source_document_type && line.source_line_id ? <span className="font-mono">{line.source_document_type}:{line.source_line_id.slice(0, 8)}…</span> : emptyLineValue },
     { key: 'journal_entry', header: 'Journal Entry', group: 'audit', defaultWidth: 130, sortValue: () => si.journal_entry_id || '', filterValue: () => si.journal_entry_id ? 'Linked Journal Entry' : '', exportValue: () => si.journal_entry_id ? 'Linked Journal Entry' : '', render: () => si.journal_entry_id ? <button type="button" onClick={() => navigate(`/accounting-trace?sourceType=SI&sourceId=${si.id}`)} className="text-blue-700 hover:underline">Open trace</button> : emptyLineValue },
     { key: 'posting_rule', header: 'Posting Rule', group: 'audit', defaultWidth: 160, sortValue: linePostingRule, filterValue: linePostingRule, exportValue: linePostingRule, render: line => linePostingRule(line) },
     { key: 'created_by', header: 'Created By', group: 'audit', defaultWidth: 150, sortValue: line => userText(line.created_by), filterValue: line => userText(line.created_by), exportValue: line => userText(line.created_by), render: line => userDisplay(line.created_by) },
@@ -567,7 +653,7 @@ export default function SalesInvoiceDocumentPage() {
   ]
   const lineProfiles: LineColumnProfile[] = [
     { key: 'default', label: 'Default', columnKeys: ['no', 'item_code', 'item_desc', 'desc', 'qty', 'uom', 'warehouse', 'price', 'disc_pct', 'vat_code', 'vat_pct', 'net', 'vat_amt', 'total'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
-    { key: 'accounting', label: 'Accounting', columnKeys: ['no', 'item_code', 'desc', 'acct', 'branch', 'department', 'cost_center', 'vat_code', 'vat_amt', 'ewt_code', 'ewt_amt', 'inventory_cost', 'net', 'total'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
+    { key: 'accounting', label: 'Accounting', columnKeys: ['no', 'item_code', 'desc', 'acct', 'branch', 'department', 'cost_center', 'project', 'location', 'functional_entity', 'vat_code', 'vat_amt', 'ewt_code', 'ewt_amt', 'inventory_cost', 'net', 'total'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
     { key: 'tax', label: 'Tax', columnKeys: ['no', 'item_code', 'desc', 'vat_code', 'atc', 'tax_base', 'vat_pct', 'vat_amt', 'ewt_code', 'ewt_amt', 'tax_class'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
     { key: 'audit', label: 'Audit', columnKeys: ['no', 'item_code', 'desc', 'source_doc', 'journal_entry', 'posting_rule', 'inventory_tx', 'created_by', 'created_date', 'uuid', 'status', 'acct', 'branch'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
     { key: 'sales', label: 'Sales', columnKeys: ['no', 'item_code', 'item_desc', 'desc', 'qty', 'uom', 'price', 'disc_pct', 'disc_amt', 'net', 'total'], pinnedColumnKeys: ['no', 'item_code', 'desc'], density: 'compact' },
@@ -585,6 +671,9 @@ export default function SalesInvoiceDocumentPage() {
       { label: 'Warehouse', value: warehouseLabel(selectedLine.warehouse_id) || 'Not assigned' },
       { label: 'Department', value: departmentLabel(selectedLine.department_id || si.department_id) || 'Not assigned' },
       { label: 'Cost Center', value: costCenterLabel(selectedLine.cost_center_id || si.cost_center_id) || 'Not assigned' },
+      { label: 'Project', value: projectLabel(selectedLine.project_id || si.project_id) || 'Not assigned' },
+      { label: 'Location', value: locationLabel(selectedLine.location_id || si.location_id) || 'Not assigned' },
+      { label: 'Functional Entity', value: functionalEntityLabel(selectedLine.functional_entity_id || si.functional_entity_id) || 'Not assigned' },
       { label: 'Salesperson', value: employeeLabel(selectedLine.salesperson_id || si.salesperson_id) || 'Not assigned' },
     ] },
     { key: 'inventory', title: 'Inventory and COGS', fields: [
@@ -599,7 +688,11 @@ export default function SalesInvoiceDocumentPage() {
       { label: 'Last Modified', value: formatDateTime(selectedLine.updated_at) },
       { label: 'Created By', value: userDisplay(selectedLine.created_by) },
     ] },
-    ...(si.reference ? [{ key: 'source', title: 'Source References', fields: [{ label: 'External Reference', value: si.reference }] }] : []),
+    ...((si.reference || selectedLine.source_document_type || selectedLine.source_line_id) ? [{ key: 'source', title: 'Source References', fields: [
+      { label: 'External Reference', value: si.reference || 'Not recorded' },
+      { label: 'Source Document Type', value: selectedLine.source_document_type || 'Not linked' },
+      { label: 'Source Line ID', value: selectedLine.source_line_id ? <span className="font-mono">{selectedLine.source_line_id}</span> : 'Not linked' },
+    ] }] : []),
     { key: 'rule', title: 'Posting Rule Used', fields: [
       { label: 'Account Source', value: selectedLine.revenue_account_id ? 'Item / document line account' : 'Unmapped' },
       { label: 'Account', value: accountLabel(selectedLine.revenue_account_id) },
@@ -650,9 +743,10 @@ export default function SalesInvoiceDocumentPage() {
         { key: 'invoice-total', component: 'Invoice Total', basis: 'Gross customer receivable before receipt applications.', amount: <AmountCell amount={num(si.total_amount)} />, strong: true },
         { key: 'expected-cwt', component: 'Expected CWT', basis: 'Informational withholding estimate until receipt, application, or certificate workflow recognizes actual CWT.', amount: cwt > 0 ? <span>(<AmountCell amount={cwt} />)</span> : <AmountCell amount={0} /> },
         { key: 'expected-net', component: 'Expected Net Collectible', basis: 'Invoice Total less Expected CWT; does not reduce invoice revenue.', amount: <AmountCell amount={num(si.total_amount) - cwt} />, strong: true },
-        { key: 'collected', component: 'Amount Collected', basis: `${collection.receiptCount} posted receipt application${collection.receiptCount !== 1 ? 's' : ''}.`, amount: <AmountCell amount={collection.paid + collection.cwt} /> },
+        { key: 'collected', component: 'Total Applied', basis: 'Posted receipt applications, actual CWT, and applied Credit Memos.', amount: <AmountCell amount={collection.paid + collection.cwt + collection.credit} /> },
         { key: 'payment-applications', component: 'Payment Applications', basis: 'Posted receipts applied to this invoice.', amount: <AmountCell amount={collection.paid} /> },
         { key: 'actual-cwt', component: 'Actual CWT Recognized', basis: 'Recognized only from posted receipt/application evidence.', amount: <AmountCell amount={collection.cwt} /> },
+        { key: 'credit-memos', component: 'Credit Memos Applied', basis: 'Applied Credit Memos linked to this invoice.', amount: <AmountCell amount={collection.credit} /> },
         { key: 'balance-due', component: 'Balance Due', basis: <button type="button" onClick={() => navigate(`/ar-aging?tab=ledger&customerId=${si.customer_id}`)} className="text-blue-700 hover:underline">Open customer ledger</button>, amount: <AmountCell amount={collection.balance} />, strong: true },
       ],
     },
@@ -743,7 +837,7 @@ export default function SalesInvoiceDocumentPage() {
     { key: 'balanced', label: 'Balanced', state: arithmeticBalanced ? 'ok' : 'blocked', detail: 'Net sales plus VAT agrees to the invoice total.' },
     { key: 'period', label: 'Period Open', state: readinessState(/period|fiscal/i) },
     { key: 'branch', label: 'Branch Active', state: branchName ? readinessState(/branch/i) : 'blocked' },
-    { key: 'dimensions', label: 'Operational Dimension Capture', state: assignedContextFields.length > 0 || lines.some(line => line.department_id || line.cost_center_id || line.warehouse_id || line.salesperson_id) ? 'ok' : 'info', detail: assignedContextFields.length > 0 ? 'Source-backed Sales Context dimensions are stored on this invoice.' : 'No operational dimensions assigned.' },
+    { key: 'dimensions', label: 'Operational Dimension Capture', state: assignedContextFields.length > 0 || lines.some(line => line.department_id || line.cost_center_id || line.project_id || line.location_id || line.functional_entity_id || line.warehouse_id || line.salesperson_id) ? 'ok' : 'info', detail: assignedContextFields.length > 0 ? 'Source-backed Sales Context dimensions are stored on this invoice and included in posting previews.' : 'No operational dimensions assigned.' },
     { key: 'series', label: 'Series Valid', state: si.si_number && seriesName ? readinessState(/series|number/i) : 'blocked' },
     { key: 'tax', label: 'Tax Valid', state: lines.every(line => line.vat_code_id || num(line.vat_amount) === 0) ? 'ok' : 'blocked' },
     { key: 'inventory', label: 'Inventory Posted', state: inventoryEvidenceComplete ? 'ok' : 'blocked', detail: inventoryLineCount > 0 ? 'Inventory lines carry warehouse, accounts, and posting evidence.' : 'No inventory impact on this invoice.' },
@@ -1222,7 +1316,7 @@ export default function SalesInvoiceDocumentPage() {
         }}
         metrics={[
           { label: 'Invoice Total', value: <AmountCell amount={num(si.total_amount)} />, emphasis: true },
-          { label: 'Collected', value: <AmountCell amount={collection.paid + collection.cwt} /> },
+          { label: 'Applied', value: <AmountCell amount={collection.paid + collection.cwt + collection.credit} /> },
           { label: 'Balance Due', value: <AmountCell amount={collection.balance} />, emphasis: collection.balance > 0.005 },
         ]}
         meta={[
@@ -1236,7 +1330,7 @@ export default function SalesInvoiceDocumentPage() {
         tabBadges={{ lines: lines.length || undefined }}
         family="sales"
         sidebarPanels={[
-          { key: 'balance', title: 'Balance', content: <div className="space-y-2"><div className="flex items-baseline justify-between gap-3"><span className="pxl-field-label">Invoice Total</span><span className="font-mono text-xs font-semibold"><AmountCell amount={num(si.total_amount)} /></span></div><div className="flex items-baseline justify-between gap-3"><span className="pxl-field-label">Collected</span><span className="font-mono text-xs"><AmountCell amount={collection.paid + collection.cwt} /></span></div><div className="flex items-baseline justify-between gap-3"><span className="pxl-field-label">Balance Due</span><span className="font-mono text-sm font-bold"><AmountCell amount={collection.balance} /></span></div></div> },
+          { key: 'balance', title: 'Balance', content: <div className="space-y-2"><div className="flex items-baseline justify-between gap-3"><span className="pxl-field-label">Invoice Total</span><span className="font-mono text-xs font-semibold"><AmountCell amount={num(si.total_amount)} /></span></div><div className="flex items-baseline justify-between gap-3"><span className="pxl-field-label">Applied</span><span className="font-mono text-xs"><AmountCell amount={collection.paid + collection.cwt + collection.credit} /></span></div><div className="flex items-baseline justify-between gap-3"><span className="pxl-field-label">Balance Due</span><span className="font-mono text-sm font-bold"><AmountCell amount={collection.balance} /></span></div></div> },
           { key: 'tax', title: 'Tax', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Output VAT</span><span className="font-mono text-xs"><AmountCell amount={num(si.total_vat_amount)} /></span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Expected CWT</span><span className="font-mono text-xs"><AmountCell amount={cwt} /></span></div></div> },
           { key: 'gl', title: 'GL Preview', content: <div className="space-y-2"><div className="flex justify-between gap-3"><span className="pxl-field-label">Debit</span><span className="font-mono text-xs"><AmountCell amount={combinedGlDebit} /></span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Credit</span><span className="font-mono text-xs"><AmountCell amount={combinedGlCredit} /></span></div><div className="flex justify-between gap-3"><span className="pxl-field-label">Difference</span><span className={`font-mono text-xs ${Math.abs(combinedGlDifference) > 0.005 ? 'text-red-700' : 'text-green-700'}`}><AmountCell amount={combinedGlDifference} /></span></div></div> },
           { key: 'customer', title: 'Customer', content: <div><button type="button" onClick={openCustomer} className="pxl-customer-link text-left text-xs font-semibold hover:underline">{si.customer_name_snapshot || customer?.registered_name || 'Customer unavailable'}</button><div className="pxl-caption mt-1 font-mono">{si.customer_tin_snapshot ? normalizePhTin(si.customer_tin_snapshot) : 'No TIN snapshot'}</div></div> },

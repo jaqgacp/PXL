@@ -129,7 +129,17 @@ if (recommendedHeadings.length !== 1) {
 }
 const recommended = section(state, '## Recommended Next Task')
 const recommendedIds = [...new Set(recommended.match(/PXL-(?:AUD|DA)-\d+/g) || [])]
-if (recommendedIds.length !== 1) {
+if (active.length === 0) {
+  // Fully-closed certification program: no finding remains open. The
+  // Recommended Next Task must then name no finding and must explicitly state
+  // that the finding program is complete (a next task may still be described in
+  // prose, e.g. module/engine certification, without a finding ID).
+  if (recommendedIds.length !== 0) {
+    fail(`with no open findings, Recommended Next Task must name no finding; found ${recommendedIds.join(', ')}`)
+  } else if (!/no (?:audit )?findings? remain open|finding program is complete|no open findings remain/i.test(recommended)) {
+    fail('with no open findings, Recommended Next Task must state that the finding program is complete')
+  }
+} else if (recommendedIds.length !== 1) {
   fail(`Recommended Next Task must name exactly one finding; found ${recommendedIds.join(', ') || 'none'}`)
 } else {
   const selected = findingRows.find((row) => row.id === recommendedIds[0])
@@ -233,7 +243,11 @@ const staleStatusFiles = [
 ]
 for (const relativePath of staleStatusFiles) {
   const markdown = read(relativePath)
-  if (/zero open findings|all findings closed|\b0\s+Open\b/i.test(markdown)) {
+  // Once the certification program is fully closed the authoritative current
+  // standing legitimately reports 0 Open; exempt only that exact standing string
+  // so any OTHER unqualified zero-open claim still fails.
+  const withoutStanding = markdown.split(expectedStanding).join(' ')
+  if (/zero open findings|all findings closed|\b0\s+Open\b/i.test(withoutStanding)) {
     fail(`stale zero-open status phrase found in ${relativePath}`)
   }
 }

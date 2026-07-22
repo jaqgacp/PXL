@@ -1,13 +1,15 @@
 import { useState, useEffect, useRef } from 'react'
 import Papa from 'papaparse'
 import { supabase } from '@/lib/supabase'
-import type { TablesInsert } from '@/lib/database.types'
+import type { Json } from '@/lib/database.types'
 import { CompanySetupChecklist } from '@/components/CompanySetupChecklist'
+import { CompanyProvisioningWizard } from '@/components/CompanyProvisioningWizard'
 import { formatPhTinInput, isValidPhTin, normalizePhTin, phTinMatches, PH_TIN_PLACEHOLDER } from '@/lib/philippines'
 
 type RDO = { id: string; rdo_code: string; rdo_name: string }
 type Company = {
   id: string
+  company_code: string | null
   registered_name: string
   trade_name: string
   tin: string
@@ -70,19 +72,33 @@ const EMPTY_FORM = {
 type CompanyForm = typeof EMPTY_FORM
 
 const CSV_COLUMNS = [
+  'company_code','template_code','template_version',
   'registered_name','trade_name','entity_type','tin','tax_registration',
   'line_of_business','psic_code','address_line_1','address_line_2',
   'city','province','zip_code','email','phone_number','mobile_number',
   'signatory_name','signatory_position','signatory_tin','accounting_period',
+  'fiscal_start_month','fiscal_year_start_date','fiscal_year_name',
+  'functional_currency_code','reporting_currency_code',
+  'default_branch_code','default_branch_name','default_branch_type','tin_branch_code',
+  'default_warehouse_code','default_warehouse_name','default_warehouse_type',
   'registration_number','bir_reg_date','sec_dti_reg_date','lgu_reg_date',
   'cas_permit_no','cas_date_issued','workspace_accent_color',
 ]
 
-const REQUIRED_COLUMNS = [
+const COMPANY_FORM_REQUIRED_COLUMNS = [
   'registered_name','entity_type','tin','tax_registration',
   'line_of_business','address_line_1','address_line_2',
   'city','province','zip_code','email','signatory_name',
   'signatory_position','accounting_period',
+]
+
+const CSV_REQUIRED_COLUMNS = [
+  'company_code','template_code','registered_name','entity_type','tin','tax_registration',
+  'line_of_business','address_line_1','address_line_2',
+  'city','province','zip_code','email','signatory_name',
+  'signatory_position','accounting_period','fiscal_year_start_date',
+  'default_branch_code','default_branch_name','default_branch_type','tin_branch_code',
+  'default_warehouse_code','default_warehouse_name','default_warehouse_type',
 ]
 
 const VALID_ENTITY_TYPES = ['sole_proprietor','opc','corporation','partnership','cooperative']
@@ -177,7 +193,11 @@ export default function CompanySetupPage() {
   }
 
   const handleSave = async () => {
-    const missingFields = validateRowFields(form)
+    if (!editId) {
+      alert('New companies must be created through guided provisioning.')
+      return
+    }
+    const missingFields = validateCompanyFormFields(form)
     if (missingFields.length > 0) {
       alert('Cannot save company.\nMissing required fields: ' + missingFields.join(', '))
       return
@@ -208,9 +228,7 @@ export default function CompanySetupPage() {
       lgu_reg_date: form.lgu_reg_date || null,
       cas_date_issued: form.cas_date_issued || null,
     }
-    const { error } = editId
-      ? await supabase.from('companies').update(payload).eq('id', editId)
-      : await supabase.from('companies').insert([payload])
+    const { error } = await supabase.from('companies').update(payload).eq('id', editId)
     if (error) alert('Cannot save company.\nReason: ' + error.message)
     else { setSaved(true); fetchCompanies() }
     setSaving(false)
@@ -224,12 +242,15 @@ export default function CompanySetupPage() {
   // Download CSV template
   const downloadTemplate = () => {
     const sampleRow = [
+      'ABC_PH','PH_STANDARD','1',
       'ABC Trading Corporation','ABC Trading','corporation','123-456-789-00000','vat',
       'Wholesale Trading of General Merchandise','46900',
       'Unit 4B 123 Ayala Avenue','Barangay San Lorenzo',
       'Makati City','Metro Manila','1226','accounting@abctrading.com.ph',
       '(02) 8888-1234','0917-123-4567','Juan dela Cruz','President','',
-      'calendar','CS201800012345','2018-03-15','2018-02-10','2026-01-05',
+      'calendar','1','2026-01-01','FY2026','PHP','PHP',
+      'HO','Head Office','head_office','00000','MAIN','Main Warehouse','main',
+      'CS201800012345','2018-03-15','2018-02-10','2026-01-05',
       'PTU-2019-00123','2019-06-01','#14532D',
     ]
     const csv = [CSV_COLUMNS.join(','), sampleRow.join(',')].join('\n')
@@ -259,7 +280,7 @@ export default function CompanySetupPage() {
           record.signatory_tin = record.signatory_tin ? normalizePhTin(record.signatory_tin) : ''
           const errors: string[] = []
 
-          REQUIRED_COLUMNS.forEach(col => {
+          CSV_REQUIRED_COLUMNS.forEach(col => {
             if (!record[col]) errors.push(`"${col}" is required`)
           })
 
@@ -269,6 +290,12 @@ export default function CompanySetupPage() {
             errors.push(`tax_registration must be one of: ${VALID_TAX_REG.join(', ')}`)
           if (record.accounting_period && !VALID_PERIODS.includes(record.accounting_period))
             errors.push(`accounting_period must be: calendar or fiscal`)
+          if (record.company_code && !/^[A-Z][A-Z0-9_-]{1,19}$/.test(record.company_code))
+            errors.push('company_code must be 2-20 uppercase letters, digits, underscores, or hyphens and start with a letter')
+          if (record.template_version && !/^\d+$/.test(record.template_version))
+            errors.push('template_version must be a positive integer when supplied')
+          if (record.fiscal_year_start_date && !/^\d{4}-\d{2}-\d{2}$/.test(record.fiscal_year_start_date))
+            errors.push('fiscal_year_start_date must use YYYY-MM-DD')
 
           if (record.accounting_period === 'fiscal' && !record.fiscal_start_month)
             errors.push('"fiscal_start_month" is required when accounting_period is "fiscal"')
@@ -278,6 +305,14 @@ export default function CompanySetupPage() {
 
           if (record.tin && companies.some(c => normalizePhTin(c.tin) === record.tin))
             errors.push(`TIN "${record.tin}" already exists in the system`)
+          if (record.company_code && companies.some(c => c.company_code?.toUpperCase() === record.company_code.toUpperCase()))
+            errors.push(`company_code "${record.company_code}" already exists in the system`)
+          if (record.tin && data.some((other, otherIndex) =>
+            otherIndex !== idx && normalizePhTin(other.tin) === record.tin))
+            errors.push(`TIN "${record.tin}" is duplicated in the file`)
+          if (record.company_code && data.some((other, otherIndex) =>
+            otherIndex !== idx && other.company_code?.toUpperCase() === record.company_code.toUpperCase()))
+            errors.push(`company_code "${record.company_code}" is duplicated in the file`)
           if (record.workspace_accent_color && !/^#[0-9A-Fa-f]{6}$/.test(record.workspace_accent_color))
             errors.push('workspace_accent_color must be a six-digit hex color such as #14532D')
 
@@ -296,21 +331,82 @@ export default function CompanySetupPage() {
     e.target.value = ''
   }
 
-  const validateRowFields = (data: Record<string, string>): string[] => {
-    const missing = REQUIRED_COLUMNS.filter(col => !data[col])
+  const validateCompanyFormFields = (data: Record<string, string>): string[] => {
+    const missing = COMPANY_FORM_REQUIRED_COLUMNS.filter(col => !data[col])
     if (data.accounting_period === 'fiscal' && !data.fiscal_start_month)
       missing.push('fiscal_start_month')
     return missing
   }
 
-  // Execute import row by row — only inserts rows that pass full validation
+  const validateImportRowFields = (data: Record<string, string>): string[] => {
+    const missing = CSV_REQUIRED_COLUMNS.filter(col => !data[col])
+    if (data.accounting_period === 'fiscal' && !data.fiscal_start_month)
+      missing.push('fiscal_start_month')
+    return missing
+  }
+
+  const buildImportProvisioningRequest = (data: Record<string, string>): Json => ({
+    template_code: data.template_code,
+    template_version: data.template_version ? Number(data.template_version) : null,
+    company: {
+      company_code: data.company_code,
+      entity_type: data.entity_type,
+      registered_name: data.registered_name,
+      trade_name: data.trade_name,
+      line_of_business: data.line_of_business,
+      psic_code: data.psic_code,
+      tin: normalizePhTin(data.tin),
+      tax_registration: data.tax_registration,
+      rdo_id: null,
+      registration_number: data.registration_number,
+      bir_reg_date: data.bir_reg_date || null,
+      sec_dti_reg_date: data.sec_dti_reg_date || null,
+      lgu_reg_date: data.lgu_reg_date || null,
+      accounting_period: data.accounting_period,
+      fiscal_start_month: data.accounting_period === 'fiscal' ? Number(data.fiscal_start_month) : null,
+      cas_permit_no: data.cas_permit_no,
+      cas_date_issued: data.cas_date_issued || null,
+      address_line_1: data.address_line_1,
+      address_line_2: data.address_line_2,
+      city: data.city,
+      province: data.province,
+      zip_code: data.zip_code,
+      email: data.email,
+      phone_number: data.phone_number,
+      mobile_number: data.mobile_number,
+      signatory_name: data.signatory_name,
+      signatory_position: data.signatory_position,
+      signatory_tin: data.signatory_tin || null,
+      workspace_accent_color: data.workspace_accent_color || '#14532D',
+      functional_currency_code: data.functional_currency_code || null,
+      reporting_currency_code: data.reporting_currency_code || null,
+    },
+    fiscal_year: {
+      start_date: data.fiscal_year_start_date,
+      year_name: data.fiscal_year_name || null,
+    },
+    default_branch: {
+      branch_code: data.default_branch_code,
+      branch_name: data.default_branch_name,
+      branch_type: data.default_branch_type,
+      tin_branch_code: data.tin_branch_code,
+      rdo_id: null,
+    },
+    default_warehouse: {
+      warehouse_code: data.default_warehouse_code,
+      warehouse_name: data.default_warehouse_name,
+      warehouse_type: data.default_warehouse_type,
+    },
+  })
+
+  // Execute each row through the same atomic provisioning service as the wizard.
   const executeImport = async () => {
     setImporting(true)
     const pendingRows = importRows.filter(r => r.status === 'pending')
 
     for (const row of pendingRows) {
       // Secondary guard: re-validate required fields before every insert
-      const missingFields = validateRowFields(row.data)
+      const missingFields = validateImportRowFields(row.data)
       if (missingFields.length > 0) {
         setImportRows(prev => prev.map(r =>
           r.row === row.row
@@ -320,21 +416,31 @@ export default function CompanySetupPage() {
         continue
       }
 
-      const { error } = await supabase.from('companies').insert([{
-        ...row.data,
-        tin: normalizePhTin(row.data.tin),
-        signatory_tin: row.data.signatory_tin ? normalizePhTin(row.data.signatory_tin) : null,
-        fiscal_start_month: row.data.fiscal_start_month ? parseInt(row.data.fiscal_start_month) : null,
-        bir_reg_date: row.data.bir_reg_date || null,
-        sec_dti_reg_date: row.data.sec_dti_reg_date || null,
-        lgu_reg_date: row.data.lgu_reg_date || null,
-        cas_date_issued: row.data.cas_date_issued || null,
-        workspace_accent_color: row.data.workspace_accent_color || '#14532D',
-        rdo_id: null,
-      } as unknown as TablesInsert<'companies'>])
+      const request = buildImportProvisioningRequest(row.data)
+      const validation = await supabase.rpc('fn_validate_company_provisioning', { p_request: request })
+      let error = validation.error?.message
+        || validation.data?.map(item => `${item.field_name}: ${item.detail}`).join(' | ')
+
+      if (!error) {
+        const response = await supabase.rpc('fn_provision_company', { p_request: request })
+        if (response.error) {
+          error = response.error.message
+        } else {
+          const result = response.data as {
+            status?: string
+            errors?: Array<{ field?: string; detail?: string }>
+          }
+          if (result.status !== 'succeeded') {
+            error = result.errors
+              ?.map(item => `${item.field || 'request'}: ${item.detail || 'validation failed'}`)
+              .join(' | ')
+              || 'Provisioning failed without retaining partial company setup.'
+          }
+        }
+      }
       setImportRows(prev => prev.map(r =>
         r.row === row.row
-          ? { ...r, status: error ? 'error' : 'success', error: error?.message }
+          ? { ...r, status: error ? 'error' : 'success', error }
           : r
       ))
     }
@@ -365,6 +471,24 @@ export default function CompanySetupPage() {
     />
   )
 
+  if (showForm && !editId) return (
+    <CompanyProvisioningWizard
+      companies={companies}
+      rdos={rdos}
+      onCancel={() => setShowForm(false)}
+      onComplete={async companyId => {
+        await fetchCompanies()
+        const { data } = await supabase
+          .from('companies')
+          .select('*, ref_rdo_codes(rdo_code, rdo_name)')
+          .eq('id', companyId)
+          .single()
+        setShowForm(false)
+        if (data) setChecklistCompany(data as Company)
+      }}
+    />
+  )
+
   // IMPORT VIEW
   if (showImport) return (
     <div className="max-w-4xl mx-auto space-y-5">
@@ -387,7 +511,7 @@ export default function CompanySetupPage() {
         <ol className="list-decimal ml-4 space-y-1 text-xs">
           <li>Download the CSV template above</li>
           <li>Fill in your company data — do not change the column headers</li>
-          <li>Required fields: registered_name, entity_type, tin, tax_registration, line_of_business, address fields, email, signatory_name, signatory_position, accounting_period</li>
+          <li>Required fields include company/template codes, legal and tax identity, fiscal-year start, default branch, default warehouse, address, and signatory details</li>
           <li>entity_type values: sole_proprietor, opc, corporation, partnership, cooperative</li>
           <li>tax_registration values: vat, non_vat, exempt</li>
           <li>accounting_period values: calendar, fiscal</li>

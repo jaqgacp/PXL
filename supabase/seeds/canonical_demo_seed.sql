@@ -653,7 +653,26 @@ CROSS JOIN (VALUES
   ('purchasing','VB',50000::numeric)
 ) AS x(module_type, document_type, threshold_value)
 WHERE c.trade_name = 'DEMO-CORP-VAT'
-ON CONFLICT (company_id, module_type, document_type, trigger_condition_type, threshold_value) DO UPDATE SET is_active = true, updated_by = auth.uid(), updated_at = now();
+ON CONFLICT DO NOTHING;
+
+-- MDP-14 uses an expression-based matrix-criteria unique index, so the legacy
+-- five-column conflict target is no longer inferable. Keep direct seed replays
+-- idempotent and reactivate the stable canonical rows explicitly.
+UPDATE approval_workflows aw
+SET is_active = true, updated_by = auth.uid(), updated_at = now()
+FROM companies c
+CROSS JOIN (VALUES
+  ('sales','SI',50000::numeric),
+  ('purchasing','VB',50000::numeric)
+) AS x(module_type, document_type, threshold_value)
+WHERE c.trade_name = 'DEMO-CORP-VAT'
+  AND aw.company_id = c.id
+  AND aw.workflow_name = 'Canonical ' || x.document_type || ' approval'
+  AND aw.module_type = x.module_type
+  AND lower(aw.document_type) = lower(x.document_type)
+  AND aw.action_type = 'approve'
+  AND aw.trigger_condition_type = 'amount_exceeds'
+  AND aw.threshold_value = x.threshold_value;
 
 INSERT INTO approval_workflow_steps (company_id, workflow_id, step_sequence, approver_type, approver_user_id, action_required)
 SELECT aw.company_id, aw.id, 1, 'user', '10000000-0000-0000-0000-000000000003'::uuid, 'approve'

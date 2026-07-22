@@ -2,7 +2,7 @@
 
 **Status:** Active Operational Reference — incomplete canonical coverage
 **Authority:** Tier 3; governed accounting, tax, transaction, security, and findings sources prevail
-**Last Verified:** 2026-07-18 hosted reset, high-volume rebuild, and reconciliation evidence
+**Last Verified:** 2026-07-22 deterministic local canonical lane; hosted evidence remains 2026-07-18
 **Applies To:** Non-production canonical data, hosted/local validation, recovery, and coverage boundaries
 **Read When:** The task changes or validates canonical data or the hosted demo environment
 **Do Not Read For:** Routine finding implementation unrelated to canonical fixtures
@@ -102,7 +102,13 @@ For a hosted operator, grant owner access without hard-coding the email in sourc
 
 ## Test Command
 
-After reset and seed:
+The governed local canonical lane performs a fresh no-seed migration replay, loads the reset/base/enrichment/volume layers in one transaction, and runs all three canonical tests:
+
+```bash
+npm run test:canonical
+```
+
+For a focused rerun after the canonical seed is already loaded:
 
 ```bash
 supabase test db --local supabase/tests/055_canonical_demo_dataset_test.sql
@@ -111,6 +117,8 @@ supabase test db --local supabase/tests/058_canonical_demo_volume_test.sql
 ```
 
 If the canonical seed is not loaded, this pgTAP file reports 34 skipped tests instead of failing the general suite.
+
+The complete canonical dataset gate is **88 assertions**: test 055 = 34, test 057 = 38, and test 058 = 16. The canonical lane additionally runs `075_table_coverage_governance_test.sql` (8 seeded assertions), so `npm run test:canonical` reports **4 files / 96 assertions**. Focused reruns do not replace the complete gate after a seed or fixture change.
 
 ## Website Audit Command
 
@@ -128,6 +136,8 @@ AUDIT_BASE_URL='http://127.0.0.1:5173' node scripts/audit_phase3_checklists.mjs
 ```
 
 These scripts log in, select each of the five companies, verify the named canonical records/routes, exercise the ABC report set, and capture the current ten-check setup checklist. Playwright must be available to Node; these scripts are hosted-safe UI reads and must not be treated as proof of unsupported workflows.
+
+For a governed hosted UI release gate, use `npm run test:hosted:ui` with explicit approved environment variables as documented in this folder's `README.md`. That command rejects local/non-HTTPS targets and returns nonzero when a company/document probe, report probe, SI-detail contract, or browser page-error check fails.
 
 ## Hosted Deployment Status
 
@@ -149,7 +159,7 @@ Hosted status through 2026-07-18:
 
 ## Setup Checklist Status
 
-All five canonical companies passed the checklist as it existed on 2026-07-16. That checklist validates ten core-accounting prerequisites: legal profile, branch, fiscal calendar/period, chart of accounts, number series, compliance/tax setup, and GL mappings. It does **not** prove customers, suppliers, inventory, banking, approvals, workflow breadth, reports, or statutory generators are operationally complete. `PXL-AUD-067` governs that scope/wording gap.
+Under `PXL-AUD-067` (Retested Passed), the Company Setup Checklist now presents readiness in explicit stages. **Stage 1 — Core Accounting Readiness** validates the ten posting prerequisites: legal profile, branch, fiscal calendar/period, chart of accounts, number series, compliance/tax setup, and GL mappings. **Stage 2 — Operational Readiness** separately evaluates customers, suppliers, products/services, conditional inventory warehousing (Not Applicable for service-only companies), and bank accounts. A persistent note states **Production Readiness** — validated live transactions, reconciliations, period close, and controls — is assessed separately and is never implied by a complete checklist. Completing Stage 1 no longer presents a company as operationally or production ready. All five canonical companies are both core-accounting and operationally ready in the current seed; the service-only OPC and Prime companies correctly show VAT and inventory warehousing as Not Applicable.
 
 ## Company Profiles
 
@@ -253,24 +263,24 @@ Current limitations:
 
 - Credit memo, vendor credit/application, physical count, cash purchase, and posted SI reversal are now covered. Customer/purchase returns, debit/supplier debit memos, serialized inventory, and reservation/commitment scenarios remain unimplemented or unexercised.
 - Hosted route visibility is passed for the scripted canonical probes. The consolidated transaction workspace UI is implemented; report/source drilldown and transaction-specific business qualification are not exhaustively proven for every company.
-- Hosted table coverage is 82 populated / 66 classified empty. Banking transactions/reconciliation, fixed assets, approvals, schedules, returns, statutory-return generation, and CAS export artifacts remain empty.
+- Table coverage is governed by the maintained matrix `PXL_TABLE_COVERAGE_MATRIX.md` and the deterministic guard `075_table_coverage_governance_test.sql` (PXL-AUD-059, Retested Passed). Locally all 176 public base tables are classified: 90 expected-populated and 86 explicitly deferred/empty. Banking transactions/reconciliation, fixed assets, approvals, schedules, returns, statutory-return generation, and CAS export artifacts remain intentionally deferred, not overstated. Hosted coverage was last profiled at 82 populated / 66 classified empty of 148 tables.
 - Hosted company selector access is membership-scoped after `20260716000002`: canonical demo users and the designated hosted operator see exactly the five canonical companies. The superseded `PXL Demo Trading Corporation` tenant was removed during the 2026-07-18 rebuild; broad global BIR form configuration policies are tracked separately as `PXL-AUD-063`.
-- Project, location, and functional-entity dimensions are not invented because governed master tables do not yet exist.
+- Project, location, and functional-entity masters now exist in the local migration chain (MDP-09), but the canonical fixture does not yet populate or exercise them; PXL-AUD-053 governs Sales Invoice propagation/report coverage.
 - Service-only project billing is represented by deterministic service invoices, not a full project subledger.
 - Approval workflow definitions exist, but no `approval_instances` canonical execution was fabricated.
 - `scripts/audit_phase3_hosted_ui.mjs` and `scripts/audit_phase3_checklists.mjs` are the current hosted UI probes.
 
-## Active Finding References
+## Finding References
 
-Official status and remediation live only in `PXL_END_TO_END_AUDIT_FINDINGS.md`. Canonical-environment work should normally consider `PXL-AUD-053`, `PXL-AUD-055`, `PXL-AUD-059`, `PXL-AUD-061`, `PXL-AUD-063`, `PXL-AUD-066`, and `PXL-AUD-067`. Do not copy their full content here or infer that a passed canonical probe closes an unrelated finding.
+Official status and remediation live only in `PXL_END_TO_END_AUDIT_FINDINGS.md`. Active canonical-environment work should normally consider `PXL-AUD-060` (the sole remaining open finding). `PXL-AUD-053`, `PXL-AUD-055`, `PXL-AUD-059`, and `PXL-AUD-067` are Retested Passed; `PXL-AUD-059` coverage governance is maintained through `PXL_TABLE_COVERAGE_MATRIX.md` and guard `075`. PXL-AUD-061 now governs the permanent release lanes as Retested Passed; PXL-AUD-063 and PXL-AUD-066 are also passed historical controls. Do not copy their full content here or infer that a passed canonical probe closes an unrelated finding.
 
 ## How To Rerun
 
 1. Confirm non-production environment.
-2. Back up the local database.
-3. Run the reset+seed command above.
-4. Run local tests 055, 057, and 058 as listed above.
-5. Run `git diff --check`, `npm run lint`, `npm run build`, `bash scripts/check_docs_consistency.sh`, and `npm run docs:ai-state-check`.
+2. Start the isolated local stack with `supabase db start`; back it up first if its current data must be retained.
+3. Run `npm run test:canonical` from the repository root.
+4. Require tests 055/057/058 to pass 88/88; do not count skipped assertions as seeded canonical evidence.
+5. Run `npm run test:db:local` and the remaining release gates defined in this folder's `README.md` before release use.
 
 ## How To Extend
 

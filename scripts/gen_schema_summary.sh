@@ -10,7 +10,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-OUT=docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md
+OUT="docs/PXL/01. Architecture/PXL_SCHEMA_SUMMARY.md"
 declare -A fn_last fn_count vw_last vw_count tb_created tb_alt_count tb_alt_last trg_last trg_table
 
 for f in $(ls supabase/migrations/*.sql | sort); do

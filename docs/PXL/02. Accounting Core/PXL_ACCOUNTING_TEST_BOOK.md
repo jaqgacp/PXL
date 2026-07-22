@@ -6,11 +6,11 @@
 **Applies To:** Accounting, tax, posting, reconciliation, and regression test scenarios
 **Read When:** Adding or changing accounting tests, validating a finding, or reconciling test coverage
 **Do Not Read For:** AI startup or accounting behavior authority without the accounting rules matrix
-**Last Reviewed:** 2026-07-18 documentation cleanup
+**Last Reviewed:** 2026-07-22 after PXL-AUD-061 deterministic release-gate formalization (74 files / 1,568 assertions)
 
 This file records expected accounting/reporting scenarios that must be executed before a finding can be marked `Retested Passed`.
 
-How to execute seeded scenarios: `supabase start` (Docker required; non-essential services are disabled in `supabase/config.toml`), then `npm test` (alias for `supabase test db`). Tests live in `supabase/tests/*.sql` (pgTAP), self-seed inside a transaction, and roll back. `supabase db reset --local` verifies the migration chain replays on a fresh database. CI: `.github/workflows/ci.yml` runs lint/build and the full suite on a fresh database for every push/PR to `main`, so each CI run is also a fresh-replay migration check.
+How to execute deterministic scenarios: start the isolated stack with `supabase db start`, run `npm run test:db:local` for a fresh no-seed migration replay plus all **74 files / 1,568 assertions**, and run `npm run test:canonical` for the atomic canonical rebuild plus tests 055/057/058 (**88 assertions**). `npm test` aliases the full pgTAP regression on the current local schema; use `npm run test:db:focused -- supabase/tests/<file>.sql` only as bounded package evidence. The permanent lane order, prerequisites, success/failure rules, hosted read-only boundary, and complete release gates are authoritative in `docs/PXL/13. Testing and Validation/README.md`. `.github/workflows/ci.yml` publishes separate static, fresh-schema/regression, canonical, protected hosted, and summary results; hosted jobs run only for a manually authorized release-candidate dispatch.
 
 Report-page adoption is governed by `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md`. Any report marked production-ready under that standard must have evidence for its accounting purpose, authoritative source data, filters, date basis, posting-state basis, totals, reconciliation target, drilldown/drillback path, export metadata, snapshot requirements where applicable, permissions, known limitations, and performance-sensitive scenarios. Visual conformance alone is not sufficient for accounting, tax, compliance, or reconciliation reports.
 
@@ -898,14 +898,14 @@ Local-harness-only by design: the test opens two extra real database sessions wi
 | 6 | Directly insert a second live original JE or a second live VAT tax row for the raced source | Structurally impossible: rejected by `ux_journal_entries_live_source` and `ux_tde_vat_source_code`. |
 | 7 | Delete the committed fixture company | Nothing is left behind; the test is rerunnable. |
 
-## CAS-E2E-DRAFT-027 - Held-Out CAS Draft Scenario
+## CAS-E2E-DRAFT-027 - CAS End-to-End Control Scenario
 
-Status: Held Out Draft (not trusted baseline). File present at `supabase/tests/027_cas_end_to_end_controls_test.sql`; see `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md` for the held-out draft list.
+Status: Executed Passing (2026-07-22 release-gate validation) in `supabase/tests/027_cas_end_to_end_controls_test.sql`, 34/34 assertions and included in the complete 74-file lane.
 
 Notes:
 
-- This draft belongs to the excluded `20260710000005_cas_numbering_void_dat_controls.sql` CAS lane and is not part of the production-ready baseline.
-- The trusted CAS evidence path is covered by later safe slices: `supabase/tests/030_document_numbering_registry_test.sql`, `supabase/tests/031_posting_runtime_repairs_test.sql`, and `supabase/tests/032_cas_numbering_void_evidence_test.sql`.
+- This scenario was originally held out while CAS allocator and document-period behavior were incomplete. Migrations through `20260721000003_aud066_cas_document_period_evidence.sql` resolved those defects, and no test file is now excluded from the governed regression lane.
+- Complementary CAS evidence remains in `supabase/tests/030_document_numbering_registry_test.sql`, `supabase/tests/031_posting_runtime_repairs_test.sql`, and `supabase/tests/032_cas_numbering_void_evidence_test.sql`.
 
 ## DOCUMENT-NUMBERING-REGISTRY-001 - Document-Code Registry and Branch-Scoped Numbering
 
@@ -1144,13 +1144,13 @@ Status: Executed Passing (Phase 3, 2026-07-16) in `supabase/tests/025_posting_pr
 
 ## CAS-HISTORICAL-PACKAGE-001 - Historical Number/Void Evidence
 
-Status: Executed Failing (held-out lane, 2026-07-16) in `supabase/tests/027_cas_end_to_end_controls_test.sql`: 29/31 assertions pass; assertions 29-30 fail. Related findings: PXL-AUD-061 and PXL-AUD-066.
+Status: Executed Passing (2026-07-22 release-gate validation) in `supabase/tests/027_cas_end_to_end_controls_test.sql`, 34/34 assertions. PXL-AUD-061 and PXL-AUD-066 are Retested Passed.
 
 | Step | Action | Expected Behavior |
 | ---- | ------ | ----------------- |
 | 1 | Create, post, and void a July 10 SI; generate reconciled books/DAT evidence later | Source documents, journals, number issuance, void event, books, and export artifacts remain immutable. |
 | 2 | Generate a CAS audit package for July 10 | Package should include the historical number and void rows based on document period. |
-| 3 | Inspect package payload | Current product returns zero number/void rows because it filters those by allocation/occurrence date; keep failing until PXL-AUD-066 is fixed. |
+| 3 | Inspect package payload | Package includes the July issuance and void by source-document date while excluding later-period reversal evidence. |
 
 ## CM-VC-OVERAPPLY-001 - Over-Apply Guards Net Applied Credit Memos / Vendor Credits
 
@@ -1208,6 +1208,24 @@ Scenario: the three previously uncovered company-scoped reference/config masters
 | 3 | Delete a row in each master | Exactly one audit row with action `DELETE`, the before-image, and a null after-image. |
 | 4 | Insert then `ROLLBACK` to a savepoint | The audit row is visible before rollback and gone after — audit is atomic with the mutation (no orphan). |
 | 5 | Inspect trigger catalog | Each of the three masters carries exactly one audit trigger; the RPC-audited global tables (`tax_codes`/`vat_codes`/`atc_codes`/`bir_forms`/`bir_form_mappings`) carry none (no double-logging). |
+
+## MASTER-DATA-ACCESS-SOD-001 - Master-Data Access Control & SOD Foundation (MDP-03)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/072_mdp03_master_data_access_sod_test.sql`, 35 assertions after a clean `supabase db reset` replay including migration `20260722000007_mdp03_master_data_access_sod.sql`. Related gaps: MD-27, MD-28.
+
+Scenario: reusable master-data authorization foundation over the existing `user_company_memberships` model. Adds action-level master-data permissions, role mappings for current roles, future custom role-code compatibility, advisory SoD conflicts, optional branch scopes, branch-aware RLS/export filtering, and audit coverage for membership, permission, SoD, and branch-scope changes. No UI, authentication redesign, transaction workflow change, or posting behavior change.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect permission catalog | Each registered master exposes view/create/edit/delete/import/export/approve definitions; unavailable deletes remain unavailable where no prior delete policy existed. |
+| 2 | Inspect role mappings | Owner/admin retain all master-data authority; member keeps operational create/edit only; viewer remains read/export-only. |
+| 3 | Use a custom role code mapped to project permissions | The existing membership table accepts the code and `fn_can_master_data_permission` honors the mapping without a parallel membership system. |
+| 4 | Call legacy `fn_can_perform(..., 'master_data', table)` | Existing customer maintenance behavior is preserved; COA setup maintenance is denied to members through the new catalog. |
+| 5 | Write through direct RLS as member/admin/viewer | Member can create an operational customer but not COA; admin can create COA; viewer cannot create customer; member cannot delete customer while admin can. |
+| 6 | Grant optional branch scopes | Admin can grant scopes; scoped users see/export only allowed branch-aware masters; no-scope behavior remains company-wide. |
+| 7 | Create branch-aware project rows | Scoped member can create in an allowed branch and is rejected (`42501`) in an unscoped branch; branch-filtered export returns only scoped rows. |
+| 8 | Inspect SoD/audit evidence | Advisory create/edit/delete/import-vs-approve conflicts are visible for admin; member has none because approve is not assigned; membership and branch-scope grants are audited. |
+| 9 | Export as global reader/non-member | Global read-only references remain exportable; non-members cannot export company masters. |
 
 ## COA-ENRICHMENT-001 - Chart of Accounts Enrichment (MDP-04)
 
@@ -1323,3 +1341,135 @@ Scenario: governed salesperson/buyer **designation** on the `employees` master (
 | 5 | Toggle a mode inactive; inspect audit trail | Active/inactive lifecycle works; creation captured in `sys_audit_logs`. |
 | 6 | Insert inside a savepoint then roll back | Rollback removes the row (atomic). |
 | 7 | Read/write as member of A vs member-of-A-only vs non-member | Company B rows are invisible to a member of A (RLS isolation); a member can create; a non-member's write is rejected. |
+
+## TAX-REFERENCE-CONSOLIDATION-001 - Tax Reference Consolidation (MDP-12)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/069_mdp12_tax_reference_consolidation_test.sql`, 16 assertions after a clean `supabase db reset` replay including migration `20260722000004_mdp12_tax_reference_consolidation.sql`. Related gap: MD-32.
+
+Scenario: MD-32 (two parallel ATC representations) was already resolved by prior work — `ref_atc_codes` was dropped with its FKs repointed to `atc_codes`, and `ewt_codes`/`fwt_codes` were consolidated away — so `atc_codes` is the single authoritative ATC source and `tax_codes`/`vat_codes`/`atc_codes` already share one versioning/effective-dating/governance pattern. This package adds only a thin read-only consolidation surface and locks the invariants; no tax-engine, posting, or governance change.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Check `ref_atc_codes` / `ewt_codes` / `fwt_codes` | All dropped (`to_regclass` NULL) — consolidation complete. |
+| 2 | Inspect `receipt_lines.atc_code_id` FK | Targets `atc_codes` (former `ref_atc_codes` FK repointed). |
+| 3 | Query `vw_tax_reference_catalog` | Exposes both `tax_code` and `atc_code` references with a computed `is_current`; readable by an authenticated user (security_invoker). |
+| 4 | `fn_tax_reference_asof(reference_type, code, tax_category, as_of)` | Delegates to `fn_tax_code_version_asof` / `fn_atc_version_asof`; normalizes the code (case-insensitive); returns NULL for a non-resolving code; missing ATC `tax_category` and an unknown reference type each raise (`22023`). |
+| 5 | Insert into `atc_codes` / `tax_codes` as an authenticated user | Rejected (`42501`) — the masters remain MDP-01 read-only (governed writes only). |
+
+## ITEM-MASTER-INVENTORY-READINESS-001 - Item Master Inventory Readiness (MDP-13)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/070_mdp13_item_master_inventory_readiness_test.sql`, 41 assertions after a clean `supabase db reset` replay including migration `20260722000005_mdp13_item_master_inventory_readiness.sql`. Related gaps: MD-21, MD-22, MD-23, MD-24.
+
+Scenario: backend/master-data readiness for Phase 4 Inventory — company inventory defaults (costing method, negative-stock policy, default warehouse) with provision/validate/guard; item-level overrides + reorder fields + preferred supplier + serial/batch flags with never-NULL effective-policy resolvers; per-item UOM conversions; item barcodes and media. No inventory movement, valuation, costing engine, UI, or posting change.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | `fn_provision_company_inventory_config(company)` | Creates `company_inventory_config` with defaults (weighted_average / block) and the company's active warehouse; idempotent; a cross-company default warehouse is rejected (`23514`); `fn_validate_company_inventory_config` reports `config_missing` / bad warehouse; provisioning is admin-only (`42501`). |
+| 2 | `fn_item_costing_method` / `fn_item_negative_stock_policy` | Resolve item override → company default → literal (`weighted_average` / `block`); never NULL; reflect item and company changes. |
+| 3 | Update item fields | `negative_stock_policy` vocabulary and non-negative reorder fields are enforced (`23514`); `preferred_supplier_id` must be same-company (`23514`). |
+| 4 | Insert `item_uom_conversions` | Stored; one conversion per UOM per item (`23505`); factor must be > 0 (`23514`); a cross-company UOM is rejected and `company_id` is derived from the item by the child guard. |
+| 5 | Insert `item_barcodes` / `item_media` | Stored; at most one primary per item (`23505`); barcodes unique per company (`23505`). |
+| 6 | Inspect audit trail; insert inside a savepoint then roll back | Config/barcode/UOM-conversion creation captured in `sys_audit_logs`; rollback removes the row (atomic). |
+| 7 | Write as a member vs a non-member | A company member can add item children; a non-member cannot. |
+
+## MASTER-DATA-IMPORT-EXPORT-001 - Master-Data Import / Export Foundation (MDP-15)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/071_mdp15_master_data_import_export_test.sql`, 38 assertions after a clean `supabase db reset` replay including migration `20260722000006_mdp15_master_data_import_export.sql`. Related gaps: MD-34, MD-35.
+
+Scenario: backend-first master-data import/export foundation for current completed master-data packages. Adds a supported-master registry, import templates, deterministic JSON export with SHA-256 export logs, validation/preview/import RPCs, idempotency keys, row-level errors, company isolation, operation audit logs, and rollback-safe commit handling. Global statutory tax/BIR references remain exportable but not tenant-importable through this generic path; their existing MDP-01/PXL-AUD-063 governed RPCs stay authoritative.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect `master_data_import_registry` and templates | Current master surfaces are registered with scope/import mode; COA template exposes `account_code` as the business key and excludes generated columns. |
+| 2 | Validate import for `tax_codes` | Returns deterministic `master_not_importable`; global statutory references remain governed elsewhere. |
+| 3 | Preview a valid `branches` payload | Returns `validated`, writes a preview batch/row record, and leaves the `branches` table unchanged. |
+| 4 | Validate duplicate, missing-required, missing-FK, and cross-company rows | Row-level errors report `duplicate_source_key`, `required_column_missing`, `missing_reference`, and `company_scope_mismatch`. |
+| 5 | Commit a valid branch import and replay the same idempotency key | First call inserts one branch; replay returns the prior batch and does not duplicate; reusing the key with a different payload is rejected. |
+| 6 | Commit an update matched by business key | Existing branch updates deterministically and the batch records `updated_count`. |
+| 7 | Commit a row that passes prevalidation but fails a DB CHECK | Import returns failed status and no partial master row persists. |
+| 8 | Export another company's master data as a non-member | Export is rejected (`42501`), preserving company isolation. |
+| 9 | Import hierarchical COA rows with child before parent | Commit succeeds after dependency-aware ordering; parent reference is preserved. |
+| 10 | Export branch and package payloads | Exports return deterministic row counts, content SHA-256, and matching `master_data_export_logs`; package export includes company masters in registry order. |
+| 11 | Inspect audit trail | Import/export operation metadata is captured in `sys_audit_logs`; underlying imported branch mutation is captured by the branch audit trigger. |
+
+## GUIDED-COMPANY-PROVISIONING-001 - Guided Company Provisioning (MDP-08)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/073_mdp08_guided_company_provisioning_test.sql`, 50 assertions after a clean `supabase db reset --local --no-seed` replay including migration `20260722000008_mdp08_guided_company_provisioning.sql`. Current full pgTAP regression passed 74 files / 1,568 assertions after MDP-14. Related gap: MD-08.
+
+Scenario: a versioned company template composes the completed provisioning primitives behind one permission-gated, deterministic, atomic, and idempotent RPC. PH_STANDARD creates legal identity, owner membership, default branch/warehouse, fiscal year and 12 periods, number series, 41-account COA, UOM/tax defaults, all current accounting-control mappings, compliance profile, dimensions, inventory configuration, and a company payment mode. Failed business setup rolls back while the audited run retains deterministic failure metadata.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect current PH_STANDARD template and module composition | One active current template exposes localization/currency defaults and ten ordered required modules with valid handlers. |
+| 2 | Validate a complete request | Side-effect-free validation returns no errors and creates no company or provisioning-run row. |
+| 3 | Provision as the zero-company bootstrap user / existing owner | Authorized caller succeeds; ordinary member and outsider are rejected (`42501`). |
+| 4 | Inspect provisioned company and ownership | Company code/TIN/legal/fiscal/currency fields persist; creator has owner membership. |
+| 5 | Inspect branch, warehouse, fiscal calendar, series, and defaults | One default branch/warehouse, one fiscal year with 12 periods, required BIR number series, UOM/PT defaults, and standard dimensions exist. |
+| 6 | Inspect COA and accounting configuration | All 41 hierarchical PH_STANDARD accounts exist; nine accounting mappings resolve to same-company postable accounts, including Customer Advances (liability) and Supplier Down Payments (asset). |
+| 7 | Inspect compliance, inventory, and payment mode | Compliance/tax calendar, company inventory default warehouse, and CASH payment-mode mapping are complete. |
+| 8 | Replay the same request/key | Returns the prior successful result with `idempotent_replay = true`; no business rows duplicate. Reusing a key for changed input is rejected. |
+| 9 | Validate duplicate company code/TIN, invalid fiscal/template/reference inputs | Deterministic ordered field errors are returned and no company is created. |
+| 10 | Force a required extension module to fail inside the orchestration subtransaction | Company and all dependent business rows roll back; the run is retained as failed with error evidence. |
+| 11 | Inspect direct table policy and internal handlers | Authorized provisioning-compatible direct company inserts remain possible for backward compatibility; unauthorized inserts fail; internal module handlers are not executable by `authenticated`. |
+| 12 | Inspect audit evidence and RLS | Company creation and provisioning execution/completion are auditable; users can read only runs for companies they administer. |
+
+## APPROVAL-MATRIX-INTEGRATION-001 - Approval Matrix Integration (MDP-14)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/074_mdp14_approval_matrix_integration_test.sql`, 61 assertions after a clean `supabase db reset --local --no-seed` replay including migration `20260722000009_mdp14_approval_matrix_integration.sql`; a direct second migration replay with `ON_ERROR_STOP=1` also passed. Targeted tests 011/014/050/071/072/073 passed 171/171 and the full pgTAP lane passed 74 files / 1,568 assertions. Related gap: MD-33.
+
+Scenario: configuration-first extension of the existing approval workflow, step, and instance architecture. Rules resolve deterministically from company, optional branch, module/record, action, amount, currency, requester context, effective dates, and active state. A version-bound `approval_requests` header and RPC-only lifecycle provide multi-level role/user routing, current-step locking, requester separation, MDP-03 permission/branch/SOD enforcement, inactive/missing-approver validation, stale/duplicate/repeated transition protection, MDP-02 audit evidence, and an inbox/status API. No rules are seeded. The bounded Master Data consumer is a configured MDP-15 import commit; previews and unconfigured commits remain compatible.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Create company/fallback/branch/effective rules and role/user steps | Admin configuration succeeds; non-admin maintenance is denied; tenant RLS hides another company's rules. |
+| 2 | Resolve branch-specific, fallback, future, and absent rules | Most-specific valid rule wins; fallback is deterministic; effective boundaries are exact; absent rules return `not_required`. |
+| 3 | Resolve a route with a deleted user | Decision reports no valid approver and submission fails closed. |
+| 4 | Preview then submit a configured department import | Preview validates without mutation; submission is permission-gated, version-bound, and duplicate-idempotent; commit before approval is denied. |
+| 5 | Attempt self, viewer, wrong-role, enforced-conflict, and wrong-branch decisions | Each is denied server-side; advisory SOD does not block a different valid approver. |
+| 6 | Complete two approval levels | First decision yields `partially_approved` and activates only the next step; second yields `approved`; ordered history contains both actors. |
+| 7 | Repeat or concurrently contend for an actionable transition | Request/current-instance row locks, status guards, and the actionable-source unique index prevent double action and duplicate pending requests. |
+| 8 | Commit and replay the approved import | Exact payload hash and request identity are revalidated; success consumes the request; the same MDP-15 idempotency key replays without duplicate data. |
+| 9 | Reject, withdraw, and attempt invalid follow-up transitions | Rejection requires a reason; requester/admin withdrawal closes pending steps; closed requests cannot be approved. |
+| 10 | Approve with a changed record version and resubmit | Stale request becomes `superseded`; changed source version produces a distinct current request. |
+| 11 | Inspect audit and direct-write boundaries | Rules, requests, resolution instances, and decisions appear in `sys_audit_logs`; authenticated direct instance mutation is denied. |
+| 12 | Run MDP-03, MDP-08, MDP-15, legacy approval, and full regressions | Existing permission/SOD, provisioning, import/export, DEC-010 approval, accounting readiness, and all prior pgTAP behavior remain green. |
+
+## TABLE-COVERAGE-GOVERNANCE-001 - Coverage Governance (PXL-AUD-059)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/075_table_coverage_governance_test.sql`. Canonical lane (fresh replay + reset/base/enrichment/volume seed) passed 4 files / 96 assertions including 075 at 8/8; full pgTAP regression passed 75 files / 1,596 assertions with 075 exercising its structural no-seed branch. Governs the maintained matrix `docs/PXL/13. Testing and Validation/PXL_TABLE_COVERAGE_MATRIX.md`.
+
+Scenario: every `public` base table is classified into exactly one coverage class — `canonical-populated` (66), `reference-populated` (24), `workflow-deferred` (19), `future-deferred` (61), or `reference-empty` (6). The guard fails on unexpected active-table emptiness and on governance drift, but never merely because an intentionally deferred module is empty. Structural checks run in every lane; seed-gated population checks run in the canonical lane.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Compare `information_schema` base tables to the registry | Every public base table is classified; no unclassified table remains. |
+| 2 | Compare the registry to `information_schema` | No stale registry entry maps to a missing table. |
+| 3 | Validate each registry class value | Only the five governed coverage classes are used. |
+| 4 | Count `reference-populated` tables (any lane) | All retain their migration/reference seed rows. |
+| 5 | Count `canonical-populated` tables (canonical lane) | All are non-empty — no unexpected active-table emptiness. |
+| 6 | Count `workflow-deferred`, `future-deferred`, `reference-empty` (canonical lane) | All remain intentionally empty until their workflow is exercised. |
+| 7 | Run without the canonical seed | Structural checks pass; population checks skip deterministically. |
+
+## REPORTING-VIEW-TENANT-ISOLATION-001 - Reporting-view RLS isolation (PXL-AUD-069)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/076_reporting_view_tenant_isolation_test.sql`, 6 assertions after a clean `supabase db reset --local --no-seed` replay including migration `20260722000011_aud069_reporting_view_rls_isolation.sql`. Empirically confirmed the pre-fix leak (a member of one company read another company's payment register/AP aging/receipt register/SLP export) and that it is closed after the fix while legitimate own-company access is preserved.
+
+Scenario: three companies (A, B, C) each with a distinct member; one payment voucher seeded in company A. Through the now-`security_invoker` `vw_payment_register`, the member of A reads exactly A's row (and only company A), while the member of B and a non-member of A read zero of A's rows. All nine remediated reporting views (`vw_ap_aging`, `vw_credit_memo_register`, `vw_debit_memo_register`, `vw_deposits_in_transit`, `vw_outstanding_checks`, `vw_payment_register`, `vw_receipt_register`, `vw_sdm_register`, `vw_slp_export`) are asserted to carry `security_invoker`, extending the proven mechanism to every view.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Member of company A reads `vw_payment_register` | Sees own-company voucher; only company A is visible. |
+| 2 | Member of company B reads the same view | Cannot see company A's voucher (zero rows). |
+| 3 | Non-member of company A reads the view | Receives zero company-A rows. |
+| 4 | Inspect all nine remediated views | Every view carries `security_invoker`; none remains RLS-bypassing. |
+
+## REPORTING-VIEW-SECURITY-GUARD-001 - Permanent view-isolation guard (PXL-AUD-069)
+
+Status: Executed Passing (2026-07-22) in `supabase/tests/077_reporting_view_security_guard_test.sql`, 2 assertions, run in every regression and canonical lane. Proven non-vacuous: temporarily resetting `security_invoker` on one view makes the guard fail and name the offending view; restoring it passes.
+
+Scenario: the guard scans `pg_catalog` for any public view that is granted SELECT to `authenticated`, is owned by an RLS-bypassing (superuser/BYPASSRLS) role, is not `security_invoker`, and embeds no tenant-isolation predicate (`is_company_member` / `user_company_memberships` / `auth.uid` / `can_admin_company`). The set must be empty; a new authenticated view without isolation fails the build.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Enumerate RLS-bypassing authenticated views without isolation | The set is empty (count 0). |
+| 2 | Report the offending-view list | The list is `(none)`. |

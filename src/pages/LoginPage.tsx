@@ -48,20 +48,29 @@ export default function LoginPage() {
             <span className="bg-white px-2">or sign in with email</span>
           </div>
         </div>
-        <form onSubmit={handleEmailLogin} className="space-y-4">
+        <form onSubmit={handleEmailLogin} className="space-y-4" noValidate>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+            <label htmlFor="login-email" className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input id="login-email" name="email" type="email" autoComplete="email"
+              value={email} onChange={e => setEmail(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-              placeholder="you@company.com" required />
+              placeholder="you@company.com" required
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? 'login-error' : undefined} />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
-            <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+            <label htmlFor="login-password" className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+            <input id="login-password" name="password" type="password" autoComplete="current-password"
+              value={password} onChange={e => setPassword(e.target.value)}
               className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900"
-              placeholder="••••••••" required />
+              placeholder="••••••••" required
+              aria-invalid={error ? true : undefined}
+              aria-describedby={error ? 'login-error' : undefined} />
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
+          <p id="login-error" role="alert" aria-live="assertive"
+            className={`text-sm text-red-600${error ? '' : ' sr-only'}`}>
+            {error}
+          </p>
           <button type="submit" disabled={loading}
             className="w-full bg-gray-900 text-white rounded-md px-4 py-2.5 text-sm font-medium hover:bg-gray-800 transition-colors">
             {loading ? 'Signing in...' : 'Sign in'}

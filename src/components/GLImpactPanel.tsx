@@ -50,6 +50,9 @@ export type ServerGLImpactLine = {
   branch_id: string | null
   department_id: string | null
   cost_center_id: string | null
+  project_id?: string | null
+  location_id?: string | null
+  functional_entity_id?: string | null
   impact_group?: string | null
   accounting_effect?: string | null
   source_type?: string | null
@@ -101,6 +104,9 @@ type DisplayRow = {
   branchId: string | null
   departmentId: string | null
   costCenterId: string | null
+  projectId: string | null
+  locationId: string | null
+  functionalEntityId: string | null
   impactGroup: 'COMMERCIAL' | 'INVENTORY' | 'WITHHOLDING_INFORMATIONAL' | 'OTHER'
   accountingEffect: string
   sourceLabel: string
@@ -269,6 +275,9 @@ export function GLImpactPanel({
         branchId: line.branch_id,
         departmentId: line.department_id,
         costCenterId: line.cost_center_id,
+        projectId: line.project_id || null,
+        locationId: line.location_id || null,
+        functionalEntityId: line.functional_entity_id || null,
         impactGroup: (line.impact_group as DisplayRow['impactGroup'] | null) || inferImpactGroup(line.account_source, line.description || ''),
         accountingEffect: effectLabel(line.accounting_effect),
         sourceLabel: line.source_type || friendlyAccountSource(line.account_source),
@@ -313,6 +322,9 @@ export function GLImpactPanel({
           branchId: null,
           departmentId: null,
           costCenterId: null,
+          projectId: null,
+          locationId: null,
+          functionalEntityId: null,
           impactGroup: row.impactGroup || inferImpactGroup(technicalSource, row.description),
           accountingEffect: effectLabel(row.accountingEffect),
           sourceLabel: row.sourceLabel || row.accountSourceLabel || (row.configKey ? friendlyConfigSource[row.configKey] || 'Company Posting Configuration' : 'Draft Preview'),
@@ -537,6 +549,9 @@ export function GLImpactPanel({
                           <div><span className="font-medium">Branch:</span> {branchLabel(row)}</div>
                           <div><span className="font-medium">Department:</span> {dimensionLabel(row.departmentId)}</div>
                           <div><span className="font-medium">Cost Center:</span> {dimensionLabel(row.costCenterId)}</div>
+                          <div><span className="font-medium">Project:</span> {dimensionLabel(row.projectId)}</div>
+                          <div><span className="font-medium">Location:</span> {dimensionLabel(row.locationId)}</div>
+                          <div><span className="font-medium">Functional Entity:</span> {dimensionLabel(row.functionalEntityId)}</div>
                         </div>
                       </details>
                     </div>
@@ -660,6 +675,9 @@ function AccountingImpactSection({
                         <div><span className="font-medium">Created By Rule:</span> {row.technicalSource || 'Not recorded'}</div>
                         <div><span className="font-medium">Accounting Effect:</span> {row.accountingEffect}</div>
                         <div><span className="font-medium">Source Type:</span> {row.sourceLabel}</div>
+                        <div><span className="font-medium">Project:</span> {dimensionLabel(row.projectId)}</div>
+                        <div><span className="font-medium">Location:</span> {dimensionLabel(row.locationId)}</div>
+                        <div><span className="font-medium">Functional Entity:</span> {dimensionLabel(row.functionalEntityId)}</div>
                       </div>
                     </details>
                   </td>

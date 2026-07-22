@@ -5,9 +5,103 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      release_candidate:
+        description: Include the protected hosted read-only and hosted UI gates
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
 
 jobs:
-  build-lint:
+  static-gates:
+    name: Static release gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Documentation lane
+        run: npm run validate:docs
+      - name: Lint lane
+        run: npm run validate:lint
+      - name: Build lane
+        run: npm run validate:build
+      - name: Diff lane
+        env:
+          PXL_DIFF_BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if git cat-file -e "${PXL_DIFF_BASE}^{commit}" 2>/dev/null && [ "${PXL_DIFF_BASE}" != "0000000000000000000000000000000000000000" ]; then
+            git diff --check "${PXL_DIFF_BASE}" "${GITHUB_SHA}"
+          else
+            git diff --check "${GITHUB_SHA}^" "${GITHUB_SHA}"
+          fi
+
+  database-gates:
+    name: Fresh schema and 74-file regression gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.108.0
+      - name: Start isolated local Supabase
+        run: supabase db start
+      - name: Fresh schema lane
+        run: npm run test:db:fresh
+      - name: Full regression lane
+        run: npm run test:db:regression
+
+  canonical-gate:
+    name: Canonical dataset gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.108.0
+      - name: Start isolated local Supabase
+        run: supabase db start
+      - name: Canonical reset, seed, and verification lane
+        run: npm run test:canonical
+
+  hosted-read-only-gate:
+    name: Hosted read-only SQL gate
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_candidate }}
+    environment: hosted-read-only
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Ensure PostgreSQL client is available
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
+      - name: Hosted read-only verification lane
+        env:
+          PXL_ALLOW_HOSTED_READ_ONLY: "1"
+          PXL_HOSTED_PROJECT_REF: bskjkogijpbhukjkagfj
+          PXL_HOSTED_READ_ONLY_DATABASE_URL: ${{ secrets.PXL_HOSTED_READ_ONLY_DATABASE_URL }}
+        run: npm run test:hosted:read-only
+
+  hosted-ui-gate:
+    name: Hosted canonical UI gate
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_candidate }}
+    environment: hosted-read-only
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,21 +110,35 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - run: npm run lint
-      - run: npm run build
-      # Docs-consistency gate (PXL-DA-020): findings status index must agree
-      # with finding rows; test book must match the pgTAP files on disk.
-      - run: bash scripts/check_docs_consistency.sh
+      - name: Install Chromium for the hosted UI lane
+        run: npx playwright install --with-deps chromium
+      - name: Hosted canonical UI verification lane
+        env:
+          PXL_ALLOW_HOSTED_READ_ONLY: "1"
+          AUDIT_BASE_URL: ${{ secrets.PXL_HOSTED_UI_BASE_URL }}
+          AUDIT_EMAIL: ${{ secrets.PXL_HOSTED_AUDIT_EMAIL }}
+          AUDIT_PASSWORD: ${{ secrets.PXL_HOSTED_AUDIT_PASSWORD }}
+        run: npm run test:hosted:ui
 
-  db-tests:
-    # A fresh runner replays the entire migration chain from scratch before the
-    # pgTAP suite runs, so this job is also the fresh-database migration gate
-    # (PXL-AUD-022 / PXL-DA-006).
+  release-gate:
+    name: Deterministic release gate
+    if: ${{ always() }}
+    needs: [static-gates, database-gates, canonical-gate, hosted-read-only-gate, hosted-ui-gate]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 2.108.0
-      - run: supabase db start
-      - run: supabase test db
+      - name: Enforce required gate results
+        env:
+          STATIC_RESULT: ${{ needs.static-gates.result }}
+          DATABASE_RESULT: ${{ needs.database-gates.result }}
+          CANONICAL_RESULT: ${{ needs.canonical-gate.result }}
+          HOSTED_SQL_RESULT: ${{ needs.hosted-read-only-gate.result }}
+          HOSTED_UI_RESULT: ${{ needs.hosted-ui-gate.result }}
+          RELEASE_CANDIDATE: ${{ github.event_name == 'workflow_dispatch' && inputs.release_candidate }}
+        run: |
+          test "${STATIC_RESULT}" = success
+          test "${DATABASE_RESULT}" = success
+          test "${CANONICAL_RESULT}" = success
+          if [ "${RELEASE_CANDIDATE}" = true ]; then
+            test "${HOSTED_SQL_RESULT}" = success
+            test "${HOSTED_UI_RESULT}" = success
+          fi

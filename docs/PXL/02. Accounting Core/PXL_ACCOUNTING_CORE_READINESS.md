@@ -2,7 +2,7 @@
 
 **Status:** Active Operational Gate
 **Authority:** Tier 3 Operational Support; Tier 1 accounting rules and the central findings register prevail
-**Last Verified:** 2026-07-17
+**Last Verified:** 2026-07-22 roadmap/state reconciliation
 **Applies To:** Sequencing work before broader transaction/report/UX rollout
 **Read When:** Deciding whether a proposed implementation can proceed
 **Do Not Read For:** Current finding counts or detailed remediation; use `AI/AI_STATE.md` and the referenced central finding
@@ -24,8 +24,6 @@ Authorities:
 Do not clear **PXL Accounting Core Ready** while an active Critical or High finding affects security, posting, accounting, tax, CAS evidence, deterministic regression, source completeness, or product coverage. The central active index currently includes:
 
 - external secret rotation (`PXL-AUD-055`);
-- global BIR configuration policy (`PXL-AUD-063`);
-- historical CAS evidence semantics (`PXL-AUD-066`);
 - deterministic regression lanes (`PXL-AUD-061`);
 - Sales Invoice source-backed completeness (`PXL-AUD-053`); and
 - unexercised workflow/table coverage (`PXL-AUD-059`).
@@ -92,7 +90,7 @@ The gate may be reassessed only when all conditions hold:
 
 - The five-company hosted canonical dataset exercises a meaningful accounting slice, not the entire ERP.
 - Banking operations/reconciliation, fixed assets, returns, approvals, schedules, statutory generators, and CAS artifacts remain incomplete or unexercised in canonical coverage.
-- Project, Location, and Functional Entity are not governed Sales Invoice masters.
+- Project, Location, and Functional Entity masters now exist (MDP-09), but Sales Invoice storage/selectors/propagation/report coverage for them remains open under `PXL-AUD-053`.
 - The current Company Setup Checklist measures ten core-accounting prerequisites, not full operational readiness (`PXL-AUD-067`).
 - Login accessibility remains active but follows the higher-risk security/accounting/CAS work (`PXL-AUD-060`).
 

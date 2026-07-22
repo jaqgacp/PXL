@@ -42,8 +42,18 @@ for (const companyName of companyNames) {
   await page.getByRole('heading', { name: 'Company Setup Checklist' }).waitFor()
   await page.waitForFunction(() => !document.body.innerText.includes('Checking company setup...'))
 
-  const summary = await page.locator('section').first().locator('p').first().innerText()
-  const steps = await page.locator('section h2').evaluateAll((headings) => headings.map((heading) => {
+  // Stage summaries: each readiness section (Core accounting / Operational)
+  // carries its uppercase stage title, a status line, and a description.
+  const stages = await page.locator('section').evaluateAll((sections) => sections.map((section) => {
+    const paragraphs = Array.from(section.querySelectorAll(':scope > div p')).map((p) => p.textContent?.trim() || '')
+    return {
+      title: paragraphs[0] || '',
+      status: paragraphs[1] || '',
+      description: paragraphs[2] || '',
+    }
+  }).filter((stage) => stage.title.startsWith('Stage')))
+
+  const steps = await page.locator('section h3').evaluateAll((headings) => headings.map((heading) => {
     const rowElement = heading.closest('.grid')
     const badge = heading.parentElement?.querySelector('span')?.textContent?.trim() || ''
     const detail = heading.parentElement?.parentElement?.querySelector('p')?.textContent?.trim() || ''
@@ -55,7 +65,7 @@ for (const companyName of companyNames) {
     }
   }))
 
-  result.companies.push({ companyName, summary, steps })
+  result.companies.push({ companyName, stages, steps })
 }
 
 console.log(JSON.stringify(result, null, 2))

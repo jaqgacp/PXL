@@ -44,6 +44,8 @@ type SI = {
   due_date: string | null; currency_code: string
   vat_price_basis: VatPriceBasis
   department_id: string | null; cost_center_id: string | null
+  project_id: string | null; location_id: string | null
+  functional_entity_id: string | null
   warehouse_id: string | null; salesperson_id: string | null
   account_owner_id: string | null
   reference: string | null; memo: string | null
@@ -75,6 +77,9 @@ type SILine = {
   warehouse_id: string
   department_id: string
   cost_center_id: string
+  project_id: string
+  location_id: string
+  functional_entity_id: string
   salesperson_id: string
   inventory_account_id: string
   cogs_account_id: string
@@ -100,6 +105,9 @@ type SalesInvoiceDraft = {
   vatPriceBasis: VatPriceBasis
   department: string
   costCenter: string
+  project: string
+  location: string
+  functionalEntity: string
   warehouse: string
   salesperson: string
   accountOwner: string
@@ -145,6 +153,9 @@ type VatPriceBasis = 'exclusive' | 'inclusive'
 type Branch = { id: string; branch_code: string; branch_name: string }
 type DepartmentRef = { id: string; department_code: string; department_name: string }
 type CostCenterRef = { id: string; cost_center_code: string; cost_center_name: string; department_id: string | null }
+type ProjectRef = { id: string; project_code: string; project_name: string; branch_id: string | null }
+type LocationRef = { id: string; location_code: string; location_name: string; branch_id: string | null }
+type FunctionalEntityRef = { id: string; entity_code: string; entity_name: string; branch_id: string | null }
 type WarehouseRef = { id: string; warehouse_code: string; warehouse_name: string; branch_id: string | null }
 type EmployeeRef = { id: string; employee_number: string; first_name: string; last_name: string; department_id: string | null }
 type VoidReason = { id: string; code: string; description: string }
@@ -159,6 +170,7 @@ type OpenSalesOrder = {
   currency_code: string
 }
 type SalesOrderLineRef = {
+  id: string
   item_id: string | null
   description: string
   quantity: number
@@ -196,6 +208,7 @@ const newLine = (): SILine => ({
   vat_code_id: '', vat_classification: 'regular', vat_rate: 12, vat_amount: 0,
   total_amount: 0, revenue_account_id: '',
   warehouse_id: '', department_id: '', cost_center_id: '', salesperson_id: '',
+  project_id: '', location_id: '', functional_entity_id: '',
   inventory_account_id: '', cogs_account_id: '', unit_cost: 0, inventory_cost: 0,
   inventory_transaction_id: '', remarks: '', source_document_type: '', source_line_id: '',
 })
@@ -213,6 +226,9 @@ const blankDraft = (branchId: string): SalesInvoiceDraft => ({
   vatPriceBasis: 'exclusive',
   department: '',
   costCenter: '',
+  project: '',
+  location: '',
+  functionalEntity: '',
   warehouse: '',
   salesperson: '',
   accountOwner: '',
@@ -250,6 +266,9 @@ const buildDraftSignature = ({
   vatPriceBasis,
   department,
   costCenter,
+  project,
+  location,
+  functionalEntity,
   warehouse,
   salesperson,
   accountOwner,
@@ -273,6 +292,9 @@ const buildDraftSignature = ({
   vatPriceBasis: VatPriceBasis
   department: string
   costCenter: string
+  project: string
+  location: string
+  functionalEntity: string
   warehouse: string
   salesperson: string
   accountOwner: string
@@ -296,6 +318,9 @@ const buildDraftSignature = ({
   vatPriceBasis,
   department,
   costCenter,
+  project,
+  location,
+  functionalEntity,
   warehouse,
   salesperson,
   accountOwner,
@@ -320,6 +345,9 @@ const buildDraftSignature = ({
     warehouse_id: line.warehouse_id,
     department_id: line.department_id,
     cost_center_id: line.cost_center_id,
+    project_id: line.project_id,
+    location_id: line.location_id,
+    functional_entity_id: line.functional_entity_id,
     salesperson_id: line.salesperson_id,
     inventory_account_id: line.inventory_account_id,
     cogs_account_id: line.cogs_account_id,
@@ -342,6 +370,9 @@ const buildSignatureFromDraft = (draft: SalesInvoiceDraft) => buildDraftSignatur
   vatPriceBasis: draft.vatPriceBasis,
   department: draft.department,
   costCenter: draft.costCenter,
+  project: draft.project,
+  location: draft.location,
+  functionalEntity: draft.functionalEntity,
   warehouse: draft.warehouse,
   salesperson: draft.salesperson,
   accountOwner: draft.accountOwner,
@@ -691,6 +722,9 @@ export default function SalesInvoicePage() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [departments, setDepartments] = useState<DepartmentRef[]>([])
   const [costCenters, setCostCenters] = useState<CostCenterRef[]>([])
+  const [projects, setProjects] = useState<ProjectRef[]>([])
+  const [locations, setLocations] = useState<LocationRef[]>([])
+  const [functionalEntities, setFunctionalEntities] = useState<FunctionalEntityRef[]>([])
   const [warehouses, setWarehouses] = useState<WarehouseRef[]>([])
   const [employees, setEmployees] = useState<EmployeeRef[]>([])
   const [voidReasons, setVoidReasons] = useState<VoidReason[]>([])
@@ -751,6 +785,9 @@ export default function SalesInvoicePage() {
   const setFVatPriceBasis = useCallback((value: SetStateAction<VatPriceBasis>) => setDraftValue('vatPriceBasis', value), [setDraftValue])
   const setFDepartment = useCallback((value: SetStateAction<string>) => setDraftValue('department', value), [setDraftValue])
   const setFCostCenter = useCallback((value: SetStateAction<string>) => setDraftValue('costCenter', value), [setDraftValue])
+  const setFProject = useCallback((value: SetStateAction<string>) => setDraftValue('project', value), [setDraftValue])
+  const setFLocation = useCallback((value: SetStateAction<string>) => setDraftValue('location', value), [setDraftValue])
+  const setFFunctionalEntity = useCallback((value: SetStateAction<string>) => setDraftValue('functionalEntity', value), [setDraftValue])
   const setFWarehouse = useCallback((value: SetStateAction<string>) => setDraftValue('warehouse', value), [setDraftValue])
   const setFSalesperson = useCallback((value: SetStateAction<string>) => setDraftValue('salesperson', value), [setDraftValue])
   const setFAccountOwner = useCallback((value: SetStateAction<string>) => setDraftValue('accountOwner', value), [setDraftValue])
@@ -771,6 +808,9 @@ export default function SalesInvoicePage() {
     vatPriceBasis: fVatPriceBasis,
     department: fDepartment,
     costCenter: fCostCenter,
+    project: fProject,
+    location: fLocation,
+    functionalEntity: fFunctionalEntity,
     warehouse: fWarehouse,
     salesperson: fSalesperson,
     accountOwner: fAccountOwner,
@@ -815,8 +855,11 @@ export default function SalesInvoicePage() {
     ...blankLineWithCurrentVat(),
     department_id: fDepartment,
     cost_center_id: fCostCenter,
+    project_id: fProject,
+    location_id: fLocation,
+    functional_entity_id: fFunctionalEntity,
     salesperson_id: fSalesperson,
-  }), [blankLineWithCurrentVat, fCostCenter, fDepartment, fSalesperson])
+  }), [blankLineWithCurrentVat, fCostCenter, fDepartment, fFunctionalEntity, fLocation, fProject, fSalesperson])
 
   // Load reference data
   useEffect(() => {
@@ -832,6 +875,9 @@ export default function SalesInvoicePage() {
         { data: brs },
         { data: deps },
         { data: ccs },
+        { data: projs },
+        { data: locs },
+        { data: entities },
         { data: whs },
         { data: emps },
         { data: vrs },
@@ -853,6 +899,9 @@ export default function SalesInvoicePage() {
           supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
           supabase.from('departments').select('id,department_code,department_name').eq('company_id', companyId).eq('is_active', true).order('department_code'),
           supabase.from('cost_centers').select('id,cost_center_code,cost_center_name,department_id').eq('company_id', companyId).eq('is_active', true).order('cost_center_code'),
+          supabase.from('projects').select('id,project_code,project_name,branch_id').eq('company_id', companyId).eq('is_active', true).eq('project_status', 'active').order('project_code'),
+          supabase.from('locations').select('id,location_code,location_name,branch_id').eq('company_id', companyId).eq('is_active', true).order('location_code'),
+          supabase.from('functional_entities').select('id,entity_code,entity_name,branch_id').eq('company_id', companyId).eq('is_active', true).order('entity_code'),
           supabase.from('warehouses').select('id,warehouse_code,warehouse_name,branch_id').eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
           supabase.from('employees').select('id,employee_number,first_name,last_name,department_id').eq('company_id', companyId).eq('is_active', true).order('last_name'),
           supabase.from('void_reason_codes').select('id,code,description').eq('is_active', true).order('code'),
@@ -882,6 +931,9 @@ export default function SalesInvoicePage() {
       setBranches(brs as Branch[] || [])
       setDepartments(deps as DepartmentRef[] || [])
       setCostCenters(ccs as CostCenterRef[] || [])
+      setProjects(projs as ProjectRef[] || [])
+      setLocations(locs as LocationRef[] || [])
+      setFunctionalEntities(entities as FunctionalEntityRef[] || [])
       setWarehouses(whs as WarehouseRef[] || [])
       setEmployees(emps as EmployeeRef[] || [])
       setVoidReasons(vrs as VoidReason[] || [])
@@ -903,18 +955,24 @@ export default function SalesInvoicePage() {
     if (filterStatus) q = q.eq('status', filterStatus)
     if (search.trim()) {
       const s = `%${search.trim()}%`
+      const normalizedSearch = search.trim().toLowerCase()
       const tinSearch = formatPhTinInput(search)
       const tinClause = tinSearch && tinSearch !== search.trim()
         ? `,customer_tin_snapshot.ilike.%${tinSearch}%`
         : ''
-      q = q.or(`si_number.ilike.${s},reference.ilike.${s},customer_name_snapshot.ilike.${s},customer_tin_snapshot.ilike.${s}${tinClause}`)
+      const dimensionClauses = [
+        ...projects.filter(project => `${project.project_code} ${project.project_name}`.toLowerCase().includes(normalizedSearch)).map(project => `project_id.eq.${project.id}`),
+        ...locations.filter(location => `${location.location_code} ${location.location_name}`.toLowerCase().includes(normalizedSearch)).map(location => `location_id.eq.${location.id}`),
+        ...functionalEntities.filter(entity => `${entity.entity_code} ${entity.entity_name}`.toLowerCase().includes(normalizedSearch)).map(entity => `functional_entity_id.eq.${entity.id}`),
+      ]
+      q = q.or(`si_number.ilike.${s},reference.ilike.${s},customer_name_snapshot.ilike.${s},customer_tin_snapshot.ilike.${s}${tinClause}${dimensionClauses.length > 0 ? `,${dimensionClauses.join(',')}` : ''}`)
     }
 
     const { data, count } = await q
     setList((data || []) as unknown as SI[])
     setTotalCount(count || 0)
     setListLoading(false)
-  }, [companyId, page, filterStatus, search])
+  }, [companyId, functionalEntities, locations, page, filterStatus, projects, search])
 
   useEffect(() => { if (mode === 'list') loadList() }, [mode, loadList])
 
@@ -962,6 +1020,9 @@ export default function SalesInvoicePage() {
       vatPriceBasis: si.vat_price_basis || 'exclusive',
       department: si.department_id || '',
       costCenter: si.cost_center_id || '',
+      project: si.project_id || '',
+      location: si.location_id || '',
+      functionalEntity: si.functional_entity_id || '',
       warehouse: si.warehouse_id || '',
       salesperson: si.salesperson_id || '',
       accountOwner: si.account_owner_id || '',
@@ -1000,6 +1061,9 @@ export default function SalesInvoicePage() {
           warehouse_id: String(l.warehouse_id || ''),
           department_id: String(l.department_id || ''),
           cost_center_id: String(l.cost_center_id || ''),
+          project_id: String(l.project_id || ''),
+          location_id: String(l.location_id || ''),
+          functional_entity_id: String(l.functional_entity_id || ''),
           salesperson_id: String(l.salesperson_id || ''),
           inventory_account_id: String(l.inventory_account_id || ''),
           cogs_account_id: String(l.cogs_account_id || ''),
@@ -1019,6 +1083,9 @@ export default function SalesInvoicePage() {
         ...blankLineWithCurrentVat(),
         department_id: si.department_id || '',
         cost_center_id: si.cost_center_id || '',
+        project_id: si.project_id || '',
+        location_id: si.location_id || '',
+        functional_entity_id: si.functional_entity_id || '',
         salesperson_id: si.salesperson_id || '',
       }]
       const nextDraft = { ...baseDraft, lines: nextLines }
@@ -1168,7 +1235,7 @@ export default function SalesInvoicePage() {
   const convertFromSalesOrder = async (so: OpenSalesOrder) => {
     const { data, error: lineError } = await supabase
       .from('sales_order_lines')
-      .select('item_id,description,quantity,fulfilled_quantity,uom_id,unit_price,discount_amount')
+      .select('id,item_id,description,quantity,fulfilled_quantity,uom_id,unit_price,discount_amount')
       .eq('sales_order_id', so.id)
       .order('line_number')
     if (lineError) {
@@ -1210,6 +1277,9 @@ export default function SalesInvoicePage() {
         warehouse_id: item?.item_type === 'inventory_item' ? fWarehouse : '',
         department_id: fDepartment,
         cost_center_id: fCostCenter,
+        project_id: fProject,
+        location_id: fLocation,
+        functional_entity_id: fFunctionalEntity,
         salesperson_id: fSalesperson,
         inventory_account_id: item?.inventory_account_id || '',
         cogs_account_id: item?.cogs_account_id || '',
@@ -1218,7 +1288,7 @@ export default function SalesInvoicePage() {
         inventory_transaction_id: '',
         remarks: '',
         source_document_type: 'sales_order',
-        source_line_id: '',
+        source_line_id: line.id,
       }, fVatPriceBasis)
     })
 
@@ -1295,6 +1365,9 @@ export default function SalesInvoicePage() {
         vat_price_basis: fVatPriceBasis,
         department_id: fDepartment || null,
         cost_center_id: fCostCenter || null,
+        project_id: fProject || null,
+        location_id: fLocation || null,
+        functional_entity_id: fFunctionalEntity || null,
         warehouse_id: fWarehouse || null,
         salesperson_id: fSalesperson || null,
         account_owner_id: fAccountOwner || null,
@@ -1325,6 +1398,9 @@ export default function SalesInvoicePage() {
           warehouse_id: (items.find(item => item.id === l.item_id)?.item_type === 'inventory_item' ? (l.warehouse_id || fWarehouse) : l.warehouse_id) || null,
           department_id: l.department_id || fDepartment || null,
           cost_center_id: l.cost_center_id || fCostCenter || null,
+          project_id: l.project_id || fProject || null,
+          location_id: l.location_id || fLocation || null,
+          functional_entity_id: l.functional_entity_id || fFunctionalEntity || null,
           salesperson_id: l.salesperson_id || fSalesperson || null,
           inventory_account_id: l.inventory_account_id || null,
           cogs_account_id: l.cogs_account_id || null,
@@ -1556,6 +1632,12 @@ export default function SalesInvoicePage() {
   const selectedAtc = cwtAtcCodes.find(a => a.id === fCwtAtc)
   const selectedDepartment = departments.find(d => d.id === fDepartment)
   const selectedCostCenter = costCenters.find(c => c.id === fCostCenter)
+  const availableProjects = projects.filter(project => !project.branch_id || project.branch_id === fBranch)
+  const availableLocations = locations.filter(location => !location.branch_id || location.branch_id === fBranch)
+  const availableFunctionalEntities = functionalEntities.filter(entity => !entity.branch_id || entity.branch_id === fBranch)
+  const selectedProject = availableProjects.find(project => project.id === fProject)
+  const selectedLocation = availableLocations.find(location => location.id === fLocation)
+  const selectedFunctionalEntity = availableFunctionalEntities.find(entity => entity.id === fFunctionalEntity)
   const selectedWarehouse = warehouses.find(w => w.id === fWarehouse)
   const employeeLabel = (employee: EmployeeRef) => `${employee.employee_number} - ${employee.first_name} ${employee.last_name}`
   const activeLines = lines.filter(l => l.description.trim() || l.item_id)
@@ -2104,7 +2186,7 @@ export default function SalesInvoicePage() {
           </TransactionInfoCard>
 
           <TransactionInfoCard title="Sales Context">
-            {departments.length === 0 && costCenters.length === 0 && warehouses.length === 0 && employees.length === 0 ? (
+            {departments.length === 0 && costCenters.length === 0 && availableProjects.length === 0 && availableLocations.length === 0 && availableFunctionalEntities.length === 0 && warehouses.length === 0 && employees.length === 0 ? (
               <div className="rounded border border-[#c7d0db] bg-[#f3f6f9] px-3 py-4 text-center">
                 <div className="text-xs font-medium text-gray-600">No operational dimensions assigned.</div>
               </div>
@@ -2171,6 +2253,45 @@ export default function SalesInvoicePage() {
                     )}
                   </div>
                 )}
+                {availableProjects.length > 0 && (
+                  <div>
+                    <label className={lbl}>Project</label>
+                    {readOnly ? (
+                      <div className={ro}>{selectedProject ? `${selectedProject.project_code} - ${selectedProject.project_name}` : 'Not assigned'}</div>
+                    ) : (
+                      <select value={fProject} onChange={e => setFProject(e.target.value)} className={inp}>
+                        <option value="">Not assigned</option>
+                        {availableProjects.map(project => <option key={project.id} value={project.id}>{project.project_code} - {project.project_name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                )}
+                {availableLocations.length > 0 && (
+                  <div>
+                    <label className={lbl}>Location</label>
+                    {readOnly ? (
+                      <div className={ro}>{selectedLocation ? `${selectedLocation.location_code} - ${selectedLocation.location_name}` : 'Not assigned'}</div>
+                    ) : (
+                      <select value={fLocation} onChange={e => setFLocation(e.target.value)} className={inp}>
+                        <option value="">Not assigned</option>
+                        {availableLocations.map(location => <option key={location.id} value={location.id}>{location.location_code} - {location.location_name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                )}
+                {availableFunctionalEntities.length > 0 && (
+                  <div>
+                    <label className={lbl}>Functional Entity</label>
+                    {readOnly ? (
+                      <div className={ro}>{selectedFunctionalEntity ? `${selectedFunctionalEntity.entity_code} - ${selectedFunctionalEntity.entity_name}` : 'Not assigned'}</div>
+                    ) : (
+                      <select value={fFunctionalEntity} onChange={e => setFFunctionalEntity(e.target.value)} className={inp}>
+                        <option value="">Not assigned</option>
+                        {availableFunctionalEntities.map(entity => <option key={entity.id} value={entity.id}>{entity.entity_code} - {entity.entity_name}</option>)}
+                      </select>
+                    )}
+                  </div>
+                )}
                 {warehouses.length > 0 && (
                   <div>
                     <label className={lbl}>Default Warehouse</label>
@@ -2220,7 +2341,7 @@ export default function SalesInvoicePage() {
               )}
             </div>
             <div className="max-h-[58vh] overflow-auto">
-              <table className={`${transactionTableClass()} w-full min-w-[1800px]`}>
+              <table className={`${transactionTableClass()} w-full min-w-[2200px]`}>
                 <thead className="sticky top-0 z-10 border-b bg-gray-50">
                   <tr>
                     <th className="sticky left-0 z-20 w-10 bg-[var(--pxl-surface-table-header)] px-3 py-2 text-left">#</th>
@@ -2231,6 +2352,9 @@ export default function SalesInvoicePage() {
                     {warehouses.length > 0 && <th className="w-36 px-3 py-2 text-left">Warehouse</th>}
                     {departments.length > 0 && <th className="w-36 px-3 py-2 text-left">Department</th>}
                     {costCenters.length > 0 && <th className="w-36 px-3 py-2 text-left">Cost Center</th>}
+                    {availableProjects.length > 0 && <th className="w-36 px-3 py-2 text-left">Project</th>}
+                    {availableLocations.length > 0 && <th className="w-36 px-3 py-2 text-left">Location</th>}
+                    {availableFunctionalEntities.length > 0 && <th className="w-40 px-3 py-2 text-left">Functional Entity</th>}
                     <th className="w-28 px-3 py-2 text-right">Unit Price</th>
                     <th className="w-16 px-3 py-2 text-right">Disc%</th>
                     <th className="w-28 px-3 py-2 text-left">VAT Code</th>
@@ -2307,6 +2431,42 @@ export default function SalesInvoicePage() {
                           )}
                         </td>
                       )}
+                      {availableProjects.length > 0 && (
+                        <td className="px-3 py-2 align-middle">
+                          {canEdit ? (
+                            <select value={l.project_id} onChange={e => setLineField(l._key, 'project_id', e.target.value)} className="w-full border-0 bg-transparent text-xs focus:outline-none">
+                              <option value="">Header/default</option>
+                              {availableProjects.map(project => <option key={project.id} value={project.id}>{project.project_code}</option>)}
+                            </select>
+                          ) : (
+                            <span className="text-xs text-gray-500">{availableProjects.find(project => project.id === l.project_id)?.project_code || 'Not assigned'}</span>
+                          )}
+                        </td>
+                      )}
+                      {availableLocations.length > 0 && (
+                        <td className="px-3 py-2 align-middle">
+                          {canEdit ? (
+                            <select value={l.location_id} onChange={e => setLineField(l._key, 'location_id', e.target.value)} className="w-full border-0 bg-transparent text-xs focus:outline-none">
+                              <option value="">Header/default</option>
+                              {availableLocations.map(location => <option key={location.id} value={location.id}>{location.location_code}</option>)}
+                            </select>
+                          ) : (
+                            <span className="text-xs text-gray-500">{availableLocations.find(location => location.id === l.location_id)?.location_code || 'Not assigned'}</span>
+                          )}
+                        </td>
+                      )}
+                      {availableFunctionalEntities.length > 0 && (
+                        <td className="px-3 py-2 align-middle">
+                          {canEdit ? (
+                            <select value={l.functional_entity_id} onChange={e => setLineField(l._key, 'functional_entity_id', e.target.value)} className="w-full border-0 bg-transparent text-xs focus:outline-none">
+                              <option value="">Header/default</option>
+                              {availableFunctionalEntities.map(entity => <option key={entity.id} value={entity.id}>{entity.entity_code}</option>)}
+                            </select>
+                          ) : (
+                            <span className="text-xs text-gray-500">{availableFunctionalEntities.find(entity => entity.id === l.functional_entity_id)?.entity_code || 'Not assigned'}</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-3 py-2 text-right align-middle">
                         {canEdit ? (
                           <input type="number" value={l.unit_price} min={0} step="any"
@@ -2354,7 +2514,7 @@ export default function SalesInvoicePage() {
                 </tbody>
                 <tfoot className="sticky bottom-0 border-t border-gray-200 bg-gray-50">
                   <tr>
-                    <td colSpan={9 + (warehouses.length > 0 ? 1 : 0) + (departments.length > 0 ? 1 : 0) + (costCenters.length > 0 ? 1 : 0)} className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Preview Totals</td>
+                    <td colSpan={9 + (warehouses.length > 0 ? 1 : 0) + (departments.length > 0 ? 1 : 0) + (costCenters.length > 0 ? 1 : 0) + (availableProjects.length > 0 ? 1 : 0) + (availableLocations.length > 0 ? 1 : 0) + (availableFunctionalEntities.length > 0 ? 1 : 0)} className="px-3 py-2 text-right text-xs font-semibold text-gray-700">Preview Totals</td>
                     <td className="px-3 py-2 text-right font-mono text-xs font-semibold tabular-nums text-gray-900">{fmt(totals.total_taxable_amount + totals.total_zero_rated_amount + totals.total_exempt_amount)}</td>
                     <td className="px-3 py-2 text-right font-mono text-xs font-semibold tabular-nums text-gray-900">{fmt(totals.total_vat_amount)}</td>
                     <td className="px-3 py-2 text-right font-mono text-xs font-semibold tabular-nums text-gray-900">{fmt(totals.total_amount)}</td>

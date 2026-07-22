@@ -18,6 +18,9 @@ export type SalesInvoiceDraftLine = {
   warehouse_id: string
   department_id: string
   cost_center_id: string
+  project_id: string
+  location_id: string
+  functional_entity_id: string
   salesperson_id: string
   inventory_account_id: string
   cogs_account_id: string

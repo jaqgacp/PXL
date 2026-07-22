@@ -1,7 +1,8 @@
 -- PXL-AUD-053
 -- Sales Invoice completeness coverage:
 --   * VAT-inclusive commercial prices are persisted and computed server-side.
---   * Supported operational dimensions are captured from master data.
+--   * Every supported operational dimension is captured, validated, reported,
+--     exported, audited, posted, and reversed from governed master data.
 --   * Inventory item lines post COGS and Inventory, reduce stock, and retain
 --     authoritative inventory cost evidence.
 --   * Service lines do not create inventory movements.
@@ -9,7 +10,7 @@
 
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
-SELECT plan(22);
+SELECT plan(42);
 
 INSERT INTO auth.users (
   instance_id, id, aud, role, email, encrypted_password,
@@ -123,6 +124,67 @@ INSERT INTO cost_centers (
   'CC-SALES', 'Sales Cost Center', auth.uid(), auth.uid()
 );
 
+INSERT INTO projects (
+  id, company_id, branch_id, project_code, project_name,
+  valid_from, created_by, updated_by
+) VALUES
+  (
+    '55555555-5555-5555-5555-555555555454',
+    '22222222-2222-2222-2222-222222222154',
+    '33333333-3333-3333-3333-333333333154',
+    'PRJ-HEAD', 'Header Project', '2026-01-01', auth.uid(), auth.uid()
+  ),
+  (
+    '55555555-5555-5555-5555-555555555554',
+    '22222222-2222-2222-2222-222222222154',
+    '33333333-3333-3333-3333-333333333154',
+    'PRJ-LINE', 'Line Override Project', '2026-01-01', auth.uid(), auth.uid()
+  ),
+  (
+    '55555555-5555-5555-5555-555555555654',
+    '22222222-2222-2222-2222-222222222154',
+    '33333333-3333-3333-3333-333333333154',
+    'PRJ-INACTIVE', 'Inactive Project', '2026-01-01', auth.uid(), auth.uid()
+  );
+
+UPDATE projects
+SET is_active = false
+WHERE id = '55555555-5555-5555-5555-555555555654';
+
+INSERT INTO locations (
+  id, company_id, branch_id, location_code, location_name,
+  valid_from, created_by, updated_by
+) VALUES
+  (
+    '55555555-5555-5555-5555-555555555754',
+    '22222222-2222-2222-2222-222222222154',
+    '33333333-3333-3333-3333-333333333154',
+    'LOC-HEAD', 'Header Location', '2026-01-01', auth.uid(), auth.uid()
+  ),
+  (
+    '55555555-5555-5555-5555-555555555854',
+    '22222222-2222-2222-2222-222222222154',
+    '33333333-3333-3333-3333-333333333154',
+    'LOC-LINE', 'Line Override Location', '2026-01-01', auth.uid(), auth.uid()
+  );
+
+INSERT INTO functional_entities (
+  id, company_id, branch_id, entity_code, entity_name,
+  valid_from, created_by, updated_by
+) VALUES
+  (
+    '55555555-5555-5555-5555-555555555954',
+    '22222222-2222-2222-2222-222222222154',
+    '33333333-3333-3333-3333-333333333154',
+    'FE-HEAD', 'Header Functional Entity', '2026-01-01', auth.uid(), auth.uid()
+  ),
+  (
+    '55555555-5555-5555-5555-555555556054',
+    '22222222-2222-2222-2222-222222222154',
+    '33333333-3333-3333-3333-333333333154',
+    'FE-LINE', 'Line Override Functional Entity', '2026-01-01', auth.uid(), auth.uid()
+  );
+
 INSERT INTO employees (
   id, company_id, branch_id, employee_number, last_name, first_name,
   department_id, job_title, hire_date, created_by, updated_by
@@ -219,6 +281,33 @@ INSERT INTO customers (
   'Customer HQ', 'Customer HQ', auth.uid(), auth.uid()
 );
 
+INSERT INTO sales_orders (
+  id, company_id, branch_id, customer_id, so_number, so_date,
+  customer_name_snapshot, customer_tin_snapshot, approval_status,
+  fulfillment_status, total_amount, created_by, updated_by
+) VALUES (
+  '99999999-9999-9999-9999-999999999154',
+  '22222222-2222-2222-2222-222222222154',
+  '33333333-3333-3333-3333-333333333154',
+  '88888888-8888-8888-8888-888888888154',
+  'SO-AUD053-001', '2026-01-15',
+  'AUD053 Customer Inc', '444-555-666-00154',
+  'approved', 'partial', 1120, auth.uid(), auth.uid()
+);
+
+INSERT INTO sales_order_lines (
+  id, sales_order_id, company_id, line_number, item_id, description,
+  quantity, fulfilled_quantity, uom_id, unit_price, discount_amount,
+  net_amount, created_by, updated_by
+) VALUES (
+  '99999999-9999-9999-9999-999999999254',
+  '99999999-9999-9999-9999-999999999154',
+  '22222222-2222-2222-2222-222222222154',
+  1, '66666666-6666-6666-6666-666666666354', 'Inventory item sale',
+  1, 0, '66666666-6666-6666-6666-666666666254', 1120, 112, 1008,
+  auth.uid(), auth.uid()
+);
+
 INSERT INTO number_series (
   company_id, branch_id, document_type_id, document_code, prefix,
   number_length, padding, starting_number, next_number, current_sequence,
@@ -248,6 +337,9 @@ SELECT 'si', fn_save_sales_invoice(NULL,
     'vat_price_basis', 'inclusive',
     'department_id', '55555555-5555-5555-5555-555555555154',
     'cost_center_id', '55555555-5555-5555-5555-555555555254',
+    'project_id', '55555555-5555-5555-5555-555555555454',
+    'location_id', '55555555-5555-5555-5555-555555555754',
+    'functional_entity_id', '55555555-5555-5555-5555-555555555954',
     'warehouse_id', '77777777-7777-7777-7777-777777777154',
     'salesperson_id', '55555555-5555-5555-5555-555555555354',
     'account_owner_id', '55555555-5555-5555-5555-555555555354'
@@ -258,6 +350,9 @@ SELECT 'si', fn_save_sales_invoice(NULL,
       'description', 'Inventory item sale',
       'quantity', 1,
       'unit_price', 1120,
+      'discount_percent', 10,
+      'source_document_type', 'sales_order',
+      'source_line_id', '99999999-9999-9999-9999-999999999254',
       'vat_code_id', (SELECT id FROM vat_codes WHERE vat_code = 'VAT-12')
     ),
     jsonb_build_object(
@@ -265,6 +360,9 @@ SELECT 'si', fn_save_sales_invoice(NULL,
       'description', 'Service item sale',
       'quantity', 1,
       'unit_price', 560,
+      'project_id', '55555555-5555-5555-5555-555555555554',
+      'location_id', '55555555-5555-5555-5555-555555555854',
+      'functional_entity_id', '55555555-5555-5555-5555-555555556054',
       'vat_code_id', (SELECT id FROM vat_codes WHERE vat_code = 'VAT-12')
     )
   )
@@ -274,8 +372,8 @@ SELECT results_eq(
   $q$SELECT vat_price_basis, total_taxable_amount, total_vat_amount, total_amount
      FROM sales_invoices
      WHERE id = (SELECT id FROM t_ctx WHERE key = 'si')$q$,
-  $$VALUES ('inclusive'::text, 1500.00::numeric, 180.00::numeric, 1680.00::numeric)$$,
-  'SI persists VAT-inclusive basis and computes net/VAT/gross from entered commercial prices'
+  $$VALUES ('inclusive'::text, 1400.00::numeric, 168.00::numeric, 1568.00::numeric)$$,
+  'SI persists VAT-inclusive basis and computes discounted net/VAT/gross from entered commercial prices'
 );
 
 SELECT results_eq(
@@ -284,18 +382,22 @@ SELECT results_eq(
      WHERE sales_invoice_id = (SELECT id FROM t_ctx WHERE key = 'si')
      ORDER BY line_number$q$,
   $$VALUES
-      (1, 1000.00::numeric, 120.00::numeric, 1120.00::numeric),
+      (1,  900.00::numeric, 108.00::numeric, 1008.00::numeric),
       (2,  500.00::numeric,  60.00::numeric,  560.00::numeric)$$,
   'SI line totals are rebuilt by the authoritative server calculation'
 );
 
 SELECT results_eq(
-  $q$SELECT department_id, cost_center_id, warehouse_id, salesperson_id, account_owner_id
+  $q$SELECT department_id, cost_center_id, project_id, location_id,
+            functional_entity_id, warehouse_id, salesperson_id, account_owner_id
      FROM sales_invoices
      WHERE id = (SELECT id FROM t_ctx WHERE key = 'si')$q$,
   $$VALUES (
       '55555555-5555-5555-5555-555555555154'::uuid,
       '55555555-5555-5555-5555-555555555254'::uuid,
+      '55555555-5555-5555-5555-555555555454'::uuid,
+      '55555555-5555-5555-5555-555555555754'::uuid,
+      '55555555-5555-5555-5555-555555555954'::uuid,
       '77777777-7777-7777-7777-777777777154'::uuid,
       '55555555-5555-5555-5555-555555555354'::uuid,
       '55555555-5555-5555-5555-555555555354'::uuid
@@ -304,14 +406,140 @@ SELECT results_eq(
 );
 
 SELECT results_eq(
-  $q$SELECT line_number, warehouse_id, department_id, cost_center_id, salesperson_id
+  $q$SELECT line_number, warehouse_id, department_id, cost_center_id,
+            project_id, location_id, functional_entity_id, salesperson_id
      FROM sales_invoice_lines
      WHERE sales_invoice_id = (SELECT id FROM t_ctx WHERE key = 'si')
      ORDER BY line_number$q$,
   $$VALUES
-      (1, '77777777-7777-7777-7777-777777777154'::uuid, '55555555-5555-5555-5555-555555555154'::uuid, '55555555-5555-5555-5555-555555555254'::uuid, '55555555-5555-5555-5555-555555555354'::uuid),
-      (2, NULL::uuid, '55555555-5555-5555-5555-555555555154'::uuid, '55555555-5555-5555-5555-555555555254'::uuid, '55555555-5555-5555-5555-555555555354'::uuid)$$,
-  'Inventory lines inherit header warehouse while service lines avoid automatic warehouse context'
+      (1, '77777777-7777-7777-7777-777777777154'::uuid, '55555555-5555-5555-5555-555555555154'::uuid, '55555555-5555-5555-5555-555555555254'::uuid, '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid, '55555555-5555-5555-5555-555555555354'::uuid),
+      (2, NULL::uuid, '55555555-5555-5555-5555-555555555154'::uuid, '55555555-5555-5555-5555-555555555254'::uuid, '55555555-5555-5555-5555-555555555554'::uuid, '55555555-5555-5555-5555-555555555854'::uuid, '55555555-5555-5555-5555-555555556054'::uuid, '55555555-5555-5555-5555-555555555354'::uuid)$$,
+  'SI lines inherit header dimensions and retain explicit line overrides'
+);
+
+SELECT results_eq(
+  $q$SELECT line_number, source_document_type, source_line_id
+     FROM sales_invoice_lines
+     WHERE sales_invoice_id = (SELECT id FROM t_ctx WHERE key = 'si')
+       AND source_document_type IS NOT NULL$q$,
+  $$VALUES (
+    1,
+    'sales_order'::text,
+    '99999999-9999-9999-9999-999999999254'::uuid
+  )$$,
+  'Sales Order conversion source type and canonical source-line UUID persist on the SI line'
+);
+
+SELECT isnt_empty(
+  $q$SELECT 1
+     FROM sys_audit_logs
+     WHERE table_name = 'sales_invoices'
+       AND record_id = (SELECT id FROM t_ctx WHERE key = 'si')
+       AND new_data->>'project_id' = '55555555-5555-5555-5555-555555555454'
+       AND new_data->>'location_id' = '55555555-5555-5555-5555-555555555754'
+       AND new_data->>'functional_entity_id' = '55555555-5555-5555-5555-555555555954'$q$,
+  'Sales Invoice audit JSON captures every governed header dimension'
+);
+
+SELECT isnt_empty(
+  $q$SELECT 1
+     FROM sys_audit_logs
+     WHERE table_name = 'sales_invoice_lines'
+       AND new_data->>'sales_invoice_id' = (SELECT id::text FROM t_ctx WHERE key = 'si')
+       AND new_data->>'project_id' = '55555555-5555-5555-5555-555555555554'
+       AND new_data->>'location_id' = '55555555-5555-5555-5555-555555555854'
+       AND new_data->>'functional_entity_id' = '55555555-5555-5555-5555-555555556054'$q$,
+  'Sales Invoice audit JSON captures explicit line dimension overrides'
+);
+
+SELECT throws_ok(
+  $q$SELECT fn_save_sales_invoice(
+    NULL,
+    jsonb_build_object(
+      'company_id', '22222222-2222-2222-2222-222222222154',
+      'branch_id', '33333333-3333-3333-3333-333333333154',
+      'date', '2026-01-20',
+      'currency_code', 'USD'
+    ),
+    '[]'::jsonb
+  )$q$,
+  'P0001',
+  'Foreign-currency Sales Invoices are not supported; currency_code must be PHP',
+  'unsupported foreign-currency Sales Invoices fail closed without an exchange-rate path'
+);
+
+SELECT throws_ok(
+  $q$SELECT fn_save_sales_invoice(
+    NULL,
+    jsonb_build_object(
+      'company_id', '22222222-2222-2222-2222-222222222154',
+      'branch_id', '33333333-3333-3333-3333-333333333154',
+      'date', '2026-01-20',
+      'customer_id', '88888888-8888-8888-8888-888888888154',
+      'customer_name_snapshot', 'AUD053 Customer Inc',
+      'customer_tin_snapshot', '444-555-666-00154',
+      'customer_address_snapshot', 'Customer HQ',
+      'project_id', '55555555-5555-5555-5555-555555555654'
+    ),
+    jsonb_build_array(jsonb_build_object(
+      'description', 'Rejected inactive dimension',
+      'quantity', 1,
+      'unit_price', 1,
+      'vat_code_id', (SELECT id FROM vat_codes WHERE vat_code = 'VAT-12'),
+      'revenue_account_id', 'aaaaaaaa-0000-0000-0000-000000000354'
+    ))
+  )$q$,
+  'P0001',
+  'Invalid project for Sales Invoice header',
+  'SI save rejects an inactive analytical dimension before persistence'
+);
+
+SELECT throws_ok(
+  $q$SELECT fn_save_sales_invoice(
+    NULL,
+    jsonb_build_object(
+      'company_id', '22222222-2222-2222-2222-222222222154',
+      'branch_id', '33333333-3333-3333-3333-333333333154',
+      'date', '2026-01-20',
+      'customer_id', '88888888-8888-8888-8888-888888888154',
+      'customer_name_snapshot', 'AUD053 Customer Inc',
+      'customer_tin_snapshot', '444-555-666-00154',
+      'customer_address_snapshot', 'Customer HQ'
+    ),
+    jsonb_build_array(jsonb_build_object(
+      'description', 'Rejected source line',
+      'quantity', 1,
+      'unit_price', 1,
+      'vat_code_id', (SELECT id FROM vat_codes WHERE vat_code = 'VAT-12'),
+      'revenue_account_id', 'aaaaaaaa-0000-0000-0000-000000000354',
+      'source_document_type', 'sales_order',
+      'source_line_id', '99999999-9999-9999-9999-999999999999'
+    ))
+  )$q$,
+  'P0001',
+  'Invalid Sales Order source line for Sales Invoice line 1',
+  'SI save rejects a nonexistent or cross-context Sales Order source line'
+);
+
+SELECT results_eq(
+  $q$SELECT accounting_effect, credit, project_id, location_id, functional_entity_id
+     FROM jsonb_to_recordset(
+       fn_preview_gl_impact('SI', (SELECT id FROM t_ctx WHERE key = 'si'))->'lines'
+     ) AS x(
+       accounting_effect text, credit numeric, project_id uuid,
+       location_id uuid, functional_entity_id uuid
+     )
+     ORDER BY CASE accounting_effect
+       WHEN 'RECEIVABLE' THEN 1 WHEN 'REVENUE' THEN 2 WHEN 'TAX' THEN 3
+       WHEN 'COGS' THEN 4 ELSE 5 END, credit DESC$q$,
+  $$VALUES
+    ('RECEIVABLE'::text, 0.00::numeric, '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid),
+    ('REVENUE'::text, 900.00::numeric, '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid),
+    ('REVENUE'::text, 500.00::numeric, '55555555-5555-5555-5555-555555555554'::uuid, '55555555-5555-5555-5555-555555555854'::uuid, '55555555-5555-5555-5555-555555556054'::uuid),
+    ('TAX'::text, 168.00::numeric, '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid),
+    ('COGS'::text, 0.00::numeric, '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid),
+    ('INVENTORY'::text, 600.00::numeric, '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid)$$,
+  'draft GL preview carries header defaults and line dimension overrides at the correct accounting grain'
 );
 
 SELECT results_eq(
@@ -321,12 +549,12 @@ SELECT results_eq(
      ) AS x(account_id uuid, debit numeric, credit numeric)
      ORDER BY debit DESC, credit DESC, account_id$q$,
   $$VALUES
-      ('aaaaaaaa-0000-0000-0000-000000000154'::uuid, 1680.00::numeric,    0.00::numeric),
+      ('aaaaaaaa-0000-0000-0000-000000000154'::uuid, 1568.00::numeric,    0.00::numeric),
       ('aaaaaaaa-0000-0000-0000-000000000654'::uuid,  600.00::numeric,    0.00::numeric),
-      ('aaaaaaaa-0000-0000-0000-000000000354'::uuid,    0.00::numeric, 1000.00::numeric),
+      ('aaaaaaaa-0000-0000-0000-000000000354'::uuid,    0.00::numeric,  900.00::numeric),
       ('aaaaaaaa-0000-0000-0000-000000000554'::uuid,    0.00::numeric,  600.00::numeric),
       ('aaaaaaaa-0000-0000-0000-000000000454'::uuid,    0.00::numeric,  500.00::numeric),
-      ('aaaaaaaa-0000-0000-0000-000000000254'::uuid,    0.00::numeric,  180.00::numeric)$$,
+      ('aaaaaaaa-0000-0000-0000-000000000254'::uuid,    0.00::numeric,  168.00::numeric)$$,
   'draft SI GL preview includes estimated COGS and inventory lines'
 );
 
@@ -347,7 +575,7 @@ SELECT results_eq(
      GROUP BY impact_group
      ORDER BY impact_group$q$,
   $$VALUES
-      ('COMMERCIAL'::text, 1680.00::numeric, 1680.00::numeric),
+      ('COMMERCIAL'::text, 1568.00::numeric, 1568.00::numeric),
       ('INVENTORY'::text,   600.00::numeric,  600.00::numeric)$$,
   'draft SI GL preview separates balanced commercial and inventory impact groups'
 );
@@ -370,13 +598,77 @@ SELECT results_eq(
      )
      ORDER BY line_number$q$,
   $$VALUES
-      ('aaaaaaaa-0000-0000-0000-000000000154'::uuid, 1680.00::numeric,    0.00::numeric),
-      ('aaaaaaaa-0000-0000-0000-000000000354'::uuid,    0.00::numeric, 1000.00::numeric),
+      ('aaaaaaaa-0000-0000-0000-000000000154'::uuid, 1568.00::numeric,    0.00::numeric),
+      ('aaaaaaaa-0000-0000-0000-000000000354'::uuid,    0.00::numeric,  900.00::numeric),
       ('aaaaaaaa-0000-0000-0000-000000000454'::uuid,    0.00::numeric,  500.00::numeric),
-      ('aaaaaaaa-0000-0000-0000-000000000254'::uuid,    0.00::numeric,  180.00::numeric),
+      ('aaaaaaaa-0000-0000-0000-000000000254'::uuid,    0.00::numeric,  168.00::numeric),
       ('aaaaaaaa-0000-0000-0000-000000000654'::uuid,  600.00::numeric,    0.00::numeric),
       ('aaaaaaaa-0000-0000-0000-000000000554'::uuid,    0.00::numeric,  600.00::numeric)$$,
   'SI GL impact includes AR, revenue, output VAT, COGS, and inventory'
+);
+
+SELECT results_eq(
+  $q$SELECT description, project_id, location_id, functional_entity_id
+     FROM journal_entry_lines
+     WHERE je_id = (
+       SELECT journal_entry_id FROM sales_invoices
+       WHERE id = (SELECT id FROM t_ctx WHERE key = 'si')
+     )
+     ORDER BY line_number$q$,
+  $$VALUES
+    ('AR - AUD053 Customer Inc'::text, '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid),
+    ('Revenue - Inventory item sale'::text, '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid),
+    ('Revenue - Service item sale'::text, '55555555-5555-5555-5555-555555555554'::uuid, '55555555-5555-5555-5555-555555555854'::uuid, '55555555-5555-5555-5555-555555556054'::uuid),
+    ((SELECT 'Output VAT - ' || si_number FROM sales_invoices WHERE id = (SELECT id FROM t_ctx WHERE key = 'si')), '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid),
+    ('COGS - INV-AUD053'::text, '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid),
+    ('Inventory - INV-AUD053'::text, '55555555-5555-5555-5555-555555555454'::uuid, '55555555-5555-5555-5555-555555555754'::uuid, '55555555-5555-5555-5555-555555555954'::uuid)$$,
+  'posted AR, revenue, VAT, COGS, and inventory GL lines carry the correct dimensions'
+);
+
+SELECT throws_ok(
+  $q$UPDATE sales_invoices
+     SET project_id = '55555555-5555-5555-5555-555555555554'
+     WHERE id = (SELECT id FROM t_ctx WHERE key = 'si')$q$,
+  'P0001',
+  'Sales Invoice dimensions are immutable after posting; use the governed void/reversal flow',
+  'posted Sales Invoice header dimensions are immutable'
+);
+
+SELECT throws_ok(
+  $q$UPDATE sales_invoice_lines
+     SET project_id = '55555555-5555-5555-5555-555555555554'
+     WHERE sales_invoice_id = (SELECT id FROM t_ctx WHERE key = 'si')
+       AND line_number = 1$q$,
+  'P0001',
+  'Sales invoice lines cannot be changed when the invoice status is posted.',
+  'posted Sales Invoice line dimensions are immutable'
+);
+
+SELECT results_eq(
+  $q$SELECT project_id, location_id, functional_entity_id
+     FROM vw_general_ledger
+     WHERE reference_doc_type = 'SI'
+       AND reference_doc_id = (SELECT id FROM t_ctx WHERE key = 'si')
+       AND line_description = 'Revenue - Service item sale'$q$,
+  $$VALUES (
+    '55555555-5555-5555-5555-555555555554'::uuid,
+    '55555555-5555-5555-5555-555555555854'::uuid,
+    '55555555-5555-5555-5555-555555556054'::uuid
+  )$$,
+  'General Ledger report/API view exposes line-level Sales Invoice dimensions'
+);
+
+SELECT results_eq(
+  $q$SELECT project_code, project_name, location_code, location_name,
+            functional_entity_code, functional_entity_name
+     FROM vw_sales_invoice_register
+     WHERE invoice_id = (SELECT id FROM t_ctx WHERE key = 'si')$q$,
+  $$VALUES (
+    'PRJ-HEAD'::text, 'Header Project'::text,
+    'LOC-HEAD'::text, 'Header Location'::text,
+    'FE-HEAD'::text, 'Header Functional Entity'::text
+  )$$,
+  'Sales register API/export view exposes dimension codes and names'
 );
 
 SELECT results_eq(
@@ -430,6 +722,19 @@ SELECT results_eq(
 );
 
 SELECT results_eq(
+  $q$SELECT project_id, location_id, functional_entity_id
+     FROM inventory_transactions
+     WHERE reference_doc_type = 'SI'
+       AND reference_doc_id = (SELECT id FROM t_ctx WHERE key = 'si')$q$,
+  $$VALUES (
+    '55555555-5555-5555-5555-555555555454'::uuid,
+    '55555555-5555-5555-5555-555555555754'::uuid,
+    '55555555-5555-5555-5555-555555555954'::uuid
+  )$$,
+  'Sales Invoice inventory movement/API evidence carries line dimensions'
+);
+
+SELECT results_eq(
   $q$SELECT qty_on_hand, total_cost, wac_unit_cost
      FROM stock_balances
      WHERE warehouse_id = '77777777-7777-7777-7777-777777777154'
@@ -444,8 +749,97 @@ SELECT results_eq(
      JOIN vat_codes vc ON vc.id = t.vat_code_id
      WHERE t.source_doc_type = 'SI'
        AND t.source_doc_id = (SELECT id FROM t_ctx WHERE key = 'si')$q$,
-  $$VALUES ('VAT-12'::text, 1500.00::numeric, 180.00::numeric, '444-555-666-00154'::text)$$,
+  $$VALUES ('VAT-12'::text, 1400.00::numeric, 168.00::numeric, '444-555-666-00154'::text)$$,
   'SI tax ledger uses VAT-inclusive taxable base, VAT amount, and normalized customer TIN'
+);
+
+SELECT results_eq(
+  $q$SELECT doc_type, doc_number, debit_amount, source_doc_type, source_doc_id
+     FROM vw_customer_ledger
+     WHERE source_doc_id = (SELECT id FROM t_ctx WHERE key = 'si')$q$,
+  $$VALUES (
+    'SI'::text,
+    (SELECT si_number FROM sales_invoices WHERE id = (SELECT id FROM t_ctx WHERE key = 'si')),
+    1568.00::numeric,
+    'SI'::text,
+    (SELECT id FROM t_ctx WHERE key = 'si')
+  )$$,
+  'Customer Ledger includes the posted Sales Invoice and canonical source key'
+);
+
+SELECT results_eq(
+  $q$SELECT original_amount, balance_due
+     FROM fn_ar_aging_asof(
+       '22222222-2222-2222-2222-222222222154',
+       '2026-01-31',
+       '88888888-8888-8888-8888-888888888154'
+     )
+     WHERE invoice_id = (SELECT id FROM t_ctx WHERE key = 'si')$q$,
+  $$VALUES (1568.00::numeric, 1568.00::numeric)$$,
+  'AR Aging includes the posted Sales Invoice at its current unapplied balance'
+);
+
+SELECT results_eq(
+  $q$SELECT gross_sales, taxable_base, output_vat, source_doc_type, source_doc_id
+     FROM vw_output_vat_review
+     WHERE source_doc_id = (SELECT id FROM t_ctx WHERE key = 'si')$q$,
+  $$VALUES (
+    1568.00::numeric, 1400.00::numeric, 168.00::numeric,
+    'SI'::text, (SELECT id FROM t_ctx WHERE key = 'si')
+  )$$,
+  'VAT report includes discounted Sales Invoice tax base, gross sales, and output VAT'
+);
+
+SELECT results_eq(
+  $q$SELECT SUM(period_debit)::numeric, SUM(period_credit)::numeric
+     FROM fn_trial_balance_report(
+       '22222222-2222-2222-2222-222222222154',
+       '2026-01-01', '2026-01-31'
+     )$q$,
+  $$VALUES (2168.00::numeric, 2168.00::numeric)$$,
+  'Trial Balance and financial-statement source totals include balanced SI revenue, AR, VAT, COGS, and inventory'
+);
+
+INSERT INTO credit_memos (
+  id, company_id, branch_id, customer_id, customer_name_snapshot,
+  customer_tin_snapshot, invoice_id, cm_number, cm_date, reason_code_id,
+  total_net_amount, total_vat_amount, total_amount, status,
+  created_by, updated_by
+) VALUES (
+  '99999999-9999-9999-9999-999999999354',
+  '22222222-2222-2222-2222-222222222154',
+  '33333333-3333-3333-3333-333333333154',
+  '88888888-8888-8888-8888-888888888154',
+  'AUD053 Customer Inc', '444-555-666-00154',
+  (SELECT id FROM t_ctx WHERE key = 'si'),
+  'CM-AUD053-001', '2026-01-25',
+  (SELECT id FROM ref_reason_codes WHERE code = 'CM_DISCOUNT'),
+  100, 12, 112, 'applied', auth.uid(), auth.uid()
+);
+
+SELECT results_eq(
+  $q$SELECT cm_number, invoice_id, total_amount, status
+     FROM credit_memos
+     WHERE id = '99999999-9999-9999-9999-999999999354'$q$,
+  $$VALUES (
+    'CM-AUD053-001'::text,
+    (SELECT id FROM t_ctx WHERE key = 'si'),
+    112.00::numeric,
+    'applied'::text
+  )$$,
+  'Credit Memo retains the canonical downstream Sales Invoice relationship'
+);
+
+SELECT results_eq(
+  $q$SELECT balance_due
+     FROM fn_ar_aging_asof(
+       '22222222-2222-2222-2222-222222222154',
+       '2026-01-31',
+       '88888888-8888-8888-8888-888888888154'
+     )
+     WHERE invoice_id = (SELECT id FROM t_ctx WHERE key = 'si')$q$,
+  $$VALUES (1456.00::numeric)$$,
+  'AR Aging consumes an applied Credit Memo linked to the Sales Invoice'
 );
 
 SELECT lives_ok(
@@ -499,6 +893,26 @@ SELECT isnt_empty(
        AND original.status = 'reversed'
        AND reversal.status = 'posted'$q$,
   'SI void creates a posted reversal journal and marks the original reversed'
+);
+
+SELECT is(
+  (SELECT COUNT(*)::integer
+   FROM journal_entries original
+   JOIN journal_entry_lines original_line ON original_line.je_id = original.id
+   JOIN journal_entry_lines reversal_line
+     ON reversal_line.je_id = original.reversed_by_je_id
+    AND reversal_line.line_number = original_line.line_number
+   WHERE original.id = (
+     SELECT journal_entry_id FROM sales_invoices
+     WHERE id = (SELECT id FROM t_ctx WHERE key = 'si')
+   )
+     AND (
+       reversal_line.project_id IS DISTINCT FROM original_line.project_id
+       OR reversal_line.location_id IS DISTINCT FROM original_line.location_id
+       OR reversal_line.functional_entity_id IS DISTINCT FROM original_line.functional_entity_id
+     )),
+  0,
+  'Sales Invoice reversal journal preserves every original analytical dimension'
 );
 
 SELECT * FROM finish();

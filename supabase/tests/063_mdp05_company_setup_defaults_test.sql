@@ -64,7 +64,7 @@ SET LOCAL ROLE authenticated;
 SELECT pg_temp.as_user('11111111-1111-1111-1111-111111111651');
 
 -- ── COA seeding via default template selection (entity_type -> PH_STANDARD) ────
-SELECT is(fn_seed_company_coa('22222222-2222-2222-2222-222222222651'), 39,
+SELECT is(fn_seed_company_coa('22222222-2222-2222-2222-222222222651'), 41,
   'default template selection seeds the full PH_STANDARD chart of accounts');
 SELECT is(
   (SELECT count(DISTINCT account_type)::int FROM chart_of_accounts
@@ -103,10 +103,10 @@ SELECT ok(
   'seeded Input VAT account inherits the tax-account flag');
 
 -- ── Idempotency: re-seeding does not duplicate ────────────────────────────────
-SELECT is(fn_seed_company_coa('22222222-2222-2222-2222-222222222651'), 39,
+SELECT is(fn_seed_company_coa('22222222-2222-2222-2222-222222222651'), 41,
   're-seeding returns the same account count (idempotent)');
 SELECT is(
-  (SELECT count(*)::int FROM chart_of_accounts WHERE company_id='22222222-2222-2222-2222-222222222651'), 39,
+  (SELECT count(*)::int FROM chart_of_accounts WHERE company_id='22222222-2222-2222-2222-222222222651'), 41,
   're-seeding creates no duplicate accounts');
 
 -- ── Company isolation ─────────────────────────────────────────────────────────
@@ -149,7 +149,7 @@ SELECT ok(
 SAVEPOINT sp_seed_b;
 SELECT fn_seed_company_coa('22222222-2222-2222-2222-222222222652');
 SELECT is(
-  (SELECT count(*)::int FROM chart_of_accounts WHERE company_id='22222222-2222-2222-2222-222222222652'), 39,
+  (SELECT count(*)::int FROM chart_of_accounts WHERE company_id='22222222-2222-2222-2222-222222222652'), 41,
   'company B COA is present inside the savepoint');
 ROLLBACK TO SAVEPOINT sp_seed_b;
 SELECT is(
@@ -157,7 +157,7 @@ SELECT is(
   'rolling back removes the seeded COA (atomic)');
 
 -- ── Default template selection for a different entity type ────────────────────
-SELECT is(fn_seed_company_coa('22222222-2222-2222-2222-222222222652'), 39,
+SELECT is(fn_seed_company_coa('22222222-2222-2222-2222-222222222652'), 41,
   'a partnership also resolves and seeds the PH_STANDARD template by default');
 
 -- ── Authority: a non-admin member cannot seed ────────────────────────────────
