@@ -1,15 +1,15 @@
 # PXL AI State
 
-**Current Date:** 2026-07-22
+**Current Date:** 2026-07-23
 **Current Branch:** `main`
-**Working Tree:** Dirty with preserved prior MDP/security/certification work plus the bounded PXL-AUD-053 migration, UI wiring, tests, and documentation. No commit has been made; preserve unrelated user changes.
-**Product Phase:** Production Certification Program. Framework setup is complete; accounting-core and canonical validation continue to feed Phase 1 certification.
-**Environment:** Authorized non-production hosted project `bskjkogijpbhukjkagfj`; migration history synchronized through `20260716000005`. Do not reset, seed, migrate, repair, link, or otherwise mutate the hosted project without explicit approval. Local reset/test work is permitted.
-**Product Readiness:** Internal QA/demo only. PXL is not production-ready and not pilot-ready while module/engine certification evidence is incomplete. No module or engine is Certified.
+**Working Tree:** Dirty with preserved prior MDP/security/certification work plus the bounded PXL-AUD-070 immutability-bypass remediation (migration `20260723000001`, guard test `078`) and the Number Series Engine certification hardening (migration `20260723000002`, guard test `079`). No commit has been made; preserve unrelated user changes.
+**Product Phase:** Production Certification Program. Framework setup is complete; engine certification is executing, with three engines now Certified.
+**Environment:** Authorized non-production hosted project `bskjkogijpbhukjkagfj`; migration history synchronized through `20260716000005`. The local migrations `20260723000001` (immutability) and `20260723000002` (number-series contract guard) are NOT yet applied to the hosted project. Do not reset, seed, migrate, repair, link, or otherwise mutate the hosted project without explicit approval. Local reset/test work is permitted.
+**Product Readiness:** Internal QA/demo only. PXL is not production-ready and not pilot-ready while module/engine certification evidence is incomplete. No module is Certified; three shared engines are Certified.
 
 ## Current Finding Standing
 
-Generated from `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`: **89 Retested Passed / 0 In Progress / 0 Open (89 total)**.
+Generated from `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`: **90 Retested Passed / 0 In Progress / 0 Open (90 total)**.
 
 - Active Critical: none.
 - Active High: none.
@@ -17,71 +17,51 @@ Generated from `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`: **89 Retested Passed
 
 ## Active Work Map
 
-No audit findings remain open. A closed findings register does not certify any module: Setup & Master Data remains **Blocked** on its own Partial/operational/shared-engine evidence. Coverage governance is maintained through `PXL_TABLE_COVERAGE_MATRIX.md` plus guard `075`; adding a `public` base table requires a matching registry entry in both. The next work is Production Certification execution, not defect remediation.
+No audit findings remain open. A Critical posted-document immutability bypass discovered during the Audit & Immutability Engine certification review was remediated, permanently guarded, and closed this session (see Last Verified Commands). A closed findings register does not certify any module: Setup & Master Data remains **Blocked** on its own Partial/operational/shared-engine evidence. Coverage governance is maintained through `PXL_TABLE_COVERAGE_MATRIX.md` plus guard `075`; adding a `public` base table requires a matching registry entry in both. The next work is Production Certification execution, not defect remediation.
 
 ## Hosted and UX Status
 
 The five canonical companies are present and owned by the hosted operator. ABC Trading carries the high-volume demo data; last hosted automation passed 48/48 company/master/document and 20/20 report probes. Table coverage is governed under PXL-AUD-059: 176 local tables classified in `PXL_TABLE_COVERAGE_MATRIX.md`; hosted last profiled 82/66 of 148.
 
-`PXL_TRANSACTION_WORKSPACE_STANDARD.md` and `PXL_TRANSACTION_WORKSPACE_PATTERNS.md` remain the transaction UI authorities. Sales Invoice is one implementation; PXL-AUD-053 still governs its validated source-backed completeness. Do not call Form/View UX fully implemented from that business/source result. Non-SI rows remain `transaction-matrix-only`.
+`PXL_TRANSACTION_WORKSPACE_STANDARD.md` and `PXL_TRANSACTION_WORKSPACE_PATTERNS.md` remain the transaction UI authorities. Sales Invoice is one implementation; PXL-AUD-053 still governs its validated source-backed completeness, so business qualification remains source-gated. Do not call Form/View UX fully implemented from that business/source result. Non-SI rows remain `transaction-matrix-only`.
 
 ## Documentation Cleanup Status
 
-Active docs are organized under `docs/PXL/00. Governance/` … `docs/PXL/13. Testing and Validation/`, leaving only the master index and central findings register in `docs/PXL` root (Sales Invoice under `05. Sales/`, transaction framework under `04.`, UI under `12.`, canonical data + testing under `13.`, accounting under `02.`, compliance under `10.`).
-
-Superseded UI and legacy SI blueprints were archived. Generated report placeholders, obsolete AIOS files, scratch scripts, and the non-authoritative Master Pharmacy working paper are in trash-review for human deletion/reconciliation review. No permanent deletion is intended in this cleanup unless validation later proves a file empty, generated, unreferenced, and reproducible.
+Active docs are organized under `docs/PXL/00. Governance/` … `docs/PXL/13. Testing and Validation/`, leaving only the master index and central findings register in `docs/PXL` root. Superseded UI and legacy SI blueprints were archived; generated placeholders, obsolete AIOS files, scratch scripts, and the non-authoritative Master Pharmacy working paper are in trash-review for human deletion/reconciliation. No permanent deletion is intended unless validation later proves a file empty, generated, unreferenced, and reproducible.
 
 ## Production Certification Program
 
-The current program certifies every supported module and shared engine toward controlled production use. Certification execution is underway: the Setup & Master Data review was re-executed on 2026-07-22 with the findings program complete (88/0/0) — 14 Pass, 3 Partial, 2 Blocked, 4 N/A, 0 Fail gates — so the module is **Blocked on missing evidence, not defects**, not Certified. The permanent framework is four documents under `docs/PXL/13. Testing and Validation/`:
+The current program certifies every supported module and shared engine toward controlled production use. The permanent framework is four documents under `docs/PXL/13. Testing and Validation/`: `PXL_MODULE_CERTIFICATION_STANDARD.md` (23 module gates), `PXL_ENGINE_CERTIFICATION_STANDARD.md` (engine contracts/invariants/concurrency), `PXL_PRODUCT_COMPLETENESS_CHECKLIST.md` (capability expectations feeding module gates 1 and 22), and `PXL_CERTIFICATION_MATRIX.md` (status dashboard only). Do not create per-module status files or duplicate findings registers.
 
-- `PXL_MODULE_CERTIFICATION_STANDARD.md` — the 23 mandatory module gates, required evidence, and per-phase exit criteria.
-- `PXL_ENGINE_CERTIFICATION_STANDARD.md` — engine contracts, invariants, consumers, and concurrency requirements.
-- `PXL_PRODUCT_COMPLETENESS_CHECKLIST.md` — professional-user capability expectations run before certifying a module (feeds module gates 1 and 22); assigns no statuses.
-- `PXL_CERTIFICATION_MATRIX.md` — status dashboard only.
+Three engines are now Certified: **Permissions/RLS** (first), **Audit & Immutability** (second, 2026-07-23 after PXL-AUD-070 remediation), and **Number Series** (third, 2026-07-23). Setup & Master Data remains **Blocked on missing evidence, not defects** (Gate 23 backup/restore/RPO/RTO does not exist; not all dependent engines are Certified — Dimension is not; Gate 20 browser evidence recorded-only). No module is Certified.
 
-Framework setup is done; execution has started and no module or engine is Certified (Partially Ready — Blocked). Do not create per-module status files or duplicate findings registers; defects stay in the central register and active work stays in this file.
-
-Phase order: (1) Setup/Master Data, Permissions/RLS, Core Accounting, Posting, Period Lock, Audit/Immutability, Number Series, Dimensions; (2) Sales/AR; (3) Purchasing/AP; (4) Inventory; (5) Banking/Treasury and Payments; (6) Fixed Assets and Schedules; (7) Compliance/Tax; (8) Reports/FS/Reconciliation; (9) Production Operations, Backup/Restore, Deployment, Pilot readiness.
-
-Next executable certification phase is **Phase 1**. The external credential blocker is resolved, but Administration/Security and the Permissions/RLS Engine are not automatically Certified; each still requires an executed review against its governing standard. Backup and restore evidence (Phase 9) does not yet exist and must not be claimed.
-
-Phase 1 Master Data planning is complete (`PXL_MASTER_DATA_GAP_REGISTER.md`, 35 gaps all resolved; `PXL_MASTER_DATA_IMPLEMENTATION_PLAN.md`, 15 packages). All packages MDP-01 through MDP-15 are verified from migrations/tests; MDP-14 provides the reusable approval-matrix foundation (deterministic role/user routing, SOD/permission/concurrency guards, audited version-bound requests, and bounded MDP-15 import enforcement) with no rules seeded, so unconfigured workflows stay compatible. The full local lane is green at 75 files / 1,596 assertions (fresh reset) plus canonical 4/96. The module review remains **Blocked on missing evidence, not defects**: Gate 23 backup/restore + RPO/RTO does not exist, the dependent Permissions/RLS, Audit & Immutability, Number Series, and Dimension engines are not Certified, and browser-workflow evidence is recorded-only (Gate 20 Partial).
+Phase order: (1) Setup/Master Data, Permissions/RLS, Core Accounting, Posting, Period Lock, Audit/Immutability, Number Series, Dimensions; (2) Sales/AR; (3) Purchasing/AP; (4) Inventory; (5) Banking/Treasury and Payments; (6) Fixed Assets; (7) Compliance/Tax; (8) Reports/FS/Reconciliation; (9) Production Operations, Backup/Restore, Deployment, Pilot readiness. Backup and restore evidence (Phase 9) does not yet exist and must not be claimed.
 
 ## Known Blockers and Non-Assumptions
 
-- Sales Invoice Project, Location, and Functional Entity are now validated from UI/storage through posting, GL/inventory, reporting, API/export, audit, and reversal under PXL-AUD-053. This does not certify dimension integration in unrelated transactions.
-- Banking, fixed assets, returns, broad transaction approval rollout, schedules, statutory generators, and CAS artifacts are not proven complete. MDP-14 proves the reusable approval foundation and configured MDP-15 import integration only.
+- The remediation migration `20260723000001` is applied locally only; it must be applied to the hosted project under explicit approval before any hosted immutability claim.
+- Banking, fixed assets, returns, broad transaction approval rollout, schedules, statutory generators, and CAS artifacts are not proven complete.
 - Do not assume green checklists mean operational readiness, a rendered route means source-backed correctness, or archived phase reports are current status.
 - Do not read `docs/PXL/archive/`, `docs/PXL/trash-review/`, all Compliance files, all SI specifications, or the full findings body for the next task.
 
 ## Last Verified Commands
 
-PXL-AUD-069 reporting-view RLS isolation remediation on 2026-07-22 (Critical, Retested Passed):
+Audit & Immutability Engine certification — **CERTIFIED** 2026-07-23 (second Certified engine), after remediating the Critical bypass found during the review:
 
-- The Permissions/RLS Engine review found a confirmed Critical cross-company leak: 9 `postgres`-owned, non-`security_invoker` views (`vw_ap_aging`, `vw_payment_register`, `vw_receipt_register`, `vw_slp_export`, `vw_credit_memo_register`, `vw_debit_memo_register`, `vw_deposits_in_transit`, `vw_outstanding_checks`, `vw_sdm_register`) bypassed RLS — a member of only Golden Retail read ABC Trading's financials via PostgREST.
-- Fixed by migration `20260722000011` (`security_invoker=on` on all 9; server-side only, RLS not weakened). Verified: leak closed (non-member sees 0) and legitimate access preserved (ABC member still sees ABC). Test 076 (6/6) proves member/non-member isolation + structural coverage; permanent guard 077 (2/2, proven non-vacuous) blocks the class in every lane. Engine foundation otherwise strong: RLS on 176/176 tables (473 policies), `anon` zero data access, all 335 DEFINER functions pin `search_path`, RLS/SOD tests 90 assertions.
+- PXL-AUD-070 remediation: the immutability guard family (`fn_guard_doc_header`, `fn_guard_doc_lines`, four `fn_block_*_line_mutation_after_draft`) previously short-circuited on the USERSET GUC `pxl.allow_demo_reset='on'`, letting any authenticated member UPDATE/DELETE posted documents. Migration `20260723000001` gates the bypass on `fn_demo_reset_bypass_authorized()` (GUC AND a privileged `session_user` via `fn_role_is_privileged_maintenance`, i.e. `rolsuper`/`rolbypassrls`). `session_user=authenticator` for every PostgREST call, so the GUC alone can no longer disable immutability.
+- Evidence: a production-identical `authenticator` reproduction confirmed the block (payee/line unchanged) and the authorized `postgres`+GUC maintenance path still writes. Focused test `078_immutability_demo_reset_bypass_guard_test.sql` passes 16/16 and is a permanent static class guard wired into the regression and canonical lanes. Full local lane green: fresh `--no-seed` replay through `20260723000001`, `test:db:local`, `test:canonical`, docs, lint, build, secret guard, diff.
+- Immutability strengths retained: `sys_audit_logs`/`transaction_events` tamper-proof to authenticated; 79 tables audited; posted-doc guards (42 header/18 line) with tests 020/041/061/009/010/012.
 
-Setup & Master Data Phase 1 certification re-review on 2026-07-22 (decision: Blocked):
+Number Series Engine certification — **CERTIFIED** 2026-07-23 (third Certified engine):
 
-- `npm run test:db:local` — fresh no-seed reset + full pgTAP, 75 files / 1,596 assertions PASS (MDP-01…15 including 073 MDP-08 50/50 and 074 MDP-14 61/61 on clean state). `npm run test:canonical` — 4 files / 96 assertions PASS. `npm run test:company-setup-readiness` — 8/8. All 35 master-data gaps resolved.
-- Decision **Blocked on missing evidence, not defects**: no backup/restore/RPO/RTO exists (Gate 23); dependent Permissions/RLS, Audit & Immutability, Number Series, Dimension engines not Certified; browser workflow evidence recorded-only (Gate 20). Certification-matrix dashboard updated; no code, schema, or hosted mutation.
+- Contract: `fn_next_document_number(company, branch, code)` allocates a continuous `prefix+LPAD(seq,padding)+suffix` number under a `FOR UPDATE` row lock, membership-checked, active-only, ATP-bounded, writing forward-only `cas_document_number_issuances` evidence bound to the source document by 24 `fn_bind_cas_document_number` triggers; `number_series` writes are MDP-03 permission-gated; issued counters are no-backward/no-identity guarded; void evidence is immutable (test 032). ~25 document codes consume the governed allocator (server-side RPC for SI/CS/OR/JE/CM/DM-S/VB/PV/CP/VC/SDM/RR/PRT/PO/FA; client RPC then insert for CV/QT/SO/DR/FT/IBT/BADJ/PCV/PCR/CCS).
+- Concurrency proven empirically: 10 concurrent clients × 20 allocations → 200 distinct, contiguous, zero duplicates, counter == 200. Company/branch isolation, inactive-series rejection, same-transaction rollback (no drift), and manual-number duplicate rejection all proven.
+- Certification hardening: migration `20260723000002` adds a contract guard rejecting `has_dynamic_year=true` and `reset_frequency<>'never'` (the continuous allocator honors neither; CAS numbering is non-resetting) — the UI could previously store these unhonored. Guard test `079` (17/17) plus tests 030/032 run in the regression and canonical lanes. Not a defect finding (0 of 264 series used the values; latent, non-mandatory). Limitation: default auto-provisioning (MDP-06) covers only BIR-registered SI/CS/OR; other codes require explicit setup and fail closed if absent.
 
-PXL-AUD-060 login accessibility certification on 2026-07-22 passed:
+Permissions/RLS Engine remains **CERTIFIED** 2026-07-22: RLS on 176/176 tables (473 policies); default-deny; 335/335 DEFINER functions pin `search_path`; all authenticated views `security_invoker`; guard `077`; prior Critical PXL-AUD-069 Retested Passed via `20260722000011`.
 
-- `src/pages/LoginPage.tsx` wires `htmlFor`/`id` labels, `name`, `autocomplete="email"`/`current-password`, and a persistent `role="alert"` assertive error region referenced by `aria-describedby`/`aria-invalid`; `scripts/audit_phase3_hosted_ui.mjs` now resolves login fields by `getByLabel`. Read-only over auth UI; no table/migration/RPC/RLS change.
-- `npm run test:login-accessibility` — 10/10 credential-free Chromium label/attribute/error-region assertions (serves the built app, never submits). Lint, build, and the frontend secret guard pass. Closing this last finding required teaching guard `check_ai_state.mjs` to represent a fully-closed program (no remaining open finding).
-
-PXL-AUD-067 readiness-model certification on 2026-07-22 passed: Company Setup Checklist restructured into Stage 1 Core Accounting Readiness, Stage 2 Operational Readiness, and a separate Production Readiness note; logic extracted to pure `src/lib/companySetupReadiness.ts`; `npm run test:company-setup-readiness` 8/8; lint/build pass; read-only over masters, no schema change.
-
-PXL-AUD-059 (prior cycle): 176 `public` base tables classified in `PXL_TABLE_COVERAGE_MATRIX.md`; guard `075` runs in `test:canonical` (96) and `test:db:local` (75 files / 1,596).
-
-PXL-AUD-053 Sales Invoice completeness certification on 2026-07-22 passed: clean no-seed replay through `20260722000010`; test 054 42/42; `test:sales-invoice-draft-state` 4/4; full suite 74 files / 1,588; canonical 055/057/058 88/88; docs/lint/build/diff pass. Supported field set `END_TO_END_VALIDATED`; unsupported/partial rows explicit in the Field Source Matrix. No hosted mutation.
-
-PXL-AUD-061 / MDP-14 deterministic release-gate validation on 2026-07-22 passed: `npm ci` reproducible install (Playwright declared); fresh no-seed replay through `20260722000009` (idempotent on second replay); test 074 61/61; targeted regressions 011/014/050/071/072/073 171/171; full lane and canonical green; named local/CI gates fail closed if a protected hosted job is skipped. Prior hosted evidence remains 48/48 company/master/document and 20/20 report probes.
-
-PXL-AUD-055 final remediation on 2026-07-22 passed: exposed hosted key and revoked PAT (`8a20f35e729f3c30`) independently rejected (HTTP 401); local plaintext cleanup done; security tests 056/059/060/072/074 158/158; `release:gate:local` green (fresh replay, 74 files / 1,568, canonical 88/88, docs/lint/build/frontend-secret/diff). No hosted mutation.
+Setup & Master Data Phase 1 re-review 2026-07-22 — Blocked on missing evidence, not defects; all 35 master-data gaps resolved (MDP-01…15). PXL-AUD-053 Sales Invoice completeness Retested Passed (test 054 42/42; canonical 88/88).
 
 ## Recommended Next Task
 
-**No audit findings remain open (89/89).** The Permissions/RLS Engine's Critical cross-company reporting-view leak is remediated and guarded (recorded in Last Verified). Immediate next task: **re-run the Permissions/RLS Engine certification review** against the cleared state and make its browser-tier cross-tenant isolation check a re-runnable lane; then certify Audit & Immutability, Number Series, and Dimension engines and stand up Backup/Restore (RPO/RTO) evidence. Do not imply any module or engine certification; no module or engine is Certified.
+The finding program is complete — no audit findings remain open (90/90 Retested Passed) — and three shared engines are Certified (Permissions/RLS, Audit & Immutability, Number Series). Immediate next task, with user authorization: execute the **Dimension Engine** certification review from scratch against its governing standard (governed Project/Location/Functional Entity masters and `fn_is_valid_dimension` exist from MDP-09; transaction propagation, journal/report integration, and non-double-counting remain unproven), then Gate 23 backup/restore. Do not assume any module or remaining engine is Certified; each requires an executed review. Before any hosted immutability or numbering claim, apply migrations `20260723000001` and `20260723000002` to the hosted project under explicit approval and re-verify.

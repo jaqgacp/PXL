@@ -1473,3 +1473,34 @@ Scenario: the guard scans `pg_catalog` for any public view that is granted SELEC
 | ---- | ------ | ----------------- |
 | 1 | Enumerate RLS-bypassing authenticated views without isolation | The set is empty (count 0). |
 | 2 | Report the offending-view list | The list is `(none)`. |
+
+## IMMUTABILITY-BYPASS-GUARD-001 - Posted-document immutability cannot be disabled by a user GUC (PXL-AUD-070)
+
+Status: Executed Passing (2026-07-23) in `supabase/tests/078_immutability_demo_reset_bypass_guard_test.sql`, 16 assertions, run in every regression and canonical lane. The production-identical attack (a real `authenticator` connection → `SET ROLE authenticated` as a company member → `SET pxl.allow_demo_reset = 'on'`) is recorded in PXL-AUD-070: the member sees the posted voucher through RLS, but `fn_demo_reset_bypass_authorized()` returns false and every UPDATE/DELETE against the posted document and its lines is blocked.
+
+Scenario: a committed posted check voucher is provisioned. With the bypass GUC off, direct-SQL UPDATE/DELETE of the posted header and line are rejected as immutable. The privileged-role classifier `fn_role_is_privileged_maintenance` returns false for `authenticated`/`authenticator`/`anon` and true only for `postgres`/`service_role`; the composite gate `fn_demo_reset_bypass_authorized()` is false with the GUC off, true only for a privileged `session_user` with the GUC on, and never authorized for a PostgREST role even with the GUC on. The authorized maintenance path (privileged `session_user` + GUC on) still rewrites a posted document. A permanent static guard fails the build if any function reads `pxl.allow_demo_reset` for a bypass without routing through the privileged gate, if any of the six immutability guard functions stops routing through it, or if the gate/classifier stops keying off `session_user`/`rolsuper`/`rolbypassrls`.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Direct-SQL UPDATE/DELETE a posted check voucher and its line (GUC off) | All rejected as immutable / cannot be changed. |
+| 2 | Classify `authenticated`/`authenticator`/`anon` vs `postgres`/`service_role` | Untrusted roles are not privileged; maintenance roles are. |
+| 3 | Evaluate the bypass gate with the GUC off, then on | False with the GUC off; true only for a privileged `session_user` with the GUC on. |
+| 4 | Confirm the GUC alone never authorizes a PostgREST session | No authenticator/authenticated/anon session is ever authorized. |
+| 5 | Authorized maintenance context rewrites a posted document | Succeeds only under a privileged `session_user` with the GUC on. |
+| 6 | Static guard over `pg_proc` | No naked GUC bypass; all six guards route through the privileged gate. |
+
+## NUMBER-SERIES-ENGINE-001 - Number Series Engine certification regression
+
+Status: Executed Passing (2026-07-23) in `supabase/tests/079_number_series_engine_certification_test.sql`, 17 assertions, run in every regression and canonical lane. Complements test 030 (registry code consistency) and test 032 (SI/JE reservation, ATP exhaustion, immutable void evidence, no-backward/no-identity guards). Empirical concurrency — 10 concurrent clients × 20 allocations → 200 distinct, contiguous `JE-000001..JE-000200`, counter == 200, zero duplicates, zero errors — is recorded in the Number Series Engine certification evidence; the structural assertions here guard the mechanism (`FOR UPDATE` row lock plus the registry UNIQUE constraints) that makes it hold.
+
+Scenario: a company with two branches and a JE series in each. A non-member cannot allocate; branch counters advance independently; a same-transaction rollback leaves the counter undrifted (no gap) and the number is reused; an inactive series cannot allocate; a manually-numbered document registers as issued evidence and a duplicate manual number is rejected; the contract guard rejects `has_dynamic_year = true` and `reset_frequency <> never` (the continuous allocator honors neither), accepts a default continuous series, and blocks backward counter movement and unsupported reconfiguration; an unconfigured document code fails closed; and the structural row-lock plus registry UNIQUE constraints are present.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Non-member calls the allocator | Rejected: Access denied. |
+| 2 | Allocate in two branches | Independent per-branch sequences. |
+| 3 | Allocate then rollback the transaction | Counter undrifted; number reused (no gap). |
+| 4 | Allocate from an inactive series | Rejected: no active number series. |
+| 5 | Insert a duplicate manual document number | Rejected: uniqueness cannot be bypassed. |
+| 6 | Configure `has_dynamic_year`/`reset_frequency` | Rejected as unsupported; default continuous series accepted. |
+| 7 | Inspect allocator + registry structure | `FOR UPDATE` lock and both registry UNIQUE constraints present. |

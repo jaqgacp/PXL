@@ -118,6 +118,9 @@ function canonical() {
       'supabase/tests/057_phase3_canonical_implementation_test.sql',
       'supabase/tests/058_canonical_demo_volume_test.sql',
       'supabase/tests/075_table_coverage_governance_test.sql',
+      'supabase/tests/077_reporting_view_security_guard_test.sql',
+      'supabase/tests/078_immutability_demo_reset_bypass_guard_test.sql',
+      'supabase/tests/079_number_series_engine_certification_test.sql',
     ],
   );
 }
