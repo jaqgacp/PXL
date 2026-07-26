@@ -41,12 +41,22 @@ DECLARE
   r RECORD;
 BEGIN
   FOR r IN
+    SELECT id FROM public.journal_entries
+    WHERE company_id = '22222222-2222-2222-2222-222222222129'
+  LOOP
+    PERFORM public.fn_finalize_journal_entry(
+      r.id, p_discard_journal => true
+    );
+  END LOOP;
+
+  FOR r IN
     SELECT c.relname
     FROM pg_class c
     JOIN pg_namespace n ON n.oid = c.relnamespace
     JOIN pg_attribute a ON a.attrelid = c.oid
     WHERE n.nspname = 'public' AND c.relkind = 'r'
       AND a.attname = 'company_id' AND NOT a.attisdropped
+      AND c.relname NOT IN ('journal_entries', 'journal_entry_lines')
   LOOP
     EXECUTE format(
       'DELETE FROM public.%I WHERE company_id = %L',
@@ -353,19 +363,13 @@ SELECT is(
 -- race fixture: one-live-JE-per-source and one-live-VAT-row-per-source-code.
 SELECT throws_like(
   format($q$
-    INSERT INTO journal_entries (
-      company_id, branch_id, je_number, je_date, fiscal_period_id,
-      description, reference_doc_type, reference_doc_id, status,
-      total_debit, total_credit, created_by, updated_by
-    ) VALUES (
+    SELECT fn_create_posted_journal_entry(
       '22222222-2222-2222-2222-222222222129',
       '33333333-3333-3333-3333-333333333329',
-      'JE-RACE-DUP-029', '2026-07-10',
+      'JE-RACE-DUP-029', '2026-07-10', 'Duplicate original', 'SI', %L,
       (SELECT id FROM fiscal_periods
        WHERE company_id = '22222222-2222-2222-2222-222222222129' AND period_number = 7),
-      'Duplicate original', 'SI', %L, 'posted', 1, 1,
-      '11111111-1111-1111-1111-111111111129',
-      '11111111-1111-1111-1111-111111111129'
+      'posted', 1, 1
     )
   $q$, (SELECT val FROM t_ctx WHERE key = 'si')),
   '%ux_journal_entries_live_source%',
@@ -399,12 +403,22 @@ DECLARE
   r RECORD;
 BEGIN
   FOR r IN
+    SELECT id FROM public.journal_entries
+    WHERE company_id = '22222222-2222-2222-2222-222222222129'
+  LOOP
+    PERFORM public.fn_finalize_journal_entry(
+      r.id, p_discard_journal => true
+    );
+  END LOOP;
+
+  FOR r IN
     SELECT c.relname
     FROM pg_class c
     JOIN pg_namespace n ON n.oid = c.relnamespace
     JOIN pg_attribute a ON a.attrelid = c.oid
     WHERE n.nspname = 'public' AND c.relkind = 'r'
       AND a.attname = 'company_id' AND NOT a.attisdropped
+      AND c.relname NOT IN ('journal_entries', 'journal_entry_lines')
   LOOP
     EXECUTE format(
       'DELETE FROM public.%I WHERE company_id = %L',

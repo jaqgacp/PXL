@@ -32,6 +32,7 @@ An engine is a shared behavior consumed by many modules and transactions. Becaus
 16. Reporting and Reconciliation Engine
 17. Attachment and Document Traceability Engine
 18. Backup and Recovery Process
+19. COA Engine
 
 ## 2. Certification Statuses
 
@@ -71,6 +72,8 @@ An engine is **Certified** only when all applicable statements are proven with e
 9. Any remaining limitations are explicitly documented and acceptable for controlled production use.
 
 ## 5. Posting Engine — Mandatory Invariants
+
+The Posting Engine's architecture is frozen in [`../02. Accounting Core/PXL_POSTING_ENGINE_SPEC.md`](../02. Accounting Core/PXL_POSTING_ENGINE_SPEC.md) (a consolidation of the existing posting kernel into a mandatory, certifiable shared engine; approved 2026-07-24). Implementation is green through P5.2, and the Kernel Totality Guard is fully enforced. That specification is designed to satisfy the invariants below; it does not replace them.
 
 The Posting Engine is certified before any downstream module is relied upon. For every posting transaction, these invariants must hold:
 
@@ -166,6 +169,7 @@ These invariants must be exercised across every implemented posting transaction 
 - **Reporting and Reconciliation Engine:** every report defines its contract and reconciles to its target; exports match on-screen values; branch totals roll up to company totals without double counting.
 - **Attachment and Document Traceability Engine:** attachments follow access boundaries and preserve source relationships.
 - **Backup and Recovery Process:** automated backup with defined frequency, retention, and storage; a **successful restore test** is mandatory — backup readiness may not be claimed without it — plus attachment/configuration backup and documented RPO/RTO.
+- **COA Engine:** the shared authority for account identity, hierarchy, lifecycle, posting eligibility, posting controls, FS classification, and account resolution (contract frozen in [`../02. Accounting Core/PXL_COA_ENGINE_SPEC.md`](../02. Accounting Core/PXL_COA_ENGINE_SPEC.md)). Resolution via `fn_resolve_account` is deterministic, fail-closed, and rejects ambiguous equal-specificity matches; posting eligibility is leaf-only on active, in-window accounts; lifecycle transitions (draft/active/deprecated/archived/locked) and immutable-once-used identity attributes are guarded server-side; the FS registry keeps exactly one active mapping per account per statement with effective-dated historical reproduction. Full certification requires the resolver to be the authority for every applicable implemented consumer (Phase B); the Phase A foundation (resolver + frameworks, config-equivalent, no consumer rewired) is certified-green but does not by itself satisfy gates 2 and 4.
 
 ## 10. Concurrency and Data-Integrity Requirements
 

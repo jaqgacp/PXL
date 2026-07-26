@@ -355,6 +355,15 @@ DECLARE
   v_table RECORD;
 BEGIN
   FOR v_table IN
+    SELECT id FROM journal_entries
+    WHERE company_id = '22222222-2222-2222-2222-222222222220'
+  LOOP
+    PERFORM fn_finalize_journal_entry(
+      v_table.id, p_discard_journal => true
+    );
+  END LOOP;
+
+  FOR v_table IN
     SELECT DISTINCT c.table_schema, c.table_name
     FROM information_schema.columns c
     JOIN information_schema.tables t
@@ -364,6 +373,7 @@ BEGIN
     WHERE c.table_schema = 'public'
       AND c.column_name = 'company_id'
       AND c.table_name <> 'companies'
+      AND c.table_name NOT IN ('journal_entries', 'journal_entry_lines')
     ORDER BY c.table_name
   LOOP
     EXECUTE format(

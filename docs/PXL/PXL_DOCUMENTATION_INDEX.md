@@ -51,14 +51,14 @@ No module-specific findings register, session handoff, phase tracker, or duplica
 
 | Folder | Authority | Contents | Read When |
 | --- | --- | --- | --- |
-| `00. Governance/` | Tier 1/Tier 3 | Principles and product backlog | Cross-domain rules or future-work planning |
+| `00. Governance/` | Tier 1/Tier 3 | Principles, product backlog, and the non-normative PG-01 authority map | Cross-domain rules, future-work planning, or resolving a "PG-01" citation |
 | `01. Architecture/` | Tier 1/Tier 2 | Architecture summary, generated schema summary, permissions blueprint, master-data gap register | Architecture, schema, permission, master-data, or platform task |
 | `02. Accounting Core/` | Tier 1/Tier 3 | Accounting rules, posting matrix, readiness gate, accounting test book, setup, accounting module blueprints | Posting, GL, period, reconciliation, or accounting validation task |
 | `03. Master Data/` | Tier 2 | Organization setup, customers, suppliers, items, employees, warehouses, payment terms, dimensions | Master-data task only |
 | `04. Transaction Framework/` | Tier 1/Tier 2/Tier 3 | Transaction matrix, field-source matrix, definition schema, draft-state standard, rollout manifest/playbook, document/system controls | Transaction behavior, field source, lifecycle, draft state, numbering, or approval task |
 | `05. Sales/` | Tier 2 | Sales Invoice specs and Sales module blueprints | Sales or Sales Invoice task |
 | `06. Purchasing and AP/` | Tier 2 | Purchasing/AP transaction, payable, tax review, and register blueprints | Purchasing/AP task |
-| `07. Inventory/` | Tier 2 | Inventory operations and inventory master blueprints | Inventory task |
+| `07. Inventory/` | Tier 1/Tier 2 | Frozen Inventory Accounting Architecture plus inventory operations and master blueprints | Inventory task |
 | `08. Banking and Treasury/` | Tier 2 | Petty cash, bank operations, check voucher, treasury blueprints | Banking/treasury task |
 | `09. Fixed Assets/` | Tier 2 | Fixed-asset operations and setup blueprints | Fixed-asset task |
 | `10. Compliance/` | Tier 2 | BIR/compliance README, tax setup, VAT, withholding, income tax, books, CAS, TIN standard | BIR, tax, CAS, statutory reporting, or compliance task |
@@ -89,6 +89,17 @@ No module-specific findings register, session handoff, phase tracker, or duplica
 | Principles | `00. Governance/PXL_PRINCIPLES.md` |
 | Product backlog | `00. Governance/PXL_PRODUCT_BACKLOG.md` |
 | Accounting rules | `02. Accounting Core/PXL_ACCOUNTING_RULES.md` and `02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md` |
+| COA Engine contract (resolver, lifecycle, change policy, FS registry) | `02. Accounting Core/PXL_COA_ENGINE_SPEC.md` |
+| Posting Engine architecture (admission, pipeline, journal model, integration contracts; P5.2 fully enforced, P6 Inventory reconciliation blocked) | `02. Accounting Core/PXL_POSTING_ENGINE_SPEC.md` |
+| Posting Engine Phase P3 spec (dimension push, fiscal-close hardcode removal, preview convergence, manual-JE control; COA Phase C design-only) | `02. Accounting Core/PXL_POSTING_ENGINE_P3_SPEC.md` |
+| Inventory Accounting Architecture (IA-3 frozen; IA-5 landed but dormant with certification suspended; ownership, FIFO/WAC/Specific ID, layers, reconciliation, reporting, canonical requirements, hardening register, roadmap) | `07. Inventory/03. Architecture/`; begin with `PXL_IA3_HARDENING_DECISION_REGISTER.md`, then `PXL_IA5_IMPLEMENTATION_AND_CERTIFICATION_EVIDENCE.md` for current implementation state |
+| Inventory event chronology and costing order authority (frozen dual-chronology decision resolving C-01) | `07. Inventory/03. Architecture/ADR-C01_ECONOMIC_EVENT_CHRONOLOGY_AND_COSTING_ORDER_AUTHORITY.md` |
+| Economic Costing Chronology derivation (ordering tuple, algorithm, total-order proofs, replay, FIFO/WAC/Specific-ID/backdate/correction demonstrations, fail-closed rules) — **owner accepted 2026-07-26, not frozen** | `07. Inventory/03. Architecture/ECC-01_ECONOMIC_COSTING_CHRONOLOGY_DERIVATION_SPEC.md`, with its acceptance gate in `ECC-01_FINAL_ARCHITECTURE_ACCEPTANCE_REPORT.md` |
+| ECC-01 owner acceptance (the single canonical acceptance record: scope, exclusions, freeze determination, retained clarifications) | `07. Inventory/03. Architecture/ECC-01_FORMAL_OWNER_ACCEPTANCE.md` |
+| IA-5 ECC hardening Work Package 1 authorisation (prerequisites, zero-data verification, boundary/dormancy confirmation, authorisation decision) | `07. Inventory/04. Implementation/ECC-01_OWNER_ACCEPTANCE_AND_IA-5_WP1_AUTHORISATION_REPORT.md` |
+| "PG-01" reference resolution — which accepted document owns each governance rule PG-01 names (**non-normative**; sources win) | `00. Governance/PG-01_GOVERNANCE_AUTHORITY_MAP.md` |
+| IA-5/IA-6 evidence gate (Outcome C; C-01 Critical; IA-6 unauthorized) | `07. Inventory/03. Architecture/IA5_IA6_FINAL_EVIDENCE_GATE_PLAN.md` and `IA5_IA6_FINAL_EVIDENCE_GATE_REPORT.md` |
+| IA-5 ECC hardening implementation design (current-state map, target data model, migration/work-package sequence, test plan; controlling engineering plan — **Work Package 1 authorised, WP-2…WP-9 and IA-6 are not**) | `07. Inventory/04. Implementation/IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md` |
 | Accounting readiness | `02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md` |
 | Accounting tests | `02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md` |
 | Transaction lifecycle and maturity | `04. Transaction Framework/PXL_TRANSACTION_MATRIX.md` |

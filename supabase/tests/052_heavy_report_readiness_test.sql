@@ -78,138 +78,72 @@ VALUES
   ('aaaaaaaa-0000-0000-0000-000000000584', '22222222-2222-2222-2222-222222222252',
    '5010', 'Adjustment Expense','expense', 'debit',  true, true, auth.uid(), auth.uid());
 
--- ── Opening balance before the report range ───────────────────────────────────
-INSERT INTO journal_entries (id, company_id, branch_id, je_number, je_date,
-                             fiscal_period_id, description, reference_doc_type, status,
-                             total_debit, total_credit, entry_class,
-                             created_by, updated_by)
-VALUES ('99999999-0000-0000-0000-000000000001',
-        '22222222-2222-2222-2222-222222222252',
-        '33333333-3333-3333-3333-333333333352',
-        'JE-OPEN-001', '2025-12-31',
-        '45454545-4545-4545-4545-454545454412',
-        'Opening balance',
-        'MANUAL', 'posted', 1000, 1000, 'opening',
-        auth.uid(), auth.uid());
+-- ── Report fixtures are persisted exclusively through the armed kernel ───────
+CREATE TEMP TABLE t_report_je (key text PRIMARY KEY, id uuid NOT NULL);
 
-INSERT INTO journal_entry_lines (je_id, company_id, line_number, account_id,
-                                 description, debit_amount, credit_amount,
-                                 created_by, updated_by)
-VALUES
-  ('99999999-0000-0000-0000-000000000001',
-   '22222222-2222-2222-2222-222222222252', 1,
-   'aaaaaaaa-0000-0000-0000-000000000581',
-   'Opening cash', 1000, 0, auth.uid(), auth.uid()),
-  ('99999999-0000-0000-0000-000000000001',
-   '22222222-2222-2222-2222-222222222252', 2,
-   'aaaaaaaa-0000-0000-0000-000000000582',
-   'Opening equity', 0, 1000, auth.uid(), auth.uid());
+DO $fixtures$
+DECLARE
+  v_je uuid;
+  n integer;
+BEGIN
+  v_je := fn_create_posted_journal_entry(
+    '22222222-2222-2222-2222-222222222252',
+    '33333333-3333-3333-3333-333333333352',
+    'JE-OPEN-001', '2025-12-31', 'Opening balance', 'MANUAL', NULL,
+    '45454545-4545-4545-4545-454545454412',
+    'posted', 1000, 1000, NULL, 'opening', false, false, false
+  );
+  PERFORM fn_add_posting_line_push(
+    v_je, 1, 'aaaaaaaa-0000-0000-0000-000000000581',
+    'Opening cash', 1000, 0
+  );
+  PERFORM fn_add_posting_line_push(
+    v_je, 2, 'aaaaaaaa-0000-0000-0000-000000000582',
+    'Opening equity', 0, 1000
+  );
 
--- ── 25 regular revenue journals: Dr Cash 100 / Cr Revenue 100 ─────────────────
-WITH seed AS (
-  SELECT
-    n,
-    ('99999999-0000-0000-0000-' || lpad((100 + n)::text, 12, '0'))::uuid AS je_id,
-    make_date(2026, 1, n)::date AS je_date
-  FROM generate_series(1, 25) AS n
-)
-INSERT INTO journal_entries (id, company_id, branch_id, fiscal_period_id,
-                             je_number, je_date, description, reference_doc_type,
-                             status, total_debit, total_credit, entry_class,
-                             created_by, updated_by)
-SELECT je_id,
-       '22222222-2222-2222-2222-222222222252',
-       '33333333-3333-3333-3333-333333333352',
-       '45454545-4545-4545-4545-454545454501',
-       'JE-JAN-' || lpad(n::text, 3, '0'),
-       je_date,
-       'Regular revenue ' || n,
-       'MANUAL',
-       'posted',
-       100,
-       100,
-       'regular',
-       auth.uid(),
-       auth.uid()
-FROM seed;
+  -- 25 regular revenue journals: Dr Cash 100 / Cr Revenue 100.
+  FOR n IN 1..25 LOOP
+    v_je := fn_create_posted_journal_entry(
+      '22222222-2222-2222-2222-222222222252',
+      '33333333-3333-3333-3333-333333333352',
+      'JE-JAN-' || lpad(n::text, 3, '0'), make_date(2026, 1, n),
+      'Regular revenue ' || n, 'MANUAL', NULL,
+      '45454545-4545-4545-4545-454545454501',
+      'posted', 100, 100, NULL, 'regular', false, false, false
+    );
+    PERFORM fn_add_posting_line_push(
+      v_je, 1, 'aaaaaaaa-0000-0000-0000-000000000581',
+      'Cash receipt', 100, 0
+    );
+    PERFORM fn_add_posting_line_push(
+      v_je, 2, 'aaaaaaaa-0000-0000-0000-000000000583',
+      'Service revenue', 0, 100
+    );
+  END LOOP;
 
-WITH seed AS (
-  SELECT
-    n,
-    ('99999999-0000-0000-0000-' || lpad((100 + n)::text, 12, '0'))::uuid AS je_id
-  FROM generate_series(1, 25) AS n
-)
-INSERT INTO journal_entry_lines (je_id, company_id, line_number, account_id,
-                                 description, debit_amount, credit_amount,
-                                 created_by, updated_by)
-SELECT je_id,
-       '22222222-2222-2222-2222-222222222252',
-       line_number,
-       account_id,
-       description,
-       debit_amount,
-       credit_amount,
-       auth.uid(),
-       auth.uid()
-FROM seed
-CROSS JOIN LATERAL (
-  VALUES
-    (1, 'aaaaaaaa-0000-0000-0000-000000000581'::uuid, 'Cash receipt', 100::numeric, 0::numeric),
-    (2, 'aaaaaaaa-0000-0000-0000-000000000583'::uuid, 'Service revenue', 0::numeric, 100::numeric)
-) AS lines(line_number, account_id, description, debit_amount, credit_amount);
-
--- ── 5 adjusting expense journals: Dr Expense 10 / Cr Cash 10 ──────────────────
-WITH seed AS (
-  SELECT
-    n,
-    ('99999999-0000-0000-0000-' || lpad((200 + n)::text, 12, '0'))::uuid AS je_id,
-    make_date(2026, 1, 25 + n)::date AS je_date
-  FROM generate_series(1, 5) AS n
-)
-INSERT INTO journal_entries (id, company_id, branch_id, fiscal_period_id,
-                             je_number, je_date, description, reference_doc_type,
-                             status, total_debit, total_credit, entry_class,
-                             created_by, updated_by)
-SELECT je_id,
-       '22222222-2222-2222-2222-222222222252',
-       '33333333-3333-3333-3333-333333333352',
-       '45454545-4545-4545-4545-454545454501',
-       'JE-ADJ-' || lpad(n::text, 3, '0'),
-       je_date,
-       'Adjustment expense ' || n,
-       'MANUAL',
-       'posted',
-       10,
-       10,
-       'adjusting',
-       auth.uid(),
-       auth.uid()
-FROM seed;
-
-WITH seed AS (
-  SELECT
-    n,
-    ('99999999-0000-0000-0000-' || lpad((200 + n)::text, 12, '0'))::uuid AS je_id
-  FROM generate_series(1, 5) AS n
-)
-INSERT INTO journal_entry_lines (je_id, company_id, line_number, account_id,
-                                 description, debit_amount, credit_amount,
-                                 created_by, updated_by)
-SELECT je_id,
-       '22222222-2222-2222-2222-222222222252',
-       line_number,
-       account_id,
-       description,
-       debit_amount,
-       credit_amount,
-       auth.uid(),
-       auth.uid()
-FROM seed
-CROSS JOIN LATERAL (
-  VALUES
-    (1, 'aaaaaaaa-0000-0000-0000-000000000584'::uuid, 'Adjustment expense', 10::numeric, 0::numeric),
-    (2, 'aaaaaaaa-0000-0000-0000-000000000581'::uuid, 'Cash adjustment', 0::numeric, 10::numeric)
-) AS lines(line_number, account_id, description, debit_amount, credit_amount);
+  -- 5 adjusting expense journals: Dr Expense 10 / Cr Cash 10.
+  FOR n IN 1..5 LOOP
+    v_je := fn_create_posted_journal_entry(
+      '22222222-2222-2222-2222-222222222252',
+      '33333333-3333-3333-3333-333333333352',
+      'JE-ADJ-' || lpad(n::text, 3, '0'), make_date(2026, 1, 25 + n),
+      'Adjustment expense ' || n, 'MANUAL', NULL,
+      '45454545-4545-4545-4545-454545454501',
+      'posted', 10, 10, NULL, 'adjusting', false, false, false
+    );
+    INSERT INTO t_report_je VALUES ('adj-' || lpad(n::text, 3, '0'), v_je);
+    PERFORM fn_add_posting_line_push(
+      v_je, 1, 'aaaaaaaa-0000-0000-0000-000000000584',
+      'Adjustment expense', 10, 0
+    );
+    PERFORM fn_add_posting_line_push(
+      v_je, 2, 'aaaaaaaa-0000-0000-0000-000000000581',
+      'Cash adjustment', 0, 10
+    );
+  END LOOP;
+END;
+$fixtures$;
 
 -- ── General Ledger report: server-side page + totals ──────────────────────────
 SELECT is(
@@ -321,7 +255,7 @@ SELECT is(
     '22222222-2222-2222-2222-222222222252',
     'aaaaaaaa-0000-0000-0000-000000000581',
     '2026-01-01', '2026-01-31',
-    '99999999-0000-0000-0000-000000000201', 10, 0)),
+    (SELECT id FROM t_report_je WHERE key='adj-001'), 10, 0)),
   1::bigint,
   'account ledger page supports JE drilldown filtering without loading the period');
 

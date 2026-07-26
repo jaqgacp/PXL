@@ -259,18 +259,14 @@ SELECT throws_like(
   '%does not belong to company%',
   'JE line branch from another company is rejected');
 
--- Direct UPDATE is filtered by RLS (0 rows) before the guard can raise; either
--- layer blocking it keeps line company welded to the JE company. Prove the
--- post-state: the attempted divergence changes nothing.
-UPDATE journal_entry_lines
-SET company_id = '22222222-2222-2222-2222-222222222292'
-WHERE je_id = (SELECT id FROM t_ctx WHERE key='mje') AND line_number = 1;
-
-SELECT is(
-  (SELECT company_id FROM journal_entry_lines
-   WHERE je_id = (SELECT id FROM t_ctx WHERE key='mje') AND line_number = 1),
-  '22222222-2222-2222-2222-222222222291'::uuid,
-  'JE line company cannot diverge from the journal entry company');
+-- P5.2 removes the obsolete ledger DML grant, so the attempted divergence now
+-- raises at the privilege boundary instead of becoming an RLS-filtered no-op.
+SELECT throws_ok(
+  $$UPDATE journal_entry_lines
+    SET company_id = '22222222-2222-2222-2222-222222222292'
+    WHERE je_id = (SELECT id FROM t_ctx WHERE key='mje') AND line_number = 1$$,
+  '42501', NULL,
+  'JE line company cannot be changed through direct authenticated DML');
 
 -- ── 13-14. vw_general_ledger: line-accurate dimensions and branch P&L ──────────
 SELECT is(

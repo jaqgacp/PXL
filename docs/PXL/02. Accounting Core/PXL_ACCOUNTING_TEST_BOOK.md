@@ -6,11 +6,11 @@
 **Applies To:** Accounting, tax, posting, reconciliation, and regression test scenarios
 **Read When:** Adding or changing accounting tests, validating a finding, or reconciling test coverage
 **Do Not Read For:** AI startup or accounting behavior authority without the accounting rules matrix
-**Last Reviewed:** 2026-07-22 after PXL-AUD-061 deterministic release-gate formalization (74 files / 1,568 assertions)
+**Last Reviewed:** 2026-07-26 after Inventory Accounting IA-5 dormant-foundation certification; P5.2 remains authoritative and fully enforced
 
 This file records expected accounting/reporting scenarios that must be executed before a finding can be marked `Retested Passed`.
 
-How to execute deterministic scenarios: start the isolated stack with `supabase db start`, run `npm run test:db:local` for a fresh no-seed migration replay plus all **74 files / 1,568 assertions**, and run `npm run test:canonical` for the atomic canonical rebuild plus tests 055/057/058 (**88 assertions**). `npm test` aliases the full pgTAP regression on the current local schema; use `npm run test:db:focused -- supabase/tests/<file>.sql` only as bounded package evidence. The permanent lane order, prerequisites, success/failure rules, hosted read-only boundary, and complete release gates are authoritative in `docs/PXL/13. Testing and Validation/README.md`. `.github/workflows/ci.yml` publishes separate static, fresh-schema/regression, canonical, protected hosted, and summary results; hosted jobs run only for a manually authorized release-candidate dispatch.
+How to execute deterministic scenarios: start the isolated stack with `supabase db start`, run `npm run test:db:local` for a fresh no-seed migration replay plus all **103 files / 2,353 assertions**, and run `npm run test:canonical` for the atomic canonical rebuild plus the canonical/engine verification set (**30 files / 748 assertions**). Run the lanes in that order: test 073 asserts the zero-company bootstrap, so the regression suite must run on a fresh no-seed schema rather than on top of a canonical seed. `npm test` aliases the full pgTAP regression on the current local schema; use `npm run test:db:focused -- supabase/tests/<file>.sql` only as bounded package evidence. The permanent lane order, prerequisites, success/failure rules, hosted read-only boundary, and complete release gates are authoritative in `docs/PXL/13. Testing and Validation/README.md`. `.github/workflows/ci.yml` publishes separate static, fresh-schema/regression, canonical, protected hosted, and summary results; hosted jobs run only for a manually authorized release-candidate dispatch.
 
 Report-page adoption is governed by `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md`. Any report marked production-ready under that standard must have evidence for its accounting purpose, authoritative source data, filters, date basis, posting-state basis, totals, reconciliation target, drilldown/drillback path, export metadata, snapshot requirements where applicable, permissions, known limitations, and performance-sensitive scenarios. Visual conformance alone is not sufficient for accounting, tax, compliance, or reconciliation reports.
 
@@ -1504,3 +1504,502 @@ Scenario: a company with two branches and a JE series in each. A non-member cann
 | 5 | Insert a duplicate manual document number | Rejected: uniqueness cannot be bypassed. |
 | 6 | Configure `has_dynamic_year`/`reset_frequency` | Rejected as unsupported; default continuous series accepted. |
 | 7 | Inspect allocator + registry structure | `FOR UPDATE` lock and both registry UNIQUE constraints present. |
+
+## DIM-ENGINE-CERT-001 - Dimension Engine certification regression
+
+Status: Executed Passing (2026-07-23) in `supabase/tests/080_dimension_engine_certification_test.sql`, 43 assertions, run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260723000003_dimension_engine_certification.sql`; full pgTAP regression passed 80 files / 1,680 assertions. Complements test 019 (branch/dept/cost-center JE-line propagation, branch P&L reconciliation) and test 066 (dimension masters, hierarchy, effective dating, `fn_is_valid_dimension`). Proves that every implemented, dimension-bearing posting transaction now carries all six governed dimensions (branch, department, cost_center, project, location, functional_entity) onto the posted journal lines, that reversal preserves them, that the dimensional GL report reconciles to the undimensioned control total without double counting, and that cross-company and hierarchy violations are rejected. The strengthened JE-line guard is proven non-vacuous: with `trg_je_line_dimensions_guard` disabled a cross-company project is accepted onto a company-A line; with it enabled the same insert is rejected.
+
+Scenario: two companies each with a branch and a full dimension set. A Manual Journal posts all six dimensions onto its line and they surface in `vw_general_ledger` and `vw_gl_dimension_summary`; reversal via `fn_reverse_je` preserves all six. A Vendor Bill's dimensions inherit onto its posting line through `fn_add_posting_line`. A Goods Issue posts department/cost-center/project/location/functional-entity onto its GL lines and the inventory movement. A Fixed Asset acquisition and its first depreciation entry carry the dimensions onto every journal line. The JE-line guard rejects a cross-company branch/department/cost-center/project/location/functional-entity; a dimension master rejects self-parent and cross-company parent; and `fn_register_fixed_asset` rejects a cross-company project at source. The dimensional summary and the `fn_report_gl_by_dimension` drill-down for department, project, and functional entity each reconcile to the same GL control total.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Post a Manual Journal with all six dimensions | Every dimension persists on the journal line and in the GL views. |
+| 2 | Reverse the manual journal | Reversal line preserves all six dimensions. |
+| 3 | Add a Vendor Bill posting line via `fn_add_posting_line` | Line inherits department/cost-center/project/location/functional-entity from the bill. |
+| 4 | Post a Goods Issue | GL lines and the inventory movement carry the dimensions. |
+| 5 | Register a Fixed Asset and post depreciation | Acquisition and depreciation journal lines carry the dimensions. |
+| 6 | Attach a cross-company dimension to a company-A line | Rejected: dimension does not belong to company. |
+| 7 | Self-parent / cross-company parent on a dimension master | Rejected by the hierarchy guard. |
+| 8 | Register a Fixed Asset with a cross-company project | Rejected: invalid project for Fixed Asset. |
+| 9 | Sum the dimensional summary and each drill-down | Reconciles to the undimensioned GL control total (no double counting). |
+
+## COA-ENGINE-CERT-001 - COA Engine (Phase A) certification + equivalence regression
+
+Status: Pending first green run (added 2026-07-24) in `supabase/tests/081_coa_engine_certification_test.sql`, 45 assertions, to run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260724000001_coa_engine_phase_a.sql`. Governs the frozen COA Engine contract `docs/PXL/02. Accounting Core/PXL_COA_ENGINE_SPEC.md` (certifiable engine #19). Phase A is additive: it rewires no posting consumer, so it establishes the resolver + lifecycle + change-policy + FS-registry foundation and its equivalence to today's `company_accounting_config`, not full engine certification.
+
+Scenario: one company provisions the canonical PXL Standard COA (33 accounts, full metadata, 8 FS lines, one active FS mapping per account). Its `company_accounting_config` is set; the sync trigger seeds the nine company-scope `account_mapping` bindings, and `fn_resolve_account` plus `vw_company_accounting_config` return exactly the configured accounts (equivalence). More-specific document-type and branch bindings prove deterministic precedence (document_type outranks branch outranks company default); two equal-specificity candidates are rejected as ambiguous rather than guessed. The resolver fails closed on no/unknown/inactive key and rejects a resolved account that is wrong-type, non-postable, or non-active; an authorized transaction override wins while an unauthorized one is rejected. Lifecycle transitions enforce the state graph and the zero-balance archive rule; the change-policy guard makes `account_type`/`normal_balance` immutable and blocks deletion once an account has posted history; posting-control validators enforce leaf/postable/manual-control rules; the FS registry keeps one active mapping per account per statement with effective-dated reclassification; and `authenticated` cannot write `account_mapping`, keeping the config the single writable authority.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Provision the canonical PXL Standard COA | 33 accounts with complete metadata + populated FS registry. |
+| 2 | Set config; resolve each key | `fn_resolve_account` and the compat view equal the configured accounts. |
+| 3 | Resolve with document_type / branch context | Most-specific binding wins; document_type outranks branch. |
+| 4 | Resolve with two equal-specificity candidates | Rejected as ambiguous; never guessed. |
+| 5 | Resolve missing / unknown / inactive key | Fails closed with a specific error. |
+| 6 | Resolve to a wrong-type / non-postable / inactive account | Rejected by account validation. |
+| 7 | Transition lifecycle (valid, invalid, archive non-zero) | State graph and zero-balance archive rule enforced. |
+| 8 | Mutate / delete an account with posted history | `account_type`/`normal_balance` immutable; deletion blocked. |
+| 9 | Insert a second active FS mapping; then reclassify by effective date | Second open mapping blocked; close-and-open reclassification allowed. |
+| 10 | Write `account_mapping` as `authenticated` | Rejected; config remains the single writable authority. |
+
+## POSTING-ENGINE-P1-001 - Posting Engine Phase P1 infrastructure (additive, inert)
+
+Status: Pending first green run (added 2026-07-24) in `supabase/tests/082_posting_engine_p1_infra_test.sql`, 22 assertions, to run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260724000002_posting_engine_p1_infra.sql`. Governs the frozen Posting Engine architecture `docs/PXL/02. Accounting Core/PXL_POSTING_ENGINE_SPEC.md` Phase P1 (infrastructure only, zero accounting behavior change). P1 is additive: it adds the Posting Context, Posting Plan validator/fingerprint, central Option-B journal-number derivation, additive metadata columns, and a push-based line builder ALONGSIDE the untouched legacy kernel — nothing is wired into existing posting, so existing journals remain byte-for-byte identical (proven by the full regression staying green).
+
+Scenario: the six additive metadata columns (`posting_origin`, `reversal_of_je_id`, `posting_run_id`, `source_fingerprint`, `line_role`, `source_line_id`) exist and are nullable, with CHECK constraints rejecting invalid `posting_origin`/`line_role`. `fn_derive_journal_number` produces `JE-<TYPE>-<source#>` byte-identically for source-numbered documents, normalizes the type to uppercase, and fails closed for source-less journals without a company or a provisioned `JE` number series. `fn_build_posting_context` assembles the canonical context (uppercased source type, `as_of` defaulting to posting date, pushed dimensions). `fn_validate_posting_plan` accepts a balanced plan and rejects unbalanced / both-sided / missing-account / empty / missing-company plans. `fn_posting_plan_fingerprint` is deterministic for equal plans and differs for different ones. `fn_add_posting_line_push` inserts lines with caller-supplied dimensions, `line_role`, and `source_line_id` (no source-table pull). The legacy `fn_create_posted_journal_entry` and `fn_add_posting_line` remain present alongside the new builder (nothing removed).
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect additive columns | Six nullable metadata columns exist; invalid `posting_origin`/`line_role` rejected by CHECK. |
+| 2 | Derive a source-numbered journal number | `JE-<TYPE>-<source#>`, byte-identical to legacy; type uppercased. |
+| 3 | Derive a source-less number without company / series | Fails closed. |
+| 4 | Build a Posting Context | Canonical shape; uppercased type; `as_of` defaults; dimensions carried. |
+| 5 | Validate posting plans | Balanced accepted; unbalanced/both-sided/missing-account/empty/missing-company rejected. |
+| 6 | Fingerprint plans | Deterministic for equal plans; differs for different plans. |
+| 7 | Push journal lines | Lines carry pushed dimensions, `line_role`, and `source_line_id`. |
+| 8 | Inspect legacy builders | `fn_create_posted_journal_entry` and `fn_add_posting_line` remain alongside the push builder. |
+
+## POSTING-ENGINE-P2A-001 - Sales resolver adoption (COA Engine Phase B, group 1)
+
+Status: Pending first green run (added 2026-07-24) in `supabase/tests/083_posting_engine_p2a_sales_resolver_test.sql`, 11 assertions, run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260724000003_posting_engine_p2a_sales_resolver.sql`. Certifies that the five Sales posting writers (`fn_post_sales_invoice`, `fn_post_receipt`, `fn_save_cash_sale`, `fn_post_credit_memo_vat_lump_impl`, `fn_post_debit_memo_vat_lump_impl`) resolve accounts exclusively through the certified COA resolver `fn_resolve_account` (via the `fn_resolve_posting_account` adapter) with no accounting behavior change. Byte-for-byte GL equality of real Sales postings is proven by the full regression + canonical lanes (test 001 critical flow, 054 SI completeness, canonical 055/057 post SI/OR/CM/DM/cash sale with exact GL assertions and remain green). Out of scope (unchanged): Vendor Bill, Cash Purchase, Vendor Credit, and every non-Sales writer.
+
+Scenario: all five Sales writers reference `fn_resolve_posting_account` and none reads `company_accounting_config` for account resolution, while an out-of-scope reconciliation report (`fn_ap_subledger_gl_reconciliation_asof`) still reads config to identify control accounts (non-vacuous scope guard). The adapter returns the configured account for a resolvable key and re-raises the writer's friendly "not configured" message on a missing mapping. For a company with configured AR/Output VAT/Cash/CWT/Customer-Advances accounts, `fn_resolve_account` returns exactly those accounts (equivalence — the basis of GL equality). Every Sales writer populates `posting_origin` metadata.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect the five Sales writers | Each resolves via `fn_resolve_posting_account`; none reads `company_accounting_config`. |
+| 2 | Inspect out-of-scope code | An out-of-scope reconciliation report still reads config (non-vacuous scope guard). |
+| 3 | Resolve a configured key via the adapter | Returns the configured account. |
+| 4 | Resolve a missing key via the adapter | Re-raises the friendly "not configured" message. |
+| 5 | Compare resolver output to config | `fn_resolve_account` equals the configured AR/VAT/Cash/CWT/Advances accounts. |
+| 6 | Inspect posting metadata | Every Sales writer populates `posting_origin`. |
+
+## POSTING-ENGINE-P2B-001 - Purchasing resolver adoption (COA Engine Phase B, group 2)
+
+Status: Pending first green run (added 2026-07-25) in `supabase/tests/084_posting_engine_p2b_purchasing_resolver_test.sql`, 11 assertions, run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260724000004_posting_engine_p2b_purchasing_resolver.sql`. Certifies that the three Purchasing posting writers (`fn_post_vendor_bill`, `fn_post_cash_purchase_source_locked_impl`, `fn_post_vendor_credit_vat_lump_impl`) resolve accounts exclusively through the certified COA resolver `fn_resolve_account` (via the `fn_resolve_posting_account` adapter) with no accounting behavior change. Byte-for-byte GL equality of real Purchasing postings is proven by the full regression + canonical lanes (test 001 critical flow posts a Vendor Bill, 042 posts a Cash Purchase with EWT, 004/035 post a Vendor Credit, and canonical 055/057 post the purchasing families with exact GL assertions and remain green). Out of scope (unchanged): Sales (already P2A), Payment Voucher, Check Voucher, Withholding Remittance, Purchase Return, and every non-Purchasing writer.
+
+Scenario: all three Purchasing writers reference `fn_resolve_posting_account` and none reads `company_accounting_config` for account resolution, while an out-of-scope reconciliation report (`fn_ap_subledger_gl_reconciliation_asof`) still reads config to identify control accounts (non-vacuous scope guard). The adapter returns the configured account for a resolvable key and re-raises the writer's friendly "not configured" message on a missing mapping. For a company with configured AP/Input VAT/EWT-Payable/Cash accounts, `fn_resolve_account` returns exactly those accounts (equivalence — the basis of GL equality). Every Purchasing writer populates `posting_origin`; the direct-insert Vendor Credit writer additionally tags `line_role`.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect the three Purchasing writers | Each resolves via `fn_resolve_posting_account`; none reads `company_accounting_config`. |
+| 2 | Inspect out-of-scope code | An out-of-scope reconciliation report still reads config (non-vacuous scope guard). |
+| 3 | Resolve a configured key via the adapter | Returns the configured account. |
+| 4 | Resolve a missing key via the adapter | Re-raises the friendly "not configured" message. |
+| 5 | Compare resolver output to config | `fn_resolve_account` equals the configured AP/Input VAT/EWT-Payable/Cash accounts. |
+| 6 | Inspect posting metadata | Every Purchasing writer populates `posting_origin`; Vendor Credit tags `line_role`. |
+
+## POSTING-ENGINE-P2C-001 - Inventory resolver certification (COA Engine Phase B, group 3)
+
+Status: Pending first green run (added 2026-07-25) in `supabase/tests/085_posting_engine_p2c_inventory_resolver_test.sql`, 5 assertions, run in every regression and canonical lane. **P2C is an evidence-based certification, not a forced migration, and adds no migration file.** Investigation established that the four Inventory posting writers (`fn_post_goods_issue_source_locked_impl`, `fn_post_physical_count_source_locked_impl`, `fn_post_stock_adjustment_source_locked_impl`, `fn_post_stock_transfer_source_locked_impl`) already satisfy the frozen Phase P2 invariant: they read **zero** `company_accounting_config`. They resolve posting accounts from explicit, per-entity account ownership — `items.inventory_account_id`/`items.cogs_account_id` (goods issue), `items.inventory_account_id`/`warehouses.gl_variance_account_id` (physical count), `items.inventory_account_id`/line `gl_offset_account_id` (stock adjustment), and `warehouses.gl_inventory_account_id` (stock transfer), with line-level `gl_*_account_id` overrides. No inventory writer is changed. Item/warehouse-scoped inventory account resolution through `fn_resolve_account` is **outside the frozen P2 scope**: it would require new mapping keys (INVENTORY/COGS/VARIANCE/OFFSET) and, for warehouse-scoped accounts, a `warehouse_id` qualifier the frozen `account_mapping` contract does not have — a future COA enhancement project after the Posting Engine resolver migration completes. Inventory posting behavior is unchanged (no code touched); the full regression and canonical inventory postings remain green.
+
+Scenario: the four Inventory writers exist and none (impl or wrapper) reads `company_accounting_config`; each resolves accounts from item/warehouse-scoped ownership; `ref_mapping_key` has no inventory/COGS/variance key (documenting the future-work boundary); and the config-read detector is non-vacuous (it fires on an out-of-scope reconciliation report `fn_ap_subledger_gl_reconciliation_asof`, which does read config).
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Enumerate the Inventory writers | The four Inventory posting writers are present. |
+| 2 | Inspect config reads across impls + wrappers | No Inventory posting writer reads `company_accounting_config` (P2 invariant already satisfied). |
+| 3 | Inspect account sources | Every Inventory writer resolves accounts from item/warehouse-scoped account ownership. |
+| 4 | Inspect the resolver key catalog | `ref_mapping_key` has no inventory/COGS/variance key — item/warehouse-scoped resolution is future COA work. |
+| 5 | Verify the detector is non-vacuous | An out-of-scope reconciliation report still reads `company_accounting_config`, so the config-read assertion is meaningful. |
+
+## POSTING-ENGINE-P2D-001 - Banking/Payments/Purchase-return resolver adoption (COA Engine Phase B, group 4)
+
+Status: Pending first green run (added 2026-07-25) in `supabase/tests/086_posting_engine_p2d_banking_payments_resolver_test.sql`, 11 assertions, run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260724000005_posting_engine_p2d_banking_payments_resolver.sql`. Certifies that the four remaining forward posting writers that read `company_accounting_config` — `fn_post_payment_voucher` (AP_TRADE, SUPPLIER_DOWNPAYMENTS, EWT_PAYABLE, CASH_DEFAULT), `fn_post_check_voucher` (EWT_PAYABLE), `fn_complete_purchase_return_source_locked_impl` (AP_TRADE), `fn_post_withholding_remittance` (EWT_PAYABLE, EWT_WITHHELD) — now resolve accounts exclusively through the certified COA resolver `fn_resolve_account` (via the `fn_resolve_posting_account` adapter) with no accounting behavior change. **Unlike P2A/P2B, P2D makes no metadata change: `posting_origin`/`line_role` are left exactly as they were, honoring the byte-for-byte-equivalent constraint.** Byte-for-byte GL equality of real postings is proven by the full regression + canonical lanes (Payment Voucher: 001/006/034/043/051 and canonical 055/057 which post 5 vouchers; Check Voucher: 022/023/036; Purchase Return: 031; Withholding Remittance: 036 — all with exact GL assertions, remaining green). Investigated and **certified without change** (already zero `company_accounting_config`): the Banking forward writers (bank adjustment / fund transfer / inter-branch transfer, sourcing `bank_accounts.gl_account_id`) and every reversal/void writer (which reverse the original posted journal and resolve no accounts). Out of scope (not posting writers): the `*_gl_reconciliation` reports, GL-impact previews, and `fn_save_withholding_remittance` (a save-time config-presence validator that writes no journal). This completes P2 resolver adoption for every forward posting family — zero forward posting writer reads `company_accounting_config`.
+
+Scenario: the four migrated writers reference `fn_resolve_posting_account` and none reads `company_accounting_config`; the already-compliant Banking/reversal writers read zero config (certified unchanged); an out-of-scope reconciliation report still reads config (non-vacuous scope guard). The adapter returns the configured account for a resolvable key and re-raises the writer's friendly "not configured" message on a missing mapping. For a company with configured AP/Supplier-Downpayments/EWT-Payable/EWT-Withheld/Cash accounts, `fn_resolve_account` returns exactly those accounts (equivalence — the basis of GL equality).
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect the four migrated P2D writers | Each resolves via `fn_resolve_posting_account`; none reads `company_accounting_config`. |
+| 2 | Inspect the Banking/reversal writers | Already read zero `company_accounting_config` (certified without modification). |
+| 3 | Inspect out-of-scope code | An out-of-scope reconciliation report still reads config (non-vacuous scope guard). |
+| 4 | Resolve a configured key via the adapter | Returns the configured account; re-raises the friendly "not configured" message on a missing mapping. |
+| 5 | Compare resolver output to config | `fn_resolve_account` equals the configured AP/Supplier-Downpayments/EWT-Payable/EWT-Withheld/Cash accounts. |
+
+## POSTING-ENGINE-P3A-001 - Dimension Push (Posting Engine Phase P3A)
+
+Status: Executed Passing (2026-07-25) in `supabase/tests/087_posting_engine_p3a_dimension_push_test.sql`, 28 assertions, run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260725000001_posting_engine_p3a_dimension_push.sql`; full pgTAP regression passed **87 files / 1,813 assertions** and the canonical lane passed **15 files / 307 assertions**. Implements objective O-A only of the frozen phase specification `docs/PXL/02. Accounting Core/PXL_POSTING_ENGINE_P3_SPEC.md` §3 (sub-phase P3a); P3B fiscal close, P3C manual-JE control, and P3D preview convergence are not implemented.
+
+`fn_add_posting_line` is now a pure persistence helper: it accepts all six governed dimensions explicitly (`p_project_id`/`p_location_id`/`p_functional_entity_id` added, `DEFAULT NULL`), performs exactly one insert, and performs no source-document lookup, no `'VB'`/`'CP'` document-type dispatch, no follow-up `UPDATE journal_entry_lines`, and no dimension inference. The two writers that depended on the retired pull — `fn_post_vendor_bill` and `fn_post_cash_purchase_source_locked_impl` — now own dimension resolution and push the document header's six dimensions onto every line; their bodies are otherwise verbatim from the certified P2B migration. The helper's admission and accounting controls (journal `FOR UPDATE` lock, `is_company_member`, `fn_require_postable_account`, exactly-one-positive-amount) and its `authenticated`/`service_role` EXECUTE grants are preserved unchanged, so `permissions` and error messages are byte-for-byte identical. The Dimension Engine guard `trg_je_line_dimensions_guard` remains the only dimension validator and now sees pushed values on the same `INSERT`.
+
+Deployment safety (spec Risk R3): PostgreSQL treats the 9-argument and 12-argument forms as distinct functions and rejects a 9-argument call against both at CALL time with `function ... is not unique`, so an additive overload is **not** deployment-safe. The migration drops the 9-argument function and creates the 12-argument one, re-applying the prior `REVOKE`/`GRANT` set verbatim; every surviving 9-argument call site still resolves.
+
+Audit-event difference (the only permitted behavioral difference, spec §3.8 / Risk R2): a Vendor Bill / Cash Purchase line is written by one `INSERT` instead of `INSERT`-then-`UPDATE`. `journal_entry_lines` carries no audit trigger, so no `sys_audit_logs` or `transaction_events` row changes; the difference is one fewer statement and one fewer redundant firing of the line guards. No GL value changes.
+
+Scenario: post a real Vendor Bill (expense / input VAT / AP / accrued EWT) and a real Cash Purchase (expense / input VAT / EWT withheld / cash) whose headers carry all six governed dimensions, then void the bill; assert the complete resulting GL and every line dimension against the pre-P3A output of the same fixture.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect `fn_add_posting_line` in `pg_proc` | Exactly one signature, twelve parameters, eight defaulted; no source lookup, no `reference_doc_type` dispatch, no follow-up UPDATE, exactly one INSERT, no dimension COALESCE inference. |
+| 2 | Inspect the posting-line helper family | No helper reaches back into `vendor_bills`/`cash_purchases` for dimensions (zero pull dispatch). |
+| 3 | Inspect EXECUTE privileges | `authenticated` and `service_role` retain EXECUTE; `anon`/PUBLIC remain denied. |
+| 4 | Inspect the two migrated writers | Both push all six `v_rec` dimensions on every posting line. |
+| 5 | Post a dimension-bearing Vendor Bill | Four lines: DR expense 10,000, DR input VAT 1,200, CR AP 11,000, CR EWT payable 200 — identical line numbers, accounts, descriptions, and amounts to the pre-P3A run. |
+| 6 | Read the Vendor Bill lines' dimensions | All four lines carry the branch, department, cost center, project, location, and functional entity from the bill header. |
+| 7 | Read the Vendor Bill metadata | `line_role` remains NULL on all four lines; `posting_origin` remains `system`. |
+| 8 | Post a dimension-bearing Cash Purchase | Four lines: DR expense 10,000, DR input VAT 1,200, CR EWT payable 200, CR cash 11,000 — identical to the pre-P3A run; all four carry all six dimensions. |
+| 9 | Void the posted Vendor Bill | Reversal journal (`REV`) posts; its four lines preserve all six dimensions. |
+| 10 | Call the helper with nine arguments on a `'VB'`-typed journal whose bill carries all six dimensions | The line is created with the pushed branch and NULL department/cost-center/project/location/functional-entity — the helper infers nothing from the source document. |
+| 11 | Push a cross-company department through the helper | The Dimension Engine guard rejects it (`does not belong to company`), proving the guard is the validator and is not vacuous. |
+
+## POSTING-ENGINE-P3C-001 - Manual Journal Control (Posting Engine Phase P3C)
+
+Status: Executed Passing (2026-07-25) in `supabase/tests/088_posting_engine_p3c_manual_je_control_test.sql`, 30 assertions, run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260725000002_posting_engine_p3c_manual_je_control.sql`; full pgTAP regression passed **88 files / 1,843 assertions** and the canonical lane passed **16 files / 337 assertions**. Implements objective O-D only of the frozen phase specification `docs/PXL/02. Accounting Core/PXL_POSTING_ENGINE_P3_SPEC.md` §6, enforcing the frozen COA Posting Control Contract (`PXL_COA_ENGINE_SPEC.md` §5); P3D preview convergence is not implemented.
+
+`fn_assert_manual_postable` was delivered by COA Phase A and had **zero runtime callers** since (certification observation O3). This phase wires it into `fn_post_manual_je` as a single `PERFORM` inside the existing per-line validation loop, placed **after** the existing account checks (belongs to company / `is_postable` / `is_active`) so every pre-P3C rejection keeps its exact message. The journal date is passed as the as-of date, so effective dating is evaluated at the accounting date rather than wall-clock time. The function body is otherwise verbatim from its certified definition (migration `20260723000003`); the signature, permissions, audit behavior, numbering (`MJE-YYYYMM-NNNN`), and posting pipeline are untouched.
+
+**Exactly one live rejection is added.** `fn_assert_manual_postable` = `fn_assert_postable_leaf` (→ `fn_is_account_postable`: `is_postable`, `lifecycle_status='active'`, leaf-ness, effective window) plus the control-account test. Against the certified database the first four predicates are provably inert — the existing loop rejects non-postable/inactive accounts first, `fn_coa_change_policy_guard` keeps `is_active` in sync with `lifecycle_status`, zero postable accounts have children, and zero accounts carry `effective_from`/`effective_to`. The control-account test is therefore the only predicate that can fire.
+
+**Canonical safety, verified before implementation:** whole database — 0 accounts flagged `is_control_account`, 0 journal lines of any document type on a control account, 0 postable non-leaf accounts, 0 effective-dated accounts. Replaying the validator over every existing `journal_entry_line`, at both the journal date and `CURRENT_DATE`, rejects 0 rows. No existing data is invalidated, so spec Open Question Q2 (grandfathering) needs no remediation.
+
+**Non-vacuity, proven by construction and by reversion.** The canonical dataset has no control accounts, so a canonical-only assertion would prove nothing. The test builds an **attribution pair**: two accounts identical in every attribute the validator inspects — type, normal balance, postable, active, lifecycle, leaf, effective dating — differing **only** in `is_control_account`. The flag is set at creation because `fn_coa_change_policy_guard` makes `is_control_account` immutable once an account has posted history. The unflagged twin accepts the posting; the flagged one is rejected on either the debit or the credit side. Independently, restoring the pre-P3C function body and replaying the same posting **accepts** it and creates a journal on the control account — the hole the guard closes is real.
+
+Scenario: prove the wiring and its order structurally; prove the guard rejects a genuine control account and that the flag is the sole cause; prove the other validator predicates are inert; prove a representative spread of valid manual journals (regular / adjusting / opening / auto-reverse / dimensioned / multi-line / null-branch) is unchanged; prove every pre-existing rejection message is preserved.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect `fn_post_manual_je` in `pg_proc` | Calls `fn_assert_manual_postable`; one signature; the call sits after the `is inactive` check; the journal date is passed as as-of. |
+| 2 | Compare the attribution pair | Two accounts identical except `is_control_account`. |
+| 3 | Post a manual JE against the non-control twin | Succeeds. |
+| 4 | Post the same manual JE against the control account, debit side then credit side | Both rejected: "control account … may not be posted by a manual journal … must originate from the owning subledger". |
+| 5 | Inspect the database after rejection | No journal header and no journal line persisted — fail-closed. |
+| 6 | Inspect callers of the validator | Only `fn_post_manual_je` — subledger/posting writers are unaffected. |
+| 7 | Inspect leaf, effective-dating, and lifecycle predicates | All inert: 0 postable non-leaf accounts, 0 effective-dated accounts, 0 lifecycle/`is_active` divergences. |
+| 8 | Replay the validator over every existing journal line | Rejects nothing. |
+| 9 | Post regular / dimensioned / adjusting / auto-reverse / null-branch manual JEs | Numbering, `entry_class`, `reference_doc_type`, `auto_reverse`, totals, line order, accounts, descriptions, amounts, and all six dimensions identical to the pre-P3C output. |
+| 10 | Trigger each pre-existing failure mode | Too-few-lines, unbalanced, foreign account, negative amount, both-sides, closing class, and no-open-period messages all unchanged. |
+| 11 | Post to an account inactive from creation | Still raises the original "is inactive" message, not the validator's — validation order preserved. |
+| 12 | Call `fn_assert_manual_postable` directly | Rejects the control account; accepts an ordinary postable leaf. |
+
+## POSTING-ENGINE-P3D-001 - GL Preview Resolver Convergence (Posting Engine Phase P3D)
+
+Status: Executed Passing (2026-07-25) in `supabase/tests/089_posting_engine_p3d_preview_resolver_test.sql`, 38 assertions, run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260725000003_posting_engine_p3d_preview_resolver.sql`; full pgTAP regression passed **89 files / 1,881 assertions** and the canonical lane passed **17 files / 375 assertions**. Implements objective O-C only of the frozen phase specification `docs/PXL/02. Accounting Core/PXL_POSTING_ENGINE_P3_SPEC.md` §5 — the resolver-convergence subset that closes COA certification observation O2. **This is NOT the full Preview ≡ Actual certification:** shared physical Posting Plan builder identity, `source_fingerprint` equivalence, and the whole-census preview/posted grid remain P8.
+
+**Census (live `pg_proc`).** Five GL-facing preview functions exist. Only **one** projects posting accounts of its own — `fn_preview_sales_invoice_gl_impact_aud053_core`. Every other supported document type previews through `fn_preview_gl_impact_core`, which executes the **real posting writer** inside a plpgsql subtransaction and rolls it back through a marker exception (`__PXL_GL_PREVIEW_ROLLBACK__`); those paths therefore already resolve accounts exactly as actual posting does and are certified unchanged. `fn_gl_impact_payload` renders an already-posted journal and is also certified unchanged: all ten of its `company_accounting_config` references are the join key plus nine `WHEN jel.account_id = cfg.x` **provenance comparisons** that derive the descriptive `account_source` label from an already-resolved line — it resolves no posting account.
+
+**Migration.** `fn_preview_sales_invoice_gl_impact_aud053_core` now obtains its two projected posting accounts from the certified adapter instead of `company_accounting_config`: AR via `fn_resolve_posting_account(company, 'AR_TRADE', v_rec.date, …)` and Output VAT via `fn_resolve_posting_account(company, 'VAT_OUTPUT', v_rec.date, …)` — the same two keys, friendly messages, and as-of expression `fn_post_sales_invoice` uses (P2A). No new mapping key, qualifier, schema change, or payload change. Signature, return type, SECURITY DEFINER, pinned `search_path`, and grants are unchanged (`CREATE OR REPLACE`, no overload).
+
+**As-of date.** The **invoice date** (`v_rec.date`) is used, matching actual posting exactly. The preview's own display date may differ when a caller passes `p_posting_date` or a posted journal carries another `je_date`; resolving on the display date would let preview drift from actual. Both are identical today (zero effective-dated `account_mapping` rows).
+
+**Failure behavior.** Resolution is deliberately non-fatal in preview: an unresolvable mapping yields NULL so the established external contract still renders a **structured blocker** (`account_code = 'Missing AR Account'`, `account_id` NULL) instead of a raw exception. This is a strengthening — a mapping that is missing, ambiguous, inactive, non-postable, wrong-typed, out of its effective window, or in another company now all surface as the same structured blocker, where previously only a NULL config column did. Actual posting still raises, unchanged.
+
+**Non-vacuity, proven by controlled reversion.** Restoring the pre-P3D body and re-pointing the `AR_TRADE` mapping away from the config column shows the old preview displaying the **config** account while the resolver — and therefore actual posting — used the mapping account. That is precisely the O2 drift, and P3D closes it (assertion 38).
+
+**Before/after equality.** On the *same* seeded database, pre-P3D and post-P3D bodies produce **byte-for-byte identical** preview output across every supported path (SI projected, SI posted, explicit posting date, generic dispatcher SI route, and the OR/VB/CP/PV/CM/DM rollback-preview routes). A cross-reseed comparison showed revenue lines in different positions; this was traced to the pre-existing ordering key `ORDER BY revenue_account_id::TEXT`, which is sensitive to canonical UUIDs regenerated on each reseed, and is unaffected by P3D.
+
+Scenario: inventory the five preview functions; prove the migrated core resolves through the adapter on the invoice date with no direct config-derived account; prove the unchanged paths' ownership models; execute a real preview and compare its accounts to the resolver and to the posted journal; prove payload shape, ordering, and amounts; prove preview has no side effects; prove the fail-closed blocker; prove drift detection.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inventory GL-preview functions in `pg_proc` | Exactly the five censused functions; none overloaded. |
+| 2 | Inspect the migrated SI preview core | Calls `fn_resolve_posting_account`; zero `v_cfg.x AS account_id`; uses `AR_TRADE` + `VAT_OUTPUT`; as-of = `v_rec.date` on both keys. |
+| 3 | Compare to actual posting | `fn_post_sales_invoice` resolves `AR_TRADE` on the same `v_rec.date` (as-of parity). |
+| 4 | Inspect preview adapter discipline | No preview function calls `fn_resolve_account` directly. |
+| 5 | Inspect `fn_gl_impact_payload` | Every config reference is the join key or a provenance comparison; it resolves no account and renders posted lines. |
+| 6 | Inspect `fn_preview_gl_impact_core` | Non-SI preview executes the real writer inside a rolled-back subtransaction. |
+| 7 | Inspect routing | Wrapper → migrated core; dispatcher → wrapper; no caller reaches an obsolete implementation. |
+| 8 | Inspect signature and grants | Returns `jsonb`; SECURITY DEFINER with pinned `search_path`; `authenticated` retains EXECUTE on the entry point. |
+| 9 | Preview a real saved invoice | AR and Output VAT line accounts equal the certified resolver results. |
+| 10 | Read preview lines and totals | Line order, account codes, `account_source` labels, debits, credits, and totals unchanged; payload balanced. |
+| 11 | Read payload key sets | Top-level (17 keys) and line (27 keys) sets unchanged. |
+| 12 | Compare state before/after preview | No journal, line, tax-ledger, inventory, event, or number-series change; document status untouched. |
+| 13 | Post the previewed invoice | Every previewed account, amount, and line position equals the posted journal. |
+| 14 | Preview an invoice whose company has no `AR_TRADE` mapping | The resolver raises at the seam, but preview returns a structured payload with `account_code = 'Missing AR Account'` and a null `account_id`. |
+| 15 | Re-point the `AR_TRADE` mapping away from the config column | Preview follows the resolver, not the config column — O2 drift closed. |
+
+## POSTING-ENGINE-P4-001 - Tax Boundary Certification (Posting Engine Phase P4)
+
+Status: Executed Passing (2026-07-26) in `supabase/tests/090_posting_engine_p4_tax_boundary_test.sql`, 49 assertions, run in every regression and canonical lane. **No migration ships with this phase** — P4 was re-scoped by the architecture board from "introduce the TaxComponent shape" to a formal certification of the ownership boundary that already exists, so production behavior is unchanged by construction. Full regression passed **90 files / 1,930 assertions** on a clean `supabase db reset --local --no-seed` replay; the canonical lane passed **18 files / 424 assertions**. Governing contract: `docs/PXL/02. Accounting Core/PXL_POSTING_ENGINE_SPEC.md` §2.2, §5.3, and the new §5.3.1 (Amendment A2).
+
+**What this does NOT certify.** No formal Tax Engine exists, and this test proves its absence rather than assuming it. No `TaxComponent` object, composite type, or contract exists in the live system and none is invented here. Philippine tax function completeness is **not** claimed. The seven duplicated document-save tax calculators are **not** removed — they are censused as registered technical debt owned by the future Tax Engine program. `fn_save_cash_sale` still co-locates document tax calculation with posting and remains a registered Tax Engine migration candidate.
+
+**Census (live `pg_proc`, authoritative over prose).** **20** tax-aware posting writers reach the General Ledger and reference VAT/EWT/CWT/withholding/tax. This corrects the investigation's count of 19: `fn_cancel_check_voucher` reverses the Check Voucher journal through `fn_bt_reverse_je` rather than `fn_reverse_posted_journal_entry` and was missed by a predicate keyed only on the latter. It computes no tax and reverses tax detail through the same certified function as the other four correction writers, so the correction enlarges the census without changing any conclusion. The remaining **30** GL writers are provably not tax-aware after P5.1 removed one unused legacy line helper, so the partition remains complete.
+
+**Non-computation proof.** Of the 20, **zero** read `company_accounting_config` for an account; **19** contain no tax arithmetic and read no VAT rate source; **six** read `atc_codes`, and in five of them the rate is copied straight into `tax_detail_entries.tax_rate` as provenance — it never feeds a multiplication, division, or policy comparison. The precise certified claim is therefore *the posting layer records the rate that applied; it does not select one.* Schema-wide, tax-rate arithmetic exists in exactly **11** functions — 7 document-save VAT calculators, 2 EWT-profile appliers, 2 stored-amount validators — of which exactly one writes the GL: `fn_save_cash_sale`, whose calculation belongs to its document-save half. The detectors are proven non-vacuous: the same predicates fire on `fn_save_cash_sale` and stay silent on the pure-consumption writers.
+
+**Ownership matrix certified.** Tax policy and calculation: document-save layer today, governed Tax Engine in future. Tax account resolution: the certified COA Resolver, over exactly the four keys `VAT_OUTPUT`/`VAT_INPUT`/`EWT_PAYABLE`/`EWT_WITHHELD`, every one reached through `fn_resolve_posting_account`. Tax-line construction, ordering, roles, dimensions: the Posting Engine. Tax-detail persistence and reversal: the Tax Ledger layer — 8 writer functions, and exactly one reversal implementation (`fn_reverse_tax_detail_entries`) consumed by the five correction writers.
+
+**Reversal provenance, proven non-vacuously.** The certified reversal copies the original ATC version, rate, taxable base, tax/VAT code, income nature, and linkage, negating only base and amount. Non-vacuity is engineered rather than asserted: the fixture closes the original `WC140` ATC version and opens a governed successor at a **different** rate (5.00 vs 2.00) effective on the reversal date, so a reversal that recomputed at the current rate would produce 250.00. The certified reversal reproduces the original 100.00 at the original 2.00 rate, and the original ledger row is left untouched.
+
+**Rounding.** All seven calculators share one idiom — `ROUND(base * rate / 100, 2)` per line. Behaviourally, the same 100.05 base at 12% rounds to 12.01 in every reachable document calculator (Sales Invoice, Vendor Bill, Cash Purchase, Credit Memo, Vendor Credit), with no calculator disagreeing. **Documented limitation:** VAT-inclusive treatment is implemented in exactly one of the seven (Sales Invoice), and the test pins that fact so the Tax Engine program inherits it explicitly.
+
+Scenario: census the tax-aware posting writers and prove the partition complete; prove structurally that the posting layer selects no rate and performs no tax arithmetic; prove COA ownership of tax accounts and Tax Ledger ownership of tax detail; prove the absence of a Tax Engine; then execute every supported tax-bearing canonical transaction and compare the stored tax fact, the posted GL tax line, and the tax-ledger entry as one triple; prove zero-variance reconciliation; prove reversal provenance against a changed current rate; prove rounding consistency; prove inclusive and exclusive behaviour unchanged; prove fail-closed on invalid stored tax.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Census tax-aware GL writers in `pg_proc` | Exactly the 20 censused writers; the other 30 GL writers are provably not tax-aware; none overloaded. |
+| 2 | Scan the census for VAT rate sources and rate arithmetic | Only `fn_save_cash_sale` reads `vat_codes`/`tax_codes` or uses a rate in arithmetic. |
+| 3 | Census tax arithmetic schema-wide | Exactly 11 functions; exactly one of them writes the GL. |
+| 4 | Census the document-save VAT calculators | Exactly the seven registered as Tax Engine debt. |
+| 5 | Scan the census for configuration reads and tax keys | Zero `company_accounting_config` reads; exactly the four certified COA tax keys; every one resolved through `fn_resolve_posting_account`. |
+| 6 | Inspect the five ATC-rate readers | The rate feeds no arithmetic and no policy comparison — provenance only. |
+| 7 | Census tax-ledger writers and reversers | Eight writers; one reversal implementation consumed by five correction writers. |
+| 8 | Search for a Tax Engine or tax-component builder | None exists. |
+| 9 | Post SI, VB (source EWT), CP, PV (payment EWT), OR (CWT), CM, VC | For each: stored tax amount == posted GL tax line == tax-ledger amount, with ATC, rate, base, and income-nature provenance where applicable. |
+| 10 | Save-and-post a Cash Sale with CWT | The posting half consumes the VAT its save half persisted (360.00 in document, GL, and ledger); caller-supplied CWT is recorded identically in GL and ledger. |
+| 11 | Run `fn_vat_gl_reconciliation` and `fn_wht_gl_reconciliation` | Every tax kind reconciles at variance exactly 0.00 — not tolerance-satisfied. |
+| 12 | Close the original ATC version and open a successor at a different rate | The rate in force on the reversal date is 5.00, not the document's 2.00. |
+| 13 | Cancel the posted Payment Voucher | The counter-row carries the original 2.00 rate, original ATC version, base, and income nature; it does not adopt 5.00 and does not recompute to 250.00; the original row is untouched; exactly one counter-row exists. |
+| 14 | Void a posted Sales Invoice | The counter-row copies the VAT code and exactly negates the original; the reversal journal debits Output VAT exactly what the original credited. |
+| 15 | Save the same 100.05 base at 12% through five calculators | 12.01 everywhere; no calculator disagrees. |
+| 16 | Post a VAT-inclusive and a VAT-exclusive invoice | 11,200 gross backs out to 10,000 + 1,200; 10,000 net grosses up to 11,200; both post unchanged. Inclusive treatment exists in exactly one calculator. |
+| 17 | Tamper stored header VAT, then post | Rejected with the certified "header VAT does not match line VAT" message; no partial journal remains. |
+| 18 | Supply withholding off the governed ATC rate | Rejected — fail-closed. |
+| 19 | Search for a `TaxComponent` type or a posting writer consuming one | Neither exists; the contract remains deferred to the Tax Engine. |
+
+## POSTING-ENGINE-P5A-001 - Surface Closure (Posting Engine Phase P5.0)
+
+Status: Executed Passing (2026-07-26) in `supabase/tests/091_posting_engine_p5a_surface_closure_test.sql`, 45 assertions, run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260726000001_posting_engine_p5a_surface_closure.sql`; full pgTAP regression passed **91 files / 1,975 assertions** and the canonical lane passed **19 files / 469 assertions**. Implements only the three items approved after the P5 architecture review. Governing contract: `docs/PXL/02. Accounting Core/PXL_POSTING_ENGINE_SPEC.md` §4.6 (the Kernel Totality Guard this phase deliberately does **not** build) and §7 phase P5.
+
+**What this did NOT do at P5.0.** P5.0 was not the Kernel Totality Guard; it closed the **external** (PostgREST / `authenticated` / `anon`) surface only. The later approved P5.1 migrations now coexist with that closure. Assertions 42-43 were advanced accordingly: the observe-only guard remains wired and every forward header INSERT is drained without reopening the P5.0 client surface.
+
+**Why the ledger was not the exposure.** `journal_entries` and `journal_entry_lines` already carry RLS with a SELECT policy and **zero write policies**, so `authenticated` is denied by absence of policy despite holding table grants. The exposures were adjacent: an internal helper left callable, PUBLIC EXECUTE grants, and six **derived** accounting tables that any company member could author directly.
+
+**The demonstrated bypass.** Before this migration, the identical statements by the identical genuine member succeeded: `UPDATE stock_balances SET wac_unit_cost = wac_unit_cost * 10` affected 1 row, and a forged `INSERT INTO inventory_transactions` inserted 1 row. `fn_post_sales_invoice` reads `stock_balances.wac_unit_cost` to compute COGS, so a member could pre-set valuation and have the certified engine post a COGS figure derived from tampered state — accounting impact created outside the Posting Engine, with no journal and no accounting audit. After the migration the same statements yield `UPDATE 0` and an RLS violation. **This controlled reversion is the non-vacuity proof**, executed against the seeded canonical dataset.
+
+**Ownership premise, verified not assumed.** All 28 functions that write the six closed tables are SECURITY DEFINER, so every legitimate path executes as the table owner and is unaffected by RLS. The frontend reads all six and writes none. No pgTAP test writes them while impersonating `authenticated`.
+
+**Two candidates deliberately excluded — a material correction to the investigation.** `bank_recon_items` and `book_tax_reconciliation` were named as P5.0 candidates on the premise that their writers were all SECURITY DEFINER. That premise is **false**: `BankReconciliationPage.tsx` writes `bank_recon_items` directly (`.delete()`/`.insert()`) and `BookToTaxReconciliationPage.tsx` writes `book_tax_reconciliation` directly (`.insert()`/`.update()`). Closing them would have broken working features, which the accounting contract forbids. They remain member-writable, and assertion 44 pins that state so it reads as a decision rather than an oversight.
+
+**Two pre-existing assertions were re-pointed, not weakened.** Test 087 asserted that P3A *preserved* the `authenticated` EXECUTE grant on `fn_add_posting_line`; P5.0 is the approved decision that removes it, so the assertion is **inverted** — it now pins the closed state, and a regression that re-grants the helper still fails. Test 080 Section C simulated the Vendor Bill writer by calling the helper from the member role; that call now runs with the owner's privilege, which is how the real SECURITY DEFINER caller invokes it. Every dimension assertion in 080 is unchanged.
+
+**Accounting equality, measured.** The canonical dataset was seeded and fingerprinted with the migration removed, then again with it applied: GL (`je_number`/status/date/source/totals/`posting_origin`/line number/account code/debit/credit/description/`line_role`/branch), tax detail, inventory movements, stock balances, and number series all hash **identically** (GL `75ddb2e4…`, TAX `50469c66…`, INV `d5e87b88…`, STOCK `31af15fa…`, SERIES `39ee27a6…`; 48 journals / 138 lines / 24 tax rows / 26 movements).
+
+Scenario: pin the closed helper and the client-entry surface; prove no GL writer is reachable by `anon` while every legitimate caller keeps exactly the privilege it had; prove the six derived tables deny every `authenticated` write while the SECURITY DEFINER writer still posts through them unchanged; prove the phase boundary; pin the deliberate exclusions.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Probe `fn_add_posting_line` privileges | Not executable by `authenticated` or `anon`; owner retains EXECUTE. |
+| 2 | Probe every internal journal/tax persistence helper | None is callable by `authenticated`. |
+| 3 | Scan GL writers for `anon` and PUBLIC grants | Zero of each. |
+| 4 | Compare the ten client entry points before/after | `authenticated` and `service_role` retain EXECUTE; `anon` does not. |
+| 5 | Enumerate the authenticated-reachable GL-writing surface | Exactly the ten client entry points. |
+| 6 | Inspect the three journal-linking trigger functions | Unreachable by `anon`/`authenticated`; all seven triggers still exist. |
+| 7 | Inspect policies on the six closed tables | RLS on; three deny-all write policies each; every write expression is `false`; the SELECT policy is preserved. |
+| 8 | Inspect the ledger's own policies | `journal_entries`/`journal_entry_lines` unchanged (two SELECT policies); `tax_detail_entries` unchanged (four). |
+| 9 | Inspect every writer of a closed table | All SECURITY DEFINER. |
+| 10 | Confirm the probing identity | A genuine member that can read the closed table — denials are not vacuous. |
+| 11 | Attempt INSERT on four closed tables as the member | Each raises `42501`. |
+| 12 | Attempt the UPDATE/DELETE battery as the member | Runs without error and touches nothing — denial is by row filtering, not privilege. |
+| 13 | Re-read all closed state | Quantity, valuation, row count, movements, cost layers, and schedule ledgers unchanged; the ledger untouched. |
+| 14 | Post a Sales Invoice with an inventory item through the writer | Posts; five lines AR/Revenue/Output VAT/COGS/Inventory with the certified amounts; header totals and status unchanged. |
+| 15 | Re-read inventory after posting | Stock decremented by 10, valuation maintained, exactly one movement recorded, tax detail unchanged, all five lines carry the branch. |
+| 16 | Inspect later-phase compatibility | The P5.1 observe-only guard coexists with the P5.0 external closure. |
+| 17 | Count direct-insert forward writers | Zero outside the sanctioned header kernel. |
+| 18 | Inspect the two excluded tables and `fiscal_periods` | Still member-writable / MDP-03 permission-gated, by recorded decision. |
+
+## POSTING-ENGINE-P51-001 - Kernel Totality Guard, Stage 1 (Posting Engine Phase P5.1)
+
+Status: Executed Passing (2026-07-26) in `supabase/tests/092_posting_engine_p51_kernel_guard_test.sql`, 40 assertions, run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260726000002_posting_engine_p51_kernel_guard_observe.sql`; full pgTAP regression passed **92 files / 2,015 assertions** and the canonical lane passed **20 files / 509 assertions**. Governing contract: `PXL_POSTING_ENGINE_SPEC.md` §4.6 / §4.6.2 and §7 phase P5.1.
+
+**The guard is NOT armed.** It records; it rejects nothing. Later approved stages migrated the remaining writers and met the arming gate without changing assertion 7's observe-only boundary. Assertion 40 now pins zero forward header INSERTs outside the kernel.
+
+**Origin is proven by call stack, not by a flag — a deliberate departure from the frozen wording.** §4.6 suggests "a transaction-scoped posting-context flag set only by the kernel". A settable flag is precisely the shape that produced Critical `PXL-AUD-070` (the `pxl.allow_demo_reset` GUC that `authenticated` could set). This implementation instead reads `GET DIAGNOSTICS ... PG_CONTEXT`: a write is kernel-origin if and only if a sanctioned kernel is genuinely on the plpgsql call stack, which a caller cannot fabricate. Assertion 17 proves the point by setting both `pxl.posting_kernel` and `pxl.allow_demo_reset` and showing the direct write is still classified as a violation. The guard reads no session setting at all (assertion 6), and enforcement is a **compile-time constant**, not a runtime knob — there is nothing to flip at session scope.
+
+**Honest scope of the control:** this is a *discipline* control, not an authorization control. Authorization is owned by RLS, closed in P5.0, where the ledger already carries zero write policies for `authenticated`. The guard's threat model is in-database code — a future function, migration, or developer shortcut writing the ledger outside the kernel.
+
+**Material finding — the 7-argument kernel could not absorb the writers.** Verified against the live catalog before any code was written: 23 of the 24 direct-insert writers resolve their own fiscal period and raise their **own** user-visible "No open fiscal period …" message (23 distinct wordings, three of them asserted by existing tests); every one writes computed header totals while the kernel writes 0/0 and relies on `fn_finalize_journal_entry`, which none of them calls; four set `posting_origin` and three set `entry_class`/`auto_reverse`, none of which the 7-argument kernel can express. Routing them through the kernel as-is would therefore have changed 23 user-visible behaviours and every migrated header's totals. The kernel is instead **extended additively** so a writer hands it what it already writes and keeps its own validation and messages verbatim. Per the P3A finding an additive overload is not deployment-safe, so the function was dropped and re-created with defaulted parameters; all seven existing 7-argument callers keep resolving and behave identically (assertion 39).
+
+**Material finding — the runtime census is larger than the static one.** Observe-only mode surfaced violations the `pg_proc` census could not: `fn_post_sales_invoice`, `fn_post_vendor_bill`, `fn_post_receipt`, and `fn_post_cash_purchase_source_locked_impl` are all "already kernel-routed" for the header INSERT, yet each mutates the header afterwards with a direct `UPDATE journal_entries` (28 events in the canonical replay). Direct `journal_entry_lines` INSERTs are the other large surface. The remaining migration is therefore header INSERTs **plus** header UPDATEs **plus** line INSERTs, not header INSERTs alone. The census is a *runtime* census over exercised paths and complements, rather than replaces, the static §4.7 census — the canonical dataset exercises 9 writers, not all 24.
+
+**Module 1 migrated: the memo posters (CM / DM / VC).** Chosen first because the three are uniform, self-contained, and already set every header column the extended kernel now carries. The transformation was performed **mechanically** — each original body was read from `pg_proc` and only the header `INSERT` block was replaced by the kernel call, with a line-level diff confirming 11-12 lines removed and 8 added in each, all inside that block. An earlier hand-reconstruction of two of these functions was discarded after the diff showed it had drifted in five ways, including silently dropping a `tax_detail_entries` write.
+
+**Accounting equality, measured.** The canonical dataset was fingerprinted before P5.0 and again after P5.1 Stage 1 — GL (`je_number`/status/date/source/totals/`posting_origin`/line number/account code/debit/credit/description/`line_role`/branch), tax detail, inventory movements, stock balances, and number series all hash **identically** (GL `75ddb2e4…`, TAX `50469c66…`, INV `d5e87b88…`, STOCK `31af15fa…`, SERIES `39ee27a6…`; 48 journals / 138 lines / 24 tax rows / 26 movements).
+
+Scenario: prove the guard exists, is structural, has no forgeable marker, and is not armed; prove it discriminates kernel from non-kernel origin using an attribution pair that differs only in origin; prove forgery fails; prove the evidence table is engine-owned; prove `posting_origin` capability; prove Module 1 posts identically through the kernel; prove the kernel extension is deployment-safe; pin the phase boundary.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Inspect the guard triggers | Wired to both ledger tables, BEFORE INSERT/UPDATE/DELETE. |
+| 2 | Inspect the guard function | SECURITY DEFINER with pinned `search_path`; not callable by `authenticated`/`anon`; derives origin from `PG_CONTEXT`; reads no session setting; enforcement is a `false` compile-time constant. |
+| 3 | Inspect the kernel whitelist | Exactly the two sanctioned kernels plus their persistence helpers. |
+| 4 | Inspect the evidence table | RLS on; three deny-all write policies; membership-scoped read. |
+| 5 | Write the ledger from a non-kernel SECURITY DEFINER function | Succeeds (observe-only) **and** is recorded, naming `probe_direct` as the writer. |
+| 6 | Write the same header through the kernel | Succeeds and is **not** recorded. |
+| 7 | Set `pxl.posting_kernel` and `pxl.allow_demo_reset`, then write directly | Still recorded — the call stack cannot be forged. |
+| 8 | Inspect `posting_origin` | Governed `system`/`manual` domain; kernel default NULL preserves legacy callers; an explicitly supplied value persists. |
+| 9 | Inspect the three Module 1 writers | None inserts a header directly; all three call the kernel; each keeps its own period message. |
+| 10 | Post a Credit Memo, Debit Memo, and Vendor Credit | Header status/totals/`posting_origin`/`entry_class`/`auto_reverse`/source, line order/accounts/amounts/`line_role`, tax detail, and document status are all the certified values. |
+| 11 | Check audit rows for the three migrated journals | Audit coverage unchanged. |
+| 12 | Check the header violation census for Module 1 | Zero — the migration is behaviourally proven, not just structurally. |
+| 13 | Count kernel signatures | Exactly one — no ambiguous overload. |
+| 14 | Count remaining direct-insert writers | Zero outside the sanctioned header kernel. |
+
+## POSTING-ENGINE-P51-002 - Stage 2, Module 2 (memo posters: line persistence)
+
+Status: Executed Passing (2026-07-26) in `supabase/tests/093_posting_engine_p51_stage2_test.sql`, 28 assertions, run in every regression and canonical lane after a clean `supabase db reset --local --no-seed` replay including migration `20260726000003_posting_engine_p51_stage2_module2.sql`; full pgTAP regression passed **93 files / 2,043 assertions** and the canonical lane passed **21 files / 537 assertions**. Governing contract: `PXL_POSTING_ENGINE_SPEC.md` §4.6.2.
+
+**The Kernel Totality Guard remains OBSERVE-ONLY.** Stage 2 does not arm it; `c_enforce` is untouched and assertion 27 pins that.
+
+**What this completes.** Stage 1 moved the CM / DM / VC header INSERTs into the sanctioned kernel; Module 2 moves their nine direct `journal_entry_lines` INSERTs into the sanctioned persistence helper. The three memo posters now touch **neither** ledger table directly, and the guard classifies them as kernel-origin on both.
+
+**Helper choice was forced, and the alternative would have been a validation change.** The memo lines carry `line_role` (`base`/`tax`/`control`), which `fn_add_posting_line` cannot express. More importantly, `fn_add_posting_line` imposes `fn_require_postable_account` **and** a debit/credit-exclusivity check that the raw INSERTs being replaced never performed — routing through it would have introduced two new rejection paths, which the phase contract forbids. `fn_add_posting_line_push` — the push-based helper P1/P3A built for exactly the §4.2 additive line columns, unreferenced until now — performs the same single INSERT, so the persisted row is identical. Assertions 6-7 pin both halves of that reasoning, including that the rejected alternative genuinely does add validation.
+
+**Transformation method: mechanical, not hand-written.** Each body was read from `pg_proc`, each `INSERT INTO journal_entry_lines (…) VALUES (…)` block parsed by paren matching, `company_id` and the two trailing `auth.uid()` audit columns dropped (the helper supplies all three), and the remaining seven arguments emitted in helper order. A line-level diff confirmed the only changes were those nine call sites. This method was adopted after Stage 1, where a hand-reconstruction of two writers had silently dropped a `tax_detail_entries` write.
+
+**Two corrections to assumptions, both verified against the live schema rather than assumed.** First, journal lines are **not** dimension-free after the migration: the certified Dimension Engine guard `fn_je_line_dimensions_guard` defaults a NULL line `branch_id` from the journal header on INSERT, and it fires identically for the helper and for the raw INSERT it replaced — so lines inherit the header branch, before and after. Second, `journal_entry_lines` carries **no** `fn_audit_trigger`; line-level audit does not exist (the Audit Engine covers 79 tables, and journal lines are protected by the posted-document immutability guards instead), so this migration could not change line audit coverage either way. Assertions 11 and 24 record both facts so neither reads as a regression.
+
+**Violation-table delta.** Canonical replay went from **9 writers / 79 events** to **7 writers / 73 events**; `fn_post_credit_memo_vat_lump_impl` and `fn_post_vendor_credit_vat_lump_impl` are fully drained (`fn_post_debit_memo_vat_lump_impl` is not exercised by the canonical dataset and is proven drained by test 093 instead).
+
+**Accounting equality, measured.** Canonical fingerprints are **identical** to the pre-P5.0 baseline across GL, tax detail, inventory movements, stock balances, and number series (GL `75ddb2e4…`, TAX `50469c66…`, INV `d5e87b88…`, STOCK `31af15fa…`, SERIES `39ee27a6…`).
+
+Scenario: prove the module is fully migrated structurally; prove the helper choice preserves validation exactly; post a Credit Memo, Debit Memo, and Vendor Credit and compare header, line grid, ordering, `line_role`, descriptions, dimensions, tax detail, numbering, and document status against the certified values; prove header audit coverage; prove the violation delta is zero for the module; pin the guard's observe-only state and the phase boundary.
+
+| Step | Action | Expected Behavior |
+| ---- | ------ | ----------------- |
+| 1 | Scan the three memo writers for direct ledger writes | None — neither `journal_entries` nor `journal_entry_lines`. |
+| 2 | Scan them for kernel and helper use | All three use the kernel for the header and the helper for lines; the CM poster makes three helper calls. |
+| 3 | Inspect the sanctioned set and helper grants | The push helper is kernel-origin and callable by no client role. |
+| 4 | Compare the two line helpers | The push helper adds no account validation; `fn_add_posting_line` does — which is why it was not used. |
+| 5 | Post a Credit Memo | Header status/totals/`posting_origin`/`entry_class`/`auto_reverse`/source/`je_number` unchanged; three lines in order with certified accounts, amounts, `line_role`, and descriptions; lines inherit the header branch and carry no analytical dimensions; tax detail and document status unchanged. |
+| 6 | Post a Debit Memo | Control line first, then base, then tax; header and tax detail unchanged. |
+| 7 | Post a Vendor Credit | Control/base/tax lines and header unchanged; document status `open`. |
+| 8 | Compare number series | Three documents consumed exactly three numbers. |
+| 9 | Check header audit rows | Each migrated journal header audited exactly once. |
+| 10 | Check line audit triggers | None exist — line audit coverage is unchanged by construction. |
+| 11 | Check the violation census for the module | Zero on both tables; posting three memo documents added no violation at all. |
+| 12 | Inspect the guard and the writer count | Guard still OBSERVE-ONLY; later approved stages leave zero direct-insert forward writers. |
+
+## POSTING-ENGINE-P51-003 through P51-010 - Writer migration and ready-to-arm closure
+
+Status: Executed Passing (2026-07-26) in:
+
+- `supabase/tests/094_posting_engine_p51_stage3_batch_a_test.sql` — 15 assertions; Sales Invoice, Vendor Bill, Receipt, Cash Purchase header UPDATE paths.
+- `supabase/tests/095_posting_engine_p51_stage4_manual_journal_test.sql` — 22 assertions; isolated Manual Journal certification.
+- `supabase/tests/096_posting_engine_p51_stage5_inventory_test.sql` — 18 assertions; Goods Issue, Physical Count, Stock Adjustment, Stock Transfer GL persistence only.
+- `supabase/tests/097_posting_engine_p51_stage6_treasury_test.sql` — 12 assertions; Bank Adjustment, Fund Transfer, Inter-Branch Transfer, Petty Cash Voucher approval, Petty Cash Replenishment, Check Voucher.
+- `supabase/tests/098_posting_engine_p51_stage7_assets_schedules_test.sql` — 16 assertions; depreciation, amortization, revenue recognition, asset registration/disposal/impairment, and source-link updates.
+- `supabase/tests/099_posting_engine_p51_stage8_system_generated_test.sql` — 14 assertions; recurring journals and fiscal close.
+- `supabase/tests/100_posting_engine_p51_stage9_commerce_test.sql` — 16 assertions; Purchase Return and Cash Sale.
+- `supabase/tests/101_posting_engine_p51_ready_to_arm_test.sql` — 20 assertions; zero-writer census, exact classifier, sanctioned mutation surface, observe-only state, and readiness.
+
+The owning migrations are `20260726000004`–`20260726000011`. The continuation adds **133 assertions**; tests `091`–`101` pass 246 assertions together. The full clean regression passes **101 files / 2,176 assertions** and deterministic canonical replay passes **29 files / 670 assertions**.
+
+**Accounting contract equality.** Journal headers, totals, status, source, origin, entry class, auto-reverse metadata, journal lines, line order, line role, descriptions, dimensions, audit rows, tax detail, inventory movements/layers/balances, number series, document lifecycle, reversal behavior, and preview output remain byte-for-byte equal to the certified outputs. Canonical fingerprints remain the pre-P5.0 values (GL `75ddb2e4…`, TAX `50469c66…`, INV `d5e87b88…`, STOCK `31af15fa…`, SERIES `39ee27a6…`).
+
+**Manual Journal isolation.** The P3C validator remains after all legacy account checks and before totals; period locking and its message remain before numbering; the seven established rejection messages, `MJE-YYYYMM` numbering, NULL `posting_origin`, `entry_class`, auto-reverse, dimension carriage, and line order are unchanged.
+
+**Inventory stop-condition result.** No Inventory Engine redesign was necessary. Only journal header/line persistence moved; WAC, layers, balances, movements, warehouse/item account ownership, and the `INV_COUNT` zero-line carve-out remain intact.
+
+**Totality result.** All 24 authoritative forward writers plus the four separately observed header-UPDATE paths contain zero direct mutation of `journal_entries` or `journal_entry_lines`. Only `fn_create_posted_journal_entry`, `fn_reverse_posted_journal_entry`, `fn_finalize_journal_entry`, `fn_add_posting_line`, `fn_add_posting_line_push`, and `fn_add_sales_invoice_posting_line` retain ledger DML. The unused legacy core helper is removed. Classifier matching is exact-name anchored; lookalikes fail and the six-member sanctioned set does not grow.
+
+**Violation and origin result.** Canonical replay produces **0 writers / 0 violation events**, including zero non-maintenance events. Of 48 canonical journals, 30 carry approved explicit `posting_origin='system'`; 18 remain NULL (Inventory, Manual, Payment Voucher, and reversal paths). No historical or ambiguous origin was inferred or backfilled.
+
+**Kernel classification.** `c_enforce` remains the compile-time constant `false`. The guard records and rejects nothing. The readiness gate is met: zero legitimate violations and zero forward direct mutations. The Kernel Totality Guard is **READY TO ARM but is not armed**; arming and enforcement-mode certification require a separate governed approval.
+
+The preceding paragraph records the completed P5.1 phase boundary. P5.2 below supersedes its observe-only runtime state without changing any P5.1 accounting result.
+
+## POSTING-ENGINE-P52-001 - Kernel Totality Guard arming and enforcement certification
+
+Status: Executed Passing (2026-07-26) in `supabase/tests/102_posting_engine_p52_enforcement_security_test.sql`, 78 assertions, after a clean replay including `20260726000012_posting_engine_p52_arm_totality_guard.sql`. The complete read-only catalog output is reproducible with `supabase/verification/p52_kernel_security_census.sql`.
+
+**Material findings.**
+
+1. `authenticated` retained legacy table-level INSERT/UPDATE/DELETE grants despite having no ledger write policies. INSERT reached the guard, but UPDATE/DELETE could be converted by RLS to successful zero-row statements rather than the required hard rejection. P5.2 revokes all three DML privileges from `PUBLIC`, `anon`, and `authenticated`; all six direct client operation/table combinations now fail with `42501`.
+2. An ordinary trigger can be skipped by a privileged replay helper setting `session_replication_role = replica`. Both totality triggers are therefore `ENABLE ALWAYS`; the replay attack reaches and fails the guard.
+3. Rejected-statement evidence cannot durably remain in `sys_posting_guard_violations`: PostgreSQL rolls back the evidence INSERT with the statement that raises. The table remains a zero-census readiness/observe artifact; P5.2 rejection is proven by SQLSTATE and the absence of persisted mutation.
+
+**Enforcement configuration.** The guard's compile-time constant is `true`. Maintenance classification no longer bypasses it. The classifier remains exact-name anchored and unchanged at six members. The guard function is not executable by client roles; ledger DML is not granted to client roles. Both totality triggers are always enabled. No whitelist, heuristic, runtime flag, historical backfill, or engine redesign was introduced.
+
+**Unauthorized-mutation matrix.** The test attempts INSERT, UPDATE, and DELETE on both `journal_entries` and `journal_entry_lines` through eight paths: authenticated, anon, non-kernel SECURITY DEFINER helper, SQL-script helper, authenticated RPC, migration helper with the historical maintenance GUC enabled, replay helper with that GUC plus replica trigger mode, and direct owner SQL. This is 48 attacks:
+
+- Authenticated and anon: 12/12 rejected with insufficient privilege (`42501`).
+- All in-database, RPC, maintenance, replay, and owner paths: 36/36 rejected by the Kernel Totality Guard (`23514`).
+- Persisted unauthorized mutations: 0.
+- Guard violations after the matrix: 0, because every guard-raised statement is atomic and rolls back its attempted mutation and evidence row.
+
+**Authorized posting matrix.** The full regression and canonical suites execute representative Sales, Vendor Bill, Receipt, Payment, Credit Memo, Debit Memo, Vendor Credit, Cash Purchase, Manual Journal, Inventory, Fixed Asset, Recurring, Fiscal Close, and Reversal paths. Each reaches the ledger only through one of the six sanctioned persistence functions and succeeds under enforcement. Recurring execution is also exercised through the certified rollback-preview path, which invokes the real writer and proves the guard permits it without committing preview state.
+
+**Complete security census.**
+
+- Application functions: 409.
+- Application SECURITY DEFINER functions: 349.
+- Direct or transitive ledger-mutating functions: 80; all 80 are SECURITY DEFINER and reach a sanctioned kernel.
+- Direct ledger mutators: exactly 6 — `fn_create_posted_journal_entry`, `fn_reverse_posted_journal_entry`, `fn_finalize_journal_entry`, `fn_add_posting_line`, `fn_add_posting_line_push`, `fn_add_sales_invoice_posting_line`.
+- Explicit EXECUTE ACL rows: 950, covering all 409 application functions; the census enumerates every grantee/signature row.
+- Direct service-role access among the six kernels: 3 — create, add-line, and add-line-push. Service role has no classifier exception and must genuinely execute the kernel.
+- Ledger persistence triggers: 21; the two totality triggers are `ENABLE ALWAYS`.
+- Ledger RLS policies: 2, both SELECT-only (`je_read`, `jel_read`).
+- Client-writable ledger tables: 0.
+- Remaining directly client-writable accounting-adjacent workflow tables: 2 (`bank_recon_items`, `book_tax_reconciliation`), retained by the recorded P5.0 decision; neither can mutate the ledger.
+
+The census script emits the complete 80-function call graph, every EXECUTE grant, every SECURITY DEFINER function, every ledger trigger, all 488 public RLS policies, the writable-accounting-table census, and the final enforcement invariants. The test creates its attack helpers only after catalog census assertions, so test-only functions cannot pollute the production census.
+
+**Accounting and replay equality.** Fresh canonical replay produces 48 journals / 138 lines / 24 tax rows / 26 inventory movements; total debit and total credit are both `2,411,134.80`; `posting_origin` remains 30 explicit `system` / 18 valid NULL; guard violations are zero. GL, journal header, journal lines, line ordering/role, numbering, dimensions, audit, tax, inventory, document status, preview, and reversal assertions all pass. The certified pre-P5.0 fingerprints remain identical (GL `75ddb2e4…`, TAX `50469c66…`, INV `d5e87b88…`, STOCK `31af15fa…`, SERIES `39ee27a6…`).
+
+**Executed lanes.**
+
+- Focused enforcement: 1 file / 78 assertions.
+- P5.1/P5.2 compatibility: 11 files / 279 assertions.
+- Full clean regression: 102 files / 2,254 assertions.
+- Fresh canonical migration, reset, base/enrichment/volume replay: pass.
+- Canonical suite: 30 files / 748 assertions.
+- Canonical violation count: 0.
+
+The Kernel Totality Guard is **FULLY ENFORCED**. This completes P5.2 only; P6 has not begun.
+
+## POSTING-ENGINE-P6-INVESTIGATION-001 - Mandatory stop at Inventory reconciliation
+
+Status: **Blocked — certification not executed** (2026-07-26). This is read-only investigation evidence, not a passing test and not a migration. P5.2 remains unchanged and authoritative.
+
+The P6 investigation independently recomputed canonical inventory quantity/value from `inventory_transactions`, compared it to `stock_balances`, compared remaining layers to both, and compared the source result to journal lines on every configured item `inventory_account_id`. No tolerance was used.
+
+| Company | Opening movement value | RR increase | Other increase | Decrease | Movement/stock ending | Inventory GL | Exact variance | Layer ending | Layer variance |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| ABC Trading Corporation | 71,200.00 | 2,400.00 | 720.00 | 3,140.00 | 71,180.00 | 68,780.00 | 2,400.00 | 73,600.00 | 2,420.00 |
+| Bayani Partners and Company | 52,500.00 | 21,000.00 | 2,100.00 | 14,700.00 | 60,900.00 | 39,900.00 | 21,000.00 | 73,500.00 | 12,600.00 |
+| Golden Retail Store | 44,300.00 | 6,000.00 | 2,400.00 | 6,330.00 | 46,370.00 | 39,740.00 | 6,630.00 | 50,300.00 | 3,930.00 |
+
+The quantity recomputation itself is exact between movements and stock: 243 / 29 / 176 units respectively. Cost-layer remaining quantities are 252 / 35 / 190, producing variances of 9 / 6 / 14 units.
+
+**Root cause evidence.**
+
+- The three Receiving Reports increase stock by exactly 2,400.00 / 21,000.00 / 6,000.00 and carry no `journal_entry_id`.
+- The corresponding Vendor Bills post those base amounts to account `5010 Purchases / Inventory Clearing`, not the configured item Inventory account `1200`.
+- ABC's Vendor Credit later credits clearing by 200.00 but does not reduce stock, leaving stock 200.00 above Inventory plus clearing.
+- Golden begins with 44,300.00 in inventory movements/stock but only 43,670.00 in the opening Inventory journal, leaving an additional 630.00 difference.
+- Layer quantities/values do not reflect the same issues/adjustments as stock.
+
+This cannot be certified by changing only a report. Combining Inventory and purchase clearing heuristically still leaves real differences; adjustments would force equality; changing receipt/vendor-credit/layer behavior would redesign or modify the Inventory/Posting contract; changing canonical inventory would violate the certified inventory equality baseline. Each is an explicit stop condition.
+
+**Stop result.** No P6 migration, report, validation, or test was introduced. AR and AP were observed to reconcile exactly in the current canonical state, but they were not promoted to P6 certification because the phase stopped before the full six-domain proof. Fixed Asset, Bank, and Tax P6 certification were not executed. No P7 work began.
+
+## INVENTORY-IA5-001 - Dormant event, identity, precision, projection, and security foundation
+
+Status: Executed Passing (2026-07-26) in
+`supabase/tests/103_inventory_accounting_ia5_foundation_test.sql`, 99 assertions.
+The genuine two-session extension is
+`supabase/verification/ia5_concurrent_idempotency.sql`, 7 assertions. The complete
+read-only writer/grant catalog is
+`supabase/verification/ia5_inventory_writer_security_census.sql`.
+
+The scenario proves:
+
+- exact company/source-document/source-line/transition/partial-occurrence identity;
+- stable per-scope economic ordering independent of UUID order;
+- immutable event, source-link, amount, allocation, occurrence, policy, and scope
+  facts, including under replica trigger mode;
+- exact `NUMERIC(38,6)` quantities, `NUMERIC(38,8)` authoritative amounts,
+  `NUMERIC(38,12)` UOM/rate evidence, scale/overflow rejection, derived-unit-rate
+  separation, and structural residual-allocation metadata;
+- sequential and concurrent duplicate idempotency, legitimate partial/source-line/
+  cross-company isolation, rollback retry, and changed-request rejection;
+- complete rollback after failures before accepted occurrence completion;
+- zero external EXECUTE grants on all IA-5 functions and no client/service DML on
+  any IA-5 table;
+- internalization of `fn_receive_inventory(jsonb)` while its two governed owner
+  callers remain wired;
+- unchanged current Inventory writers, movements, layers, balances, canonical
+  fixtures, and accounting behavior;
+- exactly six journal mutators, two always-enabled P5.2 guards, and zero violations.
+
+Fresh canonical replay remains 48 journal headers / 138 journal lines / 24 tax rows /
+26 Inventory movements with debit = credit = `2,411,134.80`. All five certified
+fingerprints remain unchanged. The eleven company/event/projection IA-5 tables remain
+empty under canonical workflows; IA-5 is additive and dormant.
+
+The post-IA-5 live P5.2 census is 417 application functions / 354
+`SECURITY DEFINER`; the eight added IA-5 signatures have zero client/service
+EXECUTE. The original P5.2 boundary census of 409/349 remains historical evidence,
+while test `102` now pins the current complete catalog.

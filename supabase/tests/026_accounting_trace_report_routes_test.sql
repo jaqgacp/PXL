@@ -241,95 +241,79 @@ INSERT INTO receipt_lines (
   '11111111-1111-1111-1111-111111111126'
 );
 
-INSERT INTO journal_entries (
-  id, company_id, branch_id, je_number, je_date, fiscal_period_id,
-  description, reference_doc_type, reference_doc_id, status,
-  total_debit, total_credit, created_by, updated_by
-) VALUES
-  (
-    '88888888-8888-8888-8888-888888888126',
-    '22222222-2222-2222-2222-222222222126',
-    '33333333-3333-3333-3333-333333333126',
-    'JE-SI-TRACE-126', '2026-07-10', '44444444-4444-4444-4444-444444444226',
-    'Sales trace fixture', 'SI', '77777777-7777-7777-7777-777777777126',
-    'posted', 112, 112,
-    '11111111-1111-1111-1111-111111111126',
-    '11111111-1111-1111-1111-111111111126'
-  ),
-  (
-    '88888888-8888-8888-8888-888888888226',
-    '22222222-2222-2222-2222-222222222126',
-    '33333333-3333-3333-3333-333333333126',
-    'JE-PV-TRACE-126', '2026-07-15', '44444444-4444-4444-4444-444444444226',
-    'Payment trace fixture', 'PV', '77777777-7777-7777-7777-777777777226',
-    'posted', 100, 100,
-    '11111111-1111-1111-1111-111111111126',
-    '11111111-1111-1111-1111-111111111126'
-  ),
-  (
-    '88888888-8888-8888-8888-888888888326',
-    '22222222-2222-2222-2222-222222222126',
-    '33333333-3333-3333-3333-333333333126',
-    'JE-OR-TRACE-126', '2026-07-20', '44444444-4444-4444-4444-444444444226',
-    'Receipt trace fixture', 'OR', '77777777-7777-7777-7777-777777777326',
-    'posted', 112, 112,
-    '11111111-1111-1111-1111-111111111126',
-    '11111111-1111-1111-1111-111111111126'
-  ),
-  (
-    -- Deliberately forged: A-company JE points at a B-company source.
-    '88888888-8888-8888-8888-888888888426',
-    '22222222-2222-2222-2222-222222222126',
-    '33333333-3333-3333-3333-333333333126',
-    'JE-CROSS-TRACE-126', '2026-07-21', '44444444-4444-4444-4444-444444444226',
-    'Cross-company trace fixture', 'SI', '77777777-7777-7777-7777-777777777127',
-    'posted', 1, 1,
-    '11111111-1111-1111-1111-111111111126',
-    '11111111-1111-1111-1111-111111111126'
-  ),
-  (
-    -- Deliberately forged: governed type with no physical source row.
-    '88888888-8888-8888-8888-888888888526',
-    '22222222-2222-2222-2222-222222222126',
-    '33333333-3333-3333-3333-333333333126',
-    'JE-ORPHAN-TRACE-126', '2026-07-22', '44444444-4444-4444-4444-444444444226',
-    'Orphan trace fixture', 'SI', '77777777-7777-7777-7777-777777777999',
-    'posted', 1, 1,
-    '11111111-1111-1111-1111-111111111126',
-    '11111111-1111-1111-1111-111111111126'
-  );
+CREATE TEMP TABLE t_je_map (key text PRIMARY KEY, id uuid NOT NULL);
 
-INSERT INTO journal_entry_lines (
-  je_id, company_id, line_number, account_id, description,
-  debit_amount, credit_amount, created_by, updated_by
-)
-SELECT
-  je.id, je.company_id, line_no,
-  CASE WHEN line_no = 1 THEN 'aaaaaaaa-0000-0000-0000-000000000126'::UUID
-       ELSE 'aaaaaaaa-0000-0000-0000-000000000226'::UUID END,
-  'Trace line',
-  CASE WHEN line_no = 1 THEN je.total_debit ELSE 0 END,
-  CASE WHEN line_no = 2 THEN je.total_credit ELSE 0 END,
-  '11111111-1111-1111-1111-111111111126',
-  '11111111-1111-1111-1111-111111111126'
-FROM journal_entries je
-CROSS JOIN generate_series(1, 2) AS line_no
-WHERE je.id IN (
-  '88888888-8888-8888-8888-888888888126',
-  '88888888-8888-8888-8888-888888888226',
-  '88888888-8888-8888-8888-888888888326',
-  '88888888-8888-8888-8888-888888888426',
-  '88888888-8888-8888-8888-888888888526'
+INSERT INTO t_je_map
+SELECT 'si', fn_create_posted_journal_entry(
+  '22222222-2222-2222-2222-222222222126',
+  '33333333-3333-3333-3333-333333333126',
+  'JE-SI-TRACE-126', '2026-07-10', 'Sales trace fixture',
+  'SI', '77777777-7777-7777-7777-777777777126',
+  '44444444-4444-4444-4444-444444444226',
+  'posted', 112, 112, NULL, 'regular', false, false, false
+);
+INSERT INTO t_je_map
+SELECT 'pv', fn_create_posted_journal_entry(
+  '22222222-2222-2222-2222-222222222126',
+  '33333333-3333-3333-3333-333333333126',
+  'JE-PV-TRACE-126', '2026-07-15', 'Payment trace fixture',
+  'PV', '77777777-7777-7777-7777-777777777226',
+  '44444444-4444-4444-4444-444444444226',
+  'posted', 100, 100, NULL, 'regular', false, false, false
+);
+INSERT INTO t_je_map
+SELECT 'or', fn_create_posted_journal_entry(
+  '22222222-2222-2222-2222-222222222126',
+  '33333333-3333-3333-3333-333333333126',
+  'JE-OR-TRACE-126', '2026-07-20', 'Receipt trace fixture',
+  'OR', '77777777-7777-7777-7777-777777777326',
+  '44444444-4444-4444-4444-444444444226',
+  'posted', 112, 112, NULL, 'regular', false, false, false
+);
+-- Deliberately malformed read fixtures still pass through a sanctioned kernel;
+-- source assertion is off only because ordinary integrity triggers are disabled
+-- by this test's replica-mode fixture transaction.
+INSERT INTO t_je_map
+SELECT 'cross', fn_create_posted_journal_entry(
+  '22222222-2222-2222-2222-222222222126',
+  '33333333-3333-3333-3333-333333333126',
+  'JE-CROSS-TRACE-126', '2026-07-21', 'Cross-company trace fixture',
+  'SI', '77777777-7777-7777-7777-777777777127',
+  '44444444-4444-4444-4444-444444444226',
+  'posted', 1, 1, NULL, 'regular', false, false, false
+);
+INSERT INTO t_je_map
+SELECT 'orphan', fn_create_posted_journal_entry(
+  '22222222-2222-2222-2222-222222222126',
+  '33333333-3333-3333-3333-333333333126',
+  'JE-ORPHAN-TRACE-126', '2026-07-22', 'Orphan trace fixture',
+  'SI', '77777777-7777-7777-7777-777777777999',
+  '44444444-4444-4444-4444-444444444226',
+  'posted', 1, 1, NULL, 'regular', false, false, false
 );
 
+SELECT fn_add_posting_line_push(
+  m.id, line_no,
+  CASE WHEN line_no=1
+    THEN 'aaaaaaaa-0000-0000-0000-000000000126'::uuid
+    ELSE 'aaaaaaaa-0000-0000-0000-000000000226'::uuid END,
+  'Trace line',
+  CASE WHEN line_no=1 THEN je.total_debit ELSE 0 END,
+  CASE WHEN line_no=2 THEN je.total_credit ELSE 0 END
+)
+FROM t_je_map m
+JOIN journal_entries je ON je.id=m.id
+CROSS JOIN generate_series(1,2) AS line_no
+ORDER BY m.key, line_no;
+
 UPDATE sales_invoices
-SET journal_entry_id = '88888888-8888-8888-8888-888888888126'
+SET journal_entry_id = (SELECT id FROM t_je_map WHERE key='si')
 WHERE id = '77777777-7777-7777-7777-777777777126';
 UPDATE payment_vouchers
-SET journal_entry_id = '88888888-8888-8888-8888-888888888226'
+SET journal_entry_id = (SELECT id FROM t_je_map WHERE key='pv')
 WHERE id = '77777777-7777-7777-7777-777777777226';
 UPDATE receipts
-SET journal_entry_id = '88888888-8888-8888-8888-888888888326'
+SET journal_entry_id = (SELECT id FROM t_je_map WHERE key='or')
 WHERE id = '77777777-7777-7777-7777-777777777326';
 
 INSERT INTO tax_detail_entries (
@@ -501,29 +485,29 @@ SELECT is(
 );
 
 SELECT throws_like(
-  $q$SELECT fn_get_accounting_trace(
+  format($q$SELECT fn_get_accounting_trace(
     'SI',
     '77777777-7777-7777-7777-777777777999',
-    '88888888-8888-8888-8888-888888888526'
-  )$q$,
+    %L
+  )$q$, (SELECT id FROM t_je_map WHERE key='orphan')),
   '%Accounting source not found or access denied%',
   'trace rejects a JE whose polymorphic source row is orphaned'
 );
 SELECT throws_like(
-  $q$SELECT fn_get_accounting_trace(
+  format($q$SELECT fn_get_accounting_trace(
     'SI',
     '77777777-7777-7777-7777-777777777326',
-    '88888888-8888-8888-8888-888888888126'
-  )$q$,
+    %L
+  )$q$, (SELECT id FROM t_je_map WHERE key='si')),
   '%source id does not match%',
   'trace rejects a caller-supplied source id that does not match the JE link'
 );
 SELECT throws_like(
-  $q$SELECT fn_get_accounting_trace(
+  format($q$SELECT fn_get_accounting_trace(
     'SI',
     '77777777-7777-7777-7777-777777777127',
-    '88888888-8888-8888-8888-888888888426'
-  )$q$,
+    %L
+  )$q$, (SELECT id FROM t_je_map WHERE key='cross')),
   '%company does not match%',
   'trace rejects a cross-company JE/source pair even when the caller belongs to both companies'
 );
@@ -551,7 +535,7 @@ SELECT is(
        'date_from', '2026-07-10', 'date_to', '2026-07-10'
      )
    ) LIMIT 1),
-  '/accounting-trace?jeId=88888888-8888-8888-8888-888888888126',
+  '/accounting-trace?jeId=' || (SELECT id::text FROM t_je_map WHERE key='si'),
   'financial trace rows expose the exact contributing JE route'
 );
 SELECT is(
@@ -657,53 +641,41 @@ SELECT is(
 SET CONSTRAINTS trg_journal_entry_source_integrity IMMEDIATE;
 
 SELECT lives_ok(
-  $q$INSERT INTO journal_entries (
-    company_id, branch_id, je_number, je_date, fiscal_period_id,
-    description, reference_doc_type, reference_doc_id, status,
-    total_debit, total_credit, created_by, updated_by
-  ) VALUES (
+  $q$SELECT fn_create_posted_journal_entry(
     '22222222-2222-2222-2222-222222222126',
     '33333333-3333-3333-3333-333333333126',
-    'JE-LIVE-SOURCE-126', '2026-07-23', '44444444-4444-4444-4444-444444444226',
-    'Live-source normal-trigger control', 'SI', '77777777-7777-7777-7777-777777777128',
-    'posted', 1, 1,
-    '11111111-1111-1111-1111-111111111126',
-    '11111111-1111-1111-1111-111111111126'
+    'JE-LIVE-SOURCE-126', '2026-07-23',
+    'Live-source normal-trigger control', 'SI',
+    '77777777-7777-7777-7777-777777777128',
+    '44444444-4444-4444-4444-444444444226',
+    'posted', 1, 1
   )$q$,
   'normal-trigger control: a posted JE with an existing same-company source is accepted'
 );
 
 SELECT throws_like(
-  $q$INSERT INTO journal_entries (
-    company_id, branch_id, je_number, je_date, fiscal_period_id,
-    description, reference_doc_type, reference_doc_id, status,
-    total_debit, total_credit, created_by, updated_by
-  ) VALUES (
+  $q$SELECT fn_create_posted_journal_entry(
     '22222222-2222-2222-2222-222222222126',
     '33333333-3333-3333-3333-333333333126',
-    'JE-ORPHAN-LIVE-126', '2026-07-23', '44444444-4444-4444-4444-444444444226',
-    'Orphan-source normal-trigger negative', 'SI', '77777777-7777-7777-7777-777777777998',
-    'posted', 1, 1,
-    '11111111-1111-1111-1111-111111111126',
-    '11111111-1111-1111-1111-111111111126'
+    'JE-ORPHAN-LIVE-126', '2026-07-23',
+    'Orphan-source normal-trigger negative', 'SI',
+    '77777777-7777-7777-7777-777777777998',
+    '44444444-4444-4444-4444-444444444226',
+    'posted', 1, 1
   )$q$,
   '%Posting source SI.% does not exist%',
   'normal trigger immediately rejects a posted JE whose governed source row does not exist'
 );
 
 SELECT throws_like(
-  $q$INSERT INTO journal_entries (
-    company_id, branch_id, je_number, je_date, fiscal_period_id,
-    description, reference_doc_type, reference_doc_id, status,
-    total_debit, total_credit, created_by, updated_by
-  ) VALUES (
+  $q$SELECT fn_create_posted_journal_entry(
     '22222222-2222-2222-2222-222222222126',
     '33333333-3333-3333-3333-333333333126',
-    'JE-CROSS-LIVE-126', '2026-07-23', '44444444-4444-4444-4444-444444444226',
-    'Cross-company normal-trigger negative', 'SI', '77777777-7777-7777-7777-777777777129',
-    'posted', 1, 1,
-    '11111111-1111-1111-1111-111111111126',
-    '11111111-1111-1111-1111-111111111126'
+    'JE-CROSS-LIVE-126', '2026-07-23',
+    'Cross-company normal-trigger negative', 'SI',
+    '77777777-7777-7777-7777-777777777129',
+    '44444444-4444-4444-4444-444444444226',
+    'posted', 1, 1
   )$q$,
   '%Posting source company % does not match journal company %',
   'normal trigger immediately rejects a posted JE linked to another company''s source'

@@ -2,7 +2,7 @@
 
 **Status:** Active authoritative coverage-governance register
 **Authority:** Tier 2 governance artifact for PXL-AUD-059 coverage governance; accounting, tax, transaction, security, and findings sources prevail on product rules
-**Last Verified:** 2026-07-22 deterministic local canonical lane (176 public base tables; 90 expected-populated, 86 explicitly deferred/empty)
+**Last Verified:** 2026-07-26 deterministic local canonical lane after IA-5 (193 public base tables; 93 expected-populated, 100 explicitly deferred/empty)
 **Applies To:** Every `public` base table; canonical/local validation coverage boundaries and product-readiness claims
 **Read When:** Adding a table or workflow, classifying coverage, or reconciling readiness against PXL-AUD-059
 **Do Not Read For:** Product accounting/tax rules (see the governing standards) or hosted credentials
@@ -22,19 +22,29 @@ Row counts below are the deterministic **canonical baseline** (fresh migration r
 | `workflow-deferred` | Populated only by a supported UI/RPC workflow the canonical seed does not run yet. | Empty in canonical; promote when exercised. |
 | `future-deferred` | Documented future/unimplemented module. | Empty (intentional). |
 | `reference-empty` | Reference/config table intentionally empty in canonical. | Empty (intentional). |
+| `control-empty` | Control/evidence table whose healthy canonical state is no findings. | Empty (guard fails if populated). |
+| `dormant-foundation` | Implemented IA foundation deliberately excluded from current production/canonical paths. | Empty until its separately certified activation phase. |
 
 ## Coverage Summary
 
 | Class | Tables | Governance |
 | --- | ---: | --- |
-| `canonical-populated` | 66 | Expected non-empty; exercised by canonical regression |
-| `reference-populated` | 24 | Expected non-empty; migration/reference seeded |
-| `workflow-deferred` | 19 | Explicitly deferred; supported workflow not yet exercised |
+| `canonical-populated` | 67 | Expected non-empty; exercised by canonical regression |
+| `reference-populated` | 26 | Expected non-empty; migration/reference seeded |
+| `workflow-deferred` | 21 | Explicitly deferred; supported workflow not yet exercised |
 | `future-deferred` | 61 | Explicitly deferred; module not implemented end-to-end |
 | `reference-empty` | 6 | Intentionally empty reference/config |
-| **Total** | **176** | 90 expected-populated / 86 explicitly deferred or empty |
+| `control-empty` | 1 | Healthy control state is empty; any row requires investigation |
+| `dormant-foundation` | 11 | Implemented but inactive; population is prohibited during IA-5 |
+| **Total** | **193** | 93 expected-populated / 100 explicitly deferred or empty |
 
-All 176 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
+All 193 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
+
+The COA Engine (Phase A, 2026-07-24) added four base tables: `ref_mapping_key` (reference-populated, 9 seeded keys), `account_mapping` (canonical-populated, 45 rows = 5 companies × 9 config-synced bindings), and the FS-registry framework `fs_structure` and `account_fs_map` (workflow-deferred, populated by the FS-registry provisioning workflow in Phase B, intentionally empty under the canonical baseline).
+
+Inventory Accounting IA-5 adds one disabled certification source registry row and
+eleven `dormant-foundation` tables. The canonical lane proves the eleven company/
+event/projection tables remain empty and current workflows do not activate them.
 
 ## Per-Module Coverage
 
@@ -154,6 +164,18 @@ All 176 tables have row-level security enabled with at least one policy. The `Te
 | `inventory_transactions` | `canonical-populated` | 26 | Canonical demo seed | on (2) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `inventory_cost_layers` | `canonical-populated` | 12 | Canonical demo seed | on (3) | 075 only | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `stock_balances` | `canonical-populated` | 11 | Canonical demo seed | on (3) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
+| `ref_inventory_event_source_types` | `reference-populated` | 1 | IA-5 migration; certification-only and production-disabled | on (1) | 103 | Keep the sole IA-5 source disabled; IA-6 owns replacement/removal. |
+| `inventory_precision_policies` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved policy activation/conversion phase. |
+| `inventory_accounting_profiles` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved policy activation/conversion phase. |
+| `inventory_cost_formula_policies` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved method-state phase. |
+| `inventory_valuation_scopes` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved method-state phase. |
+| `inventory_valuation_scope_sequences` | `dormant-foundation` | 0 | Internal occurrence sequencing only; canonical excluded | on (1) | 103 | Remain empty while no IA-5 occurrence is accepted. |
+| `inventory_occurrences` | `dormant-foundation` | 0 | Internal certification occurrence service only | on (1) | 103 | No production source type is enabled in IA-5. |
+| `inventory_events` | `dormant-foundation` | 0 | Internal certification occurrence service only | on (1) | 103 | No current workflow may read or write this table in IA-5. |
+| `inventory_event_source_links` | `dormant-foundation` | 0 | Internal certification occurrence service only | on (1) | 103 | Require explicit source-line identity; never infer history. |
+| `inventory_event_values` | `dormant-foundation` | 0 | Internal certification occurrence service only | on (1) | 103 | Remain dormant until a later valuation phase. |
+| `inventory_event_allocations` | `dormant-foundation` | 0 | Structural precision/residual basis only | on (1) | 103 | IA-6 owns allocation behavior; IA-5 writes none in canonical. |
+| `inventory_projection_versions` | `dormant-foundation` | 0 | Future internal projection rebuild evidence | on (1) | 103 | No rebuild or active projection exists in IA-5. |
 | `stock_transfers` | `canonical-populated` | 2 | Canonical demo seed | on (3) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `stock_transfer_lines` | `canonical-populated` | 2 | Canonical demo seed | on (2) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `stock_adjustments` | `canonical-populated` | 4 | Canonical demo seed | on (3) | 075 only | Maintain canonical coverage; guard 075 keeps it non-empty. |
@@ -357,6 +379,7 @@ All 176 tables have row-level security enabled with at least one policy. The `Te
 | `void_reason_codes` | `reference-populated` | 7 | Migration / reference seed | on (1) | ✓ | Maintain migration/reference seed; guard 075 keeps it non-empty. |
 | `sys_feature_enablement` | `reference-empty` | 0 | Config/reference (intentionally empty) | on (4) | 075 only | Intentionally empty in canonical; populate only when the specific feature/export is configured. |
 | `sys_audit_logs` | `canonical-populated` | 2161 | Canonical demo seed | on (1) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
+| `sys_posting_guard_violations` | `control-empty` | 0 | Posting Engine P5.1 observe-only Kernel Totality Guard | on (4) | ✓ | Healthy canonical state is empty: all 24 forward writers and four header-UPDATE paths are kernel-routed, and canonical replay produces zero violations. Any row is evidence of a non-kernel ledger mutation and must fail the P5.1 readiness posture. Writes are engine-only (deny-all for `authenticated`); reads are membership-scoped. |
 | `report_snapshots` | `workflow-deferred` | 0 | Supported UI/RPC workflow (not run in canonical) | on (4) | ✓ | Exercise the supported workflow and add a governed fixture + route/RLS evidence to promote to canonical-populated. |
 | `dashboard_layouts` | `reference-populated` | 1 | Migration / reference seed | on (2) | 075 only | Maintain migration/reference seed; guard 075 keeps it non-empty. |
 | `dashboard_widgets` | `reference-populated` | 4 | Migration / reference seed | on (2) | 075 only | Maintain migration/reference seed; guard 075 keeps it non-empty. |

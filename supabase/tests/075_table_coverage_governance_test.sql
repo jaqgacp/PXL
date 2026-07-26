@@ -15,6 +15,10 @@
 --   reference-empty      Reference/config table intentionally empty in canonical
 --                        (PHP-only FX, default-open flags, ungenerated exports,
 --                        governed global BIR config).
+--   control-empty        Control/evidence table whose healthy canonical state is
+--                        intentionally empty.
+--   dormant-foundation   Implemented IA foundation that is deliberately not read
+--                        or populated by current canonical production workflows.
 --
 -- The guard fails on UNEXPECTED active-table emptiness (an expected-populated
 -- table that is empty) and on governance drift (a new unclassified table, a
@@ -30,6 +34,8 @@ CREATE TEMP TABLE _coverage_registry (
 );
 
 INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
+  ('account_fs_map', 'workflow-deferred'),
+  ('account_mapping', 'canonical-populated'),
   ('amortization_entries', 'future-deferred'),
   ('amortization_schedules', 'future-deferred'),
   ('approval_instances', 'workflow-deferred'),
@@ -49,6 +55,8 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   ('bir_form_mappings', 'reference-empty'),
   ('bir_forms', 'reference-empty'),
   ('book_tax_reconciliation', 'future-deferred'),
+  ('fs_structure', 'workflow-deferred'),
+  ('ref_mapping_key', 'reference-populated'),
   ('branches', 'canonical-populated'),
   ('cas_attachment_register', 'future-deferred'),
   ('cas_document_number_issuances', 'canonical-populated'),
@@ -115,8 +123,19 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   ('goods_issues', 'future-deferred'),
   ('income_tax_computations', 'future-deferred'),
   ('inter_branch_transfers', 'future-deferred'),
+  ('inventory_accounting_profiles', 'dormant-foundation'),
   ('inventory_cost_layers', 'canonical-populated'),
+  ('inventory_cost_formula_policies', 'dormant-foundation'),
+  ('inventory_event_allocations', 'dormant-foundation'),
+  ('inventory_event_source_links', 'dormant-foundation'),
+  ('inventory_event_values', 'dormant-foundation'),
+  ('inventory_events', 'dormant-foundation'),
+  ('inventory_occurrences', 'dormant-foundation'),
+  ('inventory_precision_policies', 'dormant-foundation'),
+  ('inventory_projection_versions', 'dormant-foundation'),
   ('inventory_transactions', 'canonical-populated'),
+  ('inventory_valuation_scope_sequences', 'dormant-foundation'),
+  ('inventory_valuation_scopes', 'dormant-foundation'),
   ('item_barcodes', 'workflow-deferred'),
   ('item_categories', 'canonical-populated'),
   ('item_media', 'workflow-deferred'),
@@ -162,6 +181,7 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   ('ref_compliance_forms', 'reference-populated'),
   ('ref_document_types', 'reference-populated'),
   ('ref_feature_definitions', 'reference-populated'),
+  ('ref_inventory_event_source_types', 'reference-populated'),
   ('ref_payment_modes', 'reference-populated'),
   ('ref_posting_source_types', 'reference-populated'),
   ('ref_rdo_codes', 'reference-populated'),
@@ -185,6 +205,7 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   ('supplier_groups', 'workflow-deferred'),
   ('suppliers', 'canonical-populated'),
   ('sys_audit_logs', 'canonical-populated'),
+  ('sys_posting_guard_violations', 'control-empty'),
   ('sys_feature_enablement', 'reference-empty'),
   ('tax_calendar_events', 'canonical-populated'),
   ('tax_codes', 'reference-populated'),
@@ -284,7 +305,8 @@ SELECT is_empty(
   $$SELECT table_name FROM _coverage_registry
       WHERE coverage_class NOT IN (
         'canonical-populated','reference-populated',
-        'workflow-deferred','future-deferred','reference-empty'
+        'workflow-deferred','future-deferred','reference-empty','control-empty',
+        'dormant-foundation'
       )$$,
   'every coverage registry entry uses a governed coverage class'
 );
@@ -314,8 +336,12 @@ SELECT is_empty(
 );
 
 SELECT is_empty(
-  $$SELECT * FROM pg_temp.coverage_nonempty_in_class('reference-empty')$$,
-  'reference-empty tables remain intentionally empty under the canonical baseline'
+  $$SELECT * FROM pg_temp.coverage_nonempty_in_class('reference-empty')
+    UNION ALL
+    SELECT * FROM pg_temp.coverage_nonempty_in_class('control-empty')
+    UNION ALL
+    SELECT * FROM pg_temp.coverage_nonempty_in_class('dormant-foundation')$$,
+  'reference-empty, control-empty, and dormant IA foundations remain empty under the canonical baseline'
 );
 
 \else

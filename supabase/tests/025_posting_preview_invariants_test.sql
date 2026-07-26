@@ -152,29 +152,25 @@ INSERT INTO fixed_asset_categories (
   auth.uid(), auth.uid()
 );
 
-INSERT INTO journal_entries (
-  id, company_id, branch_id, je_number, je_date, fiscal_period_id,
-  description, reference_doc_type, status, total_debit, total_credit,
-  created_by, updated_by
-) VALUES (
-  '77777777-7777-7777-7777-777777777625',
+INSERT INTO t_ctx
+SELECT 'fa_je', fn_create_posted_journal_entry(
   '22222222-2222-2222-2222-222222222225',
   '33333333-3333-3333-3333-333333333325',
-  'FA-LINK-001', '2026-07-10',
+  'FA-LINK-001', '2026-07-10', 'Fixed asset source-link fixture',
+  'FA', NULL,
   (SELECT id FROM fiscal_periods
    WHERE company_id = '22222222-2222-2222-2222-222222222225' AND period_number = 7),
-  'Fixed asset source-link fixture', 'FA', 'posted', 1200, 1200,
-  auth.uid(), auth.uid()
+  'posted', 1200, 1200, NULL, 'regular', false, false, false
 );
 
-INSERT INTO journal_entry_lines (
-  je_id, company_id, line_number, account_id, description,
-  debit_amount, credit_amount, created_by, updated_by
-) VALUES
-  ('77777777-7777-7777-7777-777777777625', '22222222-2222-2222-2222-222222222225',
-   1, 'aaaaaaaa-0000-0000-0000-000000000225', 'Asset', 1200, 0, auth.uid(), auth.uid()),
-  ('77777777-7777-7777-7777-777777777625', '22222222-2222-2222-2222-222222222225',
-   2, 'aaaaaaaa-0000-0000-0000-000000000125', 'Cash', 0, 1200, auth.uid(), auth.uid());
+SELECT fn_add_posting_line_push(
+  (SELECT id FROM t_ctx WHERE key='fa_je'), 1,
+  'aaaaaaaa-0000-0000-0000-000000000225', 'Asset', 1200, 0
+);
+SELECT fn_add_posting_line_push(
+  (SELECT id FROM t_ctx WHERE key='fa_je'), 2,
+  'aaaaaaaa-0000-0000-0000-000000000125', 'Cash', 0, 1200
+);
 
 INSERT INTO fixed_assets (
   id, company_id, branch_id, asset_number, asset_name, category_id,
@@ -188,7 +184,7 @@ INSERT INTO fixed_assets (
   'FA-TEST-001', 'Preview Test Asset',
   '66666666-6666-6666-6666-666666666625',
   '2026-07-10', '2026-07-31', 1200, 0, 12, 'straight_line',
-  '77777777-7777-7777-7777-777777777625',
+  (SELECT id FROM t_ctx WHERE key='fa_je'),
   (SELECT id FROM fiscal_periods
    WHERE company_id = '22222222-2222-2222-2222-222222222225' AND period_number = 7),
   'active', auth.uid(), auth.uid()
@@ -196,35 +192,31 @@ INSERT INTO fixed_assets (
 
 SELECT is(
   (SELECT reference_doc_id FROM journal_entries
-   WHERE id = '77777777-7777-7777-7777-777777777625'),
+   WHERE id = (SELECT id FROM t_ctx WHERE key='fa_je')),
   '88888888-8888-8888-8888-888888888625'::uuid,
   'fixed-asset acquisition links its posted journal to the asset source row'
 );
 
-INSERT INTO journal_entries (
-  id, company_id, branch_id, je_number, je_date, fiscal_period_id,
-  description, reference_doc_type, reference_doc_id, status,
-  total_debit, total_credit, created_by, updated_by
-) VALUES (
-  '77777777-7777-7777-7777-777777777725',
+INSERT INTO t_ctx
+SELECT 'fa_depr_je', fn_create_posted_journal_entry(
   '22222222-2222-2222-2222-222222222225',
   '33333333-3333-3333-3333-333333333325',
   'FA-DEPR-LINK-001', '2026-07-31',
+  'Fixed asset depreciation source-link fixture', 'FA_DEPR',
+  '88888888-8888-8888-8888-888888888625',
   (SELECT id FROM fiscal_periods
    WHERE company_id = '22222222-2222-2222-2222-222222222225' AND period_number = 7),
-  'Fixed asset depreciation source-link fixture', 'FA_DEPR',
-  '88888888-8888-8888-8888-888888888625', 'posted', 100, 100,
-  auth.uid(), auth.uid()
+  'posted', 100, 100, NULL, 'regular', false, false, false
 );
 
-INSERT INTO journal_entry_lines (
-  je_id, company_id, line_number, account_id, description,
-  debit_amount, credit_amount, created_by, updated_by
-) VALUES
-  ('77777777-7777-7777-7777-777777777725', '22222222-2222-2222-2222-222222222225',
-   1, 'aaaaaaaa-0000-0000-0000-000000000625', 'Depreciation', 100, 0, auth.uid(), auth.uid()),
-  ('77777777-7777-7777-7777-777777777725', '22222222-2222-2222-2222-222222222225',
-   2, 'aaaaaaaa-0000-0000-0000-000000000325', 'Accumulated depreciation', 0, 100, auth.uid(), auth.uid());
+SELECT fn_add_posting_line_push(
+  (SELECT id FROM t_ctx WHERE key='fa_depr_je'), 1,
+  'aaaaaaaa-0000-0000-0000-000000000625', 'Depreciation', 100, 0
+);
+SELECT fn_add_posting_line_push(
+  (SELECT id FROM t_ctx WHERE key='fa_depr_je'), 2,
+  'aaaaaaaa-0000-0000-0000-000000000325', 'Accumulated depreciation', 0, 100
+);
 
 INSERT INTO asset_depreciation_entries (
   id, company_id, asset_id, period_number, entry_date, depreciation_amount,
@@ -235,12 +227,12 @@ INSERT INTO asset_depreciation_entries (
   '22222222-2222-2222-2222-222222222225',
   '88888888-8888-8888-8888-888888888625',
   1, '2026-07-31', 100, 100, 1100, 'posted',
-  '77777777-7777-7777-7777-777777777725', NOW(), auth.uid()
+  (SELECT id FROM t_ctx WHERE key='fa_depr_je'), NOW(), auth.uid()
 );
 
 SELECT is(
   (SELECT reference_doc_id FROM journal_entries
-   WHERE id = '77777777-7777-7777-7777-777777777725'),
+   WHERE id = (SELECT id FROM t_ctx WHERE key='fa_depr_je')),
   '99999999-9999-9999-9999-999999999625'::uuid,
   'depreciation journal source is the individual schedule entry, not its parent asset'
 );
@@ -454,17 +446,13 @@ SELECT throws_like(
 
 SELECT throws_like(
   format($q$
-    INSERT INTO journal_entries (
-      company_id, branch_id, je_number, je_date, fiscal_period_id,
-      description, reference_doc_type, reference_doc_id, status,
-      total_debit, total_credit, created_by, updated_by
-    ) VALUES (
+    SELECT fn_create_posted_journal_entry(
       '22222222-2222-2222-2222-222222222225',
       '33333333-3333-3333-3333-333333333325',
-      'DUP-SOURCE', '2026-07-10',
+      'DUP-SOURCE', '2026-07-10', 'Duplicate', 'SI', %L,
       (SELECT id FROM fiscal_periods WHERE company_id = '22222222-2222-2222-2222-222222222225'
        AND period_number = 7),
-      'Duplicate', 'SI', %L, 'posted', 1, 1, auth.uid(), auth.uid()
+      'posted', 1, 1
     )
   $q$, (SELECT id FROM t_ctx WHERE key = 'si')),
   '%ux_journal_entries_live_source%',
@@ -473,13 +461,10 @@ SELECT throws_like(
 
 SELECT throws_like(
   format($q$
-    INSERT INTO journal_entry_lines (
-      je_id, company_id, line_number, account_id, description,
-      debit_amount, credit_amount, created_by, updated_by
-    ) VALUES (
-      %L, '22222222-2222-2222-2222-222222222225', 99,
+    SELECT fn_add_posting_line_push(
+      %L, 99,
       'aaaaaaaa-0000-0000-0000-000000000525', 'Invalid account',
-      1, 0, auth.uid(), auth.uid()
+      1, 0
     )
   $q$, (SELECT journal_entry_id FROM sales_invoices WHERE id = (SELECT id FROM t_ctx WHERE key = 'si'))),
   '%active postable account%',
@@ -488,17 +473,13 @@ SELECT throws_like(
 
 SELECT throws_like(
   $q$
-    INSERT INTO journal_entries (
-      company_id, branch_id, je_number, je_date, fiscal_period_id,
-      description, reference_doc_type, status,
-      total_debit, total_credit, created_by, updated_by
-    ) VALUES (
+    SELECT fn_create_posted_journal_entry(
       '22222222-2222-2222-2222-222222222225',
       '33333333-3333-3333-3333-333333333325',
-      'BAD-PERIOD', '2026-07-10',
+      'BAD-PERIOD', '2026-07-10', 'Wrong period', 'MANUAL', NULL,
       (SELECT id FROM fiscal_periods WHERE company_id = '22222222-2222-2222-2222-222222222225'
        AND period_number = 8),
-      'Wrong period', 'MANUAL', 'posted', 1, 1, auth.uid(), auth.uid()
+      'posted', 1, 1
     )
   $q$,
   '%fiscal period does not match posting date%',
@@ -507,20 +488,16 @@ SELECT throws_like(
 
 SELECT throws_like(
   $q$
-    INSERT INTO journal_entries (
-      company_id, branch_id, je_number, je_date, fiscal_period_id,
-      description, reference_doc_type, status,
-      total_debit, total_credit, created_by, updated_by
-    ) VALUES (
+    SELECT fn_create_posted_journal_entry(
       '22222222-2222-2222-2222-222222222225',
       '33333333-3333-3333-3333-333333333325',
-      'BAD-TYPE', '2026-07-10',
+      'BAD-TYPE', '2026-07-10', 'Unknown source', 'UNKNOWN', NULL,
       (SELECT id FROM fiscal_periods WHERE company_id = '22222222-2222-2222-2222-222222222225'
        AND period_number = 7),
-      'Unknown source', 'UNKNOWN', 'posted', 1, 1, auth.uid(), auth.uid()
+      'posted', 1, 1
     )
   $q$,
-  '%journal_entries_reference_doc_type_fkey%',
+  '%Unknown or inactive posting source type%',
   'unregistered posting source types are rejected'
 );
 
