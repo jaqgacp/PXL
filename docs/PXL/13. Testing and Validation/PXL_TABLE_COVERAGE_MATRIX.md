@@ -2,7 +2,7 @@
 
 **Status:** Active authoritative coverage-governance register
 **Authority:** Tier 2 governance artifact for PXL-AUD-059 coverage governance; accounting, tax, transaction, security, and findings sources prevail on product rules
-**Last Verified:** 2026-07-26 deterministic local canonical lane after IA-5 (193 public base tables; 93 expected-populated, 100 explicitly deferred/empty)
+**Last Verified:** 2026-07-29 deterministic local canonical lane after IA-5 ECC WP-2 (199 public base tables; 93 expected-populated, 106 explicitly deferred/empty)
 **Applies To:** Every `public` base table; canonical/local validation coverage boundaries and product-readiness claims
 **Read When:** Adding a table or workflow, classifying coverage, or reconciling readiness against PXL-AUD-059
 **Do Not Read For:** Product accounting/tax rules (see the governing standards) or hosted credentials
@@ -35,16 +35,18 @@ Row counts below are the deterministic **canonical baseline** (fresh migration r
 | `future-deferred` | 61 | Explicitly deferred; module not implemented end-to-end |
 | `reference-empty` | 6 | Intentionally empty reference/config |
 | `control-empty` | 1 | Healthy control state is empty; any row requires investigation |
-| `dormant-foundation` | 11 | Implemented but inactive; population is prohibited during IA-5 |
-| **Total** | **193** | 93 expected-populated / 100 explicitly deferred or empty |
+| `dormant-foundation` | 17 | Implemented but inactive; population is prohibited during IA-5 |
+| **Total** | **199** | 93 expected-populated / 106 explicitly deferred or empty |
 
 All 193 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
 
 The COA Engine (Phase A, 2026-07-24) added four base tables: `ref_mapping_key` (reference-populated, 9 seeded keys), `account_mapping` (canonical-populated, 45 rows = 5 companies × 9 config-synced bindings), and the FS-registry framework `fs_structure` and `account_fs_map` (workflow-deferred, populated by the FS-registry provisioning workflow in Phase B, intentionally empty under the canonical baseline).
 
 Inventory Accounting IA-5 adds one disabled certification source registry row and
-eleven `dormant-foundation` tables. The canonical lane proves the eleven company/
-event/projection tables remain empty and current workflows do not activate them.
+seventeen `dormant-foundation` tables (eleven from the IA-5 foundation plus six
+from IA-5 ECC WP-1 — the order-policy/version foundation). The canonical lane
+proves the seventeen policy/event/projection/version tables remain empty and
+current workflows do not activate them.
 
 ## Per-Module Coverage
 
@@ -164,7 +166,7 @@ event/projection tables remain empty and current workflows do not activate them.
 | `inventory_transactions` | `canonical-populated` | 26 | Canonical demo seed | on (2) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `inventory_cost_layers` | `canonical-populated` | 12 | Canonical demo seed | on (3) | 075 only | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `stock_balances` | `canonical-populated` | 11 | Canonical demo seed | on (3) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
-| `ref_inventory_event_source_types` | `reference-populated` | 1 | IA-5 migration; certification-only and production-disabled | on (1) | 103 | Keep the sole IA-5 source disabled; IA-6 owns replacement/removal. |
+| `ref_inventory_event_source_types` | `reference-populated` | 1 | IA-5 base plus WP-2 registry-authority migration; certification-only and production-disabled | on (1) | 103, 105–106 | Keep the sole IA-5 source disabled; WP-2 authority remains dormant and IA-6 owns replacement/removal. |
 | `inventory_precision_policies` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved policy activation/conversion phase. |
 | `inventory_accounting_profiles` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved policy activation/conversion phase. |
 | `inventory_cost_formula_policies` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved method-state phase. |
@@ -176,6 +178,12 @@ event/projection tables remain empty and current workflows do not activate them.
 | `inventory_event_values` | `dormant-foundation` | 0 | Internal certification occurrence service only | on (1) | 103 | Remain dormant until a later valuation phase. |
 | `inventory_event_allocations` | `dormant-foundation` | 0 | Structural precision/residual basis only | on (1) | 103 | IA-6 owns allocation behavior; IA-5 writes none in canonical. |
 | `inventory_projection_versions` | `dormant-foundation` | 0 | Future internal projection rebuild evidence | on (1) | 103 | No rebuild or active projection exists in IA-5. |
+| `inventory_event_order_policies` | `dormant-foundation` | 0 | IA-5 ECC WP-1 order-policy version; certification fixture only | on (1) | 104 | Populate only under a separately approved ECC activation phase. |
+| `inventory_event_effect_ranks` | `dormant-foundation` | 0 | IA-5 ECC WP-1 E3 effect rank (sparse); certification fixture only | on (1) | 104 | Ranks are certification-only values; production activation is governed. |
+| `inventory_source_type_ranks` | `dormant-foundation` | 0 | IA-5 ECC WP-1 E4 source-type rank; certification fixture only | on (1) | 104 | Populate only under a separately approved ECC activation phase. |
+| `inventory_transition_ranks` | `dormant-foundation` | 0 | IA-5 ECC WP-1 E7 transition rank; certification fixture only | on (1) | 104 | Populate only under a separately approved ECC activation phase. |
+| `inventory_canonical_form_versions` | `dormant-foundation` | 0 | IA-5 ECC WP-1 canonical-form/digest version; certification fixture only | on (1) | 104 | Encoding rules are governed; no production activation in IA-5. |
+| `inventory_correction_graph_versions` | `dormant-foundation` | 0 | IA-5 ECC WP-1 correction-graph version; certification fixture only | on (1) | 104 | Populate only under a separately approved ECC activation phase. |
 | `stock_transfers` | `canonical-populated` | 2 | Canonical demo seed | on (3) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `stock_transfer_lines` | `canonical-populated` | 2 | Canonical demo seed | on (2) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `stock_adjustments` | `canonical-populated` | 4 | Canonical demo seed | on (3) | 075 only | Maintain canonical coverage; guard 075 keeps it non-empty. |

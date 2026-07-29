@@ -2,7 +2,7 @@
 
 **Status:** Active repository navigation map
 **Authority:** Tier 1 Documentation Governance; subject-matter standards retain authority in their own domains
-**Last Reviewed:** 2026-07-18
+**Last Reviewed:** 2026-07-29 after WP-2 implementation and evidence preparation
 **Applies To:** Active, archived, and trash-review documentation
 **Read When:** Locating the authority for a task or reviewing documentation lifecycle
 **Do Not Read For:** Mandatory fresh-session startup; `AI/AI_STATE.md` provides the smaller task map
@@ -97,9 +97,12 @@ No module-specific findings register, session handoff, phase tracker, or duplica
 | Economic Costing Chronology derivation (ordering tuple, algorithm, total-order proofs, replay, FIFO/WAC/Specific-ID/backdate/correction demonstrations, fail-closed rules) — **owner accepted 2026-07-26, not frozen** | `07. Inventory/03. Architecture/ECC-01_ECONOMIC_COSTING_CHRONOLOGY_DERIVATION_SPEC.md`, with its acceptance gate in `ECC-01_FINAL_ARCHITECTURE_ACCEPTANCE_REPORT.md` |
 | ECC-01 owner acceptance (the single canonical acceptance record: scope, exclusions, freeze determination, retained clarifications) | `07. Inventory/03. Architecture/ECC-01_FORMAL_OWNER_ACCEPTANCE.md` |
 | IA-5 ECC hardening Work Package 1 authorisation (prerequisites, zero-data verification, boundary/dormancy confirmation, authorisation decision) | `07. Inventory/04. Implementation/ECC-01_OWNER_ACCEPTANCE_AND_IA-5_WP1_AUTHORISATION_REPORT.md` |
+| IA-5 ECC hardening Work Package 2 authorisation (WP-1-certified prerequisites A–J, bounded M2 registry-extension scope, original authorisation preserved; EA-001/EA-002 reconciled; implementation complete, Evidence Gate pending, not certified) | `07. Inventory/04. Implementation/IA-5_ECC_HARDENING_WP-2_AUTHORISATION_REPORT.md` |
+| IA-5 WP-2 detailed registry-authority specification (**implemented 2026-07-29; independent Evidence Gate pending; not certified**; exact six-column contracts, PostgreSQL-safe constraint labels, `IA5_CERTIFICATION` values, persistent-migration versus rolled-back-certification boundary, and T-04 Source/T-06 Transition/T-07 Effect/T-27 Dormancy obligations) | `07. Inventory/04. Implementation/IA-5_WP-2_DETAILED_REGISTRY_AUTHORITY_SPECIFICATION.md` |
+| IA-5 ECC hardening Work Package 2 implementation and prepared evidence (migration M2, tests `105`/`106`, rollback, scope/accounting/security validation; **not an Evidence Gate or certification**) | `07. Inventory/04. Implementation/IA-5_ECC_HARDENING_WP-2_IMPLEMENTATION_AND_EVIDENCE_REPORT.md` |
 | "PG-01" reference resolution — which accepted document owns each governance rule PG-01 names (**non-normative**; sources win) | `00. Governance/PG-01_GOVERNANCE_AUTHORITY_MAP.md` |
 | IA-5/IA-6 evidence gate (Outcome C; C-01 Critical; IA-6 unauthorized) | `07. Inventory/03. Architecture/IA5_IA6_FINAL_EVIDENCE_GATE_PLAN.md` and `IA5_IA6_FINAL_EVIDENCE_GATE_REPORT.md` |
-| IA-5 ECC hardening implementation design (current-state map, target data model, migration/work-package sequence, test plan; controlling engineering plan — **Work Package 1 authorised, WP-2…WP-9 and IA-6 are not**) | `07. Inventory/04. Implementation/IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md` |
+| IA-5 ECC hardening implementation design (current-state map, target data model, migration/work-package sequence, test plan; controlling engineering plan — **Work Packages 1 and 2 authorised, WP-3…WP-9 and IA-6 are not**) | `07. Inventory/04. Implementation/IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md` |
 | Accounting readiness | `02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md` |
 | Accounting tests | `02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md` |
 | Transaction lifecycle and maturity | `04. Transaction Framework/PXL_TRANSACTION_MATRIX.md` |

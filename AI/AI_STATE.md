@@ -1,15 +1,15 @@
 # PXL AI State
 
-**Current Date:** 2026-07-26
+**Current Date:** 2026-07-29
 **Current Branch:** `main`
-**Working Tree:** Dirty, uncommitted local certification work through migrations `20260726000015` and tests `078`–`103`. Preserve unrelated user changes; no commit exists.
-**Product Phase:** Production Certification Program plus the governed Inventory Accounting Architecture Program. IA-5 landed as an additive dormant foundation, but its permanent-foundation certification is **SUSPENDED** by the IA-5/IA-6 Final Evidence Gate (Outcome C, C-01 Critical); ADR-C01 freezes the chronology policy, ECC-01 (its derivation) is **owner accepted 2026-07-26, not frozen**, and the **authorized phase is IA-5 ECC Hardening WP-1**. **IA-6 remains unauthorized.** Four shared engines remain Certified, COA Engine Phase A is landed, and Posting Engine P1/P2/P3/P4/P5.0/P5.1/P5.2 remains certified. The Kernel Totality Guard is **FULLY ENFORCED**. P5.3B, P6, and P7 remain paused.
-**Environment:** Authorized non-production hosted project `bskjkogijpbhukjkagfj`; migration history synchronized through `20260716000005`. Every local migration from `20260723000001` onward is NOT yet applied to the hosted project. Do not reset, seed, migrate, repair, link, or otherwise mutate the hosted project without explicit approval. Local reset/test work is permitted.
+**Working Tree:** Dirty and uncommitted through migration `20260729000017`, tests `078`–`106`, WP-2 implementation/evidence preparation, and earlier unrelated work. Preserve unrelated changes; no commit exists.
+**Product Phase:** Production Certification plus governed Inventory Accounting Architecture. IA-5 is dormant; permanent-foundation certification is **SUSPENDED** by Outcome C/C-01. ADR-C01 is frozen; ECC-01 is **owner accepted, not frozen**. **WP-1 is implemented and CERTIFIED; WP-2 is implemented, evidence-gate ready, and NOT CERTIFIED; WP-3…WP-9 and IA-6 remain unauthorized.** Four shared engines remain Certified, Posting P1–P5.2 remains certified, and the Kernel Totality Guard is **FULLY ENFORCED**. P5.3B/P6/P7 remain paused.
+**Environment:** Authorized non-production hosted project `bskjkogijpbhukjkagfj`; migration history synchronized through `20260716000005`. Every local migration from `20260723000001` onward (through `20260729000017`) is NOT yet applied to the hosted project. Do not reset, seed, migrate, repair, link, or otherwise mutate the hosted project without explicit approval. Local reset/test work is permitted.
 **Product Readiness:** Internal QA/demo only. PXL is not production-ready and not pilot-ready while module/engine certification evidence is incomplete. No module is Certified; four shared engines are Certified.
 
 ## Current Finding Standing
 
-Generated from `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`: **90 Retested Passed / 0 In Progress / 0 Open (90 total)**.
+Generated from `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`: **92 Retested Passed / 0 In Progress / 0 Open (92 total)**.
 
 - Active Critical / High / Medium: none. Every audit finding is Retested Passed.
 
@@ -37,12 +37,16 @@ Phase order: (1) Setup/Master Data + foundational engines; (2) Sales/AR; (3) Pur
 
 ## Known Blockers and Non-Assumptions
 
-- Every migration from `20260723000001` through the IA-5 migration set ending `20260726000015` is local-only; hosted application needs explicit approval before any hosted claim.
+- Every migration from `20260723000001` through the IA-5 migration set ending `20260726000016` is local-only; hosted application needs explicit approval before any hosted claim.
 - Banking, fixed assets, returns, broad approval rollout, schedules, statutory generators, and CAS artifacts are not proven complete.
 - Do not assume green checklists mean operational readiness, or a rendered route means source-backed correctness.
 - Do not read `docs/PXL/archive/`, `docs/PXL/trash-review/`, all Compliance files, all SI specifications, or the full findings body.
 
 ## Last Verified Commands
+
+IA-5 ECC Hardening WP-1 — **implemented dormant, zero accounting change** and **independent evidence gate COMPLETE — WP-1 CERTIFIED 2026-07-29**. Migration `20260726000016` adds six dormant policy/version tables; test `104` (22) proves structure, dormancy, immutability, and certification rank resolution. Independent WP-1 release gate: regression **104/2375**, canonical **30/748**.
+
+IA-5 ECC Hardening WP-2 — **implemented dormant, zero accounting/runtime change; EVIDENCE GATE NOT EXECUTED; NOT CERTIFIED** 2026-07-29. Migration `20260729000017` adds exactly six NOT NULL, no-persistent-default registry columns and six governed CHECKs, including EA-001's 59-byte identifier, materialising only the exact `IA5_CERTIFICATION` values. It asserts zero events, exact registry/WP-1 dependencies, unchanged RLS/grants/immutability, and no runtime consumer. Tests `105`/`106` provide 48 registry/fixture assertions plus 20 isolated rollback assertions; fixtures and structural rollback end in `ROLLBACK`. Focused WP-1/WP-2 **4 files/189**; full local release gate passes fresh replay, regression **106/2443**, canonical **30/748**, docs, lint, build, and diff. `inventory_events` remains zero; Posting/Kernel and accounting outputs are unchanged. Evidence report: `IA-5_ECC_HARDENING_WP-2_IMPLEMENTATION_AND_EVIDENCE_REPORT.md`. WP-3…WP-9/IA-6 unauthorised.
 
 Posting Engine P1/P2/P3 — **landed 2026-07-24/25, zero accounting change**; full record in `PXL_POSTING_ENGINE_SPEC.md`, `PXL_POSTING_ENGINE_P3_SPEC.md`. P1 (`082`) inert infrastructure; P2 resolver adoption complete (`083`–`086`); P3 (`087`–`089`) made `fn_add_posting_line` a pure persistence helper (an additive overload is NOT deployment-safe — drop-and-recreate), wired `fn_assert_manual_postable` into `fn_post_manual_je`, and converged the one self-projecting GL preview onto the resolver — **resolver convergence only; full Preview ≡ Actual remains P8**. **Observation:** run regression on a fresh no-seed schema (`npm run test:db:local`); test 073 fails atop a canonical seed (pre-existing).
 
@@ -52,13 +56,13 @@ Posting Engine P5.0 — **Surface Closure landed 2026-07-26, zero accounting cha
 
 Posting Engine P5.1 — **historical, superseded by P5.2** (migrations `20260726000002`–`20260726000011`, tests `092`–`101`; full record in `PXL_POSTING_ENGINE_SPEC.md`). All **24 authoritative forward writers** plus the four legacy SI/VB/OR/CP header UPDATE paths were drained of direct ledger mutation, leaving ledger DML only in the six sanctioned persistence functions; exact-name classifier anchoring closed lookalike inheritance. Canonical replay: **0 writers / 0 violation events**, fingerprints identical.
 
-Posting Engine P5.2 — **FULLY ENFORCED, zero accounting change** (migration `20260726000012`, test `102`, read-only census `supabase/verification/p52_kernel_security_census.sql`). Guard enforcement is compile-time `true`; both totality triggers are `ENABLE ALWAYS`; client ledger DML and guard-function execution are revoked; no maintenance, replay, replica-trigger, RPC, SECURITY DEFINER, role, or owner-SQL bypass exists. All 48 unauthorized operation/table/path attempts reject (12 privilege `42501`, 36 guard `23514`), zero persisted mutation; the sanctioned classifier remains exactly six. Census: 409 app functions / 349 SECURITY DEFINER / 80 ledger mutators (all SECURITY DEFINER, kernel-reaching) / zero client-writable ledger tables. Full clean regression: 102 files / 2,254 assertions; canonical: 30 files / 748 assertions; debit = credit = `2,411,134.80` / zero violations. P6 has not begun.
+Posting Engine P5.2 — **FULLY ENFORCED, zero accounting change** (migration `20260726000012`, test `102`, census `supabase/verification/p52_kernel_security_census.sql`). Guard enforcement compile-time `true`; both totality triggers `ENABLE ALWAYS`; client ledger DML and guard execution revoked; no bypass path exists (48 unauthorized attempts reject: 12 `42501`, 36 `23514`); the sanctioned classifier is exactly six. Post-WP-1 census: `102` pins 418 app functions / 355 SECURITY DEFINER; debit = credit = `2,411,134.80`, zero violations. Full detail in `PXL_CERTIFICATION_MATRIX.md`. P6 has not begun.
 
-Posting Engine P6 — **BLOCKED at Inventory; investigation only**. Stock-to-GL variances 2,400.00 / 21,000.00 / 6,630.00; layer-to-stock 2,420.00 / 12,600.00 / 3,930.00. Receiving Reports add stock without journals while Vendor Bills debit purchase clearing. Remedy requires prohibited engine or certified-data changes. Full evidence: Posting Engine §5.4.1. P7 has not begun.
+Posting Engine P6 — **BLOCKED at Inventory; investigation only**: Receiving Reports add stock without journals while Vendor Bills debit purchase clearing (stock-to-GL and layer-to-stock variances), and the remedy needs prohibited engine or certified-data changes. Full evidence: Posting Engine §5.4.1. P7 has not begun.
 
-Inventory Accounting IA-5 — **landed and dormant, zero accounting change** (`20260726000013`–`20260726000015`, test `103`). Its certification claim in `PXL_IA5_IMPLEMENTATION_AND_CERTIFICATION_EVIDENCE.md` is **suspended**: the **IA-5/IA-6 Final Evidence Gate returned Outcome C** (`IA5_IA6_FINAL_EVIDENCE_GATE_REPORT.md`) because the per-scope accepted sequence is allocated by row-lock order, so identical same-time receipt/issue evidence produced opposite orders across schedules. C-01 is a **Critical permanent-foundation defect**; H-01…H-09 and M-01 remain provisional and unexecuted. `fn_receive_inventory(jsonb)` is internalized pending IA-7 retirement.
+Inventory Accounting IA-5 — **landed and dormant, zero accounting change** (`20260726000013`–`20260726000015`, test `103`). Its certification claim in `PXL_IA5_IMPLEMENTATION_AND_CERTIFICATION_EVIDENCE.md` is **suspended**: the **IA-5/IA-6 Final Evidence Gate returned Outcome C** (`IA5_IA6_FINAL_EVIDENCE_GATE_REPORT.md`) because the per-scope accepted sequence is allocated by row-lock order, so identical same-time receipt/issue evidence produced opposite orders across schedules. C-01 is a **Critical permanent-foundation defect** (H-01…H-09, M-01 provisional). `fn_receive_inventory(jsonb)` is internalized pending IA-7 retirement.
 
-Inventory chronology architecture — **ADR-C01 frozen**; **ECC-01 is `ACCEPTED — OWNER APPROVED` (2026-07-26), freeze NOT exercised** (`ECC-01_FORMAL_OWNER_ACCEPTANCE.md`; change control still runs through its Supersession Rule). Its acceptance gate closed Outcome B (ADR-C01 conformity 14/14; nine defects resolved in Amendment A1, V-31…V-35), and **ECC-A-11 (PG-01 cited but absent) is resolved as Outcome B** by the non-normative `00. Governance/PG-01_GOVERNANCE_AUTHORITY_MAP.md`; ADR-C01 was not edited. ECC-01 derives economic order from source facts, never lock/arrival order (14 components, 8-stage algorithm, four proofs, 35 validation / 15 failure rules). The **IA-5 ECC hardening design is controlling; WP-1 is authorized** (`ECC-01_OWNER_ACCEPTANCE_AND_IA-5_WP1_AUTHORISATION_REPORT.md`, Outcome A; zero-data verified read-only, `inventory_events` = 0). The C-01 stop stays open pending executable conformance evidence (ADR-C01 §17).
+Inventory chronology architecture — **ADR-C01 frozen**; **ECC-01 accepted, not frozen**. WP-1 is certified. **WP-2 is implemented and evidence-gate ready, not certified**: EA-001's identifier and EA-002's T-04/T-06/T-07/T-27 plus persistent/rolled-back evidence boundary are implemented exactly. Scope, accounting, rollback, and runtime remain unchanged. C-01 stays open pending ADR-C01 §17 executable evidence.
 
 COA Engine Phase A — **landed, In Progress (not Certified)** 2026-07-24 per the frozen `PXL_COA_ENGINE_SPEC.md` (#19), via `20260724000001` + test `081`: `ref_mapping_key`, `account_mapping`, fail-closed `fn_resolve_account`, config→mapping sync, lifecycle/change guards, FS registry. `company_accounting_config` remains the single writable authority. **Not Certified** until Phase B satisfies gates 2/4.
 
@@ -68,21 +72,16 @@ Audit & Immutability (2nd), Number Series (3rd), Permissions/RLS (1st) Engines �
 
 ## Recommended Next Task
 
-The finding program is complete. The authorized phase is **IA-5 ECONOMIC COSTING
-CHRONOLOGY HARDENING — IMPLEMENTATION, WORK PACKAGE 1**, exactly as specified in
-`IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md` §24 and §17 (M1):
-create the **six** dormant version objects (`inventory_event_order_policies`,
-`inventory_event_effect_ranks`, `inventory_source_type_ranks`,
-`inventory_transition_ranks`, `inventory_canonical_form_versions`,
-`inventory_correction_graph_versions`), reusing the IA-5 guard/RLS/grant/audit/
-immutability patterns unchanged; seed only certification-only ranks; add nothing to
-`inventory_events`; expose no grant; register each new table in
-`PXL_TABLE_COVERAGE_MATRIX.md` + guard `075`; evidence T-01/T-27; rollback = drop M1.
+The finding program is complete. **WP-1 is CERTIFIED; WP-2 implementation is
+complete and ready for an independent WP-2 Evidence Gate.** The evidence gate
+must independently verify migration `20260729000017`, tests `105`/`106`,
+rollback restoration, dormancy, accounting invariance, repository consistency,
+and the implementation report. It must not infer certification from this
+implementation mission. **WP-2 remains NOT CERTIFIED; WP-3…WP-9 and IA-6
+remain unauthorised.**
 
-**Stop conditions:** no deviation from ADR-C01/ECC-01; no Posting or Kernel change;
-no IA-6 work; preserve dormancy; stop if `inventory_events` is non-zero at execution
-(re-verify; it is 0 now) or if scope differs from the approved design. **Next
-evidence:** WP-1 implementation record, migration validation, T-01/T-27,
-documentation reconciliation, WP-1 evidence-gate report. WP-2…WP-9 follow only after
-WP-1 is evidenced. **IA-6 remains unauthorized**, P5.3B/P6/P7 stay paused, hosted
-migration requires explicit approval.
+**Stop conditions carried forward:** no ADR-C01/ECC-01 deviation; no Posting/Kernel
+change; no IA-6 work; preserve dormancy; a non-zero `inventory_events` count is a
+governance stop. **IA-6 remains unauthorized**, P5.3B/P6/P7 stay paused, and every
+local migration `20260723000001`–`20260729000017` needs explicit approval before
+hosted application.

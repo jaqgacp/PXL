@@ -157,8 +157,9 @@ SELECT is(
     WHERE NOT t.tgisinternal
       AND t.tgname LIKE 'trg_inventory_%_audit'
       AND t.tgfoid = 'public.fn_audit_trigger()'::regprocedure),
-  10,
-  'IA-5 reuses the certified audit authority for every company-scoped fact table');    -- 8
+  16,
+  'IA-5 reuses the certified audit authority for every company-scoped fact table '
+  || '(10 IA-5 foundation + 6 ECC WP-1 order-policy/version tables)');                 -- 8
 
 SELECT is(
   (SELECT count(*)::int

@@ -1,13 +1,13 @@
 # IA-5 Economic Costing Chronology Hardening — Implementation Design and Change Plan
 
-**Status:** ACCEPTED — design complete and controlling. Its one open gate closed on 2026-07-26: ECC-01 is owner accepted and **Work Package 1 is authorised**; WP-2…WP-9 and IA-6 remain unauthorised. See [ECC-01 Formal Owner Acceptance](../03.%20Architecture/ECC-01_FORMAL_OWNER_ACCEPTANCE.md) and the [WP-1 authorisation report](ECC-01_OWNER_ACCEPTANCE_AND_IA-5_WP1_AUTHORISATION_REPORT.md).
+**Status:** ACCEPTED — design complete and controlling. WP-1 is implemented and certified; WP-2 was authorised and reconciled by EA-001/EA-002, and is now implemented, evidence-gate ready, and not certified. WP-3…WP-9 and IA-6 remain unauthorised. The original authorisation chronology is preserved in §1 and §30.
 **Authority:** Implementation design subordinate to [ADR-C01](../03.%20Architecture/ADR-C01_ECONOMIC_EVENT_CHRONOLOGY_AND_COSTING_ORDER_AUTHORITY.md) and [ECC-01](../03.%20Architecture/ECC-01_ECONOMIC_COSTING_CHRONOLOGY_DERIVATION_SPEC.md); authorised by ADR-C01 §17 and the [ECC-01 Final Architecture Acceptance Report](../03.%20Architecture/ECC-01_FINAL_ARCHITECTURE_ACCEPTANCE_REPORT.md) §24
 **Owner / Domain:** Inventory Accounting
 **Design date:** 2026-07-26
 **Applies To:** Hardening the dormant IA-5 foundation to conform to ECC-01
 **Read When:** Executing, reviewing, or certifying any IA-5 ECC hardening work package
 **Do Not Read For:** IA-6 method state, replay execution, projection cut-over, or authority to begin coding
-**Implementation Status:** Design only. No SQL, schema, migration, function, trigger, index, test, or runtime change is authorised or implied by this document.
+**Implementation Status:** This design authorises nothing by itself. Its WP-2 M2 contract is implemented by migration `20260729000017` and tests `105`/`106`; no runtime object or behaviour was added. Independent WP-2 evidence-gate review remains pending.
 
 ---
 
@@ -66,6 +66,35 @@ Work Package 1 is authorised to begin — see the
 [WP-1 authorisation report](ECC-01_OWNER_ACCEPTANCE_AND_IA-5_WP1_AUTHORISATION_REPORT.md).
 The readiness assessment below is preserved as issued.*
 
+*Subsequent status (2026-07-29): WP-1 is implemented and certified. WP-2 was
+separately authorised, and its detailed registry-authority specification is
+complete. Engineering Amendment EA-001 corrected one impossible 64-byte
+constraint identifier to the 59-byte
+`ref_inventory_event_source_types_doc_order_key_algorithm_ck`. The correction
+changes no design object, predicate, value, work-package boundary, rollback,
+test intent, accounting meaning, ADR-C01 rule, or ECC-01 rule. At EA-001, the
+WP-2 evidence allocation remained as then recorded; EA-002 subsequently
+clarifies it below. At the EA-001 checkpoint, WP-2 remained unimplemented and
+uncertified.*
+
+*Subsequent status (2026-07-29, EA-002): the global test-family definitions in
+§23 remain authoritative and historical numbering is unchanged: T-04 is Source
+order (E4/E5), T-06 is Transition order (E7), T-07 is Effect order (E3), and
+T-27 is Dormancy. EA-002 makes the already-required T-07 structural evidence
+explicit for WP-2, classifies registry completeness as completion evidence
+rather than a test-family name, and separates persistent M2 assertions from
+rolled-back certification fixtures. It changes no implementation object,
+predicate, value, work-package boundary, rollback, accounting meaning,
+ADR-C01, or ECC-01.*
+
+*Subsequent implementation status (2026-07-29): authorised WP-2 M2 was
+implemented by migration `20260729000017` and tests `105`/`106`. Exactly six
+dormant registry columns and their governed constraints were added; the
+certification fixtures and isolated drop-column rollback are transactionally
+rolled back. Fresh replay, full regression (106 files / 2,443 assertions), and
+canonical accounting validation (30 / 748) pass. WP-2 remains not certified
+until its independent Evidence Gate; WP-3…WP-9 and IA-6 remain unauthorised.*
+
 ---
 
 ## 2. Governance and Authority
@@ -74,7 +103,7 @@ The readiness assessment below is preserved as issued.*
 | --- | --- |
 | Is ECC-01 formally accepted? | **Yes, since 2026-07-26** (`ECC-01_FORMAL_OWNER_ACCEPTANCE.md`; ECC-01 header reads `ACCEPTED — OWNER APPROVED`, not frozen). *At the time this design was written the answer was No: the header read `PROPOSED — RECOMMENDED FOR ACCEPTANCE` and no acceptance record existed.* |
 | Is this design phase authorised despite that? | **Yes.** ADR-C01 §17 authorises comparing IA-5 against the ADR, determining "the minimum additive authority hardening required", and classifying the correction — which is exactly this document. The acceptance report §24 names this phase as next. The owner's phase instruction authorises it explicitly. |
-| May implementation begin? | **Work Package 1 only, since 2026-07-26.** Acceptance report §24 and ECC-01 §15(14) made implementation conditional on recorded acceptance; that condition is now met and WP-1 is authorised by the owner. WP-2…WP-9 still require WP-1 completion and evidence. This document self-authorises nothing. |
+| May implementation begin? | **WP-2 implementation completed 2026-07-29 under its separate authorisation report and EA-001/EA-002-reconciled detailed specification.** It remains bounded to §24 row 2 / M2 and awaits an independent Evidence Gate. WP-3…WP-9 remain unauthorised. This document self-authorises nothing. |
 | Is IA-6 authorised? | **No**, under the evidence gate §12.2 permission matrix and ADR-C01 §17. Unchanged by this design. |
 | Is the C-01 program stop closed? | **No.** It closes only on executable conformance evidence (ADR-C01 §16). WP-9 produces that evidence; the gate, not this plan, closes the stop. |
 | Freeze authority | **Resolved 2026-07-26** — ECC-A-11 closed as Outcome B: "PG-01" denotes the existing authority chain mapped in [`PG-01_GOVERNANCE_AUTHORITY_MAP.md`](../../00.%20Governance/PG-01_GOVERNANCE_AUTHORITY_MAP.md); freeze authority is the owner's under `PXL_PRINCIPLES.md` §21, and ECC-01 is accepted but not frozen. |
@@ -679,7 +708,7 @@ unrelated changes; no migration is destructive.
 | # | Migration purpose | Objects | Preconditions | Locking | Backfill | Validation | Rollback | Risk |
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
 | M1 | Order-policy + rank + canonical-form + correction-graph version tables | 6 new tables (§6.4 rows 1–6), guards, RLS, audit triggers | `inventory_events` count = 0 | New tables only — no lock on existing objects | None | Structure + dormancy test | `DROP TABLE` (reverse dependency) | Low |
-| M2 | Registry extension: per-type order authority columns | `ref_inventory_event_source_types` + columns | M1 | `ACCESS EXCLUSIVE` on a 1-row table | Set for `IA5_CERTIFICATION` only | Registry completeness test | Drop columns | Low |
+| M2 | Registry extension: per-type order authority columns | `ref_inventory_event_source_types` + columns | M1 | `ACCESS EXCLUSIVE` on a 1-row table | Set for `IA5_CERTIFICATION` only | Persistent registry completeness assertions plus rolled-back T-04/T-06/T-07/T-27 certification evidence | Drop columns | Low |
 | M3 | `inventory_valuation_streams` + stream-keyed accepted allocator | 2 new tables | M1 | New tables | None | Stream uniqueness test | Drop | Low |
 | M4 | `inventory_event_order_keys` + constraints + 1:1 deferrable trigger | 1 new table, partial unique index | M1–M3 | New table; deferrable trigger added to `inventory_events` (brief `ACCESS EXCLUSIVE`) | None | 1:1 enforcement test | Drop trigger, drop table | Medium — touches an existing table's trigger set |
 | M5 | Admission writer replacement (DROP + CREATE) + component resolver | 2 functions | M1–M4 | Function-level | None | Admission tests | Restore prior function body from M0 source | Medium |
@@ -852,6 +881,30 @@ runtime component.
 Test 103 is **extended, not replaced**: its 99 assertions stay valid once its
 "deterministic order" fixtures are relabelled accepted-chronology.
 
+### 23.1 EA-002 WP-2 evidence allocation
+
+The family names and purposes in the table above are the only authoritative
+T-number definitions. WP-2 supplies the structural, registry, and
+certification-fixture portion of four existing families:
+
+- **T-04 Source order (E4/E5):** the registry declares the exact E5 algorithm,
+  and the rolled-back WP-1 fixture resolves the certification E4 source rank.
+  Runtime comparison of two documents remains later work because WP-2 creates
+  no comparator.
+- **T-06 Transition order (E7):** the rolled-back WP-1 fixture resolves exactly
+  one `ACCEPTED` transition rank for `IA5_CERTIFICATION`. Runtime transition
+  ordering remains later work.
+- **T-07 Effect order (E3):** the exact `event_effect_map` and
+  `same_time_class` resolve through the rolled-back WP-1 effect-rank fixture,
+  including `increase = 20` before `decrease = 40`. Runtime event ordering
+  remains later work.
+- **T-27 Dormancy:** persistent post-migration state proves no activation,
+  event, runtime consumer, write grant, Posting change, or Kernel change.
+
+“Registry completeness” is WP-2 completion evidence spanning those families;
+it is not a fifth family and is not an alternative name for T-04. No WP-2 test
+may claim the later runtime-ordering portions of T-04, T-06, or T-07.
+
 ---
 
 ## 24. Implementation Work Packages
@@ -859,7 +912,7 @@ Test 103 is **extended, not replaced**: its 99 assertions stay valid once its
 | WP | Objective | Depends on | Objects | Authority | Risks | Tests | Completion evidence | Rollback point | Concurrent? |
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | **1** | **Order-policy and version foundation**: the six version tables (§6.4 rows 1–6), their guards, RLS, audit triggers, dormancy CHECKs, and the seeded certification-only rank set (effect 10/20/30/40/50; source-type and transition ranks for `IA5_CERTIFICATION`) | ECC-01 acceptance | M1 | ECC-01 §3.2, §3.3, §6.4 | Rank sparsity wrong → future renumbering | T-01, T-27 | Structure + dormancy tests green; `V` resolvable | Drop M1 | No |
-| 2 | Registry order authority + admission input contract (E5 algorithm, line-order authority, transition set, occurrence semantics, same-time class, placement class) | WP-1 | M2 | ECC-01 §4.2 E5/E7, V-10 | Incomplete rule silently admitted | T-04, T-06, T-27 | Registry completeness test | Drop columns | No |
+| **2** | **IMPLEMENTED 2026-07-29 — Registry order authority + admission input contract** (E5 algorithm, line-order authority, transition set, occurrence semantics, same-time class, placement class) | WP-1 | M2 | ECC-01 §4.2 E3/E5/E7, V-10 | Incomplete rule silently admitted | T-04, T-06, T-07, T-27 (§23.1 structural/fixture portions only; tests `105`/`106`) | Registry completeness plus persistent/rolled-back boundary evidence; independent evidence gate pending | Drop columns; isolated proof `106` | No |
 | 3 | Stream partition + stream-keyed accepted allocator | WP-1 | M3 | ECC-01 §15(4), V-11 | Two streams for one key | T-22, T-26 | Stream uniqueness proven | Drop M3 | Yes (with WP-2) |
 | 4 | `inventory_event_order_keys` + constraints + 1:1 deferrable enforcement | WP-1…3 | M4 | ECC-01 §4.2, §4.3, §6.1 | Deferrable trigger interacts with occurrence atomicity | T-03, T-24 | 1:1 and uniqueness enforced | Drop trigger + table | No |
 | 5 | Admission hardening: writer replacement (DROP+CREATE) + component resolver, correction anchoring, E10 canonicalisation | WP-4 | M5 | ECC-01 §5.1–§5.3, §8 | Signature change breaks test callers | T-02, T-05, T-07, T-08, T-20, T-25 | Admission suite green | Restore prior writer | No |
@@ -867,6 +920,20 @@ Test 103 is **extended, not replaced**: its 99 assertions stay valid once its
 | 7 | Ordering + fingerprint functions (stages 4–6 + ordered-input digest), cohort depth, boundary validation | WP-4 | M7 | ECC-01 §5.4–§5.7, §6 | Cohort depth computed over a truncated population | T-01, T-11, T-15, T-16, T-17, T-18 | Ordering + fingerprint suites green | Drop functions | Yes (with WP-6) |
 | 8 | Index replacement + superseded-index comment + coverage registry | WP-4, WP-7 | M8, M9 | ECC-01 §15(3) | Index composition drifts from comparator | T-01, guard `075` | Index composition test; guard 075 green | Drop index | Yes |
 | 9 | **Certification lane**: permutation, two-session concurrency, randomised schedules across independent resets, rollback/retry, backdate, correction, FIFO/WAC consequence models, prohibited-input census | WP-5…8 | Tests + verification assets only | ADR-C01 §17, ECC-01 §14.3 | Consequence model mistaken for an engine | T-12, T-13, T-14, T-19, T-21, T-28, T-29 | Full evidence package for the reopened gate | n/a (no schema) | No |
+
+**EA-001 (2026-07-29):** WP-2's objective, M2 object boundary, dependencies,
+risks, tests, completion evidence, and rollback remain exactly as stated in row
+2. The amendment changes only the detailed specification's constraint label for
+`document_order_key_algorithm` to the PostgreSQL-safe 59-byte
+`ref_inventory_event_source_types_doc_order_key_algorithm_ck`.
+
+**EA-002 (2026-07-29):** The §23 family definitions remain unchanged. The WP-2
+row now names T-07 explicitly because the already-governed
+`event_effect_map`/`same_time_class` evidence is E3 Effect-order evidence, not
+T-06 Transition-order evidence. This is a correction of evidence allocation,
+not a new test intent. EA-002 also binds M2 to persistent registry assertions
+only; all WP-1 rank-resolution evidence is created inside certification
+transactions and rolled back. No policy/rank fixture row is seeded by M2.
 
 **Work Package 1 is exactly:** create the six dormant version objects
 (`inventory_event_order_policies`, `inventory_event_effect_ranks`,
@@ -1012,6 +1079,12 @@ not this phase's to satisfy.
 returned **A — AUTHORISED TO BEGIN WORK PACKAGE 1**, having re-verified the
 zero-data precondition read-only (`inventory_events` = 0).*
 
+*Subsequent status (2026-07-29): WP-1 is certified. WP-2 is separately
+authorised, EA-001/EA-002-reconciled, and implemented by migration
+`20260729000017` plus tests `105`/`106` without changing this design's
+accounting or architecture. WP-2 is evidence-gate ready but remains
+uncertified.*
+
 ---
 
 ## 30. Exact Next Authorised Phase
@@ -1027,14 +1100,19 @@ zero-data precondition read-only (`inventory_events` = 0).*
 
 2. Then, and only then: **IA-5 ECONOMIC COSTING CHRONOLOGY HARDENING —
    IMPLEMENTATION, WORK PACKAGE 1** as specified in §24. — **This is now the
-   current authorised phase**, per the
+   authorised historical phase**, per the
    [WP-1 authorisation report](ECC-01_OWNER_ACCEPTANCE_AND_IA-5_WP1_AUTHORISATION_REPORT.md).
-   It has not begun; it requires a separate implementation instruction.
+   It subsequently completed and was certified on 2026-07-29.
 
-Not authorised by this document: WP-2 through WP-9 before WP-1 completes and is
-evidenced; any IA-6 subphase; any hosted migration; enabling a production source
-type; any Posting or Kernel change. **IA-6 remains unauthorised**, and the C-01
-program stop remains open until the reopened evidence gate accepts WP-9's
-evidence package.
+3. **Current next authorised phase:** independent IA-5 ECONOMIC COSTING
+   CHRONOLOGY HARDENING — WORK PACKAGE 2 EVIDENCE GATE. WP-2 implementation
+   completed under the separate authorisation report and the EA-001/EA-002
+   specification; implementation completion is not certification.
 
-No implementation was performed during this phase.
+Not authorised: WP-3 through WP-9; any IA-6 subphase; any hosted migration;
+enabling a production source type; any Posting or Kernel change. **IA-6 remains
+unauthorised**, and the C-01 program stop remains open until the reopened
+evidence gate accepts WP-9's evidence package.
+
+No implementation was performed during the original design phase. WP-2 was
+subsequently implemented under its separate authorised implementation mission.

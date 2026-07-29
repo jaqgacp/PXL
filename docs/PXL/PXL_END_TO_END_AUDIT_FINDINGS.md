@@ -3,7 +3,7 @@
 **Status:** Active authoritative findings register
 **Authority:** Tier 1 Governing — the only official register for PXL defects, audit issues, blockers, and required remediation
 **Initial Audit Date:** 2026-07-01
-**Last Verified:** 2026-07-22 roadmap/state reconciliation
+**Last Verified:** 2026-07-29 EA-002 WP-2 governance reconciliation
 **Applies To:** Product readiness, accounting, tax, inventory, security, audit, UX, data, and regression findings
 **Read When:** Opening a specific referenced finding or reconciling official status
 **Do Not Read For:** Fresh-session startup beyond the one finding named in `AI/AI_STATE.md`
@@ -21,6 +21,8 @@ This is an accumulated register. Evidence in older rows is a dated snapshot, not
 | 5 | [PXL-AUD-060](#pxl-aud-060) | Medium | Retested Passed | Login inputs now carry `htmlFor`/`id`, `name`, `autocomplete`, and an accessible `role="alert"` error region; label-based browser regression passes 10/10. | Authentication UX | None |
 | 6 | [PXL-AUD-069](#pxl-aud-069) | Critical | Retested Passed | Nine `postgres`-owned reporting views bypassed RLS (cross-company leak); now `security_invoker`, with per-view isolation regression (076) and a permanent catalog guard (077). | Permissions / RLS Engine | None |
 | 7 | [PXL-AUD-070](#pxl-aud-070) | Critical | Retested Passed | The user-settable GUC `pxl.allow_demo_reset` disabled posted-document immutability for any authenticated member; the bypass is now gated on a privileged `session_user` (`fn_demo_reset_bypass_authorized`), with an end-to-end `authenticator` reproduction, regression (078), and a permanent static class guard. | Audit & Immutability Engine | None |
+| 8 | [PXL-AUD-071](#pxl-aud-071) | High | Retested Passed | WP-2's detailed engineering specification required a 64-byte constraint identifier that PostgreSQL could not represent exactly. Engineering Amendment EA-001 replaced only that label with a deterministic 59-byte identifier and reconciled every affected authority/status document before implementation. | Inventory Accounting / repository governance | None |
+| 9 | [PXL-AUD-072](#pxl-aud-072) | High | Retested Passed | WP-2 reused T-04/T-06 for purposes that conflicted with the controlling test plan and conflated persistent M2 assertions with rolled-back rank fixtures. Engineering Amendment EA-002 restored the design's T-04/T-06/T-07/T-27 meanings and defined one exact migration/certification boundary. | Inventory Accounting / repository governance | None |
 
 PXL-AUD-063 (global BIR write policy) moved to Retested Passed on 2026-07-20, and PXL-AUD-066 (CAS document-period evidence semantics) moved to Retested Passed on 2026-07-21; see their Findings Status Index rows and detail sections.
 
@@ -122,6 +124,8 @@ Status values: `Open` (not started), `In Progress` (scoped fixes landed, work re
 | PXL-AUD-068 | High | Retested Passed | Global `tax_codes`/`vat_codes`/`atc_codes` writes are read-only at the table and routed through governed SECURITY DEFINER RPCs with **maintainer-only** authority and end-to-end audit reasons; MDP-01, frozen as the canonical Master-Data governance template (template refinement `20260721000002`). |
 | PXL-AUD-069 | Critical | Retested Passed | Nine `postgres`-owned reporting views (`vw_ap_aging`, `vw_payment_register`, `vw_receipt_register`, `vw_slp_export`, `vw_credit_memo_register`, `vw_debit_memo_register`, `vw_deposits_in_transit`, `vw_outstanding_checks`, `vw_sdm_register`) ran without `security_invoker` and returned other companies' financial data to any authenticated user via PostgREST. Fixed by enabling `security_invoker` (migration `20260722000011`); regression test 076 proves member/non-member isolation and test 077 is a permanent catalog guard against the whole class. Found and remediated during the Permissions/RLS Engine certification review. |
 | PXL-AUD-070 | Critical | Retested Passed | The immutability guard family short-circuited whenever the session GUC `pxl.allow_demo_reset` was `'on'`; that placeholder GUC is USERSET, so any authenticated company member could set it and UPDATE/DELETE posted documents. Fixed by gating the bypass on `fn_demo_reset_bypass_authorized()` — the GUC AND a privileged `session_user` (rolsuper/rolbypassrls) — in migration `20260723000001`. A production-identical `authenticator` reproduction confirmed the block; regression test 078 (16 assertions) and its permanent static class guard run in the regression and canonical lanes. Found and remediated during the Audit & Immutability Engine certification review. |
+| PXL-AUD-071 | High | Retested Passed | Engineering Amendment EA-001 corrected the sole impossible WP-2 constraint label to `ref_inventory_event_source_types_doc_order_key_algorithm_ck` (59 ASCII bytes), preserved the original authorisation chronology, and reconciled the specification, authorisation, design status, AI_STATE, Documentation Index, Certification Matrix, findings register, and Transaction Matrix checksum. No SQL, schema, migration, test, runtime, accounting, ADR-C01, or ECC-01 change occurred. |
+| PXL-AUD-072 | High | Retested Passed | Engineering Amendment EA-002 preserved the controlling design's T-04 Source-order, T-06 Transition-order, T-07 Effect-order, and T-27 Dormancy definitions; made T-07 explicitly applicable to WP-2's existing E3 evidence; classified registry completeness as combined completion evidence; and separated persistent M2 assertions from rolled-back certification-only WP-1 rank fixtures. No SQL, migration, test, schema, database object, runtime, accounting, ADR-C01, or ECC-01 change occurred. |
 
 ## Production Readiness Gate
 
@@ -357,6 +361,53 @@ Standing (2026-07-22 after PXL-AUD-069): 89 Retested Passed / 0 In Progress / 0 
 | Regression Test / Retest Plan | Test 078 (16 assertions) proves: direct-SQL immutability still blocks with the GUC off; the classifier rejects `authenticated`/`authenticator`/`anon` and admits only `postgres`/`service_role`; the gate is false with the GUC off, true only for a privileged `session_user` with the GUC on, and never authorized for a PostgREST role even with the GUC on; the authorized maintenance path still writes posted docs; and a permanent static `pg_proc` guard fails if any function reads `pxl.allow_demo_reset` for a bypass without routing through the privileged gate, if any of the six guards stops routing through it, or if the gate/classifier stops keying off `session_user`/`rolsuper`/`rolbypassrls`. The production-identical `authenticator` reproduction is the confirmatory end-to-end evidence. |
 | Dependencies / Workaround | None. |
 | Last Verified / Supporting Reports | 2026-07-23; clean `supabase db reset --local --no-seed` replay through `20260723000001`; focused test 078 (16/16); full regression and canonical lanes; production-identical `authenticator` block confirmed and authorized-maintenance path preserved. |
+
+<a id="pxl-aud-072"></a>
+
+### New Finding Detail - PXL-AUD-072
+
+| Field | Value |
+| --- | --- |
+| Title | WP-2 test-family meanings and migration/certification evidence boundary conflict |
+| Status | Retested Passed |
+| Severity | High |
+| Area | Inventory Accounting / WP-2 engineering specification / repository governance |
+| Module / Environment | IA-5 ECC Hardening WP-2; documentation and certification contract |
+| Issue | The controlling implementation design §23 defined T-04 as Source order (E4/E5), T-06 as Transition order (E7), and T-07 as Effect order (E3), but the detailed specification reused T-04 for “registry completeness” and T-06 for same-time E3 resolution. The specification also required M2 to assert all cross-object resolution while WP-1 intentionally keeps persistent policy/rank tables empty and materialises ranks only inside rolled-back certification test 104. An implementer therefore could not determine one exact test contract or whether M2 was expected to create out-of-scope fixture data. |
+| Reproduction / Evidence | Design §23 and its traceability matrix consistently map E4/E5→T-04, E7→T-06, and E3→T-07. Design §24 originally named T-04/T-06/T-27 for WP-2, while the detailed specification's already-required E3 map/rank proof was incorrectly labelled T-06. WP-1 migration `20260726000016` explicitly states policy/rank fixtures are rolled back and persistent tables remain empty; test 104 creates the fixture inside `BEGIN` and ends with `ROLLBACK`. |
+| Expected Behavior | Historical test-family numbering must remain stable; every WP-2 authority must use the design §23 family definition; migration SQL must assert persistent M2 state only; cross-object rank resolution must be owned by a self-cleaning certification fixture; and “registry completeness” must be completion evidence rather than a conflicting family name. |
+| Actual Behavior | Resolved by documentation-only Engineering Amendment EA-002 on 2026-07-29. T-04 is Source order, T-06 is Transition order, T-07 is Effect order, and T-27 is Dormancy everywhere. T-07 is now explicit in WP-2 because its prior E3 evidence already existed. M2 is prohibited from creating policy/rank fixture rows; the future WP-2 test creates minimum certification-only E3/E4/E7 data inside its transaction and proves final rollback leaves no residue. |
+| Accounting / Inventory / Tax Impact | None. No rank, tuple component, effect precedence, source authority, costing, valuation, quantity, tax, or journal meaning changed. |
+| Architecture Impact | None. ADR-C01 and ECC-01 remain unchanged. EA-002 allocates existing evidence to the already-defined test families and execution boundaries. |
+| Implementation Impact | WP-2 remains exactly six registry columns and their constraints on `ref_inventory_event_source_types`, populated only for the existing `IA5_CERTIFICATION` row. No runtime comparator or reader is added. The future implementation no longer needs to interpret whether rank fixtures belong in M2. |
+| Certification Contract | T-04 structural/fixture evidence proves E4/E5 declarations; T-06 proves E7 fixture resolution; T-07 proves E3 map/rank resolution; T-27 proves dormancy. Runtime-ordering portions remain later work. Registry completeness is the combined WP-2 completion result. |
+| Migration / Fixture Boundary | M2 asserts preconditions, exact persistent registry state, local constraints, unchanged security/trigger state, zero events, and zero persistent fixture rows. The future test owns temporary certification data and must finish with `ROLLBACK` plus no-residue evidence. M2 may not invoke test 104 or depend on test order. |
+| Verification | Governing WP-2 documents, AI_STATE, Documentation Index, Certification Matrix, Accounting Test Book, findings register, and Transaction Matrix agree; no WP-2 SQL/migration/test/object exists; ADR-C01/ECC-01 and all SQL/test files remain unchanged; documentation consistency and diff checks pass. |
+| Dependencies / Workaround | None after EA-002. Do not reinterpret the family names or persist certification fixtures. |
+| Last Verified / Supporting Reports | 2026-07-29; EA-002 sections in the WP-2 detailed specification, authorisation report, and implementation design; WP-1 migration/test fixture source; repository consistency checks. |
+
+<a id="pxl-aud-071"></a>
+
+### New Finding Detail - PXL-AUD-071
+
+| Field | Value |
+| --- | --- |
+| Title | WP-2 specification requires an unrepresentable PostgreSQL constraint identifier |
+| Status | Retested Passed |
+| Severity | High |
+| Area | Inventory Accounting / WP-2 engineering specification / repository governance |
+| Module / Environment | IA-5 ECC Hardening WP-2; PostgreSQL identifier catalog |
+| Issue | The completed WP-2 Detailed Registry Authority Specification required the exact CHECK-constraint identifier `ref_inventory_event_source_types_document_order_key_algorithm_ck`, containing 64 single-byte ASCII characters. PostgreSQL's 64-byte `NAMEDATALEN` includes its terminating byte, so only 63 identifier bytes are usable. PostgreSQL would truncate the governed literal instead of storing it exactly, making exact implementation and catalog-name verification impossible. EA-002 subsequently clarified that catalog verification contributes to registry-completeness evidence and does not redefine T-04. |
+| Reproduction / Evidence | Independent byte counting measured the pre-amendment label at 64 bytes and the PostgreSQL parser result at 63 bytes. The other five WP-2 CHECK-constraint labels measure 51–62 bytes. Repository review found no authority permitting implicit truncation or implementer-selected abbreviation of an exact engineering name. |
+| Expected Behavior | Every exact governed database identifier must be deterministic, readable, consistent with repository naming conventions, and representable without PostgreSQL truncation. |
+| Actual Behavior | Resolved by documentation-only Engineering Amendment EA-001 on 2026-07-29. The detailed specification now requires `ref_inventory_event_source_types_doc_order_key_algorithm_ck`, a deterministic 59-byte ASCII identifier that retains the table prefix, column meaning, and `_ck` suffix. The original WP-2 authorisation chronology is preserved; the authorisation report, implementation-design status, AI_STATE, Documentation Index, Certification Matrix, this register, and the Transaction Matrix findings checksum are reconciled. |
+| Accounting / Inventory / Tax Impact | No accounting, business, costing, tax, quantity, valuation, or runtime meaning changed. The amendment changes only the engineering storage label. |
+| Architecture Impact | ADR-C01 and ECC-01 are unchanged. WP-2 remains the same dormant M2 registry extension with the same six columns, exact `IA5_CERTIFICATION` values, predicates, migration sequence, rollback, and certification intent. EA-002 later reconciled that intent under the authoritative T-04/T-06/T-07/T-27 family names. |
+| Implementation Impact | No WP-2 object, migration, SQL implementation, test, schema change, or runtime change exists. Future WP-2 implementation must use the amended exact constraint identifier. |
+| Repository-Wide Identifier Review | All 300 repository SQL files, explicit planned object declarations, relevant active specifications, dynamic lifecycle-trigger names, bounded hashed generators, and the latest generated local catalog snapshot were reviewed. No additional planned implementation blocker was found. Two pre-existing lifecycle-trigger generators produce overlength source names that PostgreSQL truncates on separate tables; the 2026-07-01 history already records those expected notices, and they create no collision or WP-2 dependency. One 98-byte `DROP CONSTRAINT IF EXISTS` cleanup reference creates no object and is followed by the actual legacy-name drop. |
+| Verification | Corrected name = 59 UTF-8 bytes; all five peer WP-2 names remain at most 62 bytes; governing WP-2 status is authorised, implementation-ready, unimplemented, and uncertified; WP-3…WP-9 and IA-6 remain unauthorised; documentation consistency and diff checks pass. |
+| Dependencies / Workaround | None. Do not rely on PostgreSQL truncation. |
+| Last Verified / Supporting Reports | 2026-07-29; Engineering Amendment EA-001 in the WP-2 detailed specification; reconciled WP-2 authorisation/design/status documents; repository identifier audit; `npm run docs:check`; `npm run docs:ai-state-check`; `git diff --check`. |
 
 <a id="pxl-aud-069"></a>
 

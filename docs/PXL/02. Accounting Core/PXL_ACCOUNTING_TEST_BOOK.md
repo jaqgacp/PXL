@@ -1994,6 +1994,38 @@ The scenario proves:
   fixtures, and accounting behavior;
 - exactly six journal mutators, two always-enabled P5.2 guards, and zero violations.
 
+## INVENTORY-IA5-ECC-WP1-001 - Order-policy and version foundation (dormant)
+
+Status: Executed Passing (2026-07-26) in
+`supabase/tests/104_inventory_accounting_ia5_ecc_wp1_order_policy_foundation_test.sql`,
+22 assertions, after a clean `supabase db reset --local --no-seed` replay including
+migration `20260726000016_inventory_accounting_ia5_ecc_wp1_order_policy_foundation.sql`.
+Certifies IA-5 ECC Hardening Work Package 1 (the six dormant version tables), covering
+evidence families T-01 (deterministic tuple — structural at this stage) and T-27
+(dormancy). Governed by the frozen `IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md`
+§24/§17(M1) and authorised by `ECC-01_OWNER_ACCEPTANCE_AND_IA-5_WP1_AUTHORISATION_REPORT.md`.
+
+The scenario proves:
+
+- exactly the six ECC order-policy/version tables are installed
+  (`inventory_event_order_policies`, `inventory_event_effect_ranks`,
+  `inventory_source_type_ranks`, `inventory_transition_ranks`,
+  `inventory_canonical_form_versions`, `inventory_correction_graph_versions`), each
+  carrying `company_id` and a CHECK-pinned `activation_state` dormancy column;
+- dormancy and security: no client/service role holds INSERT/UPDATE/DELETE on any
+  table, RLS is enabled with a membership-scoped SELECT policy on all six, and the
+  new guard function has no role EXECUTE grant;
+- the certification-only rank set materialises — E3 effect ranks are the frozen
+  sparse convention `opening=10/increase=20/value_only=30/decrease=40/allowance=50`,
+  the E4 source-type rank and E7 transition rank are seeded for
+  `IA5_CERTIFICATION`/`ACCEPTED`, and the version vector V (order policy + canonical
+  form + correction graph) resolves company-consistently with a sha256 digest identity;
+- ENABLE-ALWAYS immutability rejects UPDATE and DELETE on the version rows;
+- the guard rejects a rank whose company differs from its order policy (P-02), an
+  overlapping order-policy version, duplicate ranks, and a non-dormant activation_state;
+- WP-1 adds nothing to `inventory_events` and writes no journal entry (Posting/Kernel
+  boundary unchanged).
+
 Fresh canonical replay remains 48 journal headers / 138 journal lines / 24 tax rows /
 26 Inventory movements with debit = credit = `2,411,134.80`. All five certified
 fingerprints remain unchanged. The eleven company/event/projection IA-5 tables remain
@@ -2003,3 +2035,56 @@ The post-IA-5 live P5.2 census is 417 application functions / 354
 `SECURITY DEFINER`; the eight added IA-5 signatures have zero client/service
 EXECUTE. The original P5.2 boundary census of 409/349 remains historical evidence,
 while test `102` now pins the current complete catalog.
+
+## INVENTORY-IA5-ECC-WP2-001 - Registry authority evidence contract
+
+Status: **Implemented — Evidence Gate pending; not certified.** Migration
+`20260729000017` implements M2. Test `105` carries 48 assertions for the
+registry and rolled-back certification fixture; test `106` carries 20
+assertions for fixture cleanup and isolated structural rollback.
+
+Implementation assets:
+
+- `supabase/tests/105_inventory_accounting_ia5_ecc_wp2_registry_authority_test.sql`;
+- `supabase/tests/106_inventory_accounting_ia5_ecc_wp2_rollback_test.sql`; and
+- `supabase/migrations/20260729000017_inventory_accounting_ia5_ecc_wp2_registry_authority.sql`.
+
+The controlling implementation design §23 owns the family numbers:
+
+- **T-04 Source order (E4/E5):** WP-2 persists the exact E5 registry selector;
+  its rolled-back certification fixture resolves one E4 rank for
+  `IA5_CERTIFICATION`. Runtime document comparison belongs to later work.
+- **T-06 Transition order (E7):** the rolled-back fixture resolves exactly one
+  `ACCEPTED` transition rank and rejects missing, duplicate, or unknown
+  transition authority. Runtime transition ordering belongs to later work.
+- **T-07 Effect order (E3):** the exact `event_effect_map` and
+  `same_time_class` resolve through the rolled-back effect-rank fixture and
+  prove `increase = 20 < decrease = 40`. Runtime event ordering belongs to
+  later work.
+- **T-27 Dormancy:** persistent state proves zero events, no
+  production-enabled source, no runtime consumer or new write grant, and no
+  Posting or Kernel change.
+
+“Registry completeness” is the combined WP-2 completion evidence and is not a
+test-family name.
+
+The M2 migration owns persistent assertions only: exact preconditions,
+six columns and constraints, exact registry values, registry-local consistency,
+unchanged row/event counts, unchanged RLS/grants/immutable-trigger state, no
+runtime activation, and no persistent WP-1 policy/rank rows. The WP-2
+test owns E3/E4/E7 cross-object resolution: it creates minimum
+certification-only policy/rank data inside its transaction, reads but never
+updates the persistent registry row, performs the structural/fixture portions
+of T-04/T-06/T-07/T-27, and ends with `ROLLBACK`. Post-test evidence must prove
+that no fixture user, company, policy, rank, event, journal, or other temporary
+certification row survives. Structural rollback evidence runs separately in an
+isolated test transaction against the M2-applied state, drops the six WP-2
+columns in reverse dependency order, proves the pre-M2 shape, and then rolls
+back the test transaction so that the M2-applied state is restored.
+
+Observed validation: focused tests `105`/`106` pass 68/68; WP-1/WP-2 focused
+tests `103`–`106` pass 189/189; fresh migration replay passes; full regression
+passes 106 files / 2,443 assertions; canonical accounting passes 30 files /
+748 assertions. `inventory_events` remains zero and canonical accounting
+totals/fingerprints do not change. These are implementation-prepared evidence,
+not WP-2 certification.
