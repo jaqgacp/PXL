@@ -28,8 +28,9 @@ cannot authorise itself.
 ## 6. Remote Synchronization
 
 Mission start: local `main` and `origin/main` were synchronized at the starting
-commit; ahead/behind was `0/0`; the worktree was clean. Final synchronization is
-recorded in §34 after the governed commit/push procedure.
+commit; ahead/behind was `0/0`; the worktree was clean. The EA-010 contract
+commit and this bounded handoff-metadata commit were pushed without force; final
+verification returned local/remote ahead/behind `0/0` and a clean worktree.
 
 ## 7. Product Architecture Standing
 
@@ -261,10 +262,14 @@ contract. Do not implement or repair during that gate.
 
 ## 34. Commit and Push Result
 
-Pending final validation. Governed commit message:
-`governance: complete WP-5 EA-010 contract reconciliation`. The committed
-repository state is identified by current `main` HEAD after commit; final push
-and local/remote synchronization must be verified before mission completion.
+Validation passed before commit. The seven-file EA-010 contract commit is
+`a9ed76c295a6cc86a6af4177b62de164e5b3ad69`, message
+`governance: complete WP-5 EA-010 contract reconciliation`; it was pushed
+without force from `main` to `origin/main` (`32b7f599718acdbf1e9c7a0245c14378d628f5e5`
+→ `a9ed76c295a6cc86a6af4177b62de164e5b3ad69`). This exact handoff result is a
+bounded second metadata commit. **Authoritative final pushed commit: current
+`main` HEAD.** The metadata push completed without force; final local and remote
+heads match, ahead/behind is `0/0`, and the worktree is clean.
 
 ## 35. NEXT AGENT START HERE
 
