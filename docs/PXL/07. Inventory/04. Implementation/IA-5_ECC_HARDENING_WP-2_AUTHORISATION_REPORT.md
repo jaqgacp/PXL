@@ -1,6 +1,6 @@
 # IA-5 ECC Hardening — Work Package 2 Authorisation Report
 
-**Status:** WP-2 AUTHORISED — 2026-07-29; EA-001/EA-002 reconciled; implementation completed 2026-07-29; independent Evidence Gate pending; not certified
+**Status:** WP-2 AUTHORISED — 2026-07-29; EA-001/EA-002 reconciled; implementation and independent Evidence Gate completed 2026-07-29; **WP-2 CERTIFIED 2026-07-30** by the independent Certification Mission
 **Authority:** Governance record of the WP-2 authorisation gate outcome (records the owner's authorisation; authorises no scope beyond design §24 #2 / §17 M2)
 **Owner / Domain:** Inventory Accounting — IA-5 ECC Hardening programme
 **Read When:** Establishing whether WP-2 may begin and under what bounded scope
@@ -140,11 +140,65 @@ The authorised implementation mission completed the bounded §4 package on
   `IA5_CERTIFICATION` values;
 - test `105` proves registry completeness and the structural/fixture portions
   of T-04/T-06/T-07/T-27, with all certification data rolled back;
-- test `106` proves the drop-column rollback in isolation and rolls back that
-  proof so M2 remains installed; and
-- fresh replay, 106-file/2,443-assertion regression, and
+- test `106` proves the drop-column rollback in isolation, including the
+  explicit exactly-one-registry-row precondition, and rolls back that proof so
+  M2 remains installed; and
+- fresh replay, 106-file/2,444-assertion regression, and
   30-file/748-assertion canonical accounting validation pass.
 
 The original authorisation decision and chronology above are unchanged. This
 implementation record is not an Evidence Gate or certification. WP-2 remains
 not certified; WP-3 through WP-9 and IA-6 remain unauthorised.
+
+## 11. Subsequent WP-2 Evidence Gate Outcome
+
+The independent WP-2 Evidence Gate completed on 2026-07-29 after the
+certification-review rollback finding was remediated. Test `106` now contains
+21 assertions and explicitly requires the registry total to equal one
+immediately before the reverse-order column drops.
+
+Fresh replay, focused tests `105`/`106` (69 assertions), full regression
+(106 files / 2,444 assertions), canonical accounting (30 files / 748
+assertions), and catalog/security/dormancy verification all pass. The gate
+recommends WP-2 certification and is recorded in
+`IA-5_ECC_HARDENING_WP-2_EVIDENCE_GATE_REPORT.md`.
+
+The original authorisation and implementation chronology remain unchanged.
+WP-2 is not certified until the separate Certification Mission makes that
+decision. WP-3 through WP-9 and IA-6 remain unauthorised.
+
+## 12. Subsequent WP-2 Certification Decision
+
+The independent WP-2 Certification Mission completed on 2026-07-30 and
+**granted certification**. Acting as the Certification Authority — not as the
+implementation engineer and not as the Evidence Gate reviewer — it began from the
+presumption that certification should be refused and re-derived the decision
+from the repository.
+
+It re-executed fresh no-seed replay, focused tests `105`/`106` (2 files / 69
+assertions), the full pgTAP regression (106 files / 2,444 assertions), the
+canonical accounting lane (30 files / 748 assertions), and the lint, production
+build, and diff lanes. It independently probed the applied catalog and confirmed
+the exact six-column shape, six validated CHECK constraints, EA-001's 59-byte
+identifier, the exact single `IA5_CERTIFICATION` row, zero events, zero
+persistent WP-1 fixture rows, RLS with one `authenticated` SELECT policy, zero
+client/service write grants, zero non-SELECT column privileges, `ENABLE ALWAYS`
+immutability that rejects `UPDATE` and `DELETE` with `23514` on a WP-2 column,
+and zero consumers across functions, procedures, views, materialised views,
+rules, indexes, generated columns, policy expressions, and application source.
+Canonical accounting held at debit = credit = `2,411,134.80` with variance
+`0.00`, zero unbalanced entries, zero Kernel guard violations, and both totality
+triggers `ENABLE ALWAYS`.
+
+The Certification Authority additionally mutation-verified the remediation
+rather than accepting it on report: injecting a second valid registry row makes
+test `106`'s added total-count assertion fail closed, while the pre-remediation
+exact-row assertion still passes. This independently confirms both that the
+original certification finding was genuine and that the minimum correction
+closes it.
+
+**This certifies the WP-2 work package only.** It does not lift the suspended
+IA-5 permanent-foundation certification claim, does not certify the Inventory
+module or engine, and confers no authority for WP-3. WP-3 through WP-9 and IA-6
+remain unauthorised; the next governance step is a separate WP-3 Authorisation
+Gate.

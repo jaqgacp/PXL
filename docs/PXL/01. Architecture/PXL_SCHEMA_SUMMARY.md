@@ -4,9 +4,9 @@ GENERATED FILE — do not hand-edit. Regenerate with `scripts/gen_schema_summary
 
 Maps every database object to the migration holding its CURRENT definition, so agents do not grep the full chain. Column "Defs" counts how many migrations (re)define the object — a high count means the object has history worth checking before editing.
 
-Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
+Generated: 2026-07-31. Migrations scanned: 172. Tests present: 110.
 
-## Functions (396)
+## Functions (398)
 
 | Function | Latest definition | Defs |
 | -------- | ----------------- | ---- |
@@ -169,8 +169,10 @@ Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
 | `fn_ia5_create_dormant_policy_bundle` | `20260726000013_inventory_accounting_ia5_foundation.sql` | 1 |
 | `fn_ia5_derive_unit_rate` | `20260726000013_inventory_accounting_ia5_foundation.sql` | 1 |
 | `fn_ia5_guard_inventory_event_fact` | `20260726000013_inventory_accounting_ia5_foundation.sql` | 1 |
+| `fn_ia5_guard_inventory_order_key_foundation` | `20260731000019_inventory_accounting_ia5_ecc_wp4_order_keys.sql` | 1 |
 | `fn_ia5_guard_inventory_order_policy_foundation` | `20260726000016_inventory_accounting_ia5_ecc_wp1_order_policy_foundation.sql` | 1 |
 | `fn_ia5_guard_inventory_policy_foundation` | `20260726000013_inventory_accounting_ia5_foundation.sql` | 1 |
+| `fn_ia5_guard_inventory_stream_foundation` | `20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql` | 1 |
 | `fn_ia5_quantize_exact` | `20260726000014_inventory_accounting_ia5_precision_overload.sql` | 2 |
 | `fn_ia5_record_dormant_inventory_occurrence` | `20260726000013_inventory_accounting_ia5_foundation.sql` | 1 |
 | `fn_ia5_reject_immutable_inventory_fact` | `20260726000015_inventory_accounting_ia5_immutable_error.sql` | 2 |
@@ -435,7 +437,7 @@ Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
 | `vw_trial_balance` | `20260702000005_gl_reversal_visibility.sql` | 2 |
 | `vw_vendor_bill_register` | `20260630000021_gap_fill.sql` | 2 |
 
-## Tables (200)
+## Tables (202)
 
 | Table | Created in | Alters | Last altered in |
 | ----- | ---------- | ------ | --------------- |
@@ -534,6 +536,7 @@ Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
 | `inventory_cost_layers` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `inventory_event_allocations` | `20260726000013_inventory_accounting_ia5_foundation.sql` | 0 | `—` |
 | `inventory_event_effect_ranks` | `20260726000016_inventory_accounting_ia5_ecc_wp1_order_policy_foundation.sql` | 0 | `—` |
+| `inventory_event_order_keys` | `20260731000019_inventory_accounting_ia5_ecc_wp4_order_keys.sql` | 1 | `20260731000019_inventory_accounting_ia5_ecc_wp4_order_keys.sql` |
 | `inventory_event_order_policies` | `20260726000016_inventory_accounting_ia5_ecc_wp1_order_policy_foundation.sql` | 0 | `—` |
 | `inventory_event_source_links` | `20260726000013_inventory_accounting_ia5_foundation.sql` | 0 | `—` |
 | `inventory_event_values` | `20260726000013_inventory_accounting_ia5_foundation.sql` | 0 | `—` |
@@ -546,6 +549,8 @@ Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
 | `inventory_transition_ranks` | `20260726000016_inventory_accounting_ia5_ecc_wp1_order_policy_foundation.sql` | 0 | `—` |
 | `inventory_valuation_scope_sequences` | `20260726000013_inventory_accounting_ia5_foundation.sql` | 0 | `—` |
 | `inventory_valuation_scopes` | `20260726000013_inventory_accounting_ia5_foundation.sql` | 0 | `—` |
+| `inventory_valuation_stream_sequences` | `20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql` | 1 | `20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql` |
+| `inventory_valuation_streams` | `20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql` | 1 | `20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql` |
 | `item_barcodes` | `20260722000005_mdp13_item_master_inventory_readiness.sql` | 0 | `—` |
 | `item_categories` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `item_media` | `20260722000005_mdp13_item_master_inventory_readiness.sql` | 0 | `—` |
@@ -626,7 +631,6 @@ Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
 | `units_of_measure` | `20260628000003_sprint2.sql` | 1 | `20260628000003_sprint2.sql` |
 | `user_company_branch_scopes` | `20260722000007_mdp03_master_data_access_sod.sql` | 1 | `20260722000007_mdp03_master_data_access_sod.sql` |
 | `user_company_memberships` | `20260629000008_rls_hardening.sql` | 3 | `20260722000007_mdp03_master_data_access_sod.sql` |
-| `uses` | `20260630000021_gap_fill.sql` | 0 | `—` |
 | `vat_codes` | `20260628000003_sprint2.sql` | 2 | `20260713000012_tax_code_effective_date_governance.sql` |
 | `vat_returns` | `20260701000002_vat.sql` | 1 | `20260701000002_vat.sql` |
 | `vendor_bill_lines` | `20260629000017_purchasing.sql` | 3 | `20260713000010_withholding_basis_policy.sql` |
@@ -640,7 +644,7 @@ Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
 | `warehouses` | `20260630000028_inventory.sql` | 1 | `20260630000028_inventory.sql` |
 | `withholding_remittances` | `20260713000005_withholding_remittance_flow.sql` | 1 | `20260713000005_withholding_remittance_flow.sql` |
 
-## Triggers (318)
+## Triggers (324)
 
 | Trigger | Latest definition |
 | ------- | ----------------- |
@@ -648,11 +652,14 @@ Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
 | `aa_inventory_accounting_profiles_guard` | `20260726000013_inventory_accounting_ia5_foundation.sql` |
 | `aa_inventory_cost_formula_policies_guard` | `20260726000013_inventory_accounting_ia5_foundation.sql` |
 | `aa_inventory_event_allocations_guard` | `20260726000013_inventory_accounting_ia5_foundation.sql` |
+| `aa_inventory_event_order_keys_guard` | `20260731000019_inventory_accounting_ia5_ecc_wp4_order_keys.sql` |
 | `aa_inventory_event_source_links_guard` | `20260726000013_inventory_accounting_ia5_foundation.sql` |
 | `aa_inventory_event_values_guard` | `20260726000013_inventory_accounting_ia5_foundation.sql` |
 | `aa_inventory_events_guard` | `20260726000013_inventory_accounting_ia5_foundation.sql` |
 | `aa_inventory_precision_policies_guard` | `20260726000013_inventory_accounting_ia5_foundation.sql` |
 | `aa_inventory_valuation_scopes_guard` | `20260726000013_inventory_accounting_ia5_foundation.sql` |
+| `aa_inventory_valuation_stream_sequences_guard` | `20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql` |
+| `aa_inventory_valuation_streams_guard` | `20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql` |
 | `approval_workflows_updated_at` | `20260628000002_sprint1.sql` |
 | `atc_codes_updated_at` | `20260628000004_fixes.sql` |
 | `bir_form_mappings_updated_at` | `20260628000005_sprint2_tax.sql` |
@@ -679,7 +686,6 @@ Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
 | `suppliers_updated_at` | `20260628000003_sprint2.sql` |
 | `tax_calendar_events_updated_at` | `20260628000005_sprint2_tax.sql` |
 | `tax_codes_updated_at` | `20260628000004_fixes.sql` |
-| `time` | `20260726000001_posting_engine_p5a_surface_closure.sql` |
 | `trg_` | `20260726000016_inventory_accounting_ia5_ecc_wp1_order_policy_foundation.sql` |
 | `trg_account_fs_map_updated_at` | `20260724000001_coa_engine_phase_a.sql` |
 | `trg_account_mapping_updated_at` | `20260724000001_coa_engine_phase_a.sql` |
@@ -851,6 +857,9 @@ Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
 | `trg_guard_sales_invoice_dimension_immutability` | `20260722000010_aud053_sales_invoice_completeness.sql` |
 | `trg_guard_sales_invoice_header_dimensions` | `20260722000010_aud053_sales_invoice_completeness.sql` |
 | `trg_inter_branch_transfers_updated_at` | `20260630000023_banking_treasury_schema.sql` |
+| `trg_inventory_event_order_keys_audit` | `20260731000019_inventory_accounting_ia5_ecc_wp4_order_keys.sql` |
+| `trg_inventory_valuation_stream_sequences_audit` | `20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql` |
+| `trg_inventory_valuation_streams_audit` | `20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql` |
 | `trg_item_reference_guard` | `20260722000005_mdp13_item_master_inventory_readiness.sql` |
 | `trg_je_dimensions_guard` | `20260704000001_je_line_dimensions.sql` |
 | `trg_je_line_dimensions_guard` | `20260704000001_je_line_dimensions.sql` |
@@ -960,5 +969,6 @@ Generated: 2026-07-29. Migrations scanned: 170. Tests present: 106.
 | `trg_zz_guard_cas_number_series` | `20260712000004_cas_numbering_void_evidence.sql` |
 | `uom_updated_at` | `20260628000003_sprint2.sql` |
 | `zz_` | `20260726000016_inventory_accounting_ia5_ecc_wp1_order_policy_foundation.sql` |
+| `zz_inventory_valuation_streams_immutable` | `20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql` |
 | `zz_trg_journal_entries_kernel_origin` | `20260726000002_posting_engine_p51_kernel_guard_observe.sql` |
 | `zz_trg_journal_entry_lines_kernel_origin` | `20260726000002_posting_engine_p51_kernel_guard_observe.sql` |

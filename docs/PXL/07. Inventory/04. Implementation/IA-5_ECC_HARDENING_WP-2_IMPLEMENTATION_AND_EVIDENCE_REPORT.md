@@ -1,6 +1,6 @@
 # IA-5 ECC Hardening — Work Package 2 Implementation and Evidence Report
 
-**Status:** IMPLEMENTED — independent WP-2 Evidence Gate pending; NOT CERTIFIED
+**Status:** IMPLEMENTED — independent WP-2 Evidence Gate passed; **WP-2 CERTIFIED 2026-07-30** by the independent Certification Mission
 **Implementation date:** 2026-07-29
 **Owner / Domain:** Inventory Accounting — IA-5 ECC Hardening programme
 **Authority:** ADR-C01; ECC-01; accepted implementation design §17 M2 / §24 WP-2; WP-2 Authorisation Report; EA-001/EA-002-reconciled Detailed Registry Authority Specification
@@ -85,19 +85,20 @@ Its minimum user/company/policy/rank data exists only inside the test
 transaction and is removed by final `ROLLBACK`.
 
 `supabase/tests/106_inventory_accounting_ia5_ecc_wp2_rollback_test.sql`
-contains 20 pgTAP assertions. It first proves test `105` left no fixture data,
-then drops the six columns in reverse order under the governed lock, verifies
-the exact pre-M2 registry shape and unchanged security/accounting boundaries,
-and ends in `ROLLBACK`, restoring the M2-applied state.
+contains 21 pgTAP assertions after certification remediation. It first proves
+test `105` left no fixture data, explicitly reasserts that the registry contains
+exactly one row, then drops the six columns in reverse order under the governed
+lock, verifies the exact pre-M2 registry shape and unchanged
+security/accounting boundaries, and ends in `ROLLBACK`, restoring the M2-applied
+state.
 
 ## 5. Validation Evidence
 
 | Validation | Result |
 |---|---|
 | Fresh migration replay | PASS; every migration through `20260729000017` |
-| WP-2 focused tests | PASS; `105`–`106`, 2 files / 68 assertions |
-| IA-5 focused tests | PASS; `103`–`106`, 4 files / 189 assertions |
-| Full local regression | PASS; 106 files / 2,443 assertions |
+| WP-2 focused tests | PASS; `105`–`106`, 2 files / 69 assertions |
+| Full local regression | PASS; 106 files / 2,444 assertions |
 | Canonical accounting lane | PASS; 30 files / 748 assertions |
 | Documentation / lint / production build / diff | PASS; final local release gate |
 | Post-rollback persistence probe | Six WP-2 columns retained; exact source row retained; zero events; zero WP-1/fixture rows |
@@ -123,8 +124,8 @@ lint, production build/secret guards, and diff.
 - **Rollback:** structurally proven while dormant and before downstream
   dependencies.
 
-Residual implementation risk is low and bounded to independent review of the
-prepared evidence. Activation risk remains none.
+The independent Evidence Gate completed after the rollback-test remediation and
+found no remaining implementation blocker. Activation risk remains none.
 
 ## 7. Repository Reconciliation
 
@@ -136,14 +137,21 @@ generated schema summary. ADR-C01, ECC-01, Posting, Kernel,
 
 ## 8. Evidence-Gate Boundary
 
-This report prepares evidence; it does not execute the independent Evidence
-Gate and does not certify WP-2. The next mission must independently inspect the
-implementation, reproduce the governed validations, and either certify or
-return WP-2. It may not begin WP-3.
+This implementation report prepared evidence; it did not itself execute the
+independent Evidence Gate and does not certify WP-2. The subsequent
+`IA-5_ECC_HARDENING_WP-2_EVIDENCE_GATE_REPORT.md` records that the gate passed
+after the isolated rollback proof was strengthened. The next mission is the
+separate WP-2 Certification Mission. It may not begin WP-3.
 
 ## 9. Implementation Assessment
 
 The authorised M2 implementation is complete. All observed checks are green,
-dormancy and rollback are proven, and no remaining WP-2 implementation issue
-is known. WP-2 is ready for its independent Evidence Gate and remains
-uncertified until that gate is executed.
+dormancy and rollback are proven, and the independent Evidence Gate recommended
+certification.
+
+**Certification outcome (2026-07-30):** the separate Certification Mission
+granted WP-2 certification after independently re-executing every validation
+lane, probing the applied catalog, and mutation-verifying the rollback
+remediation. Certification covers the WP-2 work package only; it does not lift
+the suspended IA-5 permanent-foundation claim, certifies no module or engine, and
+confers no WP-3 authority.

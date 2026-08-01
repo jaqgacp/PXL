@@ -120,11 +120,11 @@ SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 80,
 SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
   'every function in the static ledger-capable call graph is SECURITY DEFINER');       -- 11
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions), 418,
-  'the complete application-owned public function census contains 418 functions');    -- 12
+SELECT is((SELECT count(*)::int FROM p52_app_functions), 420,
+  'the complete application-owned public function census contains 420 functions');    -- 12
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 355,
-  'the complete application-owned SECURITY DEFINER census contains 355 functions');   -- 13
+SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 357,
+  'the complete application-owned SECURITY DEFINER census contains 357 functions');   -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions

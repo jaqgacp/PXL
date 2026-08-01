@@ -11,7 +11,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(20);
+SELECT plan(21);
 
 CREATE TEMP TABLE wp2_rollback_pre AS
 SELECT (SELECT count(*)::int FROM public.journal_entries) AS journal_rows;
@@ -59,6 +59,10 @@ SELECT is(
   0, 'test 105 fixture audit rows did not survive rollback');                            -- 6
 
 SELECT is(
+  (SELECT count(*)::int FROM public.ref_inventory_event_source_types),
+  1, 'rollback precondition: registry contains exactly one row');                         -- 7
+
+SELECT is(
   (SELECT count(*)::int FROM public.ref_inventory_event_source_types
     WHERE source_document_type='IA5_CERTIFICATION'
       AND owner_engine='Inventory'
@@ -72,23 +76,23 @@ SELECT is(
       AND occurrence_semantics='explicit_partial_occurrences'
       AND same_time_class='event_effect_map'
       AND correction_placement_class='base'),
-  1, 'the exact persistent IA5_CERTIFICATION row remains before rollback');               -- 7
+  1, 'the exact persistent IA5_CERTIFICATION row remains before rollback');               -- 8
 
 SELECT is(
   (SELECT count(*)::int FROM public.inventory_events),
-  0, 'rollback precondition: inventory_events remains empty');                           -- 8
+  0, 'rollback precondition: inventory_events remains empty');                           -- 9
 
 SELECT is(
   (SELECT count(*)::int FROM pg_trigger
     WHERE tgrelid='public.ref_inventory_event_source_types'::regclass
       AND tgname='zz_ref_inventory_event_source_types_immutable'
       AND NOT tgisinternal AND tgenabled='A'),
-  1, 'rollback precondition: registry immutability remains ENABLE ALWAYS');               -- 9
+  1, 'rollback precondition: registry immutability remains ENABLE ALWAYS');               -- 10
 
 SELECT ok(
   (SELECT relrowsecurity FROM pg_class
     WHERE oid='public.ref_inventory_event_source_types'::regclass),
-  'rollback precondition: registry RLS remains enabled');                                -- 10
+  'rollback precondition: registry RLS remains enabled');                                -- 11
 
 SELECT is_empty(
   $$SELECT grantee||':'||privilege_type
@@ -96,7 +100,7 @@ SELECT is_empty(
      WHERE table_schema='public' AND table_name='ref_inventory_event_source_types'
        AND grantee IN ('PUBLIC','anon','authenticated','service_role')
        AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE','TRIGGER')$$,
-  'rollback precondition: registry has no client/service write privilege');               -- 11
+  'rollback precondition: registry has no client/service write privilege');               -- 12
 
 -- ── B. Governed reverse-order structural rollback ───────────────────────────
 LOCK TABLE public.ref_inventory_event_source_types IN ACCESS EXCLUSIVE MODE;
@@ -116,7 +120,7 @@ SELECT set_eq(
        AND table_name='ref_inventory_event_source_types'$$,
   $$VALUES ('source_document_type'),('owner_engine'),('is_certification_only'),
            ('is_production_enabled'),('removal_phase'),('created_at')$$,
-  'rollback restores the exact pre-M2 six-column registry shape');                        -- 12
+  'rollback restores the exact pre-M2 six-column registry shape');                        -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM pg_constraint
@@ -128,7 +132,7 @@ SELECT is(
         'ref_inventory_event_source_types_occurrence_semantics_ck',
         'ref_inventory_event_source_types_same_time_class_ck',
         'ref_inventory_event_source_types_correction_placement_class_ck')),
-  0, 'rollback removes all six attached WP-2 constraints');                              -- 13
+  0, 'rollback removes all six attached WP-2 constraints');                              -- 14
 
 SELECT is(
   (SELECT count(*)::int FROM public.ref_inventory_event_source_types
@@ -137,7 +141,7 @@ SELECT is(
       AND is_certification_only
       AND NOT is_production_enabled
       AND removal_phase='IA-6'),
-  1, 'rollback retains the exact pre-WP-2 certification row');                           -- 14
+  1, 'rollback retains the exact pre-WP-2 certification row');                           -- 15
 
 SELECT is(
   (SELECT count(*)::int FROM pg_trigger t
@@ -146,18 +150,18 @@ SELECT is(
       AND t.tgname='zz_ref_inventory_event_source_types_immutable'
       AND NOT t.tgisinternal AND t.tgenabled='A'
       AND p.proname='fn_ia5_reject_immutable_inventory_fact'),
-  1, 'rollback preserves the original ENABLE ALWAYS immutable trigger');                  -- 15
+  1, 'rollback preserves the original ENABLE ALWAYS immutable trigger');                  -- 16
 
 SELECT ok(
   (SELECT relrowsecurity FROM pg_class
     WHERE oid='public.ref_inventory_event_source_types'::regclass),
-  'rollback preserves registry RLS');                                                     -- 16
+  'rollback preserves registry RLS');                                                     -- 17
 
 SELECT is(
   (SELECT count(*)::int FROM pg_policies
     WHERE schemaname='public' AND tablename='ref_inventory_event_source_types'
       AND policyname='ref_inventory_event_source_types_read' AND cmd='SELECT'),
-  1, 'rollback preserves the original registry SELECT policy');                          -- 17
+  1, 'rollback preserves the original registry SELECT policy');                          -- 18
 
 SELECT is_empty(
   $$SELECT grantee||':'||privilege_type
@@ -165,16 +169,16 @@ SELECT is_empty(
      WHERE table_schema='public' AND table_name='ref_inventory_event_source_types'
        AND grantee IN ('PUBLIC','anon','authenticated','service_role')
        AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE','TRIGGER')$$,
-  'rollback preserves the no-write-grant boundary');                                     -- 18
+  'rollback preserves the no-write-grant boundary');                                     -- 19
 
 SELECT is(
   (SELECT count(*)::int FROM public.inventory_events),
-  0, 'rollback creates, changes, or deletes no inventory event');                         -- 19
+  0, 'rollback creates, changes, or deletes no inventory event');                         -- 20
 
 SELECT is(
   (SELECT count(*)::int FROM public.journal_entries),
   (SELECT journal_rows FROM wp2_rollback_pre),
-  'rollback creates, changes, or deletes no journal entry');                             -- 20
+  'rollback creates, changes, or deletes no journal entry');                             -- 21
 
 SELECT * FROM finish();
 ROLLBACK;

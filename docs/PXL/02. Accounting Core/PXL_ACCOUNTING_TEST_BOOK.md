@@ -2038,9 +2038,10 @@ while test `102` now pins the current complete catalog.
 
 ## INVENTORY-IA5-ECC-WP2-001 - Registry authority evidence contract
 
-Status: **Implemented — Evidence Gate pending; not certified.** Migration
+Status: **Implemented — independent Evidence Gate passed; WP-2 CERTIFIED
+2026-07-30.** Migration
 `20260729000017` implements M2. Test `105` carries 48 assertions for the
-registry and rolled-back certification fixture; test `106` carries 20
+registry and rolled-back certification fixture; test `106` carries 21
 assertions for fixture cleanup and isolated structural rollback.
 
 Implementation assets:
@@ -2079,12 +2080,118 @@ of T-04/T-06/T-07/T-27, and ends with `ROLLBACK`. Post-test evidence must prove
 that no fixture user, company, policy, rank, event, journal, or other temporary
 certification row survives. Structural rollback evidence runs separately in an
 isolated test transaction against the M2-applied state, drops the six WP-2
-columns in reverse dependency order, proves the pre-M2 shape, and then rolls
-back the test transaction so that the M2-applied state is restored.
+columns in reverse dependency order, explicitly reasserts that the registry
+contains exactly one row before the destructive drops, proves the pre-M2 shape,
+and then rolls back the test transaction so that the M2-applied state is
+restored.
 
-Observed validation: focused tests `105`/`106` pass 68/68; WP-1/WP-2 focused
-tests `103`–`106` pass 189/189; fresh migration replay passes; full regression
-passes 106 files / 2,443 assertions; canonical accounting passes 30 files /
-748 assertions. `inventory_events` remains zero and canonical accounting
-totals/fingerprints do not change. These are implementation-prepared evidence,
-not WP-2 certification.
+Evidence Gate validation: focused tests `105`/`106` pass 69/69; fresh migration
+replay passes; full regression passes 106 files / 2,444 assertions; canonical
+accounting passes 30 files / 748 assertions. `inventory_events` remains zero,
+the registry contains one exact certification row, no fixture row survives,
+and canonical accounting totals/fingerprints do not change. The independent
+Evidence Gate recommended WP-2 certification and the separate Certification
+Mission granted it on 2026-07-30, having re-executed every lane, probed the
+applied catalog, and mutation-verified that test `106`'s single-row precondition
+fails closed on an extra registry row. Certification covers the WP-2 work
+package only; the IA-5 permanent-foundation claim remains suspended under C-01.
+
+## INVENTORY-IA5-ECC-WP3-001 - Stream partition and allocator evidence contract
+
+Status: **Implemented — independent Evidence Gate passed; WP-3 CERTIFIED
+2026-07-31.** Migration
+`20260730000018` implements M3. Test `107` carries 46 assertions for the
+two-table structure and the rolled-back certification fixture; test `108`
+carries 22 assertions for fixture cleanup and isolated structural rollback.
+
+Implementation assets:
+
+- `supabase/tests/107_inventory_accounting_ia5_ecc_wp3_valuation_streams_test.sql`;
+- `supabase/tests/108_inventory_accounting_ia5_ecc_wp3_rollback_test.sql`; and
+- `supabase/migrations/20260730000018_inventory_accounting_ia5_ecc_wp3_valuation_streams.sql`.
+
+The controlling implementation design §23.2 owns the family allocation:
+
+- **T-22 Multi-company isolation (P-02):** both tables carry `company_id` with
+  RLS and one member-gated `SELECT` policy each; the rolled-back fixture proves
+  two companies each hold a stream carrying the same `scope_code` for their own
+  item, that a stream naming another company's item is rejected, that a
+  duplicate `(company_id, item_id, scope_code)` is rejected `23505`, and that an
+  allocator row whose company differs from its stream's is rejected. Runtime
+  cross-company edge and order rejection belongs to later work.
+- **T-26 Migration/backfill:** fresh `--no-seed` replay through M3 succeeds with
+  `inventory_events` = 0 asserted before mutation, both tables created empty, no
+  backfill, and every key, constraint, control, and trigger present.
+
+"Stream partition completeness" is the combined WP-3 completion evidence and is
+not a test-family name. No WP-3 test claims T-01, T-02, T-03, T-05, T-15, T-16,
+T-19, T-21, or any part of C-01.
+
+The M3 migration owns persistent assertions only: six fail-closed preconditions,
+the exact two-table shape, the ten governed keys and constraints, the five
+governed triggers, RLS/policy/grant state, both tables empty, no runtime
+consumer, and no change to the legacy scope allocator. The WP-3 test owns the
+certification fixture: it builds two companies, two items, two dormant policy
+bundles, and two shared-`scope_code` scopes inside its transaction and removes
+them by final `ROLLBACK`. Structural rollback evidence runs separately in an
+isolated test transaction against the M3-applied state, reasserts exact total
+row counts, drops both tables in foreign-key order plus the WP-3 guard function,
+proves the pre-M3 state, and then rolls back so the M3-applied state is restored.
+
+The deliberate mutability asymmetry is asserted directly: the stream rejects
+`UPDATE` and `DELETE` (`23514`) and carries the dormancy `CHECK`, while the
+allocator carries neither an immutability trigger nor an `activation_state`
+column, advances forward-only, freezes its identity columns, and rejects
+`DELETE`.
+
+Validation: fresh migration replay passes; focused tests `107`/`108` pass 68/68;
+full regression passes 108 files / 2,512 assertions; canonical accounting passes
+30 files / 748 assertions with debit = credit = `2,411,134.80` and variance
+`0.00`. `inventory_events` remains zero and both WP-3 tables remain empty even
+under the full canonical seed. WP-3 is **not** evidence-gated and **not**
+certified; those are separate missions.
+
+## INVENTORY-IA5-ECC-WP4-001 - Persisted ECC order-key evidence contract
+
+Status: **WP-4 CERTIFIED 2026-07-31.** Its Brutal Audit failed only on
+WP4-BA-001/WP4-BA-002, the bounded Brutal Fix closed both, the Brutal Audit
+Re-run passed, and the separate Certification Mission granted work-package
+certification. At the original Brutal Audit decision WP-4 was not brutally
+fixed, not audit-re-run, and not certified.
+Migration `20260731000019` implements authorised M4. Test `109` carries 71
+assertions for the exact order-key structure and rolled-back fixture; test `110`
+carries 30 assertions for fixture cleanup and isolated structural rollback.
+
+Implementation assets:
+
+- `supabase/tests/109_inventory_accounting_ia5_ecc_wp4_order_keys_test.sql`;
+- `supabase/tests/110_inventory_accounting_ia5_ecc_wp4_rollback_test.sql`; and
+- `supabase/migrations/20260731000019_inventory_accounting_ia5_ecc_wp4_order_keys.sql`.
+
+The controlling implementation design §23 and the detailed WP-4 specification
+§7 allocate only the structural/fixture portions of **T-03 Duplicate identity**
+and **T-24 Immutability**. Test `109` proves both uniqueness boundaries, all 30
+non-state columns immutable with `23514`, `DELETE` rejected with `23514`, the
+one permitted `current` → `superseded` transition, the rejected reverse
+transition, and all three company-isolation guard rules. It also proves the
+exact 31-column, 24-key/constraint, four-explicit-index, two-trigger, RLS,
+policy, grant, dormancy, and no-`inventory_events`-trigger boundaries. Test
+`110` proves fixture residue is zero and exercises the authorised table-then-
+function rollback inside a transaction whose final `ROLLBACK` restores M4.
+
+Validation: fresh replay passes; focused tests `109`/`110` pass 101/101; full
+regression passes 110 files / 2,613 assertions; canonical accounting passes 30
+files / 748 assertions with debit = credit = `2,411,134.80` and variance `0.00`.
+`inventory_events`, both WP-3 stream tables, and `inventory_event_order_keys`
+remain empty under the full canonical seed. No resolver, writer, comparator,
+runtime consumer, activation path, or trigger on `inventory_events` exists.
+These were implementation results only at the implementation frontier. The independent
+Brutal Audit verified the complete executable contract but failed on only
+WP4-BA-001 (current authority-chain contradiction) and WP4-BA-002 (stale
+generated schema summary). The bounded Brutal Fix closed both without changing
+SQL, migration logic, tests, runtime behaviour, accounting, Posting, Kernel,
+ADR, or ECC. The Brutal Audit Re-run then passed. Lifecycle Step 7 independently
+re-executed fresh replay, focused `109`/`110` (2 files / 101 assertions), full
+regression (110 / 2,613), canonical accounting (30 / 748), and direct catalog
+controls before certifying WP-4. WP4-BA-003 and WP4-BA-004 remain non-blocking
+and untouched. This certification applies only to WP-4.

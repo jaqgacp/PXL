@@ -15,25 +15,30 @@ declare -A fn_last fn_count vw_last vw_count tb_created tb_alt_count tb_alt_last
 
 for f in $(ls supabase/migrations/*.sql | sort); do
   base=$(basename "$f")
+  # Object extraction must see executable DDL only. A rollback runbook or an
+  # explanatory note written in a leading `--` comment is documentation, not a
+  # schema change, and must not register or unregister an object.
+  src=$(mktemp)
+  grep -v '^[[:space:]]*--' "$f" > "$src"
   while read -r name; do
     [ -z "$name" ] && continue
     fn_last[$name]=$base; fn_count[$name]=$(( ${fn_count[$name]:-0} + 1 ))
-  done < <(grep -ohE 'CREATE (OR REPLACE )?FUNCTION +[a-zA-Z0-9_.]+' "$f" \
+  done < <(grep -ohE 'CREATE (OR REPLACE )?FUNCTION +[a-zA-Z0-9_.]+' "$src" \
            | sed -E 's/.*FUNCTION +//; s/^public\.//' | sort -u)
   while read -r name; do
     [ -z "$name" ] && continue
     vw_last[$name]=$base; vw_count[$name]=$(( ${vw_count[$name]:-0} + 1 ))
-  done < <(grep -ohE 'CREATE (OR REPLACE )?VIEW +[a-zA-Z0-9_.]+' "$f" \
+  done < <(grep -ohE 'CREATE (OR REPLACE )?VIEW +[a-zA-Z0-9_.]+' "$src" \
            | sed -E 's/.*VIEW +//; s/^public\.//' | sort -u)
   while read -r name; do
     [ -z "$name" ] && continue
     [ -z "${tb_created[$name]:-}" ] && tb_created[$name]=$base
-  done < <(grep -ohE 'CREATE TABLE (IF NOT EXISTS )?[a-zA-Z0-9_.]+' "$f" \
+  done < <(grep -ohE 'CREATE TABLE (IF NOT EXISTS )?[a-zA-Z0-9_.]+' "$src" \
            | sed -E 's/.*TABLE (IF NOT EXISTS )?//; s/^public\.//' | sort -u)
   while read -r name; do
     [ -z "$name" ] && continue
     tb_alt_count[$name]=$(( ${tb_alt_count[$name]:-0} + 1 )); tb_alt_last[$name]=$base
-  done < <(grep -ohE 'ALTER TABLE (IF EXISTS )?(ONLY )?[a-zA-Z0-9_.]+' "$f" \
+  done < <(grep -ohE 'ALTER TABLE (IF EXISTS )?(ONLY )?[a-zA-Z0-9_.]+' "$src" \
            | sed -E 's/.*TABLE (IF EXISTS )?(ONLY )?//; s/^public\.//' | sort -u)
   while IFS=$'\t' read -r name table_name; do
     [ -z "$name" ] && continue
@@ -44,7 +49,7 @@ for f in $(ls supabase/migrations/*.sql | sort); do
       while (/CREATE\s+(?:OR\s+REPLACE\s+)?(?:CONSTRAINT\s+)?TRIGGER\s+([a-zA-Z0-9_]+)\b.*?\bON\s+(?:ONLY\s+)?([a-zA-Z0-9_.]+)/sig) {
         print "$1\t$2\n";
       }
-    ' "$f" | sort -u)
+    ' "$src" | sort -u)
 
   while read -r name; do
     [ -z "$name" ] && continue
@@ -60,7 +65,8 @@ for f in $(ls supabase/migrations/*.sql | sort); do
       while (/DROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?((?:(?:public|pg_temp)\.)?[a-zA-Z0-9_]+)/ig) {
         print "$1\n";
       }
-    ' "$f" | sort -u)
+    ' "$src" | sort -u)
+  rm -f "$src"
 done
 
 {

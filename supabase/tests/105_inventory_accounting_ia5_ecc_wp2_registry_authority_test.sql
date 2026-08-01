@@ -283,6 +283,7 @@ SELECT is(
   (
     (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
       WHERE n.nspname='public' AND p.prokind='f'
+        AND p.proname <> 'fn_ia5_guard_inventory_order_key_foundation'
         AND pg_get_functiondef(p.oid) ~
           '(event_effect_map|document_order_key_algorithm|line_order_authority|occurrence_semantics|same_time_class|correction_placement_class)')
     +

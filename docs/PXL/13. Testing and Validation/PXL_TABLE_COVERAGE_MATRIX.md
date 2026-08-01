@@ -2,7 +2,7 @@
 
 **Status:** Active authoritative coverage-governance register
 **Authority:** Tier 2 governance artifact for PXL-AUD-059 coverage governance; accounting, tax, transaction, security, and findings sources prevail on product rules
-**Last Verified:** 2026-07-29 deterministic local canonical lane after IA-5 ECC WP-2 (199 public base tables; 93 expected-populated, 106 explicitly deferred/empty)
+**Last Verified:** 2026-07-31 deterministic local canonical lane after IA-5 ECC WP-4 (202 public base tables; 93 expected-populated, 109 explicitly deferred/empty)
 **Applies To:** Every `public` base table; canonical/local validation coverage boundaries and product-readiness claims
 **Read When:** Adding a table or workflow, classifying coverage, or reconciling readiness against PXL-AUD-059
 **Do Not Read For:** Product accounting/tax rules (see the governing standards) or hosted credentials
@@ -35,10 +35,10 @@ Row counts below are the deterministic **canonical baseline** (fresh migration r
 | `future-deferred` | 61 | Explicitly deferred; module not implemented end-to-end |
 | `reference-empty` | 6 | Intentionally empty reference/config |
 | `control-empty` | 1 | Healthy control state is empty; any row requires investigation |
-| `dormant-foundation` | 17 | Implemented but inactive; population is prohibited during IA-5 |
-| **Total** | **199** | 93 expected-populated / 106 explicitly deferred or empty |
+| `dormant-foundation` | 20 | Implemented but inactive; population is prohibited during IA-5 |
+| **Total** | **202** | 93 expected-populated / 109 explicitly deferred or empty |
 
-All 193 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
+All 202 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
 
 The COA Engine (Phase A, 2026-07-24) added four base tables: `ref_mapping_key` (reference-populated, 9 seeded keys), `account_mapping` (canonical-populated, 45 rows = 5 companies × 9 config-synced bindings), and the FS-registry framework `fs_structure` and `account_fs_map` (workflow-deferred, populated by the FS-registry provisioning workflow in Phase B, intentionally empty under the canonical baseline).
 
@@ -172,8 +172,11 @@ current workflows do not activate them.
 | `inventory_cost_formula_policies` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved method-state phase. |
 | `inventory_valuation_scopes` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved method-state phase. |
 | `inventory_valuation_scope_sequences` | `dormant-foundation` | 0 | Internal occurrence sequencing only; canonical excluded | on (1) | 103 | Remain empty while no IA-5 occurrence is accepted. |
+| `inventory_valuation_streams` | `dormant-foundation` | 0 | IA-5 ECC WP-3 partition identity; created empty, no writer until M5 | on (1) | 107 | Populate only under a separately authorised work package. |
+| `inventory_valuation_stream_sequences` | `dormant-foundation` | 0 | IA-5 ECC WP-3 stream-keyed accepted allocator; created empty, no writer until M5 | on (1) | 107 | Remain empty while no IA-5 occurrence is accepted. |
 | `inventory_occurrences` | `dormant-foundation` | 0 | Internal certification occurrence service only | on (1) | 103 | No production source type is enabled in IA-5. |
 | `inventory_events` | `dormant-foundation` | 0 | Internal certification occurrence service only | on (1) | 103 | No current workflow may read or write this table in IA-5. |
+| `inventory_event_order_keys` | `dormant-foundation` | 0 | IA-5 ECC WP-4 persisted ECC order key; created empty, no writer until M5 | on (1) | 109 | Populate only under a separately authorised work package. |
 | `inventory_event_source_links` | `dormant-foundation` | 0 | Internal certification occurrence service only | on (1) | 103 | Require explicit source-line identity; never infer history. |
 | `inventory_event_values` | `dormant-foundation` | 0 | Internal certification occurrence service only | on (1) | 103 | Remain dormant until a later valuation phase. |
 | `inventory_event_allocations` | `dormant-foundation` | 0 | Structural precision/residual basis only | on (1) | 103 | IA-6 owns allocation behavior; IA-5 writes none in canonical. |

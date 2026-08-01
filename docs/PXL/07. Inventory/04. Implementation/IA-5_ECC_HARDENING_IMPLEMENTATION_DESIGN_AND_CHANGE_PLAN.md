@@ -1,13 +1,13 @@
 # IA-5 Economic Costing Chronology Hardening — Implementation Design and Change Plan
 
-**Status:** ACCEPTED — design complete and controlling. WP-1 is implemented and certified; WP-2 was authorised and reconciled by EA-001/EA-002, and is now implemented, evidence-gate ready, and not certified. WP-3…WP-9 and IA-6 remain unauthorised. The original authorisation chronology is preserved in §1 and §30.
+**Status:** ACCEPTED — design complete and controlling through WP-4; M5 is specification-complete under Engineering Amendment EA-008. WP-1, WP-2, WP-3 and WP-4 are implemented and certified (2026-07-29 / 2026-07-30 / 2026-07-31 / 2026-07-31). The 2026-07-31 WP-5 Authorisation Gate rejection remains preserved in §31. EA-008 closed its three specification findings on 2026-08-01, but WP-5 remains unauthorised and unimplemented pending a separate Authorisation Gate re-run. WP-6…WP-9 and IA-6 remain unauthorised. The original chronology is preserved in §1, §29, §30, and §31; §32 records the current amendment.
 **Authority:** Implementation design subordinate to [ADR-C01](../03.%20Architecture/ADR-C01_ECONOMIC_EVENT_CHRONOLOGY_AND_COSTING_ORDER_AUTHORITY.md) and [ECC-01](../03.%20Architecture/ECC-01_ECONOMIC_COSTING_CHRONOLOGY_DERIVATION_SPEC.md); authorised by ADR-C01 §17 and the [ECC-01 Final Architecture Acceptance Report](../03.%20Architecture/ECC-01_FINAL_ARCHITECTURE_ACCEPTANCE_REPORT.md) §24
 **Owner / Domain:** Inventory Accounting
 **Design date:** 2026-07-26
 **Applies To:** Hardening the dormant IA-5 foundation to conform to ECC-01
 **Read When:** Executing, reviewing, or certifying any IA-5 ECC hardening work package
 **Do Not Read For:** IA-6 method state, replay execution, projection cut-over, or authority to begin coding
-**Implementation Status:** This design authorises nothing by itself. Its WP-2 M2 contract is implemented by migration `20260729000017` and tests `105`/`106`; no runtime object or behaviour was added. Independent WP-2 evidence-gate review remains pending.
+**Implementation Status:** This design authorises nothing by itself. WP-1…WP-4 are certified bounded work packages. EA-008 is documentation only and creates no SQL, migration, test, database object, runtime consumer, source activation or hosted change. The next mission is the WP-5 Authorisation Gate re-run.
 
 ---
 
@@ -37,13 +37,16 @@ ordered-input fingerprint, and nothing beyond.** It produces a proven order and
 a fingerprint over that order; it computes no cost. Sections 11–13 are
 consumption contracts that bind IA-6, not work in this plan.
 
-The design is additive and reversible. Nine work packages add one ordering-key
+The design is staged and reversible. Nine work packages add one ordering-key
 sidecar, one stream (partition) identity, four versioned policy objects, a
 registry extension, a pure derivation function, a replacement ordering index,
-and a certification lane. Nothing in `inventory_events`, `inventory_occurrences`,
-Posting, or the Kernel is altered; the defective index and the accepted-sequence
-allocator are demoted and superseded rather than dropped. `scope_sequence`
-survives with its meaning corrected — it is accepted chronology, permanently.
+and a certification lane. M1–M4 alter no event object. M5, if separately
+authorised, adds one deferred constraint trigger to `inventory_events` and
+replaces its owner-only admission writer; it alters no event column or row.
+`inventory_occurrences`, Posting and the Kernel remain unchanged. The defective
+index and accepted-sequence allocator are demoted and superseded rather than
+dropped. `scope_sequence` survives with its meaning corrected — it is accepted
+chronology, permanently.
 
 **Existing data is a non-problem, and this is evidence, not optimism.** The
 evidence gate measured `inventory_events` at zero rows on a clean replay; the
@@ -95,6 +98,25 @@ rolled back. Fresh replay, full regression (106 files / 2,443 assertions), and
 canonical accounting validation (30 / 748) pass. WP-2 remains not certified
 until its independent Evidence Gate; WP-3…WP-9 and IA-6 remain unauthorised.*
 
+*Subsequent Evidence Gate status (2026-07-29): the certification-review finding
+against test `106` was confirmed and remediated by adding the explicit
+exactly-one-registry-row rollback precondition. Fresh replay, focused WP-2
+tests (69 assertions), full regression (106 files / 2,444 assertions),
+canonical accounting (30 / 748), and catalog/security/dormancy checks pass.
+The Evidence Gate recommends certification; WP-2 remains not certified pending
+the separate Certification Mission. WP-3…WP-9 and IA-6 remain unauthorised.*
+
+*Subsequent Engineering Amendment status (2026-08-01, EA-008): the detailed
+[WP-5 Event Admission and Component Resolution Specification](IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md)
+closed WP5-AG-001…003. It fixes the replacement writer and resolver contracts,
+separates fail-closed production admission from an owner-only rolled-back and
+commit-rejecting certification fixture, counts the trigger function separately,
+and defines totality, rollback and test ownership. It also corrects the
+prospective M5 byte contract: E2 remains population-derived, so admission bytes
+encode the thirteen persisted components; the later comparator still uses all
+fourteen components. No certified storage object or prior certification scope
+changed. WP-5 remains unauthorised and unimplemented pending a separate gate.*
+
 ---
 
 ## 2. Governance and Authority
@@ -103,7 +125,7 @@ until its independent Evidence Gate; WP-3…WP-9 and IA-6 remain unauthorised.*
 | --- | --- |
 | Is ECC-01 formally accepted? | **Yes, since 2026-07-26** (`ECC-01_FORMAL_OWNER_ACCEPTANCE.md`; ECC-01 header reads `ACCEPTED — OWNER APPROVED`, not frozen). *At the time this design was written the answer was No: the header read `PROPOSED — RECOMMENDED FOR ACCEPTANCE` and no acceptance record existed.* |
 | Is this design phase authorised despite that? | **Yes.** ADR-C01 §17 authorises comparing IA-5 against the ADR, determining "the minimum additive authority hardening required", and classifying the correction — which is exactly this document. The acceptance report §24 names this phase as next. The owner's phase instruction authorises it explicitly. |
-| May implementation begin? | **WP-2 implementation completed 2026-07-29 under its separate authorisation report and EA-001/EA-002-reconciled detailed specification.** It remains bounded to §24 row 2 / M2 and awaits an independent Evidence Gate. WP-3…WP-9 remain unauthorised. This document self-authorises nothing. |
+| May implementation begin? | **WP-1…WP-4 are certified bounded work packages.** EA-008 makes M5 specification-complete but grants no authority. WP-5…WP-9 remain unauthorised; the next mission is the WP-5 Authorisation Gate re-run, not implementation. This document self-authorises nothing. |
 | Is IA-6 authorised? | **No**, under the evidence gate §12.2 permission matrix and ADR-C01 §17. Unchanged by this design. |
 | Is the C-01 program stop closed? | **No.** It closes only on executable conformance evidence (ADR-C01 §16). WP-9 produces that evidence; the gate, not this plan, closes the stop. |
 | Freeze authority | **Resolved 2026-07-26** — ECC-A-11 closed as Outcome B: "PG-01" denotes the existing authority chain mapped in [`PG-01_GOVERNANCE_AUTHORITY_MAP.md`](../../00.%20Governance/PG-01_GOVERNANCE_AUTHORITY_MAP.md); freeze authority is the owner's under `PXL_PRINCIPLES.md` §21, and ECC-01 is accepted but not frozen. |
@@ -299,6 +321,43 @@ while both rows are still written inside one occurrence transaction.
 | Existing data | None — created empty |
 | Rollback | Drop after the order-key table |
 
+**Controlling contract:** this table is specified to full governance standard —
+exact columns, types, defaults, PK/UNIQUE/FK/CHECK identifiers, trigger strategy,
+guard function, mutability, dormancy, activation rule, RLS, grants, audit,
+replay, certification, rollback order, and runtime exclusions — by **Engineering
+Amendment EA-004** in
+[`IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md`](IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md)
+§8–§10. **Dormancy is resolved there:** streams carries
+`activation_state NOT NULL DEFAULT 'dormant'` with `CHECK (activation_state = 'dormant')`
+**and** the `ENABLE ALWAYS` immutability trigger, matching the peer
+`inventory_valuation_scopes`; activation is by migration only, per §21.
+
+### 6.2.1 `inventory_valuation_stream_sequences` — the stream-keyed accepted allocator
+
+The second of M3's two tables (§17 M3; §17 M9 "2 from M3"). It is the
+stream-keyed successor to the existing `inventory_valuation_scope_sequences`
+(§3.1 "re-key to stream"), required by ECC-01 §15(4) so accepted numbering never
+restarts on a scope re-version.
+
+| Attribute | Design |
+|---|---|
+| Purpose | One continuous **Accepted Event Chronology** counter per valuation stream |
+| Owner / source | Inventory Engine (§5, "Accepted Event Chronology") |
+| Authority | Accepted-chronology evidence only; **contributes no ECC component** (§2.2, §7) |
+| Key | `PRIMARY KEY (valuation_stream_id)` (§18); no uniqueness keyed on a scope version |
+| Mutability | **Partially mutable by design** — `last_sequence`/`updated_at` advance forward-only; `valuation_stream_id`/`company_id` immutable; `DELETE` prohibited |
+| Immutability trigger | **Does not apply** — it would break `UPDATE … RETURNING` allocation; a partial-mutability guard is required instead |
+| Dormancy CHECK | **Does not apply** — an allocator is neither a policy nor a key table; dormancy is proven by zero rows, no writer, and no grant |
+| Existing data | None — created empty; rows are created by the future M5 writer |
+| Rollback | Drop **before** `inventory_valuation_streams` (child before parent) |
+
+**Controlling contract:** the complete column, key, constraint, mutability,
+guard, grant, RLS, dormancy, validation, audit, replay, and rollback
+specification is
+[`IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md`](IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md)
+(Engineering Amendment EA-003, 2026-07-30). That document changes no scope,
+architecture, table count, ADR-C01 rule, or ECC-01 rule.
+
 ### 6.3 `inventory_event_order_keys` — the ECC key
 
 | Field | Purpose / authority | Type concept | Null | Immutable | Versioned by |
@@ -323,13 +382,33 @@ while both rows are still written inside one occurrence transaction.
 | `correction_identity` | **X4**, sentinel at depth 0 | bytea | No | Yes | canonical form |
 | `correction_root_event_id` | Root target whose E1–E10 an anchored correction inherits | UUID FK, null only at depth 0 | Cond. | Yes | correction graph |
 | `order_policy_version_id`, `registry_version_id`, `canonical_form_version_id`, `scope_resolution_version_id`, `correction_graph_version_id` | The version vector `V`, resolved at admission (P-06) | UUID FK ×5 | No | Yes | self |
-| `canonical_key_bytes` | Length-prefixed injective serialisation of all 14 components (N-05) | bytea | No | Yes | canonical form |
+| `canonical_key_bytes` | EA-008 `PXL_ECC_ADMISSION_K1` injective serialization of the 13 admission-resolved components; E2 is excluded because it is population-derived | bytea | No | Yes | canonical form |
 | `ecc_key_digest` | `sha256(canonical_key_bytes)`, DB-computed | bytea(32) | No | Yes | canonical form |
 
 Uniqueness: `UNIQUE (valuation_stream_id, canonical_key_bytes)` — the direct
 enforcement of V-14/V-15, so a duplicate key is a constraint violation rather
 than a silent tie. Sentinels at depth 0 use one defined base-fact value each, so
 no null-ordering rule exists (N-08).
+
+**Controlling contract:** this table is specified to full governance standard —
+exact columns including the `resolution_state` column §15 requires, exact SQL
+types, defaults, PK/UNIQUE/FK/CHECK identifiers, indexes, mutability, dormancy,
+trigger strategy, guard function, RLS, grants, audit, migration preconditions and
+postconditions, rollback order, evidence allocation, and runtime exclusions — by
+**Engineering Amendment EA-006** in
+[`IA-5_WP-4_DETAILED_ORDER_KEY_SPECIFICATION.md`](IA-5_WP-4_DETAILED_ORDER_KEY_SPECIFICATION.md).
+**Mutability is resolved there:** every economic, identity, and version column is
+immutable; only `resolution_state` may change, and only `current` → `superseded`,
+which is what makes §15's V-35 re-resolution possible without editing any
+component. **Dormancy is resolved there** (corrected by **EA-007**): the table carries no
+dormancy state column, matching the certified **per-event sidecars**
+`inventory_event_values`, `inventory_event_source_links`, and
+`inventory_event_allocations`. Dormancy is **inherited** — every row requires a
+parent `inventory_events` row, and `inventory_events.foundation_state` is
+`CHECK`-pinned to `'dormant'` — and is additionally proven by emptiness, no
+writer, no grant, and zero consumers. The admission roots `inventory_events` and
+`inventory_occurrences` carry `foundation_state`; configuration, policy, version,
+and identity objects carry `activation_state`.
 
 ### 6.4 Version and registry objects
 
@@ -376,10 +455,12 @@ Required Correction 5 forbids.
 | Method state (layers, pools, averages) | **IA-6 cached projection**, never primary | Rebuildable from events + ECC |
 | `stock_balances` | Legacy projection | Unchanged this phase |
 
-**Minimum persisted authority for stable replay:** the fourteen components, the
-five version references, and the canonical bytes — per event. With those plus
-the immutable event facts, any conforming implementation reproduces the same
-order and the same fingerprint with no other state. Everything else is derived.
+**Minimum persisted authority for stable replay:** the thirteen admission-
+resolved components, the five version references, and their version-tagged canonical bytes —
+per event — plus the immutable causal edge set from which E2 is derived for the
+declared population. With those immutable facts, a conforming implementation
+reproduces all fourteen comparator components, the same order and the same
+fingerprint. Persisting an admission-time E2 would contradict §7 and ECC-01.
 
 Four prohibitions this classification enforces: a database schedule cannot
 decide order (no allocated value is in the key); recalculation cannot change
@@ -394,10 +475,12 @@ values cannot be hand-edited (immutability triggers plus no write grants).
 ### 8.1 New required admission inputs
 
 `fn_ia5_record_dormant_inventory_occurrence` gains, per occurrence:
-`p_source_line_ordinal`, `p_document_order_key_input`, and per event
-`economic_effect_class`, plus optional correction inputs
-(`correction_target_event_id`, `correction_effective_at`,
-`correction_approved_at`, `correction_placement_class`).
+`p_source_line_ordinal`, `p_document_order_key_input`, and
+`p_admission_context`; and, per event, `source_precision_code`,
+`economic_effect_class`, plus the governed optional correction inputs. The
+exact 14-argument signature, event JSON schema, defaults, validation and return
+object are owned by EA-008 specification §§3–4; no alternate placement or key
+is authorised.
 
 **Must be known before admission** (rejected if absent): E1, E5 input, E6, E8,
 E9, effect class, source type, and every correction reference. **Derived after
@@ -410,8 +493,9 @@ not deployment-safe when the old signature remains callable.
 
 ### 8.2 Validation order at admission
 
-1. Actor membership → 2. source type registered, certification-only, complete
-registry rule (V-10) → 3. required inputs present and well-formed (V-01, V-07)
+1. Actor membership → 2. source type/context separation under EA-008 §9
+(production requires V-10; the exact certification row is owner-only and
+commit-rejecting) → 3. required inputs present and well-formed (V-01, V-07)
 → 4. stream resolution (V-11) → 5. policy/version resolution and retention
 (V-12) → 6. normalisation N-01…N-10 (V-03, V-04, V-09) → 7. effect class vs
 quantity direction (V-05) → 8. E5 algorithm resolution and uniqueness (V-06) →
@@ -478,7 +562,7 @@ only after the complete sort. Neither half may move.
 
 | Aspect | Contract |
 | --- | --- |
-| Components | `fn_ia5_ecc_resolve_components` — inputs: occurrence payload + registry/policy versions; output: the 14 components + `V` + canonical bytes; called **only** by the admission writer, inside its transaction |
+| Components | `fn_ia5_ecc_resolve_components(uuid,integer,text,text,uuid,timestamptz,timestamptz,text)` — exact 25-column return in EA-008 §5: 13 admission-resolved components + `V` + canonical bytes/digest; E2 is derived only at later population ordering; called only by the writer inside its transaction |
 | Ordering | `fn_ia5_ecc_population` — inputs: stream, watermark, start/end complete keys, declared `V`; output: ordered event ids + per-adjacent-pair deciding component; **read-only**, `STABLE`, no writes |
 | Fingerprint | `fn_ia5_ecc_ordered_input_fingerprint` — `sha256` over the length-prefixed concatenation of ordered `canonical_key_bytes`; PostgreSQL's built-in `sha256(bytea)` (PG 11+) avoids any extension dependency |
 | Calling authority | Owner-only. No `EXECUTE` grant to `anon`, `authenticated`, or `service_role`, matching every existing `fn_ia5_*` |
@@ -661,7 +745,11 @@ retained immutable source evidence, producing a successor version with a uniform
 Implementation consequence: `inventory_event_order_keys` needs a
 `resolution_state` (`current`/`superseded`) plus `UNIQUE (inventory_event_id)
 WHERE resolution_state = 'current'` — a partial unique index, so 1:1 holds for
-the current resolution while history is retained.
+the current resolution while history is retained. That column and its governed
+`current` → `superseded` transition are specified exactly by **EA-006** §2.2 and
+§3 in
+[`IA-5_WP-4_DETAILED_ORDER_KEY_SPECIFICATION.md`](IA-5_WP-4_DETAILED_ORDER_KEY_SPECIFICATION.md);
+component immutability is unweakened, because demotion edits no ordering value.
 
 **Effective-dated re-versioning must not split a stream.** The stream key
 (§6.2) is version-free, which is the structural fix for ECC-01 §15(4).
@@ -709,9 +797,9 @@ unrelated changes; no migration is destructive.
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- |
 | M1 | Order-policy + rank + canonical-form + correction-graph version tables | 6 new tables (§6.4 rows 1–6), guards, RLS, audit triggers | `inventory_events` count = 0 | New tables only — no lock on existing objects | None | Structure + dormancy test | `DROP TABLE` (reverse dependency) | Low |
 | M2 | Registry extension: per-type order authority columns | `ref_inventory_event_source_types` + columns | M1 | `ACCESS EXCLUSIVE` on a 1-row table | Set for `IA5_CERTIFICATION` only | Persistent registry completeness assertions plus rolled-back T-04/T-06/T-07/T-27 certification evidence | Drop columns | Low |
-| M3 | `inventory_valuation_streams` + stream-keyed accepted allocator | 2 new tables | M1 | New tables | None | Stream uniqueness test | Drop | Low |
-| M4 | `inventory_event_order_keys` + constraints + 1:1 deferrable trigger | 1 new table, partial unique index | M1–M3 | New table; deferrable trigger added to `inventory_events` (brief `ACCESS EXCLUSIVE`) | None | 1:1 enforcement test | Drop trigger, drop table | Medium — touches an existing table's trigger set |
-| M5 | Admission writer replacement (DROP + CREATE) + component resolver | 2 functions | M1–M4 | Function-level | None | Admission tests | Restore prior function body from M0 source | Medium |
+| M3 | `inventory_valuation_streams` (§6.2) + `inventory_valuation_stream_sequences` (§6.2.1) | 2 new tables | M1 | New tables | None | Stream uniqueness test | Drop | Low |
+| M4 | `inventory_event_order_keys` + constraints + partial unique index | 1 new table, partial unique index | M1–M3 | **New table only** — no existing object is altered (EA-006 §5.4 moves the event-side 1:1 deferrable trigger to M5, whose writer is its precondition) | None | 1:1-per-current-resolution enforcement test | Drop table, drop guard function | Low — purely additive |
+| M5 | EA-008 admission writer replacement + component resolver + event-side totality | **3 functions (1 replaced, 2 created) + 1 constraint trigger** | M1–M4 | Replace owner-only writer; add deferrable trigger metadata to `inventory_events` (brief `ACCESS EXCLUSIVE`); no column/row/index/policy change | None | Future tests `111`/`112`; bounded regression `103`…`110` | Drop trigger, trigger function, resolver, new writer; restore exact M0 writer/ACL/comment; future test `113` | Medium — exact EA-008 contract; touches existing writer and trigger set |
 | M6 | Guard extension for ECC component validation | 1 function replaced | M5 | Function-level | None | Validation-rule tests | Restore | Medium |
 | M7 | ECC ordering + fingerprint functions (read-only) | 2 functions | M4 | None | None | Ordering + fingerprint tests | Drop | Low |
 | M8 | Replacement ECC ordering index; comment-correct the superseded index | 1 index added; 1 comment | M4 | Index build on an empty table is instant | None | Index presence + composition test | Drop index | Low |
@@ -738,7 +826,7 @@ approval.
 | `…_anchor_idx` | Correction-graph traversal | Performance | `(correction_root_event_id, correction_chain_depth)` | Supports V-18/V-19 |
 | `…_version_idx` | Version-vector resolution and F-11 detection | Performance | `(valuation_stream_id, order_policy_version_id, canonical_form_version_id)` | |
 | `inventory_valuation_streams_key_uq` | One stream per scope key | **Correctness** | `UNIQUE (company_id, item_id, scope_code)` | The §15(4) fix |
-| Stream-keyed accepted allocator PK | Continuous accepted numbering per stream | **Correctness** | `PRIMARY KEY (valuation_stream_id)` | Replaces version-keyed allocation |
+| `inventory_valuation_stream_sequences` PK | Continuous accepted numbering per stream | **Correctness** | `PRIMARY KEY (valuation_stream_id)` | Replaces version-keyed allocation; full contract in the WP-3 detailed specification (EA-003) |
 | `inventory_source_type_ranks` uniqueness | E4 rank uniqueness per policy version | **Correctness** | `UNIQUE (order_policy_id, rank)` and `(order_policy_id, source_document_type)` | Required by E4 validation |
 | Existing `inventory_events_logical_event_uq` | E10's relational form | Correctness | Unchanged | Mapped, not duplicated |
 
@@ -905,6 +993,63 @@ certification-fixture portion of four existing families:
 it is not a fifth family and is not an alternative name for T-04. No WP-2 test
 may claim the later runtime-ordering portions of T-04, T-06, or T-07.
 
+### 23.2 EA-003 WP-3 evidence allocation
+
+The family names and purposes in the §23 table remain the only authoritative
+T-number definitions. WP-3 supplies the structural and fixture portion of two
+existing families:
+
+- **T-22 Multi-company isolation (P-02):** both new tables carry `company_id`
+  with RLS and one member-gated `SELECT` policy each; the stream key
+  `UNIQUE (company_id, item_id, scope_code)` is company-leading; a rolled-back
+  fixture proves two companies may each hold a stream carrying the same
+  `scope_code` for their own item, that a stream naming another company's item
+  is rejected, that a duplicate `(company_id, item_id, scope_code)` is rejected,
+  and that an allocator row whose company differs from its stream's is
+  rejected. Runtime
+  cross-company **edge** and **order** rejection remains later work because WP-3
+  creates no edge, order key, or comparator.
+- **T-26 Migration/backfill:** fresh `--no-seed` replay through M3 succeeds with
+  `inventory_events` = 0 asserted before mutation, both tables created empty, no
+  backfill, and every object, constraint, control, and trigger present. WP-3
+  asserts no admitted event and no allocated sequence.
+
+“Stream partition completeness” is WP-3 completion evidence spanning those two
+families; it is not a third family and not an alternative name for T-22 or T-26.
+**No WP-3 test may claim** T-01, T-02, T-03, T-05, T-15, T-16, T-19, T-21, or
+any part of C-01.
+
+The complete evidence-ownership split — persistent migration assertions,
+rolled-back fixture evidence, implementation evidence, and the isolated
+certification rollback proof — is fixed by Engineering Amendment EA-003 in
+[`IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md`](IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md)
+§4.
+
+### 23.3 EA-006 WP-4 evidence allocation
+
+The family names and purposes in the §23 table remain the only authoritative
+T-number definitions. WP-4 supplies the structural and fixture portion of two
+existing families:
+
+- **T-03 Duplicate identity (V-14/F-06):** `…_identity_uq` exists as a `UNIQUE`
+  constraint on `(valuation_stream_id, canonical_key_bytes)` and
+  `…_event_current_uq` as a partial unique index; a rolled-back fixture proves a
+  duplicate canonical identity is rejected `23505`, a second `current` row for one
+  event is rejected `23505`, and one `current` plus one `superseded` row coexist
+  without collision. Comparator behaviour and tie-break outcomes remain WP-7.
+- **T-24 Immutability:** the `ENABLE ALWAYS` guard exists and no blanket
+  immutability trigger is attached; a rolled-back fixture proves `DELETE` is
+  rejected, an `UPDATE` to any of the thirty non-state columns is rejected,
+  `'superseded'` → `'current'` is rejected, and `'current'` → `'superseded'` is the
+  only permitted mutation.
+
+"Order-key structural completeness" is WP-4 completion evidence spanning those two
+families; it is not a third family. **No WP-4 test may claim** T-01, T-02, T-05,
+T-15, T-16, T-19, T-21, or any part of C-01. The complete evidence-ownership split
+and the fixture-constructibility proof are fixed by Engineering Amendment EA-006 in
+[`IA-5_WP-4_DETAILED_ORDER_KEY_SPECIFICATION.md`](IA-5_WP-4_DETAILED_ORDER_KEY_SPECIFICATION.md)
+§7.
+
 ---
 
 ## 24. Implementation Work Packages
@@ -912,10 +1057,10 @@ may claim the later runtime-ordering portions of T-04, T-06, or T-07.
 | WP | Objective | Depends on | Objects | Authority | Risks | Tests | Completion evidence | Rollback point | Concurrent? |
 | ---: | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | **1** | **Order-policy and version foundation**: the six version tables (§6.4 rows 1–6), their guards, RLS, audit triggers, dormancy CHECKs, and the seeded certification-only rank set (effect 10/20/30/40/50; source-type and transition ranks for `IA5_CERTIFICATION`) | ECC-01 acceptance | M1 | ECC-01 §3.2, §3.3, §6.4 | Rank sparsity wrong → future renumbering | T-01, T-27 | Structure + dormancy tests green; `V` resolvable | Drop M1 | No |
-| **2** | **IMPLEMENTED 2026-07-29 — Registry order authority + admission input contract** (E5 algorithm, line-order authority, transition set, occurrence semantics, same-time class, placement class) | WP-1 | M2 | ECC-01 §4.2 E3/E5/E7, V-10 | Incomplete rule silently admitted | T-04, T-06, T-07, T-27 (§23.1 structural/fixture portions only; tests `105`/`106`) | Registry completeness plus persistent/rolled-back boundary evidence; independent evidence gate pending | Drop columns; isolated proof `106` | No |
-| 3 | Stream partition + stream-keyed accepted allocator | WP-1 | M3 | ECC-01 §15(4), V-11 | Two streams for one key | T-22, T-26 | Stream uniqueness proven | Drop M3 | Yes (with WP-2) |
-| 4 | `inventory_event_order_keys` + constraints + 1:1 deferrable enforcement | WP-1…3 | M4 | ECC-01 §4.2, §4.3, §6.1 | Deferrable trigger interacts with occurrence atomicity | T-03, T-24 | 1:1 and uniqueness enforced | Drop trigger + table | No |
-| 5 | Admission hardening: writer replacement (DROP+CREATE) + component resolver, correction anchoring, E10 canonicalisation | WP-4 | M5 | ECC-01 §5.1–§5.3, §8 | Signature change breaks test callers | T-02, T-05, T-07, T-08, T-20, T-25 | Admission suite green | Restore prior writer | No |
+| **2** | **CERTIFIED 2026-07-30 (implemented 2026-07-29) — Registry order authority + admission input contract** (E5 algorithm, line-order authority, transition set, occurrence semantics, same-time class, placement class) | WP-1 | M2 | ECC-01 §4.2 E3/E5/E7, V-10 | Incomplete rule silently admitted | T-04, T-06, T-07, T-27 (§23.1 structural/fixture portions only; tests `105`/`106`) | Registry completeness plus persistent/rolled-back boundary evidence; independent Evidence Gate passed and the separate Certification Mission certified WP-2 on 2026-07-30 | Drop columns; isolated proof `106` | No |
+| **3** | **CERTIFIED 2026-07-31 (implemented 2026-07-30) — Stream partition + stream-keyed accepted allocator**: `inventory_valuation_streams` (§6.2) and `inventory_valuation_stream_sequences` (§6.2.1) | WP-1 | M3 | ECC-01 §15(4), V-11; **EA-003/EA-004/EA-005 detailed specification** | Two streams for one key | T-22, T-26 (§23.2 structural/fixture portions only) | Stream partition completeness plus persistent/rolled-back boundary evidence; migration `20260730000018` + tests `107`/`108`; independent Evidence Gate passed 2026-07-31 and the separate Certification Mission certified WP-3 on 2026-07-31 | Drop allocator, then streams, then the WP-3 guard function | Yes (with WP-2) |
+| **4** | **CERTIFIED 2026-07-31** — `inventory_event_order_keys` + constraints + 1:1-per-current-resolution enforcement; **EA-006/EA-007 detailed specification** | WP-1…3 | M4 | ECC-01 §4.2, §4.3, §6.1; **EA-006/EA-007** | Supersession lifecycle must not weaken component immutability | T-03, T-24 (§23.3 structural/fixture portions only) | Migration `20260731000019` + tests `109`/`110`; Brutal Fix closed both failed-audit blockers, Brutal Audit Re-run passed, and the separate Certification Mission certified the work package | Drop table, then the WP-4 guard function | No |
+| 5 | **EA-008 specification complete; unauthorised/unimplemented** — exact writer replacement, component resolver, trigger function and deferred event-side totality trigger; production/fixture separation; E10 and version-tagged 13-component admission encoding | WP-4 | M5 | ECC-01 §5.1–§5.3, §8; [EA-008 detailed specification](IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md) | Signature/test callers; fixture/production leakage; totality | T-02, T-05, T-07, T-08, T-20, T-25 plus future `111`…`113` allocation | Separate gate, then only if authorised: exact schema/security/fixture/totality/rollback evidence and `103`…`110` regression | Exact EA-008 §11 reverse order | No |
 | 6 | Guard extension for V-01…V-09, V-32, V-33 | WP-5 | M6 | ECC-01 §12 | Over-strict guard blocks valid facts | T-02, T-09 | Validation suite green | Restore guard | No |
 | 7 | Ordering + fingerprint functions (stages 4–6 + ordered-input digest), cohort depth, boundary validation | WP-4 | M7 | ECC-01 §5.4–§5.7, §6 | Cohort depth computed over a truncated population | T-01, T-11, T-15, T-16, T-17, T-18 | Ordering + fingerprint suites green | Drop functions | Yes (with WP-6) |
 | 8 | Index replacement + superseded-index comment + coverage registry | WP-4, WP-7 | M8, M9 | ECC-01 §15(3) | Index composition drifts from comparator | T-01, guard `075` | Index composition test; guard 075 green | Drop index | Yes |
@@ -959,8 +1104,9 @@ the index swap until the comparator exists to test it against.
 | Scenario | Recovery |
 | --- | --- |
 | Any WP fails before WP-5 | Drop the new tables in reverse dependency order; IA-5 is byte-identical to its certified state because nothing existing was altered |
-| WP-5/WP-6 fails | Restore the prior function bodies from `20260726000013` source; the functions are `CREATE OR REPLACE`-able and have no external grants, so no caller is stranded |
-| WP-4's deferrable trigger misbehaves | Drop the constraint trigger; `inventory_events` returns to its exact certified trigger set |
+| WP-5 fails | Apply EA-008 §11 exactly: drop constraint trigger, trigger function, resolver and 14-argument writer; recreate the exact 11-argument writer body/owner/config/ACL/comment from `20260726000013`; prove the three-trigger pre-M5 `inventory_events` set and all WP-1…WP-4 objects/rows unchanged. No `CREATE OR REPLACE` shortcut across the signature change. |
+| WP-6 fails after a separately successful WP-5 lifecycle | Restore only the WP-6 guard body under its future governed rollback; do not roll back certified WP-5 automatically. |
+| WP-5's deferrable trigger misbehaves | Stop admission and execute the complete EA-008 rollback; dropping only the trigger is not complete WP-5 rollback. *(EA-006 §5.4 moved the trigger from M4 to M5; WP-4 remains purely additive.)* |
 | WP-8 index issue | Drop the new index; the superseded index still serves accepted-chronology queries |
 | Data recovery | **Not applicable** — no data exists and none is migrated |
 | Post-acceptance discovery of a component defect | Order re-resolution (§15) is the governed forward path; superseded resolutions are retained. Never an in-place `UPDATE` |
@@ -1016,8 +1162,9 @@ during execution.
 | 10 | Whether the conforming correction sits before or inside IA-6 | **Answered by this design**: entirely before IA-6, in IA-5. The reopened gate confirms |
 | 11 | Negative-inventory policy | Already governed (prohibited by default) — **not reopened** |
 | 12 | UOM conversion authority (H-03) | Deferred to the reopened gate; does not affect ordering, only quantity values |
+| 13 | Stream-keyed accepted allocator: name, columns, partial mutability, guard, dormancy, grants, audit, rollback | Engineering choice — **closed 2026-07-30 by EA-003** (§6.2.1 and the WP-3 detailed specification). Derived from the certified `inventory_valuation_scope_sequences` template; no accounting consequence |
 
-**Zero unresolved accounting-policy questions.** Items 3–6 are genuine
+**Zero unresolved accounting-policy questions.** Items 3–6 and 13 are genuine
 engineering choices with no accounting consequence; items 7–9 are governance;
 items 11–12 are already owned elsewhere. No policy question was converted into
 an engineering choice.
@@ -1082,8 +1229,63 @@ zero-data precondition read-only (`inventory_events` = 0).*
 *Subsequent status (2026-07-29): WP-1 is certified. WP-2 is separately
 authorised, EA-001/EA-002-reconciled, and implemented by migration
 `20260729000017` plus tests `105`/`106` without changing this design's
-accounting or architecture. WP-2 is evidence-gate ready but remains
-uncertified.*
+accounting or architecture. Its independent Evidence Gate passed after the
+rollback proof was strengthened and recommends certification. WP-2 remains
+uncertified pending the separate Certification Mission.*
+
+*Subsequent status (2026-07-30) — supersedes the WP-2 status line above, which is
+retained as issued: the independent WP-2 Certification Mission **granted
+certification**. **WP-2 is CERTIFIED (2026-07-30)**; see §24 row 2 and
+`IA-5_ECC_HARDENING_WP-2_EVIDENCE_GATE_REPORT.md` §10.*
+
+*Subsequent status (2026-07-30) — WP-3: the WP-3 Authorisation Gate returned
+**B — REJECTED** for specification incompleteness (architecture and dependencies
+were complete and satisfied). It found that the "Logical data changes fully
+specified | Met (§6)" criterion above, recorded at design time, did **not** hold
+for M3: §17 M9 requires two new tables from M3 while §6 modelled only one.
+**Engineering Amendment EA-003 (2026-07-30) closes that gap** — §6.2.1 now names
+`inventory_valuation_stream_sequences`, §23.2 allocates its evidence, and
+[`IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md`](IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md)
+carries its complete governing contract. EA-003 is documentation only and changed
+no SQL, migration, test, schema, scope, architecture, ADR-C01 rule, or ECC-01
+rule. **WP-3 remains unauthorised** pending a separate authorisation gate.*
+
+*Subsequent status (2026-07-30) — supersedes the WP-3 status line above, which is
+retained as issued: Engineering Amendments **EA-004** and **EA-005** closed the
+two remaining specification defects (G-1/G-2 and B-1), and the re-run WP-3
+Authorisation Gate returned **A — WP-3 AUTHORISED**. WP-3 was implemented the
+same day by migration `20260730000018` and tests `107`/`108`, within its bounded
+§24 row 3 scope and with no accounting, runtime, Posting, Kernel, `inventory_events`,
+ADR-C01, or ECC-01 change. **WP-3 is implemented but not evidence-gated and not
+certified**; WP-4…WP-9 and IA-6 remain unauthorised.*
+
+*Subsequent status (2026-07-31) — supersedes the WP-3 status line above, which is
+retained as issued: the independent **WP-3 Evidence Gate passed** with zero
+blocking findings, and the separate Certification Mission then granted
+certification. **WP-3 is CERTIFIED 2026-07-31.** This is a work-package
+certification only: C-01 remains open, the IA-5 permanent-foundation claim
+remains suspended, no Inventory module or engine is certified, and WP-4…WP-9 and
+IA-6 remain unauthorised.*
+
+*Subsequent WP-4 status (2026-07-31) — supersedes only the WP-4 frontier in the
+historical paragraph above, which remains preserved as issued: the separate WP-4
+Authorisation Re-run returned an authorising decision, and migration
+`20260731000019` plus tests `109`/`110` implemented M4. The independent Brutal
+Audit verified the executable contract but failed on WP4-BA-001 and WP4-BA-002.
+At that audit decision WP-4 was not brutally fixed, not audit-re-run, and not
+certified. The bounded Brutal Fix closed both blockers without changing SQL,
+migration logic, tests, runtime, accounting, Posting, Kernel, ADR, or ECC. WP-4
+is now brutally fixed, not audit-re-run, and not certified; WP-5…WP-9 and IA-6
+remain unauthorised.*
+
+*Subsequent WP-4 certification status (2026-07-31) — supersedes only the current
+frontier in the WP-4 status paragraph above, which remains preserved as issued:
+the Brutal Audit Re-run passed, independently confirming WP4-BA-001 and
+WP4-BA-002 closed with no implementation regression. The separate Lifecycle
+Step 7 Certification Mission then re-executed the required local validation and
+certified WP-4. This is a work-package certification only; C-01 remains open,
+the IA-5 permanent-foundation claim remains suspended, and no Inventory module
+or engine is certified. WP-5…WP-9 and IA-6 remain unauthorised.*
 
 ---
 
@@ -1104,15 +1306,128 @@ uncertified.*
    [WP-1 authorisation report](ECC-01_OWNER_ACCEPTANCE_AND_IA-5_WP1_AUTHORISATION_REPORT.md).
    It subsequently completed and was certified on 2026-07-29.
 
-3. **Current next authorised phase:** independent IA-5 ECONOMIC COSTING
-   CHRONOLOGY HARDENING — WORK PACKAGE 2 EVIDENCE GATE. WP-2 implementation
-   completed under the separate authorisation report and the EA-001/EA-002
-   specification; implementation completion is not certification.
+3. **Completed 2026-07-29:** independent IA-5 ECONOMIC COSTING CHRONOLOGY
+   HARDENING — WORK PACKAGE 2 EVIDENCE GATE. It passed and recommends
+   certification.
 
-Not authorised: WP-3 through WP-9; any IA-6 subphase; any hosted migration;
+4. **Completed 2026-07-30:** formal IA-5 ECONOMIC COSTING CHRONOLOGY HARDENING —
+   WORK PACKAGE 2 CERTIFICATION MISSION. Evidence Gate completion was not
+   certification and authorised no later work package. The mission granted
+   certification: **WP-2 is CERTIFIED 2026-07-30**.
+
+5. **Completed 2026-07-30:** WP-3 AUTHORISATION GATE — returned
+   **B — REJECTED** for specification incompleteness, then **Engineering
+   Amendment EA-003** (documentation only) closed all four recorded blockers via
+   §6.2.1, §23.2, the §29 reconciliation, and
+   [`IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md`](IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md).
+
+6. **Completed 2026-07-30:** the WP-3 AUTHORISATION GATE (after EA-004 and
+   EA-005) returned **A — WP-3 AUTHORISED**, and WP-3 was implemented within its
+   bounded scope by migration `20260730000018` plus tests `107`/`108`.
+
+7. **Completed 2026-07-31:** the independent **WP-3 EVIDENCE GATE** passed with
+   zero blocking findings, after a governed repository amendment reconciled the
+   authorisation frontier and corrected the schema-summary generator. The
+   separate **WP-3 CERTIFICATION MISSION** then granted certification:
+   **WP-3 is CERTIFIED 2026-07-31**, a work-package certification only.
+
+8. **Completed 2026-07-31:** the WP-4 Authorisation Re-run authorised WP-4;
+   implementation completed; the Brutal Audit failed only on WP4-BA-001 and
+   WP4-BA-002; and the bounded Brutal Fix closed both without database change.
+
+9. **Completed 2026-07-31:** the **WP-4 BRUTAL AUDIT RE-RUN** passed, and the
+   separate **WP-4 CERTIFICATION** mission certified the work package.
+
+10. **Completed 2026-07-31:** the **WP-5 AUTHORISATION GATE — Lifecycle Step
+    2** returned **REJECTED** on WP5-AG-001…003. No implementation authority was
+    granted.
+
+11. **Completed 2026-08-01:** **WP-5 ENGINEERING AMENDMENT EA-008 —
+    documentation only**, bounded to WP5-AG-001…003. It grants no authority.
+
+12. **Current next mission:** **WP-5 AUTHORISATION GATE RE-RUN — Lifecycle
+    Step 2.** Do not begin implementation unless that separate gate passes.
+
+Not authorised: WP-5 through WP-9; any IA-6 subphase; any hosted migration;
 enabling a production source type; any Posting or Kernel change. **IA-6 remains
 unauthorised**, and the C-01 program stop remains open until the reopened
 evidence gate accepts WP-9's evidence package.
 
 No implementation was performed during the original design phase. WP-2 was
 subsequently implemented under its separate authorised implementation mission.
+
+---
+
+## 31. WP-5 Authorisation Gate Decision — 2026-07-31
+
+**Decision: REJECTED. WP-5 remains unauthorised.**
+
+All prerequisites outside the WP-5 specification pass: WP-1…WP-4 remain
+Certified; focused tests `104`…`110` pass 7 files / 260 assertions; the local
+catalog contains zero Inventory occurrences, events, streams, stream sequences,
+or order keys; the six WP-1 tables remain empty; the only registry row remains
+certification-only and production-disabled; no WP-5 resolver, trigger,
+migration, test, runtime consumer, or hosted dependency exists. ADR-C01 remains
+frozen, ECC-01 remains accepted, and Posting, Kernel, WP-6+, and IA-6 boundaries
+remain intact.
+
+### WP5-AG-001 — High — Exact writer/resolver contract absent
+
+Sections 8.1 and 9 describe new inputs and a conceptual resolver but do not
+define the replacement writer's exact SQL signature, the exact placement and
+schema of new JSON fields, the resolver's SQL signature/return type, or the
+byte-exact canonical serialization and digest output contract. M5 changes an
+existing 11-argument writer and therefore cannot be safely implemented by
+inference. **Minimum governed repair:** a documentation-only WP-5 detailed
+specification defining every function argument, type, default, return, payload
+key, normalization/encoding rule, failure, privilege, idempotency behavior, and
+testable postcondition. Confidence: **High**.
+
+### WP5-AG-002 — High — Dormant admission rule conflicts with ECC-01 V-10
+
+The design requires the source type to remain certification-only and
+production-disabled (§21) and routes admission through that certification-only
+rule (§8.2). ECC-01 §5.2 and V-10 instead require the source type to be
+production-enabled before economic processing, and ECC-01 §14.1 confirms the
+present disabled row is correctly unavailable. The repository provides no
+governed distinction between a rolled-back certification fixture path and
+production economic admission. **Minimum governed repair:** a documentation-only
+amendment that reconciles the certification-fixture path with ECC-01 without
+enabling a production source type, weakening dormancy, or changing ADR-C01 or
+ECC-01. Confidence: **High**.
+
+### WP5-AG-003 — High — Trigger object and rollback contract incomplete
+
+M5 declares two functions plus one new constraint trigger. The two named
+functions are the replacement writer and new component resolver, but PostgreSQL
+also requires a trigger function for the new event-side constraint trigger and
+no existing function is assigned that contract. Trigger name, timing, events,
+deferrability, function, SQLSTATE, and current/superseded behavior are absent.
+Rollback restores prior function bodies and drops the trigger, but does not
+drop the new resolver or any new trigger function; §24 row 5 names only the
+prior writer as its rollback point. **Minimum governed repair:** specify the
+complete trigger/function object set and exact reverse-order rollback, then
+allocate executable rollback and 1:1-totality evidence. Confidence: **High**.
+
+No repair, SQL, migration, test, runtime, Posting, Kernel, architecture, hosted,
+WP-6+, or IA-6 change was performed by this gate.
+
+---
+
+## 32. WP-5 Engineering Amendment EA-008 — 2026-08-01
+
+EA-008 is recorded in
+[`IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md`](IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md).
+It prospectively supersedes the incomplete M5 descriptions identified in §31
+without rewriting that rejection or any WP-1…WP-4 issued record.
+
+| Finding | Current resolution |
+| --- | --- |
+| WP5-AG-001 | Closed at specification level: exact 14-argument replacement writer, exact 8-argument/25-column resolver, payload schema, version-tagged 13-component admission encoding, digest, failures, privileges, locking, idempotency, atomicity and postconditions are fixed. E2 remains population-derived and the later full comparator remains 14 components. |
+| WP5-AG-002 | Closed at specification level: default production admission remains V-10 fail-closed; exact `IA5_CERTIFICATION` fixture admission is explicit, `postgres`-only, local, rolled back and commit-rejecting. No source is enabled and no bypass/grant/GUC/wrapper exists. |
+| WP5-AG-003 | Closed at specification level: M5 owns three functions plus one constraint trigger; trigger metadata, totality/current/superseded semantics, `103`/`109` consequences, tests `111`…`113`, and complete reverse-order rollback are fixed. |
+
+**Current decision:** specification ready for a separate WP-5 Authorisation Gate
+re-run. WP-5 is not authorised, not implemented, not audited and not certified.
+WP-6…WP-9 and IA-6 remain unauthorised. No runtime, database, test, source,
+Posting, Kernel, product-scope or hosted change occurred in EA-008.

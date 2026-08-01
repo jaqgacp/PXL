@@ -1,6 +1,6 @@
 # IA-5 WP-2 — Detailed Registry Authority Specification
 
-**Status:** COMPLETE — controlling EA-001/EA-002-reconciled specification; implemented by migration `20260729000017` and tests `105`/`106` on 2026-07-29; independent Evidence Gate pending; not certified
+**Status:** COMPLETE — controlling EA-001/EA-002-reconciled specification; implemented by migration `20260729000017` and tests `105`/`106` on 2026-07-29; independent Evidence Gate passed; **WP-2 CERTIFIED 2026-07-30**
 **Decision date:** 2026-07-29
 **Owner / Domain:** Inventory Accounting — IA-5 Economic Costing Chronology Hardening
 **Read when:** Implementing WP-2 / migration M2, or reviewing its architecture and certification evidence
@@ -681,6 +681,31 @@ back to the M2-applied state. The implementation report records the prepared
 evidence. No runtime, Posting, Kernel, `inventory_events`, accounting, ADR-C01,
 or ECC-01 change was made.
 
+**Subsequent certification remediation and Evidence Gate (2026-07-29):** an
+independent certification review correctly found that test `106` proved one
+matching certification row but did not explicitly prove the §7.1 total registry
+count of one immediately before destructive rollback. The minimum correction
+added that single assertion; test `106` now contains 21 assertions. Fresh
+replay, tests `105`/`106` (69 assertions), full regression (106 files / 2,444
+assertions), canonical accounting (30 files / 748 assertions), and
+catalog/security/dormancy checks pass. The independent Evidence Gate recommends
+certification and changes no specification, architecture, accounting, runtime,
+or work-package boundary.
+
+**Subsequent certification decision (2026-07-30):** the independent WP-2
+Certification Mission granted certification. It re-executed fresh replay,
+focused `105`/`106` (69), full regression (106/2,444), canonical accounting
+(30/748), lint, build, and diff; independently probed the applied catalog for
+shape, constraints, values, dormancy, RLS, grants, immutability, and consumers;
+and mutation-verified that test `106`'s added assertion fails closed on an extra
+registry row while the pre-remediation assertion would still have passed. One
+non-blocking observation was recorded: §4.2 and §8 cite the Formal Owner
+Acceptance clarifications as `ECC-A15`/`ECC-A16`, whereas their canonical
+identifiers are `ECC-A-15`/`ECC-A-16`. The cited substance is correct and
+present in Formal Owner Acceptance §12; only the citation format differs, so no
+specification, accounting, or scope change follows. The certification decision
+changes no architecture, accounting, runtime, or work-package boundary.
+
 ## 12. Remaining Open Questions
 
 None for WP-2 architecture or the `IA5_CERTIFICATION` row.
@@ -695,17 +720,19 @@ and retain their existing authorisation gates.
 Following EA-001 and EA-002 repository reconciliation, WP-2 was implemented
 within the authorised M2 boundary. The six columns, constraints, exact
 certification row, structural/fixture portions of T-04/T-06/T-07/T-27, and
-rollback proof exist without selected accounting policy or persistent fixture
-data.
+corrected rollback proof exist without selected accounting policy or persistent
+fixture data.
 
-The independent WP-2 Evidence Gate must still verify the prepared evidence.
-WP-2 is not certified by implementation. WP-3 through WP-9 and IA-6 remain
-unauthorised.
+The independent WP-2 Evidence Gate passed and recommended certification, and the
+separate Certification Mission granted certification on 2026-07-30 after
+independently re-executing every validation lane, probing the applied catalog,
+and mutation-verifying the rollback remediation. WP-3 through WP-9 and IA-6
+remain unauthorised.
 
 ## Decision
 
 **A.**
 
-**WP-2 IMPLEMENTED — EVIDENCE GATE PENDING**
+**WP-2 IMPLEMENTED — EVIDENCE GATE PASSED — CERTIFIED 2026-07-30**
 
-**NOT CERTIFIED**
+**WP-2 GOVERNANCE COMPLETE; WP-3 NOT AUTHORISED**
