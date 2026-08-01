@@ -66,7 +66,7 @@ bounded module scopes; those evidence boundaries do not redefine the product.
 | Engine | Maturity | Certified scope | Main blocker / next milestone |
 | --- | --- | --- | --- |
 | Posting | M7 | None as whole engine; Kernel fully enforced | Inventory P6 reconciliation; prove canonical flows |
-| Inventory Accounting | M2 | WP-1…WP-4 work packages only | EA-008 repaired WP-5 specification; separate gate re-run required |
+| Inventory Accounting | M2 | WP-1…WP-4 work packages only | EA-009 closes the three re-run blockers; another separate gate re-run required |
 | AR | M4 | None | Scenario-wide AR-control proof |
 | AP | M4 | None | Scenario-wide AP-control proof |
 | Payment & Application | M4 | None | Over/unapplied/reversal/concurrency proof |
@@ -98,7 +98,7 @@ twentieth engine and not a separate progress measure.
 | WP-2 | Certified work package | Dormant source-registry authority. |
 | WP-3 | Certified work package | Dormant valuation stream/allocator. |
 | WP-4 | Certified work package | Dormant persisted order-key evidence. |
-| WP-5 | **Specification repaired; unauthorised** | EA-008 closes WP5-AG-001…003 at specification level; a separate gate must decide authority. No implementation exists. |
+| WP-5 | **EA-009 complete; unauthorised** | The gate re-run after EA-008 rejected on WP5-AGR-001…003. EA-009 closes those three specification/proof blockers; another separate gate must decide authority. No implementation exists. |
 | WP-6…WP-9 | Unauthorised | No work may begin. |
 | IA-5 permanent foundation | Claim suspended | C-01 remains open until final executable evidence. |
 | Inventory Accounting Engine | Not Certified | Four work packages do not certify the engine. |
@@ -136,14 +136,19 @@ work, but no whole flow meets the Product Definition of Done.
 ## 8. Current Critical Path
 
 1. Product Architecture consolidation is complete and registered.
-2. WP-5 Engineering Amendment EA-008 is complete; no authority was granted.
-3. Run **WP-5 Authorisation Gate Re-run — Lifecycle Step 2**; do not implement
+2. The gate re-run after EA-008 rejected WP-5 on exactly three blockers; EA-009
+   closes them without changing implementation or granting authority.
+3. The repository owner accepted the exact Supabase CLI localhost URI in
+   reachable history as a reviewed non-secret development default; EA-009's
+   validated state is committed and pushed without history rewrite or rotation.
+4. Run another **WP-5 Authorisation
+   Gate Re-run — Lifecycle Step 2**; do not implement
    during the gate or infer authority from specification readiness.
-4. Prove one canonical Sales and one canonical Purchasing flow through source,
+5. Prove one canonical Sales and one canonical Purchasing flow through source,
    posting, subledger, GL, TB, FS, tax, books, correction and trace.
-5. Resolve Receiving Report accounting, Tax Engine ownership, opening balances
+6. Resolve Receiving Report accounting, Tax Engine ownership, opening balances
    and backup/restore at their governed decision gates.
-6. Continue later Inventory work packages only if the product-value checkpoint
+7. Continue later Inventory work packages only if the product-value checkpoint
    shows they advance Inventory-to-GL and the target workflow.
 
 ## 9. Top Product Blockers
@@ -158,7 +163,6 @@ work, but no whole flow meets the Product Definition of Done.
 7. **Hosted parity gap:** 51 local-only migrations.
 8. **UI/runtime mismatch:** 33 pure-deferred routes and 18 disabled placeholders.
 9. **Source-review gap:** 1 of 41 transaction workspaces.
-10. **Dirty/uncommitted repository:** preserve provenance and isolate future work.
 
 ## 10. Production Readiness
 
@@ -179,13 +183,14 @@ work, but no whole flow meets the Product Definition of Done.
 
 **WP-5 Authorisation Gate Re-run — Lifecycle Step 2.**
 
-It remains next because EA-008 cannot authorise itself and deterministic
-Inventory chronology is a real prerequisite for future COGS/valuation and
-Posting P6. The gate itself does **not** implement WP-5 or authorise automatic
-continuation to WP-6…WP-9. After the gate, a product-value checkpoint must place
-canonical Sales/Purchasing proof, Receiving accounting, Tax authority, opening
-balances and restore evidence ahead of further dormant foundation work unless a
-later package is demonstrably necessary.
+The owner-approved security disposition and validated main-branch handoff are
+complete. The gate remains next because EA-009 cannot authorise itself and
+deterministic Inventory chronology is a real prerequisite for future COGS/
+valuation and Posting P6. The gate itself does **not** implement WP-5 or
+authorise automatic continuation to WP-6…WP-9. After the gate, a product-value
+checkpoint must place canonical Sales/Purchasing proof, Receiving accounting,
+Tax authority, opening balances and restore evidence ahead of further dormant
+foundation work unless a later package is demonstrably necessary.
 
 ## 12. Measures and Methodology
 

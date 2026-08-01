@@ -1,250 +1,215 @@
-# PXL — Last Session Handoff
+# PXL ERP — Last Session Handoff
 
 ## 1. Date
 
-2026-08-01 (UTC)
+2026-08-01 UTC
 
 ## 2. Mission
 
-IA-5 ECC Hardening — WP-5 Engineering Amendment EA-008, documentation only,
-strictly limited to WP5-AG-001, WP5-AG-002 and WP5-AG-003.
+Record the owner-approved security disposition for the exact Supabase CLI
+localhost false positive, revalidate the preserved EA-009 repository state,
+commit it directly to `main`, push without force, and stop before the WP-5
+Authorisation Gate re-run.
 
 ## 3. Status
 
-**WP-5 ENGINEERING AMENDMENT COMPLETE — READY FOR AUTHORISATION GATE
-RE-RUN.** This is specification readiness only. WP-5 is not authorised,
-implemented, audited or certified.
+**EA-009 VALIDATED, COMMITTED, AND PUSHED TO MAIN.** This mission performed no
+Engineering Amendment, Authorisation Gate, implementation, repair, database
+operation or hosted product operation. EA-009 cannot authorise itself.
 
-## 4. Product Architecture Standing
+## 4. Starting branch
 
-The canonical Product Architecture remains
-`docs/PXL/01. Architecture/PXL_PRODUCT_ARCHITECTURE.md`. It was read and left
-unchanged. EA-008 changes no product scope, module/engine ownership or product
-maturity.
+`main`
 
-## 5. Product Roadmap Standing
+## 5. Starting commit hash
 
-The subordinate roadmap remains
-`docs/PXL/01. Architecture/PXL_PRODUCT_EXECUTION_ROADMAP.md`. It was read and
-left unchanged. Its Phase B sequence still requires a WP-5 specification repair,
-a separate gate and a product-value checkpoint before further dormant work.
+`f3f1aab4a54f445796d3568dc35a3d1bd1a16a88`
 
-## 6. Repository Standing
+## 6. Remote/tracking standing
 
-The worktree was already dirty and uncommitted. Unrelated changes were
-preserved. EA-008 changed documentation only. No SQL, migration, test, source,
-runtime, route, navigation, database object, business data or hosted environment
-was changed or executed.
+At handoff start, local `main`, tracked `origin/main`, and live
+`refs/heads/main` at `https://github.com/jaqgacp/PXL` all resolved to the
+starting commit. Ahead/behind was `0 / 0`; no earlier EA-009 commit or push
+existed. The accepted handoff is the repository state identified by current
+`main` HEAD, synchronized to `origin/main` without force.
 
-## 7. Files Created
+## 7. EA-009 standing
 
-- `docs/PXL/07. Inventory/04. Implementation/IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md`
+EA-009 is complete at documentation/governance level only. It preserves the
+issued WP-5 rejection, EA-008, and the later gate re-run rejection. It changes
+no Product Architecture, Product Execution Roadmap, ADR-C01, ECC-01, certified
+WP-1…WP-4 object, runtime contract, database object or hosted environment.
 
-## 8. Files Modified
+## 8. WP5-AGR-001 resolution
 
+**CLOSED at specification level.** Certified WP-4 remains authoritative for
+the meaning, persistence, immutability and uniqueness of the exact fourteen-
+component `canonical_key_bytes` and its SHA-256 `ecc_key_digest`. WP-5 only
+derives, validates and produces conforming values. E2 is exactly zero for the
+only eligible base/no-edge certification fixture; non-base/non-zero E2 remains
+fail-closed. No WP-4 amendment is required.
+
+## 9. WP5-AGR-002 resolution
+
+**CLOSED at specification level.** WP-5 detailed specification §3.5 is the sole
+controlling writer algorithm. It fixes security/company/context validation,
+strict normalization, company-scoped idempotency lookup, duplicate outcomes,
+new-path policy resolution, occurrence reservation, bytewise-sorted stream and
+allocator locking, fourteen-component derivation, event/key insertion, deferred
+totality, return, audit and atomic completion. Programme design §8.2 points to
+that algorithm and contains no competing sequence.
+
+## 10. WP5-AGR-003 resolution
+
+**CLOSED at governance-proof level.** WP-5 detailed specification §17 defines
+the fixed protected set, stable UTF-8/C-locale path ordering, exact GNU
+SHA-256 manifest format, missing/untracked/generated-file treatment, and the
+complete reproduction command. The rerun reproduced the governed count and
+hash without redefining the set.
+
+## 11. Security false-positive disposition
+
+The repository owner approved this exact detection as:
+`REVIEWED FALSE POSITIVE — OWNER-APPROVED FOR EXISTING HISTORY`.
+
+It is the Supabase CLI documented default local-development PostgreSQL URI,
+not a hosted or project-specific credential. The reviewed historical URI has
+SHA-256
+`cf6453a9f9e48b2d2776d5c5814b5f27c17986209872b7560d6e340617822324`.
+This decision applies only to that exact value/hash. It creates no general
+database-URI exemption; every future detection requires independent review.
+
+## 12. Exact reviewed detection location
+
+- Current scanner hit:
+  `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`, line 217.
+- Historical source:
+  `supabase/seeds/demo_company_setup_seed.sql`, line 19 at commit
+  `c88962d890ed6dd6822263a28721977ad2b89962`.
+- The historical raw line was removed from the current seed file by commit
+  `96f1889ee9b6bc9ff24483c1d64a75a02543e12f`; normal Git ancestry retains the
+  earlier blob.
+
+## 13. Masked value classification
+
+`postgresql://postgres:[MASKED]@127.0.0.1:54322/postgres`
+
+Reconfirmation proved local default username/database `postgres`, host
+`127.0.0.1`, Supabase CLI local database port `54322`, no Supabase project
+reference, no remote hostname, and no JWT, service-role key, API key or access
+token. The current tree contains only the masked audit-ledger form; it contains
+zero unredacted copies of the reviewed URI.
+
+## 14. Reason no history rewrite is required
+
+The historical value is a publicly documented local-development default, not
+a confidential hosted credential. Rewriting shared `main` would add governance
+risk without removing a real secret. The historical evidence remains preserved
+and explicitly classified; no force-push or history rewrite was performed.
+
+## 15. Reason no credential rotation is required
+
+The value names no remote database, hosted project, client, tenant or provider
+account and contains no project-specific secret material. It is the local CLI
+default, so there is no hosted credential to rotate. This conclusion does not
+apply to any other connection string or credential.
+
+## 16. Protected-boundary manifest count
+
+`527` entries. Path-manifest SHA-256:
+`168c3ef5391c26f8ee5472b09c72a96b1089cb9dd2930502b65188645b99f508`.
+
+## 17. Protected-boundary aggregate SHA-256
+
+Start, prior EA-009 end, and this handoff rerun all equal:
+
+`8ddf66f36c63606f8eb0bceaacfe3f3131337758b895fc557ec488ca383d7ba6`
+
+The exact command is WP-5 detailed specification §17.2. No protected
+implementation or governing authority file changed.
+
+## 18. Files created
+
+None.
+
+## 19. Files modified
+
+- `AI/AI_STATE.md`
+- `AI_LAST_SESSION.md`
+- `AI_PROGRESS.md`
 - `docs/PXL/07. Inventory/04. Implementation/IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md`
+- `docs/PXL/07. Inventory/04. Implementation/IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md`
 - `docs/PXL/13. Testing and Validation/PXL_CERTIFICATION_MATRIX.md`
 - `docs/PXL/PXL_DOCUMENTATION_INDEX.md`
-- `AI/AI_STATE.md`
-- `AI_PROGRESS.md`
-- `AI_LAST_SESSION.md` (overwritten completely)
 
-Product Architecture, Product Execution Roadmap, ADR-C01, ECC-01 and certified
-WP-1…WP-4 specifications were not modified.
+## 20. Validation summary
 
-## 9. WP5-AG-001 Resolution
+- `npm run docs:check`: PASS.
+- `npm run check:frontend-secrets`: PASS, 420 files scanned.
+- `git diff --check`: PASS before commit.
+- internal Markdown links and documentation-index consistency: PASS through
+  `docs:check` plus targeted review.
+- authority chain, chronology preservation, EA-009 closure/status terminology,
+  fourteen-component/26-column resolver census, single writer sequence,
+  rollback/object census and identifier-length review: PASS.
+- protected manifest: 527 entries and exact expected path/aggregate hashes.
+- Product Architecture and Product Execution Roadmap: unchanged.
+- no SQL, migration, database test, runtime/application source, route,
+  navigation or database object changed; no Supabase/hosted-environment command
+  was executed.
 
-**Closed at specification level.** EA-008 fixes the current 11-argument writer
-frontier; the exact 14-argument DROP-and-CREATE replacement; exact payload and
-return schemas; writer transaction, writes, locks, idempotency and atomicity;
-the exact 8-argument/25-column resolver; canonical bytes/digest; SQLSTATEs;
-security; and pre/postconditions.
+## 21. Secret/privacy scan summary
 
-It corrects one prospective M5 contradiction: E2 is population-derived and
-cannot be serialized at admission. `canonical_key_bytes` therefore encodes the
-version vector plus 13 persisted admission components; the later comparator remains the frozen
-14-component E1,E2,E3…X4 order. WP-4 storage certification remains bounded and
-valid because it certified no resolver/encoding implementation.
+PASS. The seven reviewed mission files and their added lines contain no private
+key, Supabase secret/PAT, structured JWT, credentialed database URI, GitHub/AWS
+token, remote Supabase database host, personal machine path, Philippine TIN,
+dump, backup or suspicious filename. The frontend secret guard passed.
 
-## 10. WP5-AG-002 Resolution
+Root `.env.local` and a Supabase temporary CA certificate exist only as ignored
+local files under existing `.gitignore` rules; neither is tracked, staged or
+read for values. The exact historical localhost URI hash in §11 is the sole
+owner-approved exception. No other exception or suppression was accepted.
 
-**Closed at specification level.** Production is the default context and
-remains ECC-01 V-10 fail-closed. The current repository has no enabled source,
-activated version/stream or production source adapter, so no production call
-can succeed.
+## 22. Repository standing
 
-The certification path is one explicit writer context, exact
-`IA5_CERTIFICATION` source, `postgres` only, local/fresh only, explicit
-BEGIN/assertions/ROLLBACK, no runtime grant and no hosted claim. The deferred
-trigger rejects certification fixture constraint execution/commit after first
-checking one current key, making accidental persistence impossible.
+WP-1…WP-4 remain Certified bounded work packages. C-01 remains open and the
+IA-5 permanent-foundation claim remains suspended. WP-6…WP-9 and IA-6 remain
+unauthorised. Product Architecture remains canonical; Roadmap remains
+subordinate. PXL remains internal QA/demo only, not pilot-ready or
+production-ready.
 
-## 11. WP5-AG-003 Resolution
+## 23. WP-5 authority standing
 
-**Closed at specification level.** M5 owns four database objects: one replaced
-writer, one new resolver, one new trigger function and one new deferred
-constraint trigger. Trigger name, table, timing, event, level, deferrability,
-ALWAYS enablement, SQLSTATE, totality, current/superseded behavior, test `103`/
-`109` consequences, rollback and evidence ownership are exact.
+**UNAUTHORISED. UNIMPLEMENTED. UNAUDITED. UNCERTIFIED.** No production Inventory
+source or runtime consumer was enabled. EA-009 is ready only for independent
+gate review.
 
-## 12. Exact WP-5 Object Contract
+## 24. Commit standing
 
-1. Replace
-   `public.fn_ia5_record_dormant_inventory_occurrence(uuid,text,uuid,uuid,text,bigint,text,text,timestamptz,uuid,jsonb)`
-   with the exact 14-argument signature in EA-008 §3.
-2. Create
-   `public.fn_ia5_ecc_resolve_components(uuid,integer,text,text,uuid,timestamptz,timestamptz,text)`.
-3. Create trigger function
-   `public.fn_ia5_enforce_event_order_key_totality()`.
-4. Create constraint trigger
-   `inventory_events_ecc_order_key_totality_ct` on `public.inventory_events`.
+Committed repository state: see current `main` HEAD. Commit message:
+`governance: close WP-5 gate blockers and establish handoff`. Exactly seven
+reviewed documentation/status files were committed. No intentionally excluded
+dirty file remains.
 
-No helper, overload, type, table, column, constraint, index, policy, grant,
-wrapper, GUC, feature flag or runtime consumer is authorised.
+## 25. Push standing
 
-## 13. Writer Contract Summary
+**PUSH COMPLETED without force.** The configured remote is `origin`, the pushed
+branch is `main`, the old remote commit is the starting hash in §5, and the new
+remote state is current `main` HEAD. `origin/main` and local `main` match.
 
-The replacement remains owner-only `SECURITY DEFINER`, `search_path=public`,
-with no client/service execute grant. It validates exact request/payload
-fingerprints, membership, context, registry, company, plan, scope and versions;
-resolves/creates one stream; advances only the stream-keyed accepted allocator;
-inserts occurrence/event/link/optional authoritative value/current order key;
-and returns exact occurrence/event/key/stream identities. Any event failure
-rolls back the whole occurrence.
+## 26. Recommended next mission
 
-## 14. Resolver Contract Summary
+`WP-5 AUTHORISATION GATE RE-RUN — Lifecycle Step 2`
 
-The resolver is owner-only, writer-consumed, read-only DML-wise and returns
-exactly one 25-column row. It resolves E1, E3…E10, X1…X4 and five version
-references, serializes the version vector plus 13 admission-resolved components and returns their
-32-byte SHA-256 digest. It cannot read accepted counters as chronology and
-cannot calculate cost, valuation, FIFO, WAC, COGS, posting, tax or journals.
+Perform an independent gate only. Do not implement or repair WP-5 during that
+mission.
 
-## 15. Canonical Encoding Summary
+## 27. NEXT AGENT START HERE
 
-Encoding marker: `PXL_ECC_ADMISSION_K1`. The five-element version vector is
-tagged before component records. Framing is one-byte tag + four-byte
-unsigned big-endian length + payload. Text is NFC UTF-8; UUID is 16 bytes;
-integers are fixed-width big-endian; timestamps are UTC microsecond text;
-base X2/X3 use a distinct sentinel encoding; E10 is its own exact six-field
-composite; JSON and amounts are excluded. Digest is the exact pgcrypto call
-`extensions.digest(canonical_key_bytes,'sha256')`, yielding 32-byte `bytea`.
-
-## 16. Certification-Fixture Boundary
-
-The only fixture mode is the exact writer argument
-`p_admission_context='certification_fixture'`. It accepts only the existing
-disabled certification row, is callable only by `postgres`, has no normal-role
-grant, is prohibited from commit and hosted claims, must rollback every
-Inventory/version/audit/counter row, and cannot prove production activation or
-Inventory readiness.
-
-## 17. Trigger and Totality Contract
-
-`inventory_events_ecc_order_key_totality_ct` is an `AFTER INSERT FOR EACH ROW`
-constraint trigger, `DEFERRABLE INITIALLY DEFERRED`, `ENABLE ALWAYS`. At the
-governed boundary every inserted event must have exactly one same-company
-current key. Intermediate incompleteness is allowed only inside the writer
-transaction. The trigger writes/repairs nothing and rejects fixture commit.
-
-WP-5 performs no re-resolution or supersession. WP-4's only permitted state
-transition remains current to superseded, but no current runtime procedure can
-invoke it. A future re-resolution package needs separate authority and key-side
-totality before use.
-
-## 18. Security Boundary
-
-All three functions are `postgres`-owned `SECURITY DEFINER` with
-`search_path=public`; execution is revoked from PUBLIC, anon, authenticated and
-service_role. Existing membership/RLS/guard/immutability controls remain.
-Company must match across actor, source, occurrence, event, scope, stream,
-allocator, version/rank, key and correction target. Direct chronology DML is
-prohibited.
-
-## 19. Rollback Contract
-
-After zero-row/dependency/control preconditions and appropriate locks: drop the
-constraint trigger; drop its function; drop resolver; drop the 14-argument
-writer; recreate the exact 11-argument migration-13 writer; restore its owner,
-security, search path, ACL and comment; prove the old three-trigger event set,
-WP-1…WP-4 catalog state and zero row/audit/counter residue. Future test `113`
-executes that proof transactionally and rolls it back.
-
-## 20. Future Test and Evidence Allocation
-
-- `111_inventory_accounting_ia5_ecc_wp5_admission_contract_test.sql` —
-  structural, fixture, golden canonical bytes/digest.
-- `112_inventory_accounting_ia5_ecc_wp5_totality_failure_security_test.sql` —
-  totality, complete failures, idempotency/concurrency and tenant/role attacks.
-- `113_inventory_accounting_ia5_ecc_wp5_rollback_test.sql` — exact restoration
-  and certification residue.
-
-Future implementation must semantically reconcile tests `103` and `109`, then
-rerun `103`…`110`. No test changed in EA-008.
-
-## 21. Validation Summary
-
-- `npm run docs:check` — **PASS**.
-- `git diff --check` — **PASS**.
-- Internal links and documentation-index registration — **PASS**; all changed-
-  document targets resolve and the WP-5 specification is registered once.
-- WP5-AG-001/002/003, authority/status and chronology-preservation checks —
-  **PASS**.
-- Object/rollback census — **PASS**: three governed functions (one replaced,
-  two created), one constraint trigger, exact reverse restoration.
-- Failure/evidence census — **PASS**: 25 unique failure IDs and seven exact test
-  families allocated across future tests `111`…`113`.
-- Identifier check — **PASS**: governed names are 29, 39, 42 and 42 bytes,
-  each below PostgreSQL's 63-byte maximum.
-- Product Architecture, Product Roadmap, ADR-C01 and ECC-01 hashes —
-  **unchanged**. The aggregate mission-start/end hash for every file under
-  `src`, `supabase` and `scripts` is identical.
-- No SQL, migration, test, runtime, route/navigation, database or hosted change
-  occurred. No database or pgTAP lane and no hosted command was run.
-
-## 22. Remaining Blocking Findings
-
-None within WP5-AG-001…003 at specification level. The separate Authorisation
-Gate is still mandatory and may independently reject EA-008. WP-5 remains
-unauthorised.
-
-## 23. Remaining Non-blocking Findings
-
-The `governed_business_sequence` representation remains intentionally
-fail-closed `0A000` because no current or enabled registry row uses it. A future
-production source needs a separately governed registry/source-adapter amendment.
-This does not affect the exact certification-only M5 contract.
-
-## 24. Current Product Value Boundary
-
-WP-5 proves what permanent evidence fixes later Inventory accounting sequence.
-It does not calculate cost, layers, COGS, journals, accounts, tax or product
-readiness. After any later WP-5 certification, the roadmap product-value
-checkpoint still decides whether dormant WP-6+ work is more valuable than
-canonical Sales/Purchasing proof, Receiving accounting, Tax authority, opening
-balances and backup/restore.
-
-## 25. Recommended Next Mission
-
-**WP-5 AUTHORISATION GATE RE-RUN — Lifecycle Step 2.** Documentation and
-governance only. Independently verify EA-008; do not implement WP-5 during the
-gate.
-
-## 26. NEXT AGENT START HERE
-
-Read in order:
-
-1. `AI/AI_STATE.md`
-2. this file
-3. `AI_PROGRESS.md`
-4. `docs/PXL/01. Architecture/PXL_PRODUCT_ARCHITECTURE.md`
-5. `docs/PXL/01. Architecture/PXL_PRODUCT_EXECUTION_ROADMAP.md`
-6. `docs/PXL/07. Inventory/04. Implementation/IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md` §§31–32
-7. `docs/PXL/07. Inventory/04. Implementation/IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md`
-8. ADR-C01, ECC-01 and certified WP-1…WP-4 only where the gate must verify a
-   cited dependency.
-
-Gate question: does EA-008 close WP5-AG-001…003 without new
-implementation-affecting ambiguity? Do not use this handoff as authority to
-implement. WP-5 is not authorised; no runtime behavior, database object, test
-or hosted environment changed.
+1. Read `AI/AGENT_SYSTEM_PROMPT.md`, then `AI/AI_STATE.md`, then this handoff.
+2. Confirm local/remote `main` resolve to the same current HEAD.
+3. Read the Product Architecture and subordinate Product Execution Roadmap.
+4. Read programme design §§31–34 and the current WP-5 detailed specification,
+   especially §§3.5, 5–6, 10–12 and 17–18.
+5. Run only `WP-5 AUTHORISATION GATE RE-RUN — Lifecycle Step 2`.
+6. WP-5 may not be implemented unless that separate gate returns AUTHORISED.

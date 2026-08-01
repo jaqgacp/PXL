@@ -2,10 +2,11 @@
 
 **Current Date:** 2026-08-01
 **Current Branch:** `main`
-**Working Tree:** Dirty and uncommitted against base `4aef8b3`; preserve all
-unrelated changes.
-**Product Phase:** Product Architecture consolidation complete; WP-5
-specification repaired, awaiting a separate Authorisation Gate re-run.
+**Working Tree:** EA-009 and its owner-approved security disposition are
+validated and committed in the repository state identified by current `main`
+HEAD; the accepted public handoff is synchronized to `origin/main`.
+**Product Phase:** Product Architecture consolidation complete; WP-5 Engineering
+Amendment EA-009 complete, awaiting another separate Authorisation Gate re-run.
 **Environment:** Local repository documentation review only; no database test
 lane, runtime, or hosted operation was authorised.
 **Product Readiness:** **Internal QA/demo only. Not pilot-ready. Not
@@ -77,15 +78,23 @@ ADR-C01 remains frozen. ECC-01 remains owner accepted, not frozen. The original
 IA-5 permanent-foundation claim remains **SUSPENDED** by C-01.
 
 WP-1, WP-2, WP-3 and WP-4 remain **Certified work packages** and dormant. The
-2026-07-31 WP-5 Authorisation Gate rejection remains preserved. Documentation-
-only Engineering Amendment **EA-008** closed WP5-AG-001…003 at specification
-level on 2026-08-01: exact replacement writer/resolver/payload/13-component
-admission encoding, V-10-preserving owner-only rolled-back fixture, separate
-trigger-function/object census, totality, rollback and future tests `111`…`113`
-are governed in
+2026-07-31 WP-5 rejection and EA-008 remain preserved as historical records.
+The later independent gate re-run returned **REJECTED** on exactly
+WP5-AGR-001…003: canonical-key authority conflicted with certified WP-4, two
+mandatory writer sequences conflicted, and the protected-boundary proof was not
+independently reproducible.
+
+Documentation/governance-only **EA-009** closes those three specification/proof
+findings. Certified WP-4 remains authoritative for immutable bytes/digest of all
+fourteen ECC components; WP-5 derives the values, with E2 = 0 for the only
+eligible base/no-edge fixture. The detailed specification §3.5 is the only
+writer sequence, and §17 fixes a reproducible 527-file protected manifest. The
+exact replacement writer/resolver/payload, V-10-preserving owner-only rolled-
+back fixture, trigger/function census, totality, rollback and future tests
+`111`…`113` remain governed in
 `docs/PXL/07. Inventory/04. Implementation/IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md`.
 
-EA-008 grants no authority. WP-5 is unauthorised, unimplemented, unaudited and
+EA-009 grants no authority. WP-5 is unauthorised, unimplemented, unaudited and
 uncertified. No runtime consumer exists and no production source is enabled.
 
 Posting P5.2 remains fully enforced. The Accounting Kernel is a component inside
@@ -107,21 +116,31 @@ complete workflow.
 
 ## Last Verified Commands
 
-- `npm run docs:check` — **PASS** on 2026-08-01 after EA-008 reconciliation.
+- `npm run docs:check` — **PASS** on 2026-08-01 after EA-009 reconciliation.
 - `git diff --check` — **PASS** on 2026-08-01.
-- Internal Markdown links/index, exact four-object and reverse-rollback census,
-  25 failure IDs, seven future test families, authority/status terminology and
-  PostgreSQL identifier lengths — **PASS**.
-- Mission-start/end SHA-256 values for Product Architecture, Roadmap, ADR-C01,
-  ECC-01 and the aggregate `src`/`supabase`/`scripts` set — **identical**.
+- Internal Markdown links/index, fourteen-component/26-column resolver census,
+  one writer sequence, exact four-object/reverse-rollback census, 25 failure
+  IDs, seven future test families, authority/status terminology and PostgreSQL
+  identifier lengths — **PASS**.
+- The fixed protected set measured 527 entries. Start/end SHA-256 aggregate
+  `8ddf66f36c63606f8eb0bceaacfe3f3131337758b895fc557ec488ca383d7ba6`
+  is **identical**.
 - No SQL, migration, pgTAP/database lane, test, route, navigation, application
-  source, database object or hosted operation was executed or edited by EA-008.
+  source, database object or hosted operation was executed or edited by EA-009.
+- Public-push secret/privacy gate — **PASS after owner disposition**. The exact
+  reviewed residual is the Supabase CLI documented default local-development
+  PostgreSQL URI at `127.0.0.1:54322`, not a hosted/project credential. Current
+  prose masks its password; the historical value is classified only by its
+  reviewed SHA-256. This exact false positive requires neither rotation nor
+  history rewrite. No blanket database-URI exemption exists.
 
 ## Recommended Next Task
 
-**WP-5 AUTHORISATION GATE RE-RUN — Lifecycle Step 2.** Independently verify
-EA-008 against ADR-C01, ECC-01, certified WP-1…WP-4 and the executable frontier.
-Do not implement WP-5 during the gate.
+**WP-5 AUTHORISATION GATE RE-RUN — Lifecycle Step 2.** Independently review the
+EA-009-current specification against ADR-C01, ECC-01 and certified WP-1…WP-4.
+Do not implement or repair WP-5 during that gate. The owner-approved Git-history
+disposition applies only to the exact documented Supabase CLI localhost default;
+any future credential detection remains a new stop requiring independent review.
 
 No open findings remain; the audit-finding program is complete. This next task
 is a governed engineering-documentation mission, not a finding remediation.
