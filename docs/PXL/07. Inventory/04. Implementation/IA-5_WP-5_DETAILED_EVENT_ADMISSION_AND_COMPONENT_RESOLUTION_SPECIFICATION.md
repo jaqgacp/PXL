@@ -1,6 +1,6 @@
 # IA-5 WP-5 — Detailed Event Admission and Component Resolution Specification
 
-**Status:** ENGINEERING AMENDMENT EA-009 COMPLETE — ready for a separate WP-5 Authorisation Gate re-run; WP-5 remains unauthorised and unimplemented
+**Status:** ENGINEERING AMENDMENT EA-010 COMPLETE — ready for a separate comprehensive WP-5 Authorisation Gate re-run; WP-5 remains unauthorised and unimplemented
 **Authority:** Tier 2 Engineering Specification subordinate to the Product Architecture, ADR-C01, ECC-01, and the accepted IA-5 ECC Hardening programme design
 **Owner / Domain:** Inventory Accounting / IA-5 ECC Hardening
 **Applies To:** WP-5/M5 event admission and admission-time ECC component resolution only
@@ -10,7 +10,7 @@
 
 ---
 
-## Engineering Amendments EA-008 and EA-009 — Findings and authority
+## Engineering Amendments EA-008 through EA-010 — Findings and authority
 
 EA-008 closes only the three findings recorded by the 2026-07-31 WP-5
 Authorisation Gate:
@@ -32,12 +32,100 @@ evidence.
 | `WP5-AGR-002` | §3.5 is the sole controlling writer algorithm. It places tenant-safe normalization before the company-scoped idempotency lookup, resolves duplicates before any chronology write, and fixes the occurrence/stream/allocator lock order. The programme design now points to it instead of restating a conflicting sequence. |
 | `WP5-AGR-003` | §17 defines and executes a fixed, filesystem-derived, independently reproducible SHA-256 manifest for the protected implementation and authority boundary. |
 
+The next complete independent Authorisation Gate re-run returned **REJECTED**
+on four High findings. The following mission ledger preserves that issued gate
+result. EA-010 supersedes only the defective prospective WP-5 rules; EA-008,
+EA-009, and both prior rejection decisions remain historical evidence.
+
+### EA-010 four-finding mission ledger
+
+#### WP5-AGR2-001 — High — Resolution identity and WP-4 uniqueness conflict
+
+- **Exact evidence:** ECC-01 §3.3 requires new immutable evidence under the
+  target version while retaining the prior resolution; certified WP-4 permits
+  retained resolutions and `current` → `superseded`; executable migration
+  `20260731000019` also enforces unconditional `UNIQUE
+  (valuation_stream_id, canonical_key_bytes)`; and the EA-009 WP-5 contract
+  excluded the version vector from those bytes while still describing a
+  successor row. A version-only re-resolution with unchanged comparator values
+  therefore collides with the retained row.
+- **Root cause:** comparator-component bytes were treated as though they were
+  also a resolution-version identity.
+- **Unsafe consequence:** an implementer could build the documented successor
+  lifecycle and encounter an unavoidable `23505`, or silently change certified
+  WP-4 identity semantics to avoid it.
+- **Minimum governed repair:** restrict WP-5 to initial resolution only; remove
+  its successor/re-resolution claims; fail closed on any pre-existing event
+  resolution; and record a mandatory separate WP-4 lifecycle decision before
+  re-resolution or dependent activation.
+- **Confidence:** High.
+
+#### WP5-AGR2-002 — High — Replacement-writer persistence map incomplete
+
+- **Exact evidence:** EA-009 governed the caller payload and high-level insert
+  sequence but did not map every required column of
+  `inventory_occurrences`, `inventory_events`,
+  `inventory_event_source_links`, optional `inventory_event_values`, the WP-3
+  stream/allocator objects, and `inventory_event_order_keys`. Executable
+  migration `20260726000013` supplies specific occurrence dates, policy IDs,
+  costing method, valuation currency, source-link evidence, currency metadata,
+  atomic/audit identities, defaults, and creation fields that the replacement
+  contract left implicit. Its text/NFC/trim storage behavior was also not
+  governed.
+- **Root cause:** the input contract was completed without completing the
+  persisted row-construction contract.
+- **Unsafe consequence:** an implementer still had to choose which current
+  writer semantics to preserve and how to populate financially and audit-
+  relevant columns.
+- **Minimum governed repair:** an exhaustive per-column persistence map for all
+  seven written tables, plus an explicit preserved/modified/removed matrix for
+  the current 11-argument writer.
+- **Confidence:** High.
+
+#### WP5-AGR2-003 — High — Economic-date derivation depends on session timezone
+
+- **Exact evidence:** EA-009 used `E1::date`; executable
+  `fn_ia5_guard_inventory_event_fact` compares policy periods through
+  `NEW.effective_at::date`; and the current writer stores
+  `p_occurred_at::date`. PostgreSQL converts `timestamptz` to `date` in the
+  effective session `TimeZone`, while the canonical timestamp contract is UTC.
+- **Root cause:** the contract governed UTC timestamp bytes but not the date
+  boundary used for scope/policy selection, guard validation, and
+  `occurrence_date` persistence.
+- **Unsafe consequence:** the same instant near UTC midnight can select a
+  different policy/version or be accepted/rejected differently under two
+  session timezones.
+- **Minimum governed repair:** define one UTC economic-date and occurrence-date
+  derivation, pin the writer/resolver function-local timezone to UTC so the
+  preserved guard observes the same date, and allocate two-timezone evidence.
+- **Confidence:** High.
+
+#### WP5-AGR2-004 — High — Two-session certification evidence is unconstructible
+
+- **Exact evidence:** EA-009 required all business/version/event/key fixtures
+  to live in one transaction ending `ROLLBACK`, yet assigned concurrent
+  idempotency to test `112`. Existing repository asset
+  `supabase/verification/ia5_concurrent_idempotency.sql` correctly records that
+  autonomous sessions cannot see an uncommitted fixture and therefore commits
+  isolated local setup before its two-session proof and requires an immediate
+  local reset.
+- **Root cause:** the single-session rolled-back fixture convention was applied
+  to a multi-session visibility test without a separate reset-bounded lane.
+- **Unsafe consequence:** the future implementer would have to commit forbidden
+  Inventory fixture rows, weaken the fixture boundary, or claim concurrency
+  without executable evidence.
+- **Minimum governed repair:** allocate one exact fresh-local, reset-bounded,
+  two-session verification asset; permit only non-Inventory setup to commit;
+  require both event-admission transactions to roll back or be commit-rejected;
+  reset immediately; and prove no Inventory or setup residue.
+- **Confidence:** High.
+
 Authority order is:
 
 1. [`PXL_PRODUCT_ARCHITECTURE.md`](../../01.%20Architecture/PXL_PRODUCT_ARCHITECTURE.md) — product scope and engine/module ownership;
 2. [`ADR-C01_ECONOMIC_EVENT_CHRONOLOGY_AND_COSTING_ORDER_AUTHORITY.md`](../03.%20Architecture/ADR-C01_ECONOMIC_EVENT_CHRONOLOGY_AND_COSTING_ORDER_AUTHORITY.md) — frozen dual-chronology decision;
 3. [`ECC-01_ECONOMIC_COSTING_CHRONOLOGY_DERIVATION_SPEC.md`](../03.%20Architecture/ECC-01_ECONOMIC_COSTING_CHRONOLOGY_DERIVATION_SPEC.md) — accepted derivation, validation, normalization and failure authority;
-4. [`IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md`](IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md) — programme and work-package sequence, as amended by EA-008 and EA-009;
+4. [`IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md`](IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md) — programme and work-package sequence, as amended by EA-008 through EA-010;
 5. certified WP-1 through WP-4 specifications — storage and dormant-foundation contracts; and
 6. this document — the exact M5 representation and executable boundary.
 
@@ -55,7 +143,7 @@ integer zero. Any later source requiring non-zero E2 remains fail-closed until a
 separate governed source/resolver amendment. No WP-4 amendment is required and
 its certification remains valid.
 
-**Governance decision:** EA-008 and EA-009 grant no implementation, audit,
+**Governance decision:** EA-008, EA-009, and EA-010 grant no implementation, audit,
 certification, deployment, source activation, or hosted authority. Only a
 separate successful WP-5 Authorisation Gate may permit implementation.
 
@@ -99,8 +187,10 @@ Object census:
 - table-coverage entries: **0**, because WP-5 creates no table;
 - rollback-owned database objects: the four rows above plus restoration of the
   prior 11-argument writer definition, ACL and comment;
-- future test files: `111`, `112`, and `113` allocated in §12; no test is
-  created or changed by EA-008 or EA-009.
+- future pgTAP files: `111`, `112`, and `113`; future two-session verification
+  asset: `supabase/verification/ia5_wp5_concurrent_idempotency.sql`, evidence ID
+  `WP5-CONC-114`; no test or verification asset is created or changed by
+  EA-008, EA-009, or EA-010.
 
 No helper or encoding function is authorised. The resolver performs encoding
 inside its body. Adding a helper, overload, view, type, domain, table, column,
@@ -217,7 +307,9 @@ caller-supplied, and is excluded from canonical ECC serialization.
 - parallel safety: `PARALLEL UNSAFE`;
 - security: `SECURITY DEFINER`;
 - owner: `postgres`;
-- search path: exactly `public`;
+- function configuration: exactly `SET search_path = public` and
+  `SET TimeZone = 'UTC'`; both settings are function-local and PostgreSQL
+  restores the caller's settings when the call returns;
 - direct `EXECUTE`: owner only;
 - explicit `REVOKE ALL`: `PUBLIC`, `anon`, `authenticated`, `service_role`;
 - prohibited callers: every direct client, browser, UI, API role, report, job,
@@ -232,6 +324,16 @@ The writer uses the caller's transaction. Production semantics require
 internally. Any exception rolls back every row and counter change made by that
 function statement. The certification context has the additional commit
 prohibition in §9.
+
+The UTC function configuration is part of the executable contract, not an
+environment assumption. Define `economic_date` exactly as
+`(effective_at AT TIME ZONE 'UTC')::date` and `occurrence_date` exactly as
+`(p_occurred_at AT TIME ZONE 'UTC')::date`. The preserved
+`fn_ia5_guard_inventory_event_fact` uses `NEW.effective_at::date`; because that
+trigger executes inside this UTC-configured writer call, its date comparison is
+identical to `economic_date` without modifying the certified guard. A future
+direct writer other than this function is prohibited and may not rely on the
+session timezone.
 
 ### 3.3 Exact return object
 
@@ -301,16 +403,16 @@ stream, allocator and key work waits until the duplicate decision.
 | 1 | Enforce owner-only execution and validate `p_actor_id`, required scalar types, and the exact caller transaction requirement. | Reads function ACL/session identity only; no table write or lock. | `42501`/`22023`; retry only with an authorised caller/valid scalar. Both contexts. |
 | 2 | Prove `p_company_id` exists and `p_actor_id` has the exact `user_company_memberships` row. Do not query occurrence or source evidence first. | Reads `companies` and `user_company_memberships`; no write or row lock. | `42501`; cross-company probing stops here. Both contexts. |
 | 3 | Resolve the exact source-registry row and validate `p_admission_context`. Apply V-10 to `production`; apply only §9.3 to `certification_fixture`. | Reads `ref_inventory_event_source_types`; no write or lock. | `23514`/`42501`; production-disabled and certification-only production calls fail before idempotency lookup. |
-| 4 | Strictly parse all event/value keys, normalize timestamps/text/UUID/fixed-point values, require the event plan to be contiguous, validate the five immutable source-evidence identity keys, augment §4.3 evidence, recompute every source-evidence fingerprint, build the exact §3.4 request object, and verify `p_request_fingerprint`. | Reads no chronology table; writes only local PL/pgSQL values; no lock. | `22023`/`22021`/`23514`; corrected retry is safe. Both contexts. No master/policy default is inferred. |
+| 4 | Strictly parse all event/value keys, normalize timestamps/text/UUID/fixed-point values, derive every event's `economic_date` as `(effective_at AT TIME ZONE 'UTC')::date` and the occurrence date as `(p_occurred_at AT TIME ZONE 'UTC')::date`, require the event plan to be contiguous, validate the five immutable source-evidence identity keys, augment §4.3 evidence, recompute every source-evidence fingerprint, build the exact §3.4 request object, and verify `p_request_fingerprint`. | Reads no chronology table; writes only local PL/pgSQL values; no lock. | `22023`/`22021`/`23514`; corrected retry is safe. Both contexts. No master/policy default or session-timezone date is inferred. |
 | 5 | Query the company-scoped idempotency identity and, if present, acquire `FOR UPDATE` on that `inventory_occurrences` row. | Reads/locks at most one occurrence using both company and key; no write. This is always the first chronology row lock. | Lock waits for an uncommitted winner. Deadlock is avoided because no stream/allocator lock precedes it. Both contexts. |
-| 6 | Classify the existing-row result: exact accepted success, contradictory reuse, or invalid stored result. Compare source identity, fingerprint, context, event count, event ids, exactly one current key per event, and returned stream/key arrays. | Reads occurrence, events, reserved audit context, streams and current keys while holding the occurrence lock; no write. | Exact prior success returns §3.3 immediately. Any mismatch is `23505`; missing/duplicate result evidence is `23514` and is never repaired. A failed prior transaction has no row and therefore proceeds as new. Both contexts. |
-| 7 | On the new path only, resolve every event's company/item/UOM/scope/profile/formula/precision authority at E1 and resolve the exact applicable order policy, E3/E4/E7 ranks, canonical-form version and correction-graph version. Validate quantity direction and the current base/no-edge rule. | Reads only the §3.6 master/policy allowlist; no write or lock. | Missing, ambiguous, cross-company or incompatible authority aborts. Retry only after governed correction. Both contexts. |
+| 6 | Classify the existing-row result: exact accepted success, contradictory reuse, or invalid stored result. Compare source identity, fingerprint, context, event count, event ids, and the §3.8 persisted map; require exactly one order-key row in total—and that row `current`—for every event, then reconstruct the stream/key arrays. | Reads occurrence, events, reserved audit context, streams and all key states while holding the occurrence lock; no write. | Exact prior success returns §3.3 immediately. Any request mismatch is `IA5-WP5-011`/`23505`; missing, extra, superseded or otherwise invalid stored result evidence is `IA5-WP5-017`/`23514` and is never repaired. A failed prior transaction has no row and therefore proceeds as new. Both contexts. |
+| 7 | On the new path only, resolve every event's company/item/UOM/scope/profile/formula/precision authority against its exact UTC `economic_date`; resolve the exact applicable order policy, E3/E4/E7 ranks, canonical-form version and correction-graph version against that same date. Validate quantity direction and the current base/no-edge rule. | Reads only the §3.6 master/policy allowlist; no write or lock. | Missing, ambiguous, cross-company, out-of-date or incompatible authority aborts. Retry only after governed correction. Both contexts. |
 | 8 | Generate one occurrence id and the ordered event-id array, then insert the accepted occurrence as the idempotency reservation with `ON CONFLICT (company_id,idempotency_key) DO NOTHING`. | Inserts `inventory_occurrences`; its unique index is the absent-row concurrency arbiter. | If another transaction won, PostgreSQL waits for its outcome: on commit, lock the winner and repeat step 6; on rollback, this insert succeeds and remains the winner. Contradictory payload never receives the winner's result. |
 | 9 | Derive all distinct stream business keys `(company_id,item_id,scope_code)` and process them in exact `ORDER BY uuid_send(company_id), uuid_send(item_id), convert_to(normalize(scope_code, NFC),'UTF8')`. Resolve/create each immutable stream, resolve/create its allocator row, then lock every allocator row `FOR UPDATE` in that same order before allocating any sequence. | Reads/inserts `inventory_valuation_streams` and `inventory_valuation_stream_sequences`; locks allocators only after the occurrence row. | Unique conflicts resolve to the one certified stream and are identity-checked. The fixed occurrence→sorted-stream→allocator order applies to every writer and prevents opposite multi-stream deadlocks. Both contexts. |
 | 10 | Build each event's candidate component plan in `event_sequence` order: E1, E3…E10, X1…X4 and, because the only eligible source forbids all edges, E2 = 0. Validate the exact fourteen-component census before any key call. | Reads retained request and resolved authority in local values; no additional write or lock. | Any causal/reversal/correction input is `0A000`; no fifteenth component, version reference or admission metadata may enter the plan. Both contexts. |
-| 11 | For each event in `event_sequence` order, increment its already-locked stream allocator with one `UPDATE … RETURNING`; construct reserved audit evidence; insert the event, primary source link and optional caller-authoritative value. | Updates only allocator `last_sequence`/`updated_at`; inserts `inventory_events`, `inventory_event_source_links`, optional `inventory_event_values`. | Allocator mismatch is `23514`. The returned `scope_sequence` is Accepted Event Chronology only. A later error rolls back every counter and row. Both contexts. |
+| 11 | For each event in `event_sequence` order, increment its already-locked stream allocator with one `UPDATE … RETURNING`; construct and insert the occurrence/event/link/value rows exactly as the exhaustive §3.8 map requires. | Updates only allocator `last_sequence`/`updated_at`; inserts `inventory_events`, `inventory_event_source_links`, optional `inventory_event_values`. | Allocator or required-column mismatch is `23514`. The returned `scope_sequence` is Accepted Event Chronology only. A later error rolls back every counter and row. Both contexts. |
 | 12 | Call the §5 resolver exactly once for the newly inserted event with the four required and four correction arguments. Require exactly one 26-column row and compare it to the step-10 plan. | Resolver performs only §5.2 reads; no write or lock. | Zero/multiple rows, component mismatch or encoding failure aborts. Event insertion must precede this call because the certified event and source-link facts are the resolver's retained evidence; that evidence-driven dependency is why the conceptual list in the gate prompt cannot place the executable resolver before event insertion. |
-| 13 | Recompute `extensions.digest(canonical_key_bytes,'sha256')`, compare the 32 bytes, and insert one WP-4 row with `resolution_state='current'`. | Reads resolver output; inserts only `inventory_event_order_keys`; no update/supersession. | Digest mismatch `23514`; duplicate identity/current key `23505`; no repair or suffix. Both contexts. |
+| 13 | Recompute `extensions.digest(canonical_key_bytes,'sha256')`, compare the 32 bytes, prove no `inventory_event_order_keys` row of any state exists for the newly generated event id, and insert exactly one §3.8/WP-4 row with `resolution_state='current'`. | Reads resolver output and all key states for that event; inserts only `inventory_event_order_keys`; no update, demotion, supersession or successor. | Digest mismatch `23514`; pre-existing event resolution raises `IA5-WP5-026`/`23505`; duplicate canonical identity/current key remains `23505`; no repair or suffix. Both contexts. |
 | 14 | After every event, query events/keys/streams in event order; require exact event-count cardinality, exactly one current key per event, matching companies/streams, and construct only the §3.3 return object. | Read-only verification; occurrence and allocator locks remain transaction-held. | Totality/cardinality failure `23514`; whole transaction remains abortable. Both contexts. |
 | 15 | Permit the deferred `inventory_events_ecc_order_key_totality_ct` to enforce event-side totality at `SET CONSTRAINTS` or transaction end. | Trigger performs §10 reads; no writes. | Production may pass only when source authority is later enabled; certification fixture always receives `IA5-WP5-024` and must roll back. |
 | 16 | Return the governed object to the caller. | No write or new lock. | A return is not a commit and does not weaken deferred constraints. Both contexts. |
@@ -392,6 +494,244 @@ journals, tax, GL or reports.
 - no exception handler may convert a component, totality, cross-company or
   digest failure into an accepted result.
 
+### 3.8 Complete column-by-column persistence map
+
+This subsection is the complete row-construction authority for the replacement
+writer. It covers **139 columns across seven written tables**. No column is
+left to inherited implementation choice. Unless a row says otherwise, the
+writer inserts once, never updates it, and an unavailable required value aborts
+the whole occurrence with `IA5-WP5-010`/`22023` for malformed caller input or
+the closest §7 `23514` authority failure. Database-generated IDs and timestamps
+are audit/identity evidence only; none enters ECC. “Preserved” means the current
+11-argument writer already uses the stated business rule; “modified” means
+WP-5 deliberately replaces it. Every omitted nullable value below is explicitly
+SQL `NULL`, not an undocumented default.
+
+#### 3.8.1 `inventory_valuation_streams` — 7 columns
+
+The writer selects by exact `(company_id,item_id,scope_code)`. If absent, it
+inserts with `ON CONFLICT` handling, reloads the one row, and validates all
+identity and dormant fields. It never updates a stream.
+
+| Column / SQL contract | Exact source and stored value | Validation / failure | Evolution and audit meaning |
+| --- | --- | --- | --- |
+| `id uuid NOT NULL` | Omit on insert; table default `gen_random_uuid()`; return the persisted id | Exactly one row after conflict handling or `IA5-WP5-009`/`23514` | **Modified/additive**; permanent stream identity, not ECC input |
+| `company_id uuid NOT NULL` | `p_company_id` | Company/item/scope equality or `IA5-WP5-006` | **Modified/additive** tenant partition |
+| `item_id uuid NOT NULL` | normalized `p_events[].item_id` | Existing same-company item and scope item equality or `IA5-WP5-006` | **Modified/additive** partition key |
+| `scope_code text NOT NULL` | exact `inventory_valuation_scopes.scope_code`; no trim/case change | Source value must be non-empty and already NFC; otherwise `IA5-WP5-014`/`22021` | **Modified/additive** version-free partition key |
+| `activation_state text NOT NULL` | Omit; certified default exact `'dormant'` | Reload must equal `dormant` or `IA5-WP5-009` | **Modified/additive** dormancy evidence |
+| `created_by uuid NOT NULL` | `p_actor_id` | Same-company member or `IA5-WP5-005` | **Modified/additive** creator audit identity |
+| `created_at timestamptz NOT NULL` | Omit; certified default `clock_timestamp()` | Non-null; never compared or serialized | **Modified/additive** audit clock only |
+
+#### 3.8.2 `inventory_valuation_stream_sequences` — 4 columns
+
+For each bytewise-sorted stream key, insert the allocator row if absent, reload
+and company-check it, then lock it `FOR UPDATE`. For each event, execute exactly
+`last_sequence = last_sequence + 1, updated_at = clock_timestamp()` with stream
+and company predicates and `RETURNING last_sequence`.
+
+| Column / SQL contract | Exact source and stored value | Validation / failure | Evolution and audit meaning |
+| --- | --- | --- | --- |
+| `valuation_stream_id uuid NOT NULL` | persisted stream id | Exact FK/identity or `IA5-WP5-019`/`23514` | **Modified** from scope-keyed to certified stream-keyed allocator; immutable PK |
+| `company_id uuid NOT NULL` | `p_company_id` | Equals stream company or `IA5-WP5-006` | **Preserved concept, modified key**; tenant audit |
+| `last_sequence bigint NOT NULL` | insert exact `0`; one locked `+ 1` per event | Must return a positive value; overflow/native check aborts; retry is atomic | **Preserved allocation behavior, modified authority**; Accepted Event Chronology only |
+| `updated_at timestamptz NOT NULL` | insert default `clock_timestamp()`; set `clock_timestamp()` on each increment | Non-null; never chronology or ECC | **Preserved** operational allocator timestamp |
+
+#### 3.8.3 `inventory_occurrences` — 24 columns
+
+| Column / SQL contract | Exact source and stored value | Validation / failure | Evolution and audit meaning |
+| --- | --- | --- | --- |
+| `id uuid NOT NULL` | writer-local `gen_random_uuid()` generated before event IDs | New-path insert must win or follow §3.5 step 8 | **Preserved** occurrence identity; not chronology |
+| `atomic_occurrence_id uuid NOT NULL` | exact same UUID as `id` | Certified equality check or transaction abort | **Preserved** atomicity identity |
+| `company_id uuid NOT NULL` | `p_company_id` | Company and membership proven before lookup | **Preserved** tenant identity |
+| `source_document_type text NOT NULL` | exact ASCII registry key `p_source_document_type`; no trim/case/NFC transform | Registry/context rules or `001`/`002`/`003` | **Preserved, tightened** source authority |
+| `source_document_id uuid NOT NULL` | `p_source_document_id` | Required and matches retained evidence | **Preserved** source identity |
+| `source_line_id uuid NOT NULL` | `p_source_line_id` | Required and matches retained evidence | **Preserved** source identity |
+| `source_transition text NOT NULL` | exact `p_source_transition`; no transform | ASCII domain and rank authority or `010`/`007` | **Preserved, tightened** lifecycle identity |
+| `source_occurrence_sequence bigint NOT NULL` | `p_source_occurrence_sequence` | Positive and evidence-equal or `010` | **Preserved** E8 source evidence |
+| `idempotency_key text NOT NULL` | exact `p_idempotency_key`; no trim/case/NFC transform | 16…200 and company-scoped uniqueness or `011` | **Preserved, tightened** retry identity |
+| `request_fingerprint text NOT NULL` | verified/recomputed §3.4 lowercase SHA-256 hex | Exact equality or `010`; contradictory reuse `011` | **Modified** to governed normalized envelope |
+| `occurrence_state text NOT NULL` | fixed literal `'accepted'` | Any other state is outside WP-5 | **Preserved** accepted fact; rejected attempts leave no row |
+| `occurred_at timestamptz NOT NULL` | exact `p_occurred_at` instant | Required; request text canonicalized to UTC microseconds | **Preserved, normalized** audit instant; not ECC |
+| `event_ids uuid[] NOT NULL` | writer-generated UUID array in `event_sequence` order | Cardinality equals event count; no null/duplicate ids | **Preserved** atomic event membership |
+| `event_count integer NOT NULL` | validated JSON array length | Positive and integer-domain safe | **Preserved** atomic cardinality |
+| `projection_effect_count integer NOT NULL` | fixed literal `0` | Certified check requires zero | **Preserved** no-projection boundary |
+| `posting_request_id uuid NULL` | explicit `NULL` | Non-null is prohibited | **Preserved** no-Posting boundary |
+| `posting_result_id uuid NULL` | explicit `NULL` | Non-null is prohibited | **Preserved** no-Posting boundary |
+| `audit_identity uuid NOT NULL` | exact same UUID as `id` | Certified equality check | **Preserved** immutable audit identity |
+| `failure_code text NULL` | explicit `NULL` | Accepted row requires null | **Preserved** failed requests persist nothing |
+| `failure_evidence jsonb NULL` | explicit `NULL` | Accepted row requires null | **Preserved** failed requests persist nothing |
+| `retry_of_occurrence_id uuid NULL` | explicit `NULL`; exact retries return prior row instead of inserting | Any non-null retry chain is outside WP-5 | **Preserved** idempotent-return model |
+| `foundation_state text NOT NULL` | omit; certified default exact `'dormant'` | Reload/default must equal dormant | **Preserved** dormant foundation |
+| `created_by uuid NOT NULL` | `p_actor_id` | Membership already proven | **Preserved** creator audit identity |
+| `created_at timestamptz NOT NULL` | omit; certified default `clock_timestamp()` | Non-null; never ECC | **Preserved** audit clock |
+
+#### 3.8.4 `inventory_events` — 41 columns
+
+Text normalization is exact: ASCII-regex domains are stored exactly as supplied;
+`lot_number`, `serial_number`, and `reason_code` are stored as
+`btrim(normalize(input,'NFC'))`, with empty results rejected. Open JSON evidence
+is stored as PostgreSQL JSONB after the reserved augmentation in §4.3.
+
+| Column / SQL contract | Exact source and stored value | Validation / failure | Evolution and audit meaning |
+| --- | --- | --- | --- |
+| `id uuid NOT NULL` | writer-generated member of occurrence `event_ids` | Unique and fixed before occurrence insert | **Preserved** event identity; prohibited from ECC |
+| `company_id uuid NOT NULL` | `p_company_id` | Every dependency same company or `006` | **Preserved** tenant identity |
+| `occurrence_id uuid NOT NULL` | new occurrence `id` | Exact FK/member relationship | **Preserved** atomic occurrence link |
+| `source_document_type text NOT NULL` | exact `p_source_document_type` | Equals occurrence/primary link | **Preserved** source identity |
+| `source_document_id uuid NOT NULL` | `p_source_document_id` | Equals occurrence/primary link | **Preserved** E5/E10 source identity |
+| `source_line_id uuid NOT NULL` | `p_source_line_id` | Equals occurrence/primary link | **Preserved** E10 source identity |
+| `source_transition text NOT NULL` | exact `p_source_transition` | Equals occurrence/primary link and ranked | **Preserved** E7/E10 source identity |
+| `source_occurrence_sequence bigint NOT NULL` | `p_source_occurrence_sequence` | Positive/equal to occurrence | **Preserved** E8 evidence |
+| `event_type text NOT NULL` | exact ASCII `p_events[].event_type` | Exact regex or `010` | **Preserved, tightened** event audit class |
+| `event_effect text NOT NULL` | exact payload enum | Registry effect map and quantity direction or `013` | **Preserved, tightened** E3 classification input |
+| `event_sequence integer NOT NULL` | normalized contiguous payload integer | Equals array position + 1 | **Preserved, tightened** E9 |
+| `scope_sequence bigint NOT NULL` | locked WP-3 stream allocator return | Positive and returned once or `019` | **Modified** to stream-keyed Accepted Event Chronology; never ECC |
+| `effective_at timestamptz NOT NULL` | exact parsed UTC-microsecond payload instant | RFC3339 `Z`; no timezone-dependent transformation | **Preserved, tightened** E1 |
+| `accounting_date date NULL` | exact payload date or explicit `NULL` | `YYYY-MM-DD`; WP-5 does not derive it | **Preserved** Posting/reporting date evidence only |
+| `occurrence_date date NOT NULL` | `(p_occurred_at AT TIME ZONE 'UTC')::date` | Same result under every caller timezone | **Modified** to explicit UTC audit date |
+| `item_id uuid NOT NULL` | normalized payload UUID | Existing same-company item and scope equality | **Preserved** stream/partition input |
+| `valuation_scope_id uuid NOT NULL` | exact payload scope-version UUID | Same company/item and effective on UTC `economic_date` | **Preserved, tightened** scope version |
+| `accounting_profile_id uuid NOT NULL` | exact `inventory_valuation_scopes.accounting_profile_id` | Profile same company/effective on UTC date | **Preserved** dependency of record |
+| `cost_formula_policy_id uuid NOT NULL` | exact `inventory_valuation_scopes.cost_formula_policy_id` | Formula same company/profile/effective on UTC date | **Preserved** dependency of record |
+| `precision_policy_id uuid NOT NULL` | exact selected profile's `precision_policy_id` | Precision same company/effective on UTC date | **Preserved** dependency of record |
+| `costing_method text NOT NULL` | exact selected formula's `costing_method` | Certified enum and profile relationship | **Preserved** future costing-policy evidence; no cost computed |
+| `physical_warehouse_id uuid NULL` | normalized payload UUID or `NULL` | Same company; must match scope warehouse when scope type is warehouse | **Preserved, tightened** physical evidence |
+| `physical_location_id uuid NULL` | normalized payload UUID or `NULL` | Same company; if both location and warehouse carry non-null branch identities, those branch ids must match. The current `locations` schema has no warehouse FK, so no direct location-to-warehouse relationship is invented | **Preserved, tightened** physical evidence |
+| `lot_number text NULL` | `btrim(normalize(payload,'NFC'))` or `NULL` | Empty normalized value rejected as `010` | **Modified** deterministic stored text; not ECC |
+| `serial_number text NULL` | `btrim(normalize(payload,'NFC'))` or `NULL` | Empty normalized value rejected as `010` | **Modified** deterministic stored text; not ECC |
+| `source_uom_id uuid NOT NULL` | normalized payload UUID | Same-company UOM or `006` | **Preserved** quantity evidence |
+| `base_uom_id uuid NOT NULL` | normalized payload UUID | Same-company UOM or `006` | **Preserved** quantity evidence |
+| `source_quantity numeric(38,6) NOT NULL` | exact six-decimal normalized payload | Precision policy quantization/direction or `013` | **Preserved, tightened** method-neutral quantity |
+| `base_quantity numeric(38,6) NOT NULL` | exact six-decimal normalized payload | Equals rounded source × factor under quantity scale | **Preserved, tightened** method-neutral quantity |
+| `uom_conversion_factor numeric(38,12) NOT NULL` | exact positive twelve-decimal payload | Governed conversion equality or `013` | **Preserved, tightened** source conversion evidence |
+| `valuation_currency_code text NOT NULL` | exact `inventory_valuation_scopes.valuation_currency_code` | Three uppercase ASCII and scope equality | **Preserved** valuation-currency evidence |
+| `reversal_of_event_id uuid NULL` | explicit `NULL` | Any input is `020`/`0A000` | **Modified boundary:** current WP-5 base facts only |
+| `correction_of_event_id uuid NULL` | explicit `NULL` | Any input is `020`/`0A000` | **Modified boundary:** no correction/re-resolution |
+| `predecessor_event_id uuid NULL` | explicit `NULL` | Any input is `020`/`0A000` | **Modified boundary:** E2 fixed to zero |
+| `immutable_source_evidence jsonb NOT NULL` | exact augmented §4.3 JSONB | Non-empty, source identities equal, reserved key caller-absent | **Modified** governed chronology/audit evidence |
+| `source_evidence_fingerprint text NOT NULL` | exact recomputed augmented-evidence SHA-256 hex | Caller equality required or `010` | **Modified** verified audit checksum |
+| `journal_entry_id uuid NULL` | explicit `NULL` | Certified dormant Posting check | **Preserved** no-journal boundary |
+| `reason_code text NOT NULL` | `btrim(normalize(payload,'NFC'))` | Non-empty; fixture exact `IA5_CERTIFICATION` | **Modified** deterministic audit reason |
+| `foundation_state text NOT NULL` | omit; certified default exact `'dormant'` | Must remain dormant | **Preserved** no-activation evidence |
+| `created_by uuid NOT NULL` | `p_actor_id` | Membership proven | **Preserved** creator audit identity |
+| `created_at timestamptz NOT NULL` | omit; certified default `clock_timestamp()` | Non-null; never ECC | **Preserved** audit clock |
+
+#### 3.8.5 `inventory_event_source_links` — 13 columns
+
+WP-5 inserts exactly one primary link per event. Split, partial, predecessor,
+reversal, correction, transfer-pair, and additional links are prohibited.
+
+| Column / SQL contract | Exact source and stored value | Validation / failure | Evolution and audit meaning |
+| --- | --- | --- | --- |
+| `id uuid NOT NULL` | omit; default `gen_random_uuid()` | Exact one primary link per event | **Preserved** relationship-row identity |
+| `company_id uuid NOT NULL` | `p_company_id` | Equals event company | **Preserved** tenant identity |
+| `inventory_event_id uuid NOT NULL` | generated event id | Exact event FK | **Preserved** event relationship |
+| `relationship_type text NOT NULL` | fixed literal `'primary'` | Any other WP-5 link is `020`/`0A000` | **Preserved, narrowed** source relationship |
+| `source_document_type text NOT NULL` | `p_source_document_type` | Exact event/occurrence identity | **Preserved** source evidence |
+| `source_document_id uuid NOT NULL` | `p_source_document_id` | Exact event/occurrence identity | **Preserved** source evidence |
+| `source_line_id uuid NOT NULL` | `p_source_line_id` | Exact event/occurrence identity | **Preserved** source evidence |
+| `source_transition text NOT NULL` | `p_source_transition` | Exact event/occurrence identity | **Preserved** source evidence |
+| `source_occurrence_sequence bigint NOT NULL` | `p_source_occurrence_sequence` | Exact event/occurrence identity | **Preserved** source evidence |
+| `related_inventory_event_id uuid NULL` | explicit `NULL` | Non-null is outside initial/base WP-5 | **Preserved base-only** no-edge boundary |
+| `immutable_relationship_evidence jsonb NOT NULL` | exact JSONB object with only `request_fingerprint` = verified §3.4 hex and `source_evidence_fingerprint` = verified event hex | Both keys required; no unknown key; mismatch `010` | **Preserved and made exact** immutable relationship proof |
+| `created_by uuid NOT NULL` | `p_actor_id` | Membership proven | **Preserved** creator audit identity |
+| `created_at timestamptz NOT NULL` | omit; default `clock_timestamp()` | Non-null; never ECC | **Preserved** audit clock |
+
+#### 3.8.6 `inventory_event_values` — 19 columns
+
+The row is omitted exactly when `value` is absent or JSON null. When present,
+one row is inserted; all scale/currency metadata is policy-derived, not caller-
+selectable. `value_role` and non-null `exchange_rate_identity` are stored as
+`btrim(normalize(input,'NFC'))`.
+
+| Column / SQL contract | Exact source and stored value | Validation / failure | Evolution and audit meaning |
+| --- | --- | --- | --- |
+| `id uuid NOT NULL` | omit; default `gen_random_uuid()` | One role row under existing unique constraint | **Preserved** value-evidence identity |
+| `company_id uuid NOT NULL` | `p_company_id` | Equals event/policy company | **Preserved** tenant identity |
+| `inventory_event_id uuid NOT NULL` | generated event id | Exact FK | **Preserved** event relationship |
+| `value_role text NOT NULL` | trimmed NFC payload role | Lowercase domain regex; fixture exact `inventory_value` | **Modified** deterministic role storage |
+| `transaction_currency_code text NOT NULL` | precision policy exact value | Three uppercase ASCII; guard equality | **Preserved** transaction-currency evidence |
+| `functional_currency_code text NOT NULL` | precision policy exact value | Three uppercase ASCII; guard equality | **Preserved** functional-currency evidence |
+| `transaction_currency_scale smallint NOT NULL` | precision policy exact value | 0…8; amount quantized accordingly | **Preserved** currency-scale evidence |
+| `functional_currency_scale smallint NOT NULL` | precision policy exact value | 0…8; functional/GL amount rules | **Preserved** currency-scale evidence |
+| `valuation_amount_scale smallint NOT NULL` | precision policy exact value, required `8` | Guard/check equality | **Preserved** amount-scale evidence |
+| `unit_rate_scale smallint NOT NULL` | precision policy exact value, required `12` | Guard/check equality | **Preserved** rate-scale evidence |
+| `authoritative_transaction_amount numeric(38,8) NOT NULL` | normalized eight-decimal payload | Exact valuation scale **and** value equals its round at `transaction_currency_scale`; otherwise `010` | **Preserved, tightened** caller-authoritative value |
+| `authoritative_functional_amount numeric(38,8) NOT NULL` | normalized eight-decimal payload | Exact `valuation_amount_scale=8`; otherwise `010` | **Preserved, tightened** caller-authoritative value |
+| `gl_basis_amount numeric(38,8) NOT NULL` | normalized eight-decimal payload | Exact `gl_basis_scale=functional_currency_scale`; otherwise `010` | **Preserved, tightened** future posting basis; no journal |
+| `derived_unit_rate numeric(38,12) NULL` | normalized twelve-decimal payload or explicit `NULL` | Exact policy scale | **Preserved, tightened** evidence only; never authority for WAC |
+| `exchange_rate_identity text NULL` | trimmed NFC payload or `NULL` | Must be null for same currency and non-empty/non-null for differing currencies | **Preserved, tightened** source FX evidence; no FX calculation |
+| `residual_units bigint NOT NULL` | normalized payload integer; omitted input materializes exact `0` | Bigint range | **Preserved, explicit default** precision residue |
+| `calculation_evidence jsonb NOT NULL` | exact non-empty payload JSONB | Object and non-empty; contents not interpreted by WP-5 | **Preserved** source calculation audit evidence |
+| `created_by uuid NOT NULL` | `p_actor_id` | Membership proven | **Preserved** creator audit identity |
+| `created_at timestamptz NOT NULL` | omit; default `clock_timestamp()` | Non-null; never ECC | **Preserved** audit clock |
+
+#### 3.8.7 `inventory_event_order_keys` — 31 columns
+
+Before insert the writer requires zero rows of **any** `resolution_state` for the
+event. Every component and version value comes from the one resolver row; the
+writer only recomputes/verifies the digest and supplies fixed audit/lifecycle
+values. The row is never updated by WP-5.
+
+| Column / SQL contract | Exact source and stored value | Validation / failure | Evolution and audit meaning |
+| --- | --- | --- | --- |
+| `id uuid NOT NULL` | omit; default `gen_random_uuid()`, captured by `RETURNING` | Exactly one persisted id | **Modified/additive** returned key identity; not ECC |
+| `inventory_event_id uuid NOT NULL` | generated event id | Zero prior key rows or `026`/`23505` | **Modified/additive** initial-resolution ownership |
+| `company_id uuid NOT NULL` | `p_company_id`; compare resolver/event/stream | Cross-company `006` | **Modified/additive** tenant evidence |
+| `valuation_stream_id uuid NOT NULL` | resolver output 1 | Exact event stream | **Modified/additive** partition identity |
+| `economic_effective_at timestamptz NOT NULL` | resolver output 2 / event `effective_at` | Exact instant equality | **Modified/additive** E1 |
+| `source_precision_code text NOT NULL` | resolver output 3; fixed current value `microsecond` | Exact retained evidence | **Modified/additive** normalization evidence |
+| `economic_effect_class text NOT NULL` | resolver output 5 | Exact registry map and domain | **Modified/additive** E3 class |
+| `economic_effect_rank smallint NOT NULL` | resolver output 6 | Positive exact policy rank | **Modified/additive** E3 rank |
+| `source_type_rank smallint NOT NULL` | resolver output 7 | Positive exact policy rank | **Modified/additive** E4 |
+| `document_order_key bytea NOT NULL` | resolver output 8 | Exact §6.3 bytes | **Modified/additive** E5 |
+| `source_line_ordinal integer NOT NULL` | resolver output 9 | Positive/equal reserved evidence | **Modified/additive** E6 |
+| `transition_rank smallint NOT NULL` | resolver output 10 | Positive exact policy rank | **Modified/additive** E7 |
+| `occurrence_ordinal bigint NOT NULL` | resolver output 11 | Positive/equal occurrence | **Modified/additive** E8 |
+| `event_ordinal integer NOT NULL` | resolver output 12 | Positive/equal event sequence | **Modified/additive** E9 |
+| `canonical_source_identity bytea NOT NULL` | resolver output 13 | Exact §6.3 bytes | **Modified/additive** E10 |
+| `correction_placement_class text NOT NULL` | resolver output 14; fixed current `base` | Non-base `020` | **Modified/additive** correction class evidence |
+| `correction_chain_depth integer NOT NULL` | resolver output 15; fixed `0` | Nonzero `020` | **Modified/additive** X1 |
+| `correction_effective_at timestamptz NOT NULL` | resolver output 16; PostgreSQL `-infinity` base sentinel | Exact depth-zero sentinel | **Modified/additive** X2 |
+| `correction_approved_at timestamptz NOT NULL` | resolver output 17; PostgreSQL `-infinity` base sentinel | Exact depth-zero sentinel | **Modified/additive** X3 |
+| `correction_identity bytea NOT NULL` | resolver output 18; zero-length bytea | Exact depth-zero sentinel | **Modified/additive** X4 |
+| `correction_root_event_id uuid NULL` | resolver output 19; exact `NULL` | Depth-zero/root check | **Modified/additive** root evidence |
+| `order_policy_version_id uuid NOT NULL` | resolver output 20 | Exact applicable policy on UTC economic date | **Modified/additive** derivation version |
+| `registry_source_document_type text NOT NULL` | resolver output 21 | Exact registry primary key | **Modified/additive** registry authority reference |
+| `canonical_form_version_id uuid NOT NULL` | resolver output 22 | Exact applicable version on UTC economic date | **Modified/additive** serialization authority |
+| `scope_resolution_version_id uuid NOT NULL` | resolver output 23; exact event scope id | Exact equality | **Modified/additive** scope version |
+| `correction_graph_version_id uuid NOT NULL` | resolver output 24 | Exact applicable version on UTC economic date | **Modified/additive** correction-policy reference |
+| `canonical_key_bytes bytea NOT NULL` | resolver output 25 | Exact fourteen-component §6 bytes | **Modified/additive** certified WP-4 canonical evidence |
+| `ecc_key_digest bytea NOT NULL` | resolver output 26 | 32 bytes and writer recomputation equality | **Modified/additive** certified WP-4 digest |
+| `resolution_state text NOT NULL` | fixed literal `'current'`, not table-default discretion | Existing/current row prohibited; never changed by WP-5 | **Modified/additive** initial resolution only |
+| `created_by uuid NOT NULL` | `p_actor_id` | Membership proven | **Modified/additive** resolution creator |
+| `created_at timestamptz NOT NULL` | omit; default `clock_timestamp()` | Non-null; never ECC | **Modified/additive** audit clock |
+
+#### 3.8.8 Current 11-argument writer behavior disposition
+
+| Current behavior | EA-010 disposition | Controlling rule |
+| --- | --- | --- |
+| Membership before source admission | **PRESERVED** and made tenant-probe safe | §3.5 steps 1–3 |
+| Certification-only disabled source admission | **MODIFIED** into explicit production-versus-fixture contexts | §9 |
+| Eleven-argument callable signature | **REMOVED** after exact `DROP … RESTRICT`; restored only by rollback | §§2, 11 |
+| Company-scoped idempotency and logical-source uniqueness | **PRESERVED**, with normalized request recomputation and lock classification | §§3.4, 3.5, 3.7 |
+| Caller-supplied request/source fingerprints accepted by shape only | **REMOVED**; both are recomputed and compared | §§3.4, 4.3 |
+| Unknown event/value keys silently unused | **REMOVED**; rejected | §4.1 |
+| Writer-generated occurrence/event UUIDs and atomic event array | **PRESERVED** | §3.8.3–§3.8.4 |
+| Legacy scope-version accepted allocator | **REMOVED from writer use**; table itself is preserved | §§3.5, 3.6 |
+| WP-3 version-free stream and stream allocator | **ADDED** | §3.8.1–§3.8.2 |
+| Scope/profile/formula/precision/currency derivation | **PRESERVED** and fixed to the UTC economic date | §§3.2, 3.8.4 |
+| `p_occurred_at::date` under caller timezone | **REMOVED**; UTC occurrence date is mandatory | §§3.2, 3.8.4 |
+| Quantity/UOM quantization and direction guards | **PRESERVED** and input formatting tightened | §§4.2, 3.8.4 |
+| Source link with two-fingerprint evidence | **PRESERVED** and exact keys/values governed | §3.8.5 |
+| Optional caller-authoritative value row and policy currency/scales | **PRESERVED** and every column/default governed | §§4.4, 3.8.6 |
+| Posting/journal/projection fields remain null/zero | **PRESERVED** | §§3.6, 3.8 |
+| No ECC resolver/order-key/totality | **MODIFIED**: initial resolution, key insertion, and deferred totality added | §§5–6, 10 |
+| Correction/reversal/predecessor payload accepted by base writer | **REMOVED for WP-5**; any non-null edge fails `0A000` | §§4.2, 5.3 |
+| Free-form text stored without a normalization decision | **REMOVED**; exact trimmed-NFC rules apply where stated | §§3.8.4, 3.8.6 |
+| Failed statement leaves no partial row/counter/audit effect | **PRESERVED** | §§3.5, 3.7 |
+
 ---
 
 ## 4. Exact `p_events` JSON contract
@@ -441,8 +781,8 @@ rather than guessing a source table.
 | `valuation_scope_id` | string | Required | lowercase UUID; exact company/item/effective scope version | `V` scope version; not tuple |
 | `physical_warehouse_id` | string or null | Optional, default null | lowercase UUID and same company when present | retained; not ECC |
 | `physical_location_id` | string or null | Optional, default null | lowercase UUID and governed warehouse/company when present | retained; not ECC |
-| `lot_number` | string or null | Optional, default null | NFC; non-empty after trim; WP-5 adds no length cap absent a current table constraint | retained; not ECC |
-| `serial_number` | string or null | Optional, default null | NFC; non-empty after trim; WP-5 adds no length cap absent a current table constraint | retained; not ECC |
+| `lot_number` | string or null | Optional, default null | store exact `btrim(normalize(value,'NFC'))`; reject empty result; WP-5 adds no length cap absent a current table constraint | retained; not ECC |
+| `serial_number` | string or null | Optional, default null | store exact `btrim(normalize(value,'NFC'))`; reject empty result; WP-5 adds no length cap absent a current table constraint | retained; not ECC |
 | `source_uom_id` | string | Required | lowercase UUID, same company | retained; not ECC |
 | `base_uom_id` | string | Required | lowercase UUID, same company | retained; not ECC |
 | `source_quantity` | string | Required | signed fixed-point with exactly 6 decimals; direction matches effect | classification only; magnitude prohibited from ECC |
@@ -457,7 +797,7 @@ rather than guessing a source table.
 | `correction_placement_class` | string or null | Optional, default null | if present, exact registry value; caller cannot override registry | X placement |
 | `immutable_source_evidence` | object | Required | non-empty; exact five source-identity keys in §4.1; reserved key `ia5_ecc_admission` prohibited in input | retained, fingerprinted; never directly serialized into ECC |
 | `source_evidence_fingerprint` | string | Required | 64 lowercase hex; exact checksum §4.3 | audit, not tuple |
-| `reason_code` | string | Required | NFC and non-empty; certification fixture uses exact `IA5_CERTIFICATION`; WP-5 adds no narrower table domain | audit, not tuple |
+| `reason_code` | string | Required | store exact `btrim(normalize(value,'NFC'))`; reject empty result; certification fixture uses exact `IA5_CERTIFICATION`; WP-5 adds no narrower table domain | audit, not tuple |
 | `value` | object or null | Optional, default null | exact §4.4 object | existing value evidence only; no resolver use |
 
 ### 4.3 Reserved audit evidence and checksum
@@ -489,12 +829,12 @@ Allowed keys are exactly:
 
 | Key | JSON type | Requirement |
 | --- | --- | --- |
-| `value_role` | string | Required, NFC and non-empty; certification fixture uses exact `inventory_value`; no new table domain |
+| `value_role` | string | Required; store exact `btrim(normalize(value,'NFC'))`, require the existing lowercase role regex; certification fixture uses exact `inventory_value`; no new table domain |
 | `authoritative_transaction_amount` | string | Required; signed fixed-point, exactly 8 decimals |
 | `authoritative_functional_amount` | string | Required; signed fixed-point, exactly 8 decimals |
 | `gl_basis_amount` | string | Required; signed fixed-point, exactly 8 decimals |
 | `derived_unit_rate` | string or null | Optional, default null; signed fixed-point, exactly 12 decimals |
-| `exchange_rate_identity` | string or null | Optional, default null; required by existing currency rule when currencies differ |
+| `exchange_rate_identity` | string or null | Optional, default null; when non-null store exact `btrim(normalize(value,'NFC'))` and reject empty; required by existing currency rule when currencies differ |
 | `residual_units` | number | Optional, default `0`; signed JSON integer in bigint range |
 | `calculation_evidence` | object | Required and non-empty |
 
@@ -556,7 +896,8 @@ overload.
 | 26 | `ecc_key_digest` | `bytea` | No; exactly 32 bytes |
 
 Properties: `plpgsql`, `VOLATILE`, `PARALLEL UNSAFE`, `SECURITY DEFINER`, owner
-`postgres`, `SET search_path = public`, and no direct execution grant to
+`postgres`, exact function configuration `SET search_path = public` and
+`SET TimeZone = 'UTC'`, and no direct execution grant to
 `PUBLIC`, `anon`, `authenticated`, or `service_role`. `VOLATILE` is required so
 the resolver can see the event and stream inserted by earlier statements in the
 writer's transaction. It performs no DML and emits no audit row. Only the
@@ -603,7 +944,9 @@ resolver against current master data.
    matches, `policy_code = source_document_type`, and
    `effective_from <= E1::date <= COALESCE(effective_to,'infinity')`. Resolve
    exactly one positive E3 rank, E4 rank and E7 rank under that policy, each
-   with the same company and exact class/type/transition.
+   with the same company and exact class/type/transition. Every effective-date
+   comparison uses `economic_date := (E1 AT TIME ZONE 'UTC')::date`; `E1::date`
+   under an inherited session timezone is prohibited.
 3. E1 is the event's normalized `effective_at`; source precision is the reserved
    audit value and must be `microsecond`.
 4. E5: `canonical_source_document_id` requires
@@ -777,10 +1120,10 @@ retry is safe only after the governed cause is corrected.
 | `IA5-WP5-003` | Source is not production-enabled/complete in production context; writer | `23514` | Retry after separate activation/certification; no bypass; `112` |
 | `IA5-WP5-004` | Invalid fixture source/context/caller; writer | `42501` | Owner-only; `112` |
 | `IA5-WP5-005` | Actor is not a company member; writer | `42501` | Retry with governed membership; `112` |
-| `IA5-WP5-006` | Cross-company source/event/scope/policy/stream/key/target; writer/resolver/guards | `23514` | No row; offending identities in message, no secret payload; `112` |
+| `IA5-WP5-006` | Missing tenant master identity or cross-company source/item/UOM/warehouse/location/event/scope/policy/stream/key/target; writer/resolver/guards | `23514` | No row; offending identities in message, no secret payload; `112` |
 | `IA5-WP5-007` | Missing or ambiguous order policy/effect/source/transition rank; resolver | `23514` | Retry after governed version fixture; `112` |
 | `IA5-WP5-008` | Missing/invalid canonical-form or correction-graph version; resolver | `23514` | Retry after governed version; `112` |
-| `IA5-WP5-009` | Missing/multiple/mismatched valuation stream; writer/resolver | `23514` | Retry after source correction; `112` |
+| `IA5-WP5-009` | Missing/multiple/out-of-UTC-date/mismatched valuation scope, accounting profile, cost formula, precision policy or valuation stream; writer/resolver | `23514` | Retry only after governed authority/source correction; `112` |
 | `IA5-WP5-010` | Malformed argument, event plan, key, decimal, UUID, timestamp or unknown JSON key; writer | `22023` | Idempotent after correcting input; `112` |
 | `IA5-WP5-011` | Idempotency key reused with different governed request/context; writer | `23505` | Not retryable under same key; evidence is both fingerprints/identities; `112` |
 | `IA5-WP5-012` | Logical source occurrence duplicated under another key; occurrence constraint/writer | `23505` | Not retryable as a new fact; `112` |
@@ -788,7 +1131,7 @@ retry is safe only after the governed cause is corrected.
 | `IA5-WP5-014` | Malformed or non-NFC component / canonical encoding failure; resolver | `22021` | Retry after canonical input correction; `111`/`112` |
 | `IA5-WP5-015` | Digest recomputation differs; writer | `23514` | Not accepted; implementation defect blocks gate/certification; `111` |
 | `IA5-WP5-016` | E10 or fourteen-component canonical key bytes duplicate another fact; order-key constraint | `23505` | Both logical applications are unsafe; stream certification blocked; `112` |
-| `IA5-WP5-017` | Missing current order key for a persisted event; writer/trigger | `23514` | Transaction aborts; no repair path; `112` |
+| `IA5-WP5-017` | Persisted event has no current key or, during duplicate reconstruction, does not have exactly one total key row and that row current; writer/trigger | `23514` | Transaction aborts; no repair path; `112` |
 | `IA5-WP5-018` | Duplicate current order key; WP-4 partial unique index | `23505` | Transaction aborts; `112` |
 | `IA5-WP5-019` | Stream allocator row/company mismatch or no returned sequence; writer | `23514` | Transaction aborts including counter statement; `112` |
 | `IA5-WP5-020` | Unsupported correction/reversal/fork/counterfactual chain under current source rule; resolver | `0A000` | Requires separate source/correction authority, not retry; `112` |
@@ -797,6 +1140,7 @@ retry is safe only after the governed cause is corrected.
 | `IA5-WP5-023` | Event-side totality fails at deferred boundary; trigger function | `23514` | Transaction aborts; no event/key residue; `112` |
 | `IA5-WP5-024` | Certification fixture reaches constraint execution/commit; trigger function | `23514` | Mandatory rollback path; not production evidence; `112` |
 | `IA5-WP5-025` | Rollback precondition/residue mismatch; rollback test/migration | `23514` | Rollback stops before destructive step; `113` |
+| `IA5-WP5-026` | Any order-key row of any state already exists for a newly generated event at initial resolution; writer | `23505` | Whole occurrence aborts; WP-5 never repairs, demotes or adds a successor; `112` |
 
 Native foreign-key `23503`, check `23514`, unique `23505` and privilege `42501`
 remain authoritative where PostgreSQL raises before a wrapper can attach a
@@ -865,7 +1209,9 @@ flag, wrapper, table or grant is created. It is compatible with WP-1…WP-4
 precedent: certification authorities are owner-created inside a transaction and
 removed by final rollback.
 
-The fixture path:
+#### Single-session pgTAP fixture path
+
+Tests `111` and `112` use this path:
 
 1. runs only as `postgres` in a fresh local certification database;
 2. begins `BEGIN ISOLATION LEVEL SERIALIZABLE` and records before-counts for every affected
@@ -885,6 +1231,64 @@ The deferred trigger makes accidental fixture commit impossible: after proving
 one current key, it rejects a certification-only event at constraint execution.
 The fixture path has no grant to normal roles and is excluded from application,
 production, hosted and activation claims.
+
+#### Two-session concurrency verification path
+
+`WP5-CONC-114` is allocated to the future, non-runtime repository asset
+`supabase/verification/ia5_wp5_concurrent_idempotency.sql`. It is separate from
+test `112` because two autonomous PostgreSQL sessions cannot see an uncommitted
+single-session fixture. The asset follows the existing
+`supabase/verification/ia5_concurrent_idempotency.sql` precedent but must use the
+EA-010 writer contract and these exact controls:
+
+1. It aborts unless the target is the local Supabase database and a fresh
+   `supabase db reset --local --no-seed` baseline has zero rows for its reserved
+   fixture identities and every IA-5 occurrence/event/stream/allocator/key
+   table.
+2. Its controlling `psql` session may commit only the minimum non-Inventory
+   setup visible to autonomous sessions: reserved test user, two companies and
+   memberships, branches, items/UOM/warehouse masters, dormant policy bundles,
+   WP-1 policy/rank/canonical/correction-version fixtures, and valuation scopes.
+   It may not commit an `inventory_occurrences`, `inventory_events`, source-link,
+   value, stream, allocator, or order-key row.
+3. It opens two owner-only autonomous connections using the local connection
+   parameters already supplied by the Supabase CLI environment. Each executes
+   `BEGIN ISOLATION LEVEL SERIALIZABLE`; neither may run against hosted or a
+   remote hostname.
+4. Session A calls the exact fixture-context writer and retains the successful
+   statement without committing. Session B asynchronously calls the byte-
+   identical request. The controller proves B waits on the company/idempotency
+   unique-index transaction dependency and that neither session holds a stream
+   or allocator lock before the occurrence/idempotency decision.
+5. Session A executes explicit `ROLLBACK`. It must never commit; an independent
+   branch also proves `SET CONSTRAINTS
+   inventory_events_ecc_order_key_totality_ct IMMEDIATE` raises
+   `IA5-WP5-024`/`23514` before rollback.
+6. After A rolls back, B must proceed as the new winner, return
+   `duplicate=false`, create exactly one structurally complete event/key result
+   visible inside B, and then execute explicit `ROLLBACK`. This proves an
+   in-progress duplicate waits and a rolled-back failed attempt consumes no
+   identity. It does **not** claim a committed production-winner path.
+7. Exact accepted-success retry and contradictory-payload rejection remain
+   single-transaction assertions in test `112`, where the first governed result
+   is visible without committing certification data. The concurrency asset must
+   not fabricate a committed certification success or weaken the trigger.
+8. The controller disconnects both sessions, runs
+   `supabase db reset --local --no-seed` immediately, then starts a fresh
+   read-only proof transaction and asserts: all seven writer-target tables are
+   empty; all reserved user/company/master/policy fixtures are absent; the
+   `IA5_CERTIFICATION` registry row is still its persistent certified value;
+   migration history and the WP-1…WP-5 object census match the pre-run baseline;
+   and no audit row for either reserved actor/company remains.
+9. Any setup, connection, wait-state, SQLSTATE, rollback, reset, or residue
+   mismatch exits non-zero and invalidates all concurrency evidence. Cleanup DML
+   is prohibited; the fresh local reset is the only cleanup authority.
+
+The only permissible claim is rollback-winner idempotency serialization under
+the owner-only certification contract. A committed-winner production claim is
+deferred until a separately governed source is production-enabled and its own
+integration evidence is authorised. No hosted evidence or source activation is
+produced.
 
 ### 9.4 Evidence boundary
 
@@ -956,30 +1360,41 @@ All event effects admitted by WP-5 require chronology. There is no persisted
 excluded event class. Rejected/counterfactual facts are excluded by not being
 inserted, not by storing an unkeyed event.
 
-### 10.3 Current and superseded semantics
+### 10.3 Initial-resolution-only lifecycle
 
-- initial admission inserts exactly one `current` row;
-- writer/resolver never update or delete an order key;
-- exact duplicate admission returns the same current row and inserts nothing;
-- `resolution_state` is the only mutable WP-4 column and its only permitted
-  transition remains `current` → `superseded`, enforced by the existing
-  `ENABLE ALWAYS` guard;
-- WP-5 exposes no correction, re-resolution, policy-version-change,
-  source-version-change, canonical-version-change, replay or supersession
-  procedure, so no WP-5 object performs that transition;
-- old rows are never deleted and remain queryable by event/version/state;
-- a future re-resolution must, in one separately authorised transaction,
-  demote the old row, insert one successor current row under the target `V`,
-  retain the old row, and add key-side deferred totality before runtime use;
-- until that future contract exists, direct owner demotion is a prohibited
-  governance act and cannot be cited as supported behavior;
-- uniqueness applies to one current row per event and to
-  `(valuation_stream_id,canonical_key_bytes)` across retained resolutions;
-- rollback of a transaction removes its newly inserted event/key and allocator
-  effects automatically; persistent delete is never a rollback method.
+WP-5 owns **initial resolution only**:
 
-This resolves the present admission boundary without falsely claiming that
-future re-resolution is implemented.
+- new admission generates a new event id and requires zero pre-existing
+  `inventory_event_order_keys` rows of any state for that id;
+- it inserts exactly one row with fixed `resolution_state='current'`;
+- any pre-existing row is `IA5-WP5-026`/`23505` and aborts the whole occurrence;
+- writer and resolver never update, delete, demote, supersede or replace a key;
+- exact duplicate admission returns the same one current row and inserts
+  nothing; a duplicate result containing any superseded/extra row is invalid
+  stored evidence and fails `23514` rather than being repaired;
+- policy-version, registry-version, scope-version, canonical-form-version,
+  correction-graph-version and replay-driven re-resolution are unsupported;
+- WP-5 creates no successor resolution row and exposes no supersession or
+  re-resolution entry point; and
+- transactional rollback removes only the new uncommitted admission effects.
+  Persistent delete is never a rollback method.
+
+Certified WP-4 continues to prove the 31-column storage shape, unconditional
+canonical-identity uniqueness, partial one-current-per-event uniqueness, full
+economic/version-column immutability, and the structural fact that its guard
+permits only `current` → `superseded`. WP-5 initial-resolution evidence proves
+only that a newly admitted event receives one immutable current row satisfying
+that storage contract. It does **not** prove that the structural supersession
+capability is executable as a valid successor lifecycle.
+
+**Mandatory future stop:** before any version-only or other re-resolution,
+successor-row procedure, automatic supersession, WP-7 capability that depends
+on re-resolution, or Inventory production activation, a separately governed
+WP-4 lifecycle amendment or later authorised work package must resolve
+resolution-aware uniqueness. Executable WP-4 currently enforces unconditional
+`UNIQUE (valuation_stream_id,canonical_key_bytes)`, so equal fourteen-component
+bytes cannot coexist merely because their version vector differs. EA-010 does
+not alter that constraint, any WP-4 migration, or WP-4 certification.
 
 ### 10.4 Existing-table and certified-test consequence
 
@@ -1008,11 +1423,17 @@ Future implementation must update prior tests as follows:
   events or consume the writer-created keys without attempting a duplicate.
 - **tests `104`…`108` and `110`: no semantic change expected**, but rerun for
   bounded regression evidence.
+- **tests `111`/`112`: UTC and initial-resolution evidence.** Run the same
+  boundary instants under at least two distinct session timezones and require
+  identical policy/version selection, stored `occurrence_date`, resolver bytes,
+  digest, and guard result; prove `IA5-WP5-026` on any pre-existing key state.
 - the ten `supabase/verification/ia5_*` assets that reference the old signature
   must be updated in their later authorised scope before they are executable;
   `ia5_rollback_boundary.sql` must name the new signature and exact restoration.
+  Future `ia5_wp5_concurrent_idempotency.sql` owns only §9.3's reset-bounded
+  two-session proof.
 
-These future test edits do not occur in EA-008 or EA-009. WP-1…WP-4 remain certified in
+These future test edits do not occur in EA-008, EA-009, or EA-010. WP-1…WP-4 remain certified in
 their bounded storage/control scopes, but WP-5 implementation cannot pass its
 gate or certification without re-evidence of `103` and `104`…`110`.
 
@@ -1076,19 +1497,22 @@ status remains local; hosted rollback/deployment is outside WP-5.
 
 ## 12. Future test and evidence allocation
 
-No test is authored by EA-008 or EA-009. Future implementation owns exactly:
+No test or verification asset is authored by EA-008, EA-009, or EA-010. Future
+implementation owns exactly:
 
 | Test ID/file | Families owned | Required fixture / persistence | Core assertions and SQLSTATE | Explicitly excluded |
 | --- | --- | --- | --- | --- |
-| `111_inventory_accounting_ia5_ecc_wp5_admission_contract_test.sql` | `WP5-ST-111` structural; `WP5-FX-111` fixture/encoding | Exact local owner fixture, one transaction, final rollback | 3 governed function signatures + 1 trigger; 26-column resolver row; exact payload rejection; fourteen-component golden bytes (including E2 = 0), no extra component/version frames, and 32-byte digest; one event/one key/one stream; `22021`/`23514`; zero persistent rows | No production, costing, comparator, GL or engine claim |
-| `112_inventory_accounting_ia5_ecc_wp5_totality_failure_security_test.sql` | `WP5-TOT-112`, `WP5-FAIL-112`, `WP5-SEC-112` | Exact two-company certification fixture; rolled back | success before rollback; zero/multiple key rejection `23514`/`23505`; production-disabled failure; fixture commit rejection; all §7 failures feasible in M5; idempotent retry/concurrency; direct-role `42501`; cross-company `23514` | No hosted or source activation claim |
+| `111_inventory_accounting_ia5_ecc_wp5_admission_contract_test.sql` | `WP5-ST-111` structural; `WP5-FX-111` fixture/encoding/date | Exact local owner fixture, one transaction, final rollback | 3 governed function signatures + 1 trigger; writer/resolver both pin UTC; 26-column resolver row; 139-column persistence map; exact payload rejection; fourteen-component golden bytes (including E2 = 0), no extra component/version frames, 32-byte digest; same instant under UTC and a non-UTC session yields identical selected versions, `occurrence_date`, bytes/digest and guard outcome; one event/one key/one stream; `22021`/`23514`; zero persistent rows | No production, costing, comparator, re-resolution, GL or engine claim |
+| `112_inventory_accounting_ia5_ecc_wp5_totality_failure_security_test.sql` | `WP5-TOT-112`, `WP5-FAIL-112`, `WP5-SEC-112`, `WP5-IDEM-112` | Exact two-company **single-session** certification fixture; final rollback | success before rollback; exact retry returns prior result; contradictory same-key payload `23505`; zero/multiple key rejection `23514`/`23505`; pre-existing any-state key `IA5-WP5-026`/`23505`; production-disabled failure; fixture commit rejection; all §7 failures feasible in M5; direct-role `42501`; cross-company `23514`; UTC/non-UTC date-boundary attack equality | No multi-session claim, hosted, committed production winner, source activation or re-resolution claim |
 | `113_inventory_accounting_ia5_ecc_wp5_rollback_test.sql` | `WP5-RB-113`, `WP5-RES-113` | M5-applied database; structural rollback inside transaction; final rollback | exact reverse object census; old writer restored; trigger set restored; WP-1…WP-4 unchanged; all fixture/audit/counter counts zero; no ACL/comment residue; failure precondition `23514` | Does not uninstall M5 persistently or certify it |
+| `supabase/verification/ia5_wp5_concurrent_idempotency.sql` | `WP5-CONC-114` | Fresh local reset; only §9.3 non-Inventory setup committed; two serializable autonomous event transactions both roll back; immediate second reset and residue proof | B waits behind A on company/idempotency conflict; A rollback consumes no identity; B proceeds as new and rolls back; commit-reject branch `IA5-WP5-024`/`23514`; deterministic lock order; zero event/stream/key/audit/setup residue after reset | No committed certification event, exact-prior-success winner, production concurrency, hosted or source-activation claim |
 
 Evidence classes:
 
 - structural assertions are persistent M5 schema evidence;
-- all business/version/event/key fixtures are certification-only and rolled
-  back;
+- ordinary pgTAP business/version/event/key fixtures are certification-only and
+  rolled back; only `WP5-CONC-114` may commit the exact non-Inventory setup in
+  §9.3 and must erase it by immediate fresh local reset;
 - totality failure uses deferred constraint execution inside a rolled-back
   transaction;
 - security uses owner and `SET LOCAL ROLE` attacks, then rollback;
@@ -1097,6 +1521,7 @@ Evidence classes:
 - regression census updates to `103` and `109` are part of the future WP-5
   implementation change; tests `104`…`110` all rerun;
 - canonical accounting lane expectation: fresh DB plus focused `103`…`113`,
+  then `WP5-CONC-114` in its isolated reset-bounded lane, another fresh reset,
   then the repository's canonical database lane only if the Authorisation Gate
   authorises implementation;
 - documentation lane: `npm run docs:check` and `git diff --check`;
@@ -1109,11 +1534,11 @@ Evidence classes:
 
 | Object | Action / owner | Purpose | Reads / writes | Security and callable boundary | Rollback / test owner | Explicit exclusions |
 | --- | --- | --- | --- | --- | --- | --- |
-| 14-arg `fn_ia5_record_dormant_inventory_occurrence` | Replace / `postgres` | Atomic source admission, accepted occurrence/event/stream/key evidence | Reads §3.6; inserts seven listed tables; updates only stream allocator | Definer; owner only; no current runtime; fixture owner-callable | Drop, restore old 11-arg body / `111`,`112`,`113` | No costing, projection, Posting, GL, tax, activation |
+| 14-arg `fn_ia5_record_dormant_inventory_occurrence` | Replace / `postgres` | Atomic source admission and **initial** accepted occurrence/event/stream/key resolution | Reads §3.6; applies all 139 §3.8 column mappings; updates only stream allocator | Definer; owner only; no current runtime; fixture owner-callable | Drop, restore old 11-arg body / `111`,`112`,`113`,`WP5-CONC-114` | No re-resolution, successor, supersession, costing, projection, Posting, GL, tax, activation |
 | `fn_ia5_ecc_resolve_components` | Create / `postgres` | Resolve and encode all fourteen current admission chronology values, with E2 fixed to governed base-source depth 0 | Exact §5.2 allowlist; no writes | Definer; writer-only runtime; owner fixture direct call only | Drop / `111`,`112`,`113` | No causal graph traversal, cost, quantity valuation, comparator, replay or journal |
 | `fn_ia5_enforce_event_order_key_totality` | Create / `postgres` | Deferred event-side exactly-one-current and fixture commit rejection | Reads `public.inventory_event_order_keys` and `public.ref_inventory_event_source_types`; `NEW` supplies the event; no writes | Definer trigger execution only; direct execution revoked | Drop after trigger / `112`,`113` | No key repair, supersession or runtime activation |
 | `inventory_events_ecc_order_key_totality_ct` | Create on existing table / managed by `public.inventory_events` owner `postgres`; PostgreSQL gives triggers no separate owner | Arm totality after insertion | Fires on event; no direct table read/write of its own | ALWAYS, deferred constraint trigger | Drop first / `103`,`112`,`113` | No column/constraint/index/policy change |
-| Existing WP-1…WP-4 objects | Preserve | Dependencies and controls | Read only, except certified stream allocator/key inserts through writer | Existing ACL/RLS/guards unchanged | Census / `103`…`113` | No reopening of certified scope |
+| Existing WP-1…WP-4 objects | Preserve | Dependencies and controls | Read only, except certified stream allocator/key inserts through writer | Existing ACL/RLS/guards unchanged | Census / `103`…`113`,`WP5-CONC-114` | No reopening of certified scope; WP-4 structural supersession is not a WP-5 lifecycle |
 
 The complete explicit exclusions are: costing; valuation calculation; FIFO;
 Moving WAC; Specific-ID method state; cost layers; COGS; Inventory journal
@@ -1157,10 +1582,15 @@ then checks, before mutation:
     `81dfe547905626f3e45fb2b59245d6953fbe79bfb8b23ad99202656a562fc5bf`;
     ECC-01 owner acceptance is still current at SHA-256
     `af017823e70858343ccb6f70670899f51af5e8ffe848a47c27636213ebff158c`.
-    The implementation boundary also records the gate-reviewed EA-009 spec and
+    The implementation boundary also records the gate-reviewed EA-010 spec and
     amended-design hashes. A migration cannot read documentation hashes, so the
     Authorisation Gate records them before implementation.
 12. Hosted state is neither queried nor assumed.
+13. The certified `fn_ia5_guard_inventory_event_fact()` definition still uses
+    its existing `NEW.effective_at::date` checks and is otherwise byte-/catalog-
+    equivalent to the pre-M5 census; no alternate event writer exists. This is
+    required because the writer's function-local UTC setting is the bounded
+    compatibility mechanism in §3.2.
 
 Any failure raises `23514` with an M5 stop-condition message before the first
 DDL statement. It authorises no repair, backfill, trigger disablement, object
@@ -1174,7 +1604,8 @@ After future M5 implementation:
   trigger function; the writer replacement does not increase the count);
 - exactly 10 of them are `SECURITY DEFINER` (the two existing immutable numeric
   helpers remain invoker/immutable); all new/definer functions pin
-  `search_path=public`;
+  `search_path=public`, and the writer/resolver additionally pin
+  `TimeZone=UTC`;
 - old 11-argument writer count = 0; exact new 14-argument writer count = 1;
 - resolver count = 1; trigger-function count = 1;
 - `inventory_events` has exactly four non-internal triggers: its three certified
@@ -1190,8 +1621,10 @@ After future M5 implementation:
 - certification fixture context exists only as the owner-only function
   argument and commit-rejecting trigger behavior; no flag/GUC/wrapper/table;
 - rollback test `113` can restore exact pre-M5 catalog state inside a transaction;
-- tests `111`…`113` are registered; `103`/`109` are reconciled; no new table
-  coverage entry exists;
+- tests `111`…`113` and verification asset `WP5-CONC-114` are registered;
+  `103`/`109` are reconciled; no new table coverage entry exists;
+- every newly admitted event has one and only one total order-key row, fixed
+  `current`; no re-resolution/successor/supersession implementation exists;
 - no WP-6+, IA-6, cost, valuation, Posting, journal, tax, route, UI, report,
   hosted or production-activation change exists.
 
@@ -1241,12 +1674,13 @@ backup/restore gaps.
 
 ---
 
-## 17. EA-009 reproducible protected-boundary proof
+## 17. EA-009/EA-010 reproducible protected-boundary proof
 
 ### 17.1 Fixed protected set
 
-EA-009 protects executable implementation and the authorities it is forbidden
-to amend. The set is enumerated from the filesystem, never from `git status`:
+EA-009 established, and EA-010 reuses unchanged, the protected executable and
+authority set. The set is enumerated from the filesystem, never from
+`git status`:
 
 - every regular file under `supabase/migrations/`;
 - every `*.sql` regular file under `supabase/tests/`;
@@ -1257,7 +1691,7 @@ to amend. The set is enumerated from the filesystem, never from `git status`:
   certified WP-2, WP-3 and WP-4 detailed specifications; and
 - the Posting Engine, Posting P3 and Accounting Rules authorities.
 
-The EA-009 files legitimately amended—this specification, the IA-5 programme
+The EA-009/EA-010 files legitimately amended—this specification, the IA-5 programme
 design, certification dashboard, documentation index and current AI status/
 handoff files—are intentionally excluded. `AI_LAST_SESSION.md` is explicitly
 excluded. `supabase/.temp`, `node_modules`, `.git` and build output outside the
@@ -1322,34 +1756,164 @@ printf 'PROTECTED_AGGREGATE_SHA256 %s\n' "$(sha256sum "$manifest_file" | awk '{p
 rm -r "$proof_dir"
 ```
 
-EA-009 mission-start evidence is **527 entries**, path-manifest SHA-256
+EA-009 and EA-010 mission-start evidence is **527 entries**, path-manifest SHA-256
 `168c3ef5391c26f8ee5472b09c72a96b1089cb9dd2930502b65188645b99f508`,
 and protected aggregate SHA-256
 `8ddf66f36c63606f8eb0bceaacfe3f3131337758b895fc557ec488ca383d7ba6`.
-The mission-end run must reproduce all three values exactly; the permanent
+Each mission-end run must reproduce all three values exactly; the permanent
 handoff records the independent rerun and equality result. Redefining the set
 after an edit is prohibited.
 
 ## 18. Governance quality challenge and decision
 
-EA-009 attempted to reject the complete amended contract against every item in
-both gate invention lists. Object names/counts, signatures, arguments/types/
-defaults, 26 return fields, payload keys, fourteen-component encoding/byte
-order/digest, privileges, trigger metadata, SQLSTATEs, state transitions,
-fixture behavior, source eligibility, the single writer sequence, locks/
-idempotency/concurrency, rollback order, test/evidence boundaries, runtime
-exclusions, postconditions and the reproducible protected boundary are fixed
-above.
+EA-010 attempted a line-by-line implementation against the entire specification,
+not only the four cited paragraphs. The following ambiguity register records
+every candidate that could affect data, chronology, security, failure atomicity,
+rollback or evidence.
 
-No unresolved decision within WP5-AGR-001…003 requires the Product Owner,
-ADR-C01 owner, ECC-01 owner or a WP-4 amendment. The only prospective rule not
-implemented is `governed_business_sequence` representation; because no such
-source row exists or is enabled, the exact WP-5 behavior is fail-closed
-`0A000`. Non-base E2/correction resolution likewise requires a separately
-governed future source/resolver contract and does not make the current
-certification-only M5 contract ambiguous.
+| Candidate ambiguity | Disposition | Controlling rule |
+| --- | --- | --- |
+| Version-only successor collides with WP-4 canonical identity | **Resolved for WP-5** by initial-resolution-only scope; **future governed stop** before any re-resolution | §§3.5, 10.3, 19.1 |
+| Which old writer columns/defaults/text rules survive | **Resolved** by 139-column census and disposition matrix | §3.8 |
+| Caller session timezone changes policy date/guard result | **Resolved** by function-local UTC and explicit UTC dates | §§3.2, 5.1, 5.3, 19.3 |
+| Autonomous sessions cannot see rolled-back setup | **Resolved** by isolated reset-bounded `WP5-CONC-114` | §§9.3, 12, 19.4 |
+| Exact duplicate result with historical/superseded key | **Resolved**: invalid stored evidence, `23514`, no repair | §§3.5, 10.3 |
+| Non-base E2/correction derivation | **Resolved fail-closed**, `0A000`; separate future source/resolver authority | §§5.3, 7 |
+| `governed_business_sequence` representation | **Resolved fail-closed**, `0A000`; no eligible source uses it | §§5.3, 6.3 |
+| Committed-winner concurrency under disabled certification source | **Not a WP-5 certification claim**; future production-source integration evidence | §§9.3, 12 |
+| Existing event guard still casts `timestamptz::date` | **Resolved without guard amendment**: it executes inside writer's UTC function configuration; alternate writers prohibited | §§3.2, 14 |
+| IDs and audit clocks could enter chronology | **False positive**: every occurrence is mapped and explicitly excluded from ECC | §§3.8, 6.4 |
+| Trigger could repair missing keys | **False positive**: read-only and fail-closed | §10 |
+| Certification setup can leak to hosted/production | **Resolved** by local-host check, owner-only calls, reset boundary and prohibited claims | §9 |
+| Rollback might remove business rows | **Resolved**: zero-row precondition, structural reverse order only | §11 |
+| WP-6+, IA-6, Posting, costing or source activation could be inferred | **Resolved** by object/write allowlists and explicit exclusions | §§1, 3.6, 13, 16 |
 
-**Decision:** `EA-009 COMPLETE — READY FOR WP-5 AUTHORISATION GATE RE-RUN`.
+Object names/counts, signatures, argument/default/return contracts, 139 stored
+columns, payload keys, fourteen-component encoding/byte order/digest, version
+references, privileges, trigger metadata, 26 SQLSTATE failures, initial-only
+lifecycle, fixture contexts, one writer sequence, locks, idempotency,
+concurrency, rollback, future evidence, pre/postconditions and protected
+boundaries are now fixed. No unresolved EA-010 decision requires the Product
+Owner, ADR-C01 owner, ECC-01 owner or a current WP-4 amendment. The mandatory
+future WP-4 lifecycle stop is an explicit exclusion, not hidden authority.
+
+**Decision:** `EA-010 COMPLETE — READY FOR WP-5 AUTHORISATION GATE RE-RUN`.
 
 This is a specification-readiness decision only. It is not the Authorisation
 Gate. WP-5 remains unauthorised and unimplemented.
+
+## 19. Engineering Amendment EA-010 closure
+
+### 19.1 Resolution of WP5-AGR2-001
+
+- **Confirmed defect and sources:** ECC-01 §3.3/V-35, design §§6.3/15,
+  certified WP-4 §§2–3 and executable migration `20260731000019` collectively
+  permit historical state but do not provide resolution-aware canonical
+  uniqueness. EA-009's prospective successor paragraph was therefore
+  unexecutable for unchanged comparator bytes.
+- **Controlling corrected rule:** WP-5 inserts an order key only for a newly
+  generated event with no prior key row. Existing resolution of any state is
+  `IA5-WP5-026`/`23505`. No update, demotion, successor or re-resolution occurs.
+- **Implementation/rollback boundary:** the same four WP-5 objects remain; no
+  WP-4 object changes. Rollback removes only new WP-5 objects and restores the
+  old writer.
+- **Evidence owner:** `111` proves one initial current row; `112` proves `026`,
+  duplicate return and no supersession; `113` proves WP-4 unchanged.
+- **Higher-authority preservation:** WP-4 still proves its issued structural
+  lifecycle; ECC-01 still requires a future governed re-resolution remedy. EA-010
+  merely refuses to claim that future procedure in WP-5.
+- **Objective closure:** repository-wide WP-5 statements must classify
+  re-resolution as prohibited/future, and no WP-5 algorithm may write
+  `superseded` or a successor row.
+
+Repository-wide terminology census disposition:
+
+| Match group | Classification |
+| --- | --- |
+| ECC-01 and its acceptance report | **Future governed work** — the required higher-authority semantics remain; no executable WP-5 procedure is implied |
+| Certified WP-4 specification, migration `20260731000019`, and test `109` | **WP-4 structural capability** — state column/guard/retention evidence only; unconditional canonical uniqueness remains |
+| WP-3 specification references | **Future governed work** — explicitly names re-resolution as a later forward path, outside WP-3/WP-5 authority |
+| IA-5 programme design §§6.3/15/23/25/28 | **Future governed work** after EA-010's explicit uniqueness stop; its §§31–36 matches are **historical** chronology |
+| This specification §§13–19 | **Prohibited in WP-5** or **future governed work** as explicitly labelled; its EA-008/EA-009 ledger matches are **historical** |
+| Other Inventory architecture/blueprint documents and IA-5 evidence reports | **Future governed work** or **historical** evidence; none is the current M5 executable authority |
+| Current AI/dashboard/index references | **Prohibited in WP-5 / future governed work**; they route to this specification |
+| Non-Inventory Accounting, Approval, Sales, Reporting, Compliance migration/test matches using the generic word `superseded` | **Historical/domain-local lifecycle terminology**, unrelated to Inventory order-key resolution and not a conflicting WP-5 authority |
+| Archive and trash-review matches | **Historical** and non-authoritative |
+
+No conflicting current WP-5 authority remains. The census intentionally does
+not rewrite ECC-01, certified WP-4, unrelated domain lifecycles, or archived
+history merely because they use the same English word.
+
+### 19.2 Resolution of WP5-AGR2-002
+
+- **Confirmed defect and sources:** migration `20260726000013`, WP-3 migration
+  `20260730000018`, and WP-4 migration `20260731000019` contain 139 written-table
+  columns whose complete construction was absent from EA-009.
+- **Controlling corrected rule:** §3.8 governs every column, exact source,
+  default/null, normalization, validation/failure, mutability, audit meaning,
+  and preserved/modified/removed behavior. §3.5 step 11 points only to that map.
+- **Implementation/rollback boundary:** no new argument, table, column or object
+  was added. The 14-argument signature and seven-table write allowlist remain.
+- **Evidence owner:** `111` owns column/source/default and normalized storage
+  assertions; `112` owns missing/invalid mapping failures and idempotent return;
+  `113` owns restoration and residue.
+- **Higher-authority preservation:** the map adopts executable certified table
+  shapes without modifying them and explicitly identifies the few WP-5 writer
+  behavior changes.
+- **Objective closure:** a future writer can be implemented from §§3–6 without
+  consulting the old function to choose business behavior.
+
+### 19.3 Resolution of WP5-AGR2-003
+
+- **Confirmed defect and sources:** EA-009 resolver rule `E1::date`, current
+  writer `p_occurred_at::date`, and preserved guard
+  `NEW.effective_at::date` inherited caller/session timezone.
+- **Controlling corrected rule:** writer and resolver have exact function
+  configuration `SET TimeZone='UTC'`; `economic_date` and `occurrence_date` use
+  explicit `AT TIME ZONE 'UTC'` expressions; all policy/version range checks use
+  the former. The guard sees UTC because it runs during the writer call.
+- **Implementation boundary:** only the future replacement writer and new
+  resolver definitions receive the UTC configuration. The certified guard,
+  migrations, tables and policies remain unchanged. No other event writer is
+  authorised.
+- **Failure behavior:** missing/invalid timestamp remains `010`/`22023`;
+  canonical conversion failure is `014`/`22021`; out-of-period/mismatched
+  authority is `23514`; the whole occurrence rolls back.
+- **Rollback consequence:** dropping those two WP-5 definitions removes the UTC
+  configuration; restoring the exact old writer restores its original config.
+- **Evidence owner:** `111` and `112` execute a UTC-midnight boundary instant
+  under at least UTC and one non-UTC session and require identical stored date,
+  policy versions, guard result, bytes and digest.
+- **Higher-authority preservation:** UTC is ECC-01 N-01's existing authority;
+  this amendment supplies its missing PostgreSQL representation and changes no
+  accounting policy.
+- **Objective closure:** catalog `proconfig` and two-timezone result equality
+  must both pass.
+
+### 19.4 Resolution of WP5-AGR2-004
+
+- **Confirmed defect and sources:** an all-rollback pgTAP fixture cannot be
+  observed by independent sessions; current
+  `supabase/verification/ia5_concurrent_idempotency.sql` documents and implements
+  the necessary local committed-setup/reset precedent.
+- **Controlling corrected rule:** ordinary fixtures remain rolled back.
+  Multi-session proof belongs only to future `WP5-CONC-114` under §9.3: commit
+  the minimum non-Inventory local setup, roll back or commit-reject every event
+  transaction, reset immediately, and prove full residue absence.
+- **Implementation boundary:** the future asset is evidence-only and
+  non-runtime; it creates no database object, grant, source enablement or hosted
+  path. EA-010 creates no SQL/test asset.
+- **Failure behavior:** wrong host/baseline, inability to observe the wait,
+  unexpected commit, SQLSTATE mismatch, reset failure or any residue exits
+  non-zero and invalidates the evidence.
+- **Rollback consequence:** event transactions explicitly roll back; local reset
+  is mandatory cleanup for the deliberately committed setup. Cleanup DML is
+  prohibited.
+- **Evidence owner:** `WP5-CONC-114`; test `112` retains exact retry and
+  contradictory-payload semantics without a multi-session claim.
+- **Higher-authority preservation:** ECC-01 V-10 and the certification-only,
+  production-disabled registry row are unchanged. No hosted or production
+  concurrency claim is made.
+- **Objective closure:** the future asset must be independently executable from
+  fresh reset through second reset and residue proof without relying on
+  uncommitted cross-session fixture visibility.

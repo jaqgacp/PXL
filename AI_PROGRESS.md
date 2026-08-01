@@ -66,7 +66,7 @@ bounded module scopes; those evidence boundaries do not redefine the product.
 | Engine | Maturity | Certified scope | Main blocker / next milestone |
 | --- | --- | --- | --- |
 | Posting | M7 | None as whole engine; Kernel fully enforced | Inventory P6 reconciliation; prove canonical flows |
-| Inventory Accounting | M2 | WP-1…WP-4 work packages only | EA-009 closes the three re-run blockers; another separate gate re-run required |
+| Inventory Accounting | M2 | WP-1…WP-4 work packages only | EA-010 closes four latest specification blockers; comprehensive final gate required; re-resolution remains future-governed |
 | AR | M4 | None | Scenario-wide AR-control proof |
 | AP | M4 | None | Scenario-wide AP-control proof |
 | Payment & Application | M4 | None | Over/unapplied/reversal/concurrency proof |
@@ -98,7 +98,7 @@ twentieth engine and not a separate progress measure.
 | WP-2 | Certified work package | Dormant source-registry authority. |
 | WP-3 | Certified work package | Dormant valuation stream/allocator. |
 | WP-4 | Certified work package | Dormant persisted order-key evidence. |
-| WP-5 | **EA-009 complete; unauthorised** | The gate re-run after EA-008 rejected on WP5-AGR-001…003. EA-009 closes those three specification/proof blockers; another separate gate must decide authority. No implementation exists. |
+| WP-5 | **EA-010 complete; unauthorised** | The latest complete gate rejected on WP5-AGR2-001…004. EA-010 closes all four at specification level through initial-resolution-only scope, a 139-column persistence map, UTC date rules and reset-bounded concurrency evidence. A separate comprehensive gate must decide authority. No implementation exists. |
 | WP-6…WP-9 | Unauthorised | No work may begin. |
 | IA-5 permanent foundation | Claim suspended | C-01 remains open until final executable evidence. |
 | Inventory Accounting Engine | Not Certified | Four work packages do not certify the engine. |
@@ -136,13 +136,13 @@ work, but no whole flow meets the Product Definition of Done.
 ## 8. Current Critical Path
 
 1. Product Architecture consolidation is complete and registered.
-2. The gate re-run after EA-008 rejected WP-5 on exactly three blockers; EA-009
-   closes them without changing implementation or granting authority.
+2. The latest complete gate rejected WP-5 on four blockers; EA-010 closes them
+   without changing implementation or granting authority. WP-5 is initial-
+   resolution-only; re-resolution remains a separate future governance stop.
 3. The repository owner accepted the exact Supabase CLI localhost URI in
-   reachable history as a reviewed non-secret development default; EA-009's
+   reachable history as a reviewed non-secret development default; EA-010's
    validated state is committed and pushed without history rewrite or rotation.
-4. Run another **WP-5 Authorisation
-   Gate Re-run — Lifecycle Step 2**; do not implement
+4. Run the **WP-5 Authorisation Gate Re-run — Comprehensive Final Gate**; do not implement
    during the gate or infer authority from specification readiness.
 5. Prove one canonical Sales and one canonical Purchasing flow through source,
    posting, subledger, GL, TB, FS, tax, books, correction and trace.
@@ -181,10 +181,10 @@ work, but no whole flow meets the Product Definition of Done.
 
 ## 11. Immediate Next Mission
 
-**WP-5 Authorisation Gate Re-run — Lifecycle Step 2.**
+**WP-5 Authorisation Gate Re-run — Comprehensive Final Gate.**
 
 The owner-approved security disposition and validated main-branch handoff are
-complete. The gate remains next because EA-009 cannot authorise itself and
+complete. The gate remains next because EA-010 cannot authorise itself and
 deterministic Inventory chronology is a real prerequisite for future COGS/
 valuation and Posting P6. The gate itself does **not** implement WP-5 or
 authorise automatic continuation to WP-6…WP-9. After the gate, a product-value

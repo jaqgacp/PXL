@@ -2,11 +2,11 @@
 
 **Current Date:** 2026-08-01
 **Current Branch:** `main`
-**Working Tree:** EA-009 and its owner-approved security disposition are
-validated and committed in the repository state identified by current `main`
-HEAD; the accepted public handoff is synchronized to `origin/main`.
+**Working Tree:** EA-010 documentation/governance reconciliation is the current
+mission state; commit/push standing is recorded in `AI_LAST_SESSION.md`.
 **Product Phase:** Product Architecture consolidation complete; WP-5 Engineering
-Amendment EA-009 complete, awaiting another separate Authorisation Gate re-run.
+Amendment EA-010 complete, awaiting a separate comprehensive final Authorisation
+Gate re-run.
 **Environment:** Local repository documentation review only; no database test
 lane, runtime, or hosted operation was authorised.
 **Product Readiness:** **Internal QA/demo only. Not pilot-ready. Not
@@ -77,25 +77,27 @@ Payroll is a **future separate product — excluded from current PXL ERP progres
 ADR-C01 remains frozen. ECC-01 remains owner accepted, not frozen. The original
 IA-5 permanent-foundation claim remains **SUSPENDED** by C-01.
 
-WP-1, WP-2, WP-3 and WP-4 remain **Certified work packages** and dormant. The
-2026-07-31 WP-5 rejection and EA-008 remain preserved as historical records.
-The later independent gate re-run returned **REJECTED** on exactly
-WP5-AGR-001…003: canonical-key authority conflicted with certified WP-4, two
-mandatory writer sequences conflicted, and the protected-boundary proof was not
-independently reproducible.
+WP-1, WP-2, WP-3 and WP-4 remain **Certified work packages** and dormant. Every
+earlier WP-5 rejection and EA-008/EA-009 remains historical evidence. The latest
+complete gate returned **REJECTED** on WP5-AGR2-001…004: the successor lifecycle
+collided with certified WP-4 canonical uniqueness; persisted-row construction
+was incomplete; policy dates depended on session timezone; and the all-rollback
+fixture could not support two autonomous sessions.
 
-Documentation/governance-only **EA-009** closes those three specification/proof
-findings. Certified WP-4 remains authoritative for immutable bytes/digest of all
-fourteen ECC components; WP-5 derives the values, with E2 = 0 for the only
-eligible base/no-edge fixture. The detailed specification §3.5 is the only
-writer sequence, and §17 fixes a reproducible 527-file protected manifest. The
-exact replacement writer/resolver/payload, V-10-preserving owner-only rolled-
-back fixture, trigger/function census, totality, rollback and future tests
-`111`…`113` remain governed in
+Documentation/governance-only **EA-010** closes all four specification blockers.
+WP-5 is initial-resolution-only and fails `IA5-WP5-026`/`23505` on any prior
+event resolution; all 139 columns across seven writer-target tables are mapped;
+writer/resolver date authority is UTC without modifying the certified guard;
+and future two-session evidence belongs to local-only reset-bounded
+`WP5-CONC-114`. The exact four-object contract, one writer sequence,
+fourteen-component encoding, V-10-preserving contexts, totality, rollback and
+future evidence remain governed in
 `docs/PXL/07. Inventory/04. Implementation/IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md`.
 
-EA-009 grants no authority. WP-5 is unauthorised, unimplemented, unaudited and
+EA-010 grants no authority. WP-5 is unauthorised, unimplemented, unaudited and
 uncertified. No runtime consumer exists and no production source is enabled.
+Re-resolution, dependent WP-7 capability and production activation additionally
+stop on a separate future WP-4 lifecycle/uniqueness decision.
 
 Posting P5.2 remains fully enforced. The Accounting Kernel is a component inside
 the Posting Engine, not a separate engine. Posting P6 remains blocked at
@@ -116,17 +118,18 @@ complete workflow.
 
 ## Last Verified Commands
 
-- `npm run docs:check` — **PASS** on 2026-08-01 after EA-009 reconciliation.
+- `npm run docs:check` — **PASS** on 2026-08-01 after EA-010 reconciliation;
+  the canonical findings standing and 110-file test-book census agree.
 - `git diff --check` — **PASS** on 2026-08-01.
-- Internal Markdown links/index, fourteen-component/26-column resolver census,
-  one writer sequence, exact four-object/reverse-rollback census, 25 failure
-  IDs, seven future test families, authority/status terminology and PostgreSQL
-  identifier lengths — **PASS**.
+- EA-010 links/index, fourteen-component/26-column resolver, executable-schema-
+  matched 139-column persistence map, one 18-step writer sequence, four-object/
+  reverse-rollback, 26 failures, future evidence, timezone, identifier and
+  status/terminology censuses — **PASS**.
 - The fixed protected set measured 527 entries. Start/end SHA-256 aggregate
   `8ddf66f36c63606f8eb0bceaacfe3f3131337758b895fc557ec488ca383d7ba6`
   is **identical**.
 - No SQL, migration, pgTAP/database lane, test, route, navigation, application
-  source, database object or hosted operation was executed or edited by EA-009.
+  source, database object or hosted operation changed or ran under EA-010.
 - Public-push secret/privacy gate — **PASS after owner disposition**. The exact
   reviewed residual is the Supabase CLI documented default local-development
   PostgreSQL URI at `127.0.0.1:54322`, not a hosted/project credential. Current
@@ -136,8 +139,9 @@ complete workflow.
 
 ## Recommended Next Task
 
-**WP-5 AUTHORISATION GATE RE-RUN — Lifecycle Step 2.** Independently review the
-EA-009-current specification against ADR-C01, ECC-01 and certified WP-1…WP-4.
+**WP-5 AUTHORISATION GATE RE-RUN — COMPREHENSIVE FINAL GATE.** Independently
+review the EA-010-current specification against ADR-C01, ECC-01 and certified
+WP-1…WP-4.
 Do not implement or repair WP-5 during that gate. The owner-approved Git-history
 disposition applies only to the exact documented Supabase CLI localhost default;
 any future credential detection remains a new stop requiring independent review.

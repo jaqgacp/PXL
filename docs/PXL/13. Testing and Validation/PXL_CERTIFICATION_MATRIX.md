@@ -6,7 +6,7 @@
 **Applies To:** Program-level module and engine certification status
 **Read When:** Checking current certification status or selecting the next certification phase
 **Do Not Read For:** Certification method (use the module/engine standards), defect content (use the findings register), or current bounded task (use `AI/AI_STATE.md`)
-**Last Reviewed:** 2026-08-01 after WP-5 Engineering Amendment EA-009. **IA-5 ECC Hardening WP-1, WP-2, WP-3, and WP-4 are CERTIFIED work packages.** The 2026-07-31 WP-5 gate rejection and EA-008 remain historical authority. The later independent gate re-run returned REJECTED on WP5-AGR-001…003; documentation/governance-only EA-009 now closes those three findings at specification/proof level. WP-5 remains unauthorised, unimplemented, unaudited and uncertified pending another separate Authorisation Gate re-run. **The four work-package certifications do not certify the IA-5 permanent foundation, Inventory module, or Inventory Engine:** the dormant-foundation claim remains **suspended** under C-01. WP-6…WP-9, IA-6, P5.3B, P6 implementation, and P7 have not begun. P5.2 remains fully enforced and authoritative.
+**Last Reviewed:** 2026-08-01 after WP-5 Engineering Amendment EA-010. **IA-5 ECC Hardening WP-1, WP-2, WP-3, and WP-4 are CERTIFIED work packages.** All earlier WP-5 gate rejections and EA-008/EA-009 remain historical authority. The latest complete gate re-run returned REJECTED on WP5-AGR2-001…004; documentation/governance-only EA-010 closes those four findings at specification level through initial-resolution-only scope, a complete 139-column persistence map, UTC date semantics, and a constructible reset-bounded concurrency evidence lane. WP-5 remains unauthorised, unimplemented, unaudited and uncertified pending another separate comprehensive Authorisation Gate re-run. **The four work-package certifications do not certify the IA-5 permanent foundation, Inventory module, or Inventory Engine:** the dormant-foundation claim remains **suspended** under C-01. WP-6…WP-9, IA-6, P5.3B, P6 implementation, and P7 have not begun. P5.2 remains fully enforced and authoritative.
 
 This is a concise status dashboard only. It records where each module and engine stands against [`PXL_MODULE_CERTIFICATION_STANDARD.md`](PXL_MODULE_CERTIFICATION_STANDARD.md) and [`PXL_ENGINE_CERTIFICATION_STANDARD.md`](PXL_ENGINE_CERTIFICATION_STANDARD.md). Capability expectations run before certifying a module are defined in [`PXL_PRODUCT_COMPLETENESS_CHECKLIST.md`](PXL_PRODUCT_COMPLETENESS_CHECKLIST.md). It holds no defect detail (see [`../PXL_END_TO_END_AUDIT_FINDINGS.md`](../PXL_END_TO_END_AUDIT_FINDINGS.md)) and no active-task handoff (see `AI/AI_STATE.md`). Statuses are defined in the two standards.
 
@@ -24,7 +24,7 @@ The strongest implemented cores (Sales Invoice, Official Receipt, Vendor Bill, P
 | 2 | Accounting Core | In Progress | Phase 1 | Posting invariants not proven across all posting transactions |
 | 3 | Sales and Accounts Receivable | In Progress | Phase 2 | `PXL-AUD-053` SI completeness; returns/credit reconciliation unproven |
 | 4 | Purchasing and Accounts Payable | In Progress | Phase 3 | Three-way match, returns, over-receipt controls unproven |
-| 5 | Inventory | In Progress | Phase 4 | IA-5 landed a dormant event/identity/precision/policy/projection/security foundation with zero accounting change, but its **certification is suspended**: the IA-5/IA-6 Final Evidence Gate returned Outcome C (C-01 Critical — accepted sequence allocated by row-lock order). Remediation runs under ADR-C01 + ECC-01. WP-1, WP-2, WP-3, and WP-4 are implemented and certified work packages (2026-07-29 / 2026-07-30 / 2026-07-31 / 2026-07-31). The gate re-run after EA-008 rejected WP-5 on WP5-AGR-001…003; EA-009 closes those specification/proof blockers but grants no authority. WP-5…WP-9 and IA-6 remain unauthorised. Active method state, costing cut-over, valuation, negative-stock settlement, reporting, and Inventory-to-GL reconciliation remain later governed phases. |
+| 5 | Inventory | In Progress | Phase 4 | IA-5 landed a dormant event/identity/precision/policy/projection/security foundation with zero accounting change, but its **certification is suspended**: the IA-5/IA-6 Final Evidence Gate returned Outcome C (C-01 Critical — accepted sequence allocated by row-lock order). Remediation runs under ADR-C01 + ECC-01. WP-1, WP-2, WP-3, and WP-4 are implemented and certified work packages (2026-07-29 / 2026-07-30 / 2026-07-31 / 2026-07-31). The latest complete gate rejected WP-5 on WP5-AGR2-001…004; EA-010 closes those specification blockers but grants no authority. WP-5 remains initial-resolution-only in scope and unauthorised; WP-6…WP-9 and IA-6 remain unauthorised. Active method state, costing cut-over, valuation, negative-stock settlement, reporting, and Inventory-to-GL reconciliation remain later governed phases. |
 | 6 | Banking and Treasury | Not Started | Phase 5 | Module not proven complete |
 | 7 | Fixed Assets | Not Started | Phase 6 | Lifecycle/reconciliation not proven |
 | 8 | Accounting Schedules | Not Started | Phase 6 | Generation, duplicate-run, closed-period behavior unproven |
@@ -92,6 +92,18 @@ making the detailed specification's tenant-safe/idempotency-first algorithm the
 only sequence, and adding a fixed 527-file SHA-256 proof procedure. No
 certification status changed. WP-5 is ready only for another Authorisation Gate
 re-run and remains unauthorised, unimplemented, unaudited and uncertified.
+
+The subsequent complete independent gate re-run returned **REJECTED** on exactly
+WP5-AGR2-001…004: WP-4's unconditional canonical identity could not support the
+claimed successor lifecycle; the replacement writer lacked a complete stored-
+column map; effective-date derivation depended on session timezone; and the
+rolled-back fixture could not support two autonomous sessions. Documentation-
+only **EA-010** closes those four findings without changing WP-4: WP-5 is
+initial-resolution-only; every one of the 139 columns across seven writable
+tables is governed; writer/resolver dates are UTC; and future concurrency proof
+is allocated to local-only reset-bounded `WP5-CONC-114`. EA-010 does not
+authorise or certify WP-5. The next mission is a separate comprehensive final
+Authorisation Gate.
 
 ## Critical Reconciliations (to be evidenced during certification)
 
