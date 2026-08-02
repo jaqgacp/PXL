@@ -28,6 +28,25 @@ next session. `AI_PROGRESS.md` and `AI_LAST_SESSION.md` were exactly that failur
 and were archived on 2026-08-02: both still reported inventory as unreconciled
 after it had been fixed. Session history is `git log`, not a hand-maintained file.
 
+**Four authorities, four questions.** Each planning document answers exactly one
+question, and may not answer another's:
+
+| Question | Authority |
+| --- | --- |
+| **What** is PXL? | `01. Architecture/PXL_PRODUCT_ARCHITECTURE.md` |
+| **When**, and in what order, does work ship? | `01. Architecture/PXL_DELIVERY_PLAN.md` |
+| **Why** is the order what it is? | `01. Architecture/PXL_PRODUCT_EXECUTION_ROADMAP.md` |
+| **Where** are we today? | `AI/AI_STATE.md` |
+
+**Phase-numbering rule.** Only `PXL_DELIVERY_PLAN.md` numbers phases. An
+unqualified "Phase 4" always means Delivery Plan Phase 4. Any other document that
+needs to reference scheduling must cite it explicitly ("Delivery Plan Phase 4")
+and must never define a numbering of its own. On 2026-08-01 the Execution
+Roadmap briefly carried its own numbered phases, which gave "Phase 4" two
+incompatible meanings in two active documents; the Roadmap now uses outcome names
+only. Historical certification-programme phases are always written
+"certification-programme Phase N".
+
 The normal AI startup set must not expand to all Markdown, all Compliance files, all Sales Invoice files, or archived reports.
 
 Authority hierarchy:

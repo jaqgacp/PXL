@@ -15,25 +15,26 @@ production-ready.** PXL is not production-ready.
 
 ## Canonical Authority and Startup
 
-The canonical product authority is
-`docs/PXL/01. Architecture/PXL_PRODUCT_ARCHITECTURE.md`: what PXL is, its eleven
-business modules, nineteen engine scopes, canonical names and M0–M9 maturity.
-`PXL_DELIVERY_PLAN.md` is the complete plan; `PXL_PRODUCT_EXECUTION_ROADMAP.md`
-holds the dependency map, quality bars and per-module criteria. Neither may
-override the Product Architecture or authorise implementation.
+Four authorities, four questions — settled 2026-08-02; none answers another's:
+**what** PXL is → `PXL_PRODUCT_ARCHITECTURE.md`; **when/in what order** work
+ships, the only numbered phases and the timeline → `PXL_DELIVERY_PLAN.md`;
+**why** that order — outcome dependencies, quality bars, per-module criteria →
+`PXL_PRODUCT_EXECUTION_ROADMAP.md`, which carries **no phase numbers**;
+**where** we are today → this file. An unqualified "Phase N" always means a
+Delivery Plan phase. Neither planning document may override the Product
+Architecture or authorise implementation.
 
 A brand-new session should be started with `AI/ONBOARDING_PROMPT.md`.
 
-**Current phase: Delivery Plan Phase 2 — Operational safety.** Phase 1 is
-complete. Phase 3 was implemented locally out of sequence on 2026-08-02 because
-its interrupted work already existed in the tree. The backup service is now
-built, scheduled and proven end to end including offsite replication; what
-remains of Phase 2 is **owner-supplied**, not engineering: a destination on a
-separate failure domain, an escrowed passphrase, and a PAD-007 PITR ruling.
+**Current phase: Delivery Plan Phase 2 — Operational safety.** Phase 1 complete;
+Phase 3 was built locally out of sequence on 2026-08-02 because its interrupted
+work already existed in the tree. The backup service is built, scheduled and
+proven including offsite replication; what remains of Phase 2 is
+**owner-supplied**: a destination on a separate failure domain and an escrowed
+passphrase.
 
-Fresh AI startup order: `AI/AGENT_SYSTEM_PROMPT.md` → this file →
-`docs/PXL/00. Governance/PXL_HOW_WE_WORK.md` → Product Architecture → Execution
-Roadmap for planning work → only the authorities the active mission names.
+Startup order: `AI/AGENT_SYSTEM_PROMPT.md` → this file → `PXL_HOW_WE_WORK.md` →
+Product Architecture → Roadmap for planning → only what the mission names.
 
 The certification-ceremony process was **retired on 2026-08-02** and replaced by
 automated invariants (see `PXL_HOW_WE_WORK.md` §3–4). Do not run an audit
@@ -159,27 +160,27 @@ complete workflow.
 
 ## Recommended Next Task
 
-**PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE. The remainder is owner action,
-not code.** PAD-007 is **decided: self-managed encrypted backups to
-S3-compatible object storage**, no provider PITR for the pilot. To close item 5:
-create the bucket (versioning + lifecycle), run `npm run backup:offsite:check`
-to prove it with a canary carrying no client data, then set repository variable
+**PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE; the rest is owner action.**
+PAD-007 decided: self-managed encrypted backups to S3-compatible storage, no
+provider PITR for the pilot. To close it: create the bucket (versioning +
+lifecycle), run `npm run backup:offsite:check`, set repository variable
 `PXL_OFFSITE_URL` plus the access-key secrets, and escrow
-`PXL_BACKUP_PASSPHRASE` off the host — an archive whose passphrase died with the
-server is not a backup. Runbook §6 has the exact commands.
+`PXL_BACKUP_PASSPHRASE` off the host. Runbook §6 has the commands.
 
-**The next build task is Delivery Plan Phase 4 — the Tax Engine (PAD-001)**,
-unless the owner authorises the hosted deploy first. Phase 3's local build is
-complete; do not call it pilot-ready until hosted parity, the invite function, a
-real-company cut-over rehearsal and browser/UAT evidence exist.
+**The next build task is Delivery Plan Phase 4 — Tax Engine and filing
+artifacts (PAD-001)**, unless the owner authorises the hosted deploy first.
+Phase 5 now also owns **financial statement presentation**: `account_fs_map`
+has never held a row, so no statements can be produced from mapped accounts.
+Phase 3's local build is complete; not pilot-ready until hosted parity, the
+invite function, a real cut-over rehearsal and browser/UAT evidence exist.
 
-**The hosted deploy is deliberately deferred, not blocked** (Deploy Runbook §2a).
-Re-run `npm run deploy:rehearse` after adding migrations. **Requires explicit
-owner approval before any hosted operation.**
+**The hosted deploy is deliberately deferred, not blocked** (Deploy Runbook §2a);
+re-run `npm run deploy:rehearse` after adding migrations. **Requires explicit
+owner approval.**
 
-No open findings remain. Do not resume IA-5: operated recovery, Phase 3 target
-acceptance, canonical Sales/Purchasing proof, sales-side COGS and Tax ownership
-all rank above further dormant foundation work.
+No open findings remain. Do not resume IA-5: operated recovery, canonical
+Sales/Purchasing proof, statement presentation and Tax ownership all rank above
+dormant foundation work.
 
 ## Stop Conditions
 

@@ -7,9 +7,20 @@
 **Do Not Read For:** Current status (`AI/AI_STATE.md`), what PXL is (Product Architecture), or how we work (`00. Governance/PXL_HOW_WE_WORK.md`)
 **Date:** 2026-08-02
 
-> `PXL_PRODUCT_EXECUTION_ROADMAP.md` holds the dependency map, the two quality
-> bars and the per-module criteria. **This document is the plan itself** — the
-> ordered list of phases, what each delivers, and how you know it is done.
+> **This document is the only place in PXL that numbers phases.** It owns the
+> delivery sequence, the phase numbers, the target timeline and the pilot
+> roadmap. When any document says "Phase 4" without qualification, it means
+> Phase 4 *of this plan*.
+>
+> `PXL_PRODUCT_EXECUTION_ROADMAP.md` explains **why** the order is what it is —
+> dependencies between outcomes, the two quality bars and the per-module
+> criteria. It deliberately carries **no phase numbers** and must never become a
+> second delivery plan. `PXL_PRODUCT_ARCHITECTURE.md` defines **what** PXL is.
+> `AI/AI_STATE.md` records **where we are today**.
+>
+> The one exception: the retired certification programme had its own phase
+> numbering, which survives only in historical records and is always written
+> "certification-programme Phase N".
 
 ---
 
@@ -129,12 +140,26 @@ PAD-001. Decide it as **Accounting-owned, one calculator.**
 
 1. `fn_calculate_tax(context) → tax_components[]` — one authority for VAT
    (inclusive and exclusive), percentage tax, EWT by ATC, FWT.
-2. Migrate the six save-routines that compute tax independently today. Only one
-   handles VAT-inclusive pricing — that inconsistency is a live correctness risk.
+2. Migrate the **seven** save-routines that compute tax independently today
+   (`fn_save_cash_purchase_core_20260718`, `fn_save_cash_sale`,
+   `fn_save_credit_memo`, `fn_save_debit_memo`,
+   `fn_save_sales_invoice_aud053_core`, `fn_save_vendor_bill_core_20260718`,
+   `fn_save_vendor_credit`). Only one handles VAT-inclusive pricing — that
+   inconsistency is a live correctness risk. *Measured 2026-08-02; this item
+   previously said six.*
 3. Regression test asserting every caller produces byte-identical output to today
    **before** switching.
+4. **The filing artifacts themselves.** A calculator does not produce a return.
+   All twelve `compliance_*` working-paper tables are empty, as are `bir_forms`,
+   `form_2306_issuances`, `form_2307_issuances`, `form_2307_tracking`,
+   `vat_returns`, `withholding_remittances` and `tax_credits_schedule`. **Nothing
+   has ever been filed from PXL.** A VAT-registered pilot client cannot operate
+   without at least: VAT return working papers, EWT working papers, Form 2307
+   issuance, and the SLS/SLP exports.
 
-**Done when:** one place to change a BIR rate. Compliance unblocks.
+**Done when:** one place to change a BIR rate, **and** one full period's VAT,
+percentage tax and withholding returns generated from posted data and reconciled
+to the General Ledger at zero variance.
 
 ---
 
@@ -163,11 +188,20 @@ Mostly proof of what exists, not new features.
 5. **Document Conversion**, minimally: carry quantities forward, prevent double
    conversion. This is what makes quote → invoice real.
 6. Surface the accounting trace in the menu (complete, currently unreachable).
+7. **Financial statement presentation.** Both flows above end in "→ TB → FS",
+   but **`account_fs_map` has never held a row**, so no account is mapped to a
+   statement line. The trial balance is correct and out of balance by ₱0.00 in
+   every company; a Statement of Financial Position and Statement of
+   Comprehensive Income cannot be produced from mapped accounts today. A pilot
+   client's accountant has to sign statements, so this is pilot-critical rather
+   than reporting polish. *Added 2026-08-02; this item was absent from the plan
+   entirely.*
 
 Each flow proven by a **fresh-data end-to-end test in the style of `112`**, never
 against the demo seed.
 
-**Done when:** both flows meet the Pilot Bar with evidence.
+**Done when:** both flows meet the Pilot Bar with evidence, and a full statement
+set is produced from mapped accounts and ties to the trial balance.
 
 ---
 
@@ -179,8 +213,18 @@ against the demo seed.
    exception.
 3. Monitoring — error capture, slow-query log, and a **daily reconciliation job
    that alerts if inventory or AR/AP stops tying out.**
-4. Notifications, minimum viable — approval routing currently notifies nobody.
-5. Retire or finish the remaining **Not built** surfaces so the pilot menu is honest.
+4. Notifications, minimum viable — approval routing currently notifies nobody,
+   and **no notification model exists anywhere in the product** (PAD-013).
+5. **Prove approval routing at least once.** Two workflows are defined, but
+   `approval_requests` and `approval_instances` have **never held a row** — the
+   engine has never executed. Either exercise it end to end or explicitly take
+   approvals out of pilot scope; shipping a defined-but-unrun approval engine is
+   the worst of the three options.
+6. **Operational access control.** Deploy the `admin-invite` Edge Function (written,
+   never deployed) and exercise branch scoping — `user_company_branch_scopes` has
+   never held a row, so per-branch restriction is unproven in practice.
+7. Retire or finish the remaining **Not built** surfaces so the pilot menu is
+   honest: 30 deferred routes and 17 navigation labels with no page (PAD-012).
 
 **Done when:** a stranger can use it without you sitting beside them.
 
@@ -209,18 +253,44 @@ replay becomes a real complaint.
 
 ## Timeline
 
-| | |
-|---|---|
-| Phase 1 | ✅ done |
-| Phase 2 | ~2 weeks — **recoverable** |
-| Phases 3–5 | ~11 weeks — **onboardable, one tax authority, two proven flows** |
-| Phase 6 | ~4 weeks — **pilot-ready** |
-| **To pilot** | **~4 months from 2026-08-02** |
-| Phase 7 | one quarter parallel run |
-| **To production-ready** | **~8 months** |
+**Revised 2026-08-02** after the measured status review added three pilot-critical
+items that the previous estimate did not contain: financial statement
+presentation, the BIR filing artifacts, and proving approval routing.
 
-Deliberately front-loaded: after Phase 2 the product is recoverable, which is the
-difference between a setback and a catastrophe.
+| Phase | Estimate | Confidence |
+|---|---|---|
+| Phase 1 — accounting break | ✅ done | — |
+| Phase 2 — operational safety | days, not weeks (owner action only) | **High** — engineering is complete and proven |
+| Phase 3 — onboardable | built locally; hosted/UAT proof outstanding | **Medium** |
+| Phase 4 — Tax Engine **and filing artifacts** | 4–6 weeks calculator; **filing artifacts not estimated** | **Low** — see below |
+| Phase 5 — two canonical flows **and statements** | 3–4 weeks flows; **+ statement presentation not estimated** | **Low** |
+| Phase 6 — pilot hardening | 3–4 weeks | **Low** — no browser lane exists yet to calibrate against |
+| **To pilot** | **previously ~4 months; now unestimated — see below** | — |
+| Phase 7 — pilot | one quarter parallel run | **High** — fixed by calendar |
+
+### Why the "~4 months to pilot" figure was withdrawn
+
+It was published before three pilot-critical items were known to be missing, and
+none of them has a defensible estimate from repository evidence:
+
+- **Filing artifacts (Phase 4.4).** Twelve working-paper tables, four form
+  tables and the return tables are empty. Nothing in the repository indicates how
+  much of the generation logic exists behind those empty tables, so any duration
+  would be invention.
+- **Statement presentation (Phase 5.7).** `account_fs_map` is empty. Whether this
+  is a mapping-data exercise or also a reporting build is not determinable from
+  the schema alone.
+- **Approval routing (Phase 6.5).** An engine that has never executed once
+  carries unknown defect risk. The first run finds what review cannot.
+
+Stating "~4 months" while those three are open would repeat the mistake this plan
+was written to stop. **The next honest estimate becomes possible once Phase 4.4
+and Phase 5.7 are scoped against the code** — that scoping is itself the first
+task of Phase 4.
+
+What has *not* changed: Phases 1–3 are done or nearly done, and the ordering
+below is unaffected. Deliberately front-loaded — after Phase 2 the product is
+recoverable, which is the difference between a setback and a catastrophe.
 
 ---
 
