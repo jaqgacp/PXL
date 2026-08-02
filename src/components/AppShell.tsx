@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { AppContextProvider, useAppCtx } from '@/lib/context'
 import { IMPLEMENTED_TRANSACTION_WORKSPACES } from '@/lib/transactionWorkspaceCoverage'
+import { isDeferredRoute } from '@/lib/deferredSurfaces'
 import type { Session } from '@supabase/supabase-js'
 
 type SubItem = { name: string; page: string; feature?: string }
@@ -47,7 +48,7 @@ const NAV: NavItem[] = [
         s('Chart of Accounts', 'chart-of-accounts'),
         s('Currency Setup', 'currency-setup'),
         s('Exchange Rates', 'currency-setup'),
-        s('Opening Balances'),
+        s('Opening Balances', 'opening-balances'),
         s('Financial Statement Fields'), s('GL Posting Configuration', 'gl-posting-config'),
       ]},
       { group: 'Tax Setup', items: [
@@ -59,6 +60,12 @@ const NAV: NavItem[] = [
       ]},
       { group: 'Treasury', items: [s('Petty Cash Fund Setup', 'petty-cash-funds')] },
       { group: 'System', items: [s('System Audit Log', 'audit-log')] },
+      { group: 'Administration', items: [
+        s('Users & Invite', 'admin-users'),
+        s('Company Memberships', 'admin-memberships'),
+        s('Role Assignment', 'admin-roles'),
+        s('Branch Scope', 'admin-branch-scopes'),
+      ]},
     ]
   },
   {
@@ -66,7 +73,7 @@ const NAV: NavItem[] = [
       { group: 'Parties', items: [s('Customers', 'customers'), s('Suppliers', 'suppliers'), s('Employees', 'employees')] },
       { group: 'Items & Services', items: [s('Item Categories', 'item-catalog'), s('Units of Measure', 'item-catalog'), s('Items', 'item-catalog'), s('Services', 'item-catalog')] },
       { group: 'Inventory Master', items: [s('Warehouses', 'warehouses'), s('Warehouse Stock Settings', 'warehouse-stock-settings')] },
-      { group: 'Shared', items: [s('Payment Terms', 'payment-terms')] },
+      { group: 'Shared', items: [s('Payment Terms', 'payment-terms'), s('Master Data Import', 'master-data-import')] },
       { group: 'Banking', items: [s('Bank Accounts', 'bank-accounts')] },
     ]
   },
@@ -231,13 +238,19 @@ const PAGE_LABELS: Record<string, string> = {
   'department-setup': 'Departments & Cost Centers',
   'fiscal-years': 'Fiscal Years',
   'chart-of-accounts': 'Chart of Accounts',
+  'opening-balances': 'Opening Balances',
   'currency-setup': 'Currency Setup',
   'feature-enablement': 'Feature Enablement',
   'number-series': 'Number Series',
   'approval-workflow': 'Approval Workflows',
+  'admin-users': 'Users & Invite',
+  'admin-memberships': 'Company Memberships',
+  'admin-roles': 'Role Assignment',
+  'admin-branch-scopes': 'Branch Scope',
   'audit-log': 'System Audit Log',
   'customers': 'Customers',
   'suppliers': 'Suppliers',
+  'master-data-import': 'Master Data Import',
   'payment-terms': 'Payment Terms',
   'item-catalog': 'Item Catalog',
   'tax-setup': 'Tax Code Setup',
@@ -605,18 +618,32 @@ function AppShellInner({ session, children }: { session: Session; children: Reac
               <p className="px-4 pb-1.5 text-xs font-semibold text-gray-500 uppercase tracking-widest">
                 {activeGroup}
               </p>
-              {currentGroupItems.map(mod => (
-                <button key={mod.name}
-                  onClick={() => navigate(mod.page)}
-                  disabled={!mod.page}
-                  className={`w-full text-left px-4 py-1.5 text-sm transition-colors whitespace-nowrap ${
-                    mod.page
-                      ? 'text-gray-200 hover:bg-gray-700 hover:text-white'
-                      : 'text-gray-500 cursor-not-allowed'
-                  }`}>
-                  {mod.name}
-                </button>
-              ))}
+              {currentGroupItems.map(mod => {
+                // A scaffold route renders a finished-looking screen over data
+                // that cannot exist yet. Say so, rather than letting the user
+                // conclude the product is broken.
+                const deferred = isDeferredRoute(mod.page)
+                return (
+                  <button key={mod.name}
+                    onClick={() => navigate(mod.page)}
+                    disabled={!mod.page}
+                    title={deferred ? 'Not built yet — this screen has no data behind it' : undefined}
+                    className={`w-full text-left px-4 py-1.5 text-sm transition-colors whitespace-nowrap flex items-center justify-between gap-3 ${
+                      mod.page
+                        ? deferred
+                          ? 'text-gray-500 hover:bg-gray-800 hover:text-gray-300'
+                          : 'text-gray-200 hover:bg-gray-700 hover:text-white'
+                        : 'text-gray-500 cursor-not-allowed'
+                    }`}>
+                    <span>{mod.name}</span>
+                    {deferred && (
+                      <span className="shrink-0 text-[10px] uppercase tracking-wider text-amber-500/80 border border-amber-500/30 rounded px-1 py-px">
+                        Not built
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
             </div>
           </div>
         )}

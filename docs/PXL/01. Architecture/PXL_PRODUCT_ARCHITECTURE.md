@@ -189,16 +189,24 @@ views explicitly.
 ## 1.6 The honest position, in one paragraph
 
 PXL has an unusually strong accounting foundation and an unusually weak claim to
-completion. The ledger is sealed and provably single-doorway. Multi-tenant
-isolation, audit immutability, document numbering, and dimensional accounting are
-formally certified. VAT and withholding reconcile to the General Ledger with
-exactly zero variance. Against that: **no business module is certified**,
-inventory valuation does not currently tie to its control account, there is **no
-tax engine** (tax is computed in seven separate document-save routines), there is
-**no way to load opening balances**, and there is **no backup or restore evidence
-of any kind**. Roughly a quarter of the product's visible surface consists of
-screens whose data tables are deliberately empty. PXL is suitable for **internal
-QA and demonstration only. It is not production-ready and not pilot-ready.**
+completion. The ledger is sealed and provably single-doorway — and the guard
+survives a restore into a fresh database. Multi-tenant isolation (209 of 209
+tables, 519 policies, none unprotected), audit immutability, document numbering
+and dimensional accounting are formally certified. The trial balance is out of
+balance by ₱0.00 in all five companies, inventory ties to its control account,
+and VAT and withholding reconcile to the General Ledger at exactly zero variance.
+
+Against that: **no business module is certified**; there is **no Tax Engine** —
+seven document-save routines compute VAT independently and only one handles
+VAT-inclusive pricing; **`account_fs_map` is empty**, so no financial-statement
+presentation exists; **12 of 24 posting entry points have never produced a
+journal**; every Banking and Fixed Asset transaction table is empty; and all
+twelve compliance working-paper tables are empty, so nothing has ever been filed.
+Of 209 tables, **116 have never held a row**. Opening balances, verified supplier
+payee accounts and minimum administration exist locally; recoverability is
+mechanised and scheduled but not operated over anything real. PXL is suitable for
+**internal QA and demonstration only. It is not production-ready and not
+pilot-ready.**
 
 ---
 
@@ -264,7 +272,7 @@ PXL ERP
 │   │   ├── GL Posting Configuration                                 [W]
 │   │   ├── Currency Setup                                           [P]
 │   │   ├── Financial Statement Structure                            [B]
-│   │   └── Opening Balances                                         [X]
+│   │   └── Opening Balances                                         [W]
 │   └── Tax Setup                                                       [P]
 │       ├── Tax Codes                                                [W]
 │       ├── VAT Codes                                                [W]
@@ -280,7 +288,7 @@ PXL ERP
 │   │   ├── Employees (lite BIR identifier master)                   [W]
 │   │   ├── Party Contacts (multi-contact master)                    [B]
 │   │   ├── Customer / Supplier Groups                               [B]
-│   │   └── Supplier Bank Details                                    [X]
+│   │   └── Supplier Bank Details                                    [W]
 │   ├── Items & Services                                                [P]
 │   │   ├── Item Catalog (items, services, non-inventory)            [W]
 │   │   ├── Item Categories                                          [W]
@@ -497,11 +505,11 @@ PXL ERP
 │       ├── Book vs Tax Depreciation                                 [U]
 │       └── Asset Disposal Report                                    [U]
 │
-└── Administration & Security                                        [X]
-    ├── Users & Memberships                                          [X]
-    ├── Roles & Permissions                                          [X]
-    ├── Branch Scope Assignment                                      [X]
-    ├── Master Data Import / Export                                  [B]
+└── Administration & Security                                        [G]
+    ├── Users & Memberships                                          [W]
+    ├── Roles & Permissions                                          [W]
+    ├── Branch Scope Assignment                                      [W]
+    ├── Master Data Import / Export                                  [W]
     └── System Audit Log                                             [W]
 ```
 
@@ -518,10 +526,11 @@ receivables view, the Accounting customer subsidiary ledger, and the BIR AR
 Subsidiary Ledger. That is one surface serving three purposes by design, not
 three features. The same applies to AP Aging and to Inventory Movements.
 
-**Administration & Security is a real gap.** It is a recognised certification
-module with no screens at all. Security *enforcement* is complete and certified —
-but it lives in the Permissions engine, and there is no administrative surface to
-manage users, roles, or branch scopes.
+**Administration & Security is now a partial product module.** Four restricted
+screens manage users/invites, company memberships, roles and branch scopes, while
+security enforcement remains owned by the certified Permissions engine. Hosted
+invite delivery, browser evidence, access review and support operations remain
+unproven.
 
 ---
 # 3. Canonical Module Definitions
@@ -565,8 +574,8 @@ that status.
 | **Dependencies** | Permissions engine (admin-only writes) · Number Series engine · Audit engine · COA engine |
 | **Maturity** | **M7 — GOVERNED** |
 | **Certification** | Certification module #1 *"Setup and Master Data"* — **Blocked.** Its review has been executed: 14 gates Pass, 3 Partial, 2 Blocked, 4 not applicable, **0 Fail, and zero open defects**. All four foundational engines it depends on are Certified. |
-| **Implementation** | The strongest-governed module in PXL. Blocked only on **missing evidence, not defects**: there is no backup/restore or RPO/RTO evidence at all, and browser-workflow evidence is recorded-only rather than automated. |
-| **Roadmap** | Produce Phase-9 backup/restore evidence and an automated browser lane — those two items alone would make Setup & Master Data the first certified module. Then decide the two genuine gaps: **CAS Registrations** (BIR accreditation and permit data has nowhere to live) and **Opening Balances** (no supported way to migrate an existing company's balances onto PXL). |
+| **Implementation** | The strongest-governed module in PXL. Backup and restore are demonstrated locally with measured RPO/RTO, but not operated on a schedule or offsite; browser-workflow evidence remains absent. Opening balances now provide a governed cut-over surface and lifecycle. |
+| **Roadmap** | Operate backup/restore and add an automated browser lane. CAS Registrations remain the genuine setup gap; validate the opening-balance cut-over against a real onboarding before any pilot claim. |
 
 ---
 
@@ -583,8 +592,8 @@ that status.
 | **Dependencies** | Permissions engine (a governed permission and segregation-of-duties model) · Audit engine · Approval engine (import commits are approval-gated) · Chart of Accounts |
 | **Maturity** | **M7 — GOVERNED** |
 | **Certification** | Shares certification module #1 with Setup — **Blocked**, same reasons. |
-| **Implementation** | Party, item, warehouse, and payment-term masters are complete and exercised. Philippine TIN is normalised and constraint-enforced on both party masters. Customer and supplier tax profiles drive withholding on receipts and bills end to end, proven by test. Three capabilities are **built but have no screen**: the multi-contact master, customer/supplier groups, and item UoM conversions/barcodes/media. One is **entirely absent**: supplier bank details, which means a payment or check voucher cannot carry a validated payee account. |
-| **Roadmap** | Surface the contacts and groups masters. Decide supplier bank details before any disbursement workflow is certified. |
+| **Implementation** | Party, item, warehouse, and payment-term masters are complete and exercised. Philippine TIN is normalised and constraint-enforced on both party masters. Customer and supplier tax profiles drive withholding end to end. Suppliers now carry verified bank accounts; bank-transfer Payment Vouchers snapshot the selected payee and fail closed at posting without one. Multi-contact, groups, and item-extension foundations still lack complete screens. The existing governed importer is now navigable with preview-before-commit. |
+| **Roadmap** | Surface the contacts, groups and item-extension masters; validate supplier-bank and import workflows in the browser and hosted environment. |
 
 ---
 
@@ -619,7 +628,7 @@ that status.
 | **Dependencies** | Suppliers · Items · Payment Terms · Number Series · Posting engine · Dimension engine · Approval engine · COA engine · tax calculation in the save layer |
 | **Maturity** | **M4 — PARTIAL WORKFLOW** |
 | **Certification** | Certification module #4 — **In Progress.** Named blockers: three-way match, returns, over-receipt controls. |
-| **Implementation** | Vendor Bill, Cash Purchase, Payment Voucher, and Vendor Credit have complete posting lifecycles with correct withholding basis (at source for accruals, at payment for disbursements). **One structural defect dominates this module: confirming a Receiving Report increases stock without creating any journal entry, while the matching Vendor Bill debits purchase clearing.** That single asymmetry is what blocks the Posting Engine from advancing and what makes inventory fail to reconcile to its control account. Supplier Debit Memo and Purchase Return are finished screens over governed-empty tables. |
+| **Implementation** | Vendor Bill, Cash Purchase, Payment Voucher, and Vendor Credit have complete posting lifecycles with correct withholding basis (at source for accruals, at payment for disbursements). The structural defect that dominated this module — a Receiving Report increasing stock without creating any journal — was closed by PXL-AUD-073 on 2026-08-02: the receipt now posts DR inventory control / CR purchase clearing, which the Vendor Bill's existing debit to the same account clears. Three-way match, over-receipt control and returns remain open. Supplier Debit Memo and Purchase Return are finished screens over governed-empty tables. |
 | **Roadmap** | Resolve the receiving-to-journal asymmetry — it is the highest-value accounting fix in the product. Then three-way match, then returns. |
 
 ---
@@ -643,7 +652,7 @@ that status.
 | **Dependencies** | Items · Warehouses · Warehouse Stock Settings · Posting engine · Dimension engine · Purchasing (receiving) · Sales (delivery) |
 | **Maturity** | **M4 — PARTIAL WORKFLOW** |
 | **Certification** | Certification module #5 — **In Progress.** |
-| **Implementation** | Adjustments, transfers, and physical counts post real journals and are exercised with live data. Goods Issue is a finished screen over a governed-empty table. **The material problem is that inventory does not tie out:** measured against the demonstration dataset, inventory value differs from the configured inventory-control account by ₱2,400.00, ₱21,000.00, and ₱6,630.00 across three companies, and remaining cost layers exceed physical stock by ₱2,420.00 / ₱12,600.00 / ₱3,930.00 and by 9 / 6 / 14 units. The Inventory Valuation report therefore displays a figure the General Ledger disagrees with. |
+| **Implementation** | Adjustments, transfers, and physical counts post real journals and are exercised with live data. Goods Issue is a finished screen over a governed-empty table. **Inventory now ties out.** PXL-AUD-073 (2026-08-02) closed the receiving-to-journal gap: a confirmed Receiving Report posts DR inventory control / CR purchase clearing through the sealed doorway, and inventory value equals its configured control account at **₱0.00 variance** in every stock-holding company, enforced by guard test `111`. The previously recorded variances of ₱2,400.00 / ₱21,000.00 / ₱6,630.00 were never re-measured and were wrong; the true pre-fix variances were **₱380.00 / ₱2,100.00 / ₱330.00**. The cost-layer excess of ₱2,420.00 / ₱12,600.00 / ₱3,930.00 and 9 / 6 / 14 units was correct and is also closed: layers are no longer created for weighted-average items, because no outflow path could consume them. **Correction 2026-08-02:** an earlier edition recorded "sales-side COGS posting remains open". That was wrong. `fn_post_sales_invoice` posts DR COGS / CR inventory per inventory line, consuming weighted-average cost or FIFO layers, decrementing `stock_balances` and refusing to post on insufficient stock; test `054` asserts it and the canonical ledger shows COGS debits equal to inventory credits in all three trading companies. Inventory could not tie out at ₱0.00 if it were true. Genuinely open: three-way match, over-receipt control, Cash Sales posting, Customer Return COGS, and the FIFO layer path (`inventory_cost_layers` has never held a row). |
 | **Roadmap** | Reconcile inventory to the control account (this requires the Purchasing receiving fix first). Then activate governed costing through the Inventory Accounting Engine — which is itself blocked several stages upstream. |
 
 ---
@@ -749,10 +758,10 @@ that status.
 | **Major transactions** | None |
 | **Major reports** | System Audit Log · User Activity Log |
 | **Dependencies** | Permissions engine · Audit engine · Approval engine |
-| **Maturity** | **M1 — ARCHITECTURE** |
+| **Maturity** | **M4 — PARTIAL WORKFLOW** |
 | **Certification** | Certification module #11 — **Not Started.** |
-| **Implementation** | **This module has no screens.** Security *enforcement* is complete and formally certified, but it lives in the Permissions engine. There is no administrative surface: memberships are created by database triggers and seed data, branch scope assignment has a data table that has never been used, and role management has no interface at all. Two adjacent capabilities exist without a home — the master-data import and export framework has no menu entry, and the System Audit Log is reachable but sits under Setup. |
-| **Roadmap** | Build the module. This is the clearest structural hole in the product: an ERP that cannot administer its own users is not deployable, regardless of how good its permission enforcement is. |
+| **Implementation** | Four restricted screens now list/invite users, manage company memberships and roles, and assign branch scopes through company-scoped RPCs. Owner protections prevent an administrator from demoting/removing owners, duplicate branch input is normalized, and invite credentials remain server-side in an Edge Function. The master-data importer is navigable and the System Audit Log remains reachable under Setup. |
+| **Roadmap** | Deploy and exercise invite delivery only with explicit hosted authority; add browser/UAT evidence, access-review workflow and operating support before certification or pilot claims. |
 
 ## 3.13 Canonical module operating matrix
 
@@ -763,8 +772,8 @@ or absent workflow is never implied by a route, table, or test.
 | Capability | Major master data | Major transactions and workflows | Reviews, reconciliations, reports, compliance outputs |
 | --- | --- | --- | --- |
 | **Dashboard** *(Reporting Surface)* | Company, branch, compliance profile, tax calendar; customer/supplier/item/account counts | Monitoring only; no transaction | Setup readiness and BIR deadline review. Planned cash, AR/AP and KPI views are not built. |
-| **Setup** | Company, branch, fiscal year/period, COA, number series, tax profile/codes | Company provisioning; configuration; period lock | Setup checklist; configuration audit. CAS registration and opening-balance setup are absent. |
-| **Master Data** | Customer, supplier, employee-lite, item/service, UOM, warehouse, bank account, payment terms, dimensions | Party/item onboarding; governed maintenance; import/export foundation | Duplicate TIN and change review; master-data export. Supplier bank details are absent. |
+| **Setup** | Company, branch, fiscal year/period, COA, number series, tax profile/codes | Company provisioning; configuration; period lock; governed opening-balance cut-over | Setup checklist; configuration and cut-over audit. CAS registration remains absent. |
+| **Master Data** | Customer, supplier, supplier bank account, employee-lite, item/service, UOM, warehouse, bank account, payment terms, dimensions | Party/item onboarding; governed maintenance; preview/commit import and export | Duplicate TIN and change review; verified payee controls; master-data export. |
 | **Sales & Receivables** | Customer, item, warehouse, payment terms, dimensions, tax defaults | Quote → order → delivery → Sales Invoice/Cash Sale → Official Receipt/application → memo/return | AR ageing/customer ledger, collection monitoring, sales registers, SLS, output VAT, percentage tax, 2307 received. |
 | **Purchasing & Payables** | Supplier, item, warehouse, payment terms, dimensions, tax defaults | PO → Receiving Report → Vendor Bill/Cash Purchase → Payment Voucher → credit/return | AP ageing/supplier ledger, payment monitoring, purchase registers, SLP, input VAT, EWT, 2307 issued. |
 | **Inventory** | Item, UOM, warehouse, warehouse-item settings, costing/negative-stock policy | Receipt/issue, adjustment, transfer, physical count; governed costing activation remains separate | Stock balance/movements/valuation/slow-moving; quantity-to-movement and valuation-to-GL reconciliation. |
@@ -773,22 +782,22 @@ or absent workflow is never implied by a route, table, or test.
 | **Accounting** | COA, fiscal calendar, dimensions, posting mappings | Journal/reversal, source trace, recurring/amortisation/revenue schedules, period close | GL, account ledger, trial balance, control reconciliations, posting/reversal review, financial-statement source. |
 | **Compliance** | Compliance profile, VAT/PT/ATC/tax codes, tax calendar, BIR form configuration | Review posted tax; prepare working papers/returns/certificates/exports when implemented | VAT/WHT/PT reviews, books, SLS/SLP/RELIEF, BIR returns/certificates, CAS and audit evidence. A central Tax Engine is absent. |
 | **Reports** | COA statement classification, financial-statement structure, dimensions | Read-only financial and management reporting | Financial statements, comparative reports, branch/department/cost-centre analysis, audit support and drill-down. |
-| **Administration & Security** | Users, memberships, roles, permissions, branch scope | Provision/revoke access; assign roles/scopes; review privileged activity | User/system activity and access review. No administrative UI exists. |
+| **Administration & Security** | Users, memberships, roles, permissions, branch scope | Invite/list users; provision/revoke access; assign roles/scopes; review privileged activity | User/system activity and access review; hosted invite delivery and browser/UAT remain unproven. |
 
 | Capability | Shared-engine and accounting dependencies | Maturity | Certification / production readiness | Current blocker | Explicit exclusions and future roadmap |
 | --- | --- | --- | --- | --- | --- |
 | **Dashboard** | Reporting/Reconciliation; all source modules; no posting | **M4 — PARTIAL WORKFLOW** | No owning certification scope / **No** | Ownership and required KPI contract undecided | No transaction origination. Widget grid, roll-up and export are deferred. |
-| **Setup** | Permissions, Audit, Number Series, COA; no transactional posting | **M7 — GOVERNED** | Setup & Master Data scope **Blocked** / **No** | Backup/restore evidence and automated browser evidence | User administration belongs to Administration & Security; opening balances require a product decision. |
-| **Master Data** | Permissions, Audit, Approval, COA | **M7 — GOVERNED** | Setup & Master Data scope **Blocked** / **No** | Same evidence gates; some masters have no UI; supplier bank details absent | Payroll processing excluded. Surface contacts/groups/UOM extensions; decide supplier bank details. |
-| **Sales & Receivables** | Number Series, Posting, COA, Dimension, AR, Payment, Approval, Correction, missing Tax Engine | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Full conversion, returns, applications, attachments, approval and reconciliation proof | Foreign currency unsupported; complete source review, return-to-stock, conversion and certification. |
-| **Purchasing & Payables** | Number Series, Posting, COA, Dimension, AP, Payment, Approval, Correction, missing Tax Engine | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Receiving adds stock without a journal; three-way match/returns unproven | Foreign currency unsupported; resolve receiving accounting before module certification. |
-| **Inventory** | Posting, Dimension, Purchasing/Sales, Inventory Accounting | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Valuation does not reconcile to inventory control; IA-5 C-01 open | IA-5/ECC is hidden costing infrastructure, not this module. Lot/serial and landed cost remain future. |
-| **Banking & Treasury** | Payment, Posting, Period, Reversal, Reporting | **M3 — UI SKELETON** | Not Started / **No** | Governed-empty workflows; bank-reconciliation ownership and write boundary unresolved | No production banking claim. Statement import/automatch are later roadmap. |
-| **Fixed Assets** | Posting, Dimension, Period, Reversal, Reporting | **M3 — UI SKELETON** | Not Started / **No** | Governed-empty workflows; no depreciation-profile master | No asset lifecycle claim. Build policy authority before exercising workflows. |
+| **Setup** | Permissions, Audit, Number Series, COA; opening cut-over posts through the Kernel | **M7 — GOVERNED** | Setup & Master Data scope **Blocked** / **No** | Operated backup/offsite and automated browser evidence | User administration belongs to Administration & Security; opening cut-over needs real onboarding/UAT proof. |
+| **Master Data** | Permissions, Audit, Approval, COA | **M7 — GOVERNED** | Setup & Master Data scope **Blocked** / **No** | Same evidence gates; some extension masters have no UI | Payroll processing excluded. Surface contacts/groups/UOM extensions; validate supplier-bank/import browser paths. |
+| **Sales & Receivables** | Number Series, Posting, COA, Dimension, AR, Payment, Approval, Correction, missing Tax Engine | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | **Cash Sales cannot post** (`fn_post_cash_sale` absent); Customer Return has no COGS path; no fresh-data end-to-end proof; document conversion absent | Foreign currency unsupported. SI itself posts AR, revenue, output VAT **and** COGS/inventory relief; the gap is the other entry points, not COGS. |
+| **Purchasing & Payables** | Number Series, Posting, COA, Dimension, AP, Payment, Approval, Correction, missing Tax Engine | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Three-way match and over-receipt control absent; `purchase_returns` and `supplier_debit_memos` empty | Foreign currency unsupported. PO → RR → Bill is proven from first principles by fresh-data test `112`; receiving posts to the GL since PXL-AUD-073. |
+| **Inventory** | Posting, Dimension, Purchasing/Sales, Inventory Accounting | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | `inventory_cost_layers` never exercised (FIFO path unproven, only weighted average runs); `goods_issues` empty | IA-5/ECC is hidden costing infrastructure, not this module, and is frozen with zero consumers. Inventory ties to control at **₱0.00** in every stock-holding company (guard `111`). Lot/serial and landed cost remain future. |
+| **Banking & Treasury** | Payment, Posting, Period, Reversal, Reporting | **M3 — UI SKELETON** | Not Started / **No** | Only `bank_accounts` holds data. `check_vouchers`, `fund_transfers`, `bank_reconciliations`, `petty_cash_vouchers`, `bank_adjustments` are **all empty**; posting functions exist but have never produced a journal. PAD-004 unresolved | v2 by Delivery Plan decision, except Check Voucher for the Cash Disbursements Book. No production banking claim. |
+| **Fixed Assets** | Posting, Dimension, Period, Reversal, Reporting | **M3 — UI SKELETON** | Not Started / **No** | **All six tables empty** (`fixed_assets`, `fixed_asset_categories`, depreciation entries, disposals, impairments, transfers); five routes on the deferred list; no depreciation-profile master | v2 by Delivery Plan decision, except a minimal straight-line run if the pilot client holds assets. |
 | **Accounting** | Posting/Kernel, COA, Dimension, Period, Reversal, Reporting; all source modules | **M4 — PARTIAL WORKFLOW** | Accounting Core In Progress; Schedules Not Started / **No** | Posting invariants across all consumers, schedules and year-end close unproven | Operational source workflows remain owned by their modules. Close and reconciliation proof are next. |
-| **Compliance** | Missing Tax Engine, Posting boundary, Number Series, Audit, Reporting; Sales/Purchasing/Accounting | **M4 — PARTIAL WORKFLOW** | Blocked / **No** | No accepted Tax Engine architecture; persisted returns/workpapers mostly deferred | Income tax is future scope in the current completeness checklist; do not claim filing readiness. |
-| **Reports** | Reporting/Reconciliation, COA, Dimension, GL and every source module | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Nine critical reconciliations not certified; statement registry and dimensional engine underused | Reports is a cross-domain index where stated; no parallel books. Complete drill/reconciliation/export evidence. |
-| **Administration & Security** | Certified Permissions and Audit; Approval | **M1 — ARCHITECTURE** | Not Started / **No** | Product-owner decision on visible module versus external administration; no UI | Security enforcement remains hidden. Build only after ownership/scope decision. |
+| **Compliance** | Missing Tax Engine, Posting boundary, Number Series, Audit, Reporting; Sales/Purchasing/Accounting | **M4 — PARTIAL WORKFLOW** | Blocked / **No** | No Tax Engine (PAD-001). **All twelve `compliance_*` working-paper tables are empty**, as are `bir_forms`, `form_2306/2307_*`, `vat_returns` and `withholding_remittances`. Nothing has ever been filed | Review surfaces read real posted data (tax calendar 248 rows, tax detail entries, VAT/EWT reconcile to GL); the **filing artifacts** do not exist. Income tax is v2. Do not claim filing readiness. |
+| **Reports** | Reporting/Reconciliation, COA, Dimension, GL and every source module | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Eight of nine critical reconciliations unevidenced; **`account_fs_map` empty**, so no financial-statement presentation mapping exists | Trial balance and GL read real posted data across 23 views. Reports is a cross-domain index where stated; no parallel books. |
+| **Administration & Security** | Certified Permissions and Audit; Approval | **M4 — PARTIAL WORKFLOW** | Not Started / **No** | `user_company_branch_scopes` **empty** — branch scoping never exercised; the `admin-invite` Edge Function is written but **never deployed**; browser/UAT unproven | Restricted in-product administration is the decided PAD-003 boundary; enforcement remains engine-owned. |
 
 ---
 # 4. Shared Engines
@@ -814,32 +823,41 @@ all nineteen are the same kind of product component. Backup and Recovery is an
 operational capability assessed under the engine standard; the Accounting
 Kernel is nested within Posting and is not a twentieth engine.
 
-| # | Canonical name | Purpose / visibility | Principal consumers | Maturity and certification | Blocker / future responsibility / must not be confused with |
-| ---: | --- | --- | --- | --- | --- |
-| 1 | **Posting Engine** | Single governed doorway to the GL; hidden | Every posting module | **M7 GOVERNED; Blocked at P6; not Certified** | Inventory independent recomputation. Kernel is its guard component, not a peer; future consumer-wide certification. |
-| 2 | **Inventory Accounting Engine** | Economic chronology and future costing; hidden | Inventory, Purchasing, Sales, Posting | **M2 BACKEND FOUNDATION; not Certified; C-01 suspended claim** | WP-5 rejected; future WP-5…WP-9 then separately governed IA-6. Not the user-facing Inventory Module. |
-| 3 | **AR Engine** | Receivable position and ageing; visible only through AR surfaces | Sales, Accounting, Reports | **M4 PARTIAL WORKFLOW; not Certified** | Prove every scenario to AR control and corrections. Not the Sales module. |
-| 4 | **AP Engine** | Payable position and ageing; visible only through AP surfaces | Purchasing, Accounting, Reports | **M4 PARTIAL WORKFLOW; not Certified** | Prove every scenario to AP control and corrections. Not the Purchasing module. |
-| 5 | **Payment and Application Engine** | Applies receipts/payments and tracks residuals; surfaced inside transactions | Sales, Purchasing, Banking, AR/AP | **M4 PARTIAL WORKFLOW; not Certified** | Over-application, unapplied cash, reversal and concurrency proof. Not a Banking module. |
-| 6 | **Tax Engine** | One authoritative PH-tax calculator; hidden | Sales, Purchasing, Compliance, Posting boundary | **M0 CONCEPT; absent; not Certified** | **Architecturally required/proposed; current tax capability is distributed across module/compliance surfaces; architecture decision required: Yes.** Do not call it merely blocked or confuse it with Tax Setup/Compliance. |
-| 7 | **Document Conversion Engine** | Preserves source chains and remaining quantities; hidden | Sales, Purchasing, Inventory | **M1 ARCHITECTURE; Not Started** | Implement only after exact conversion contracts. Not the document lifecycle/workspace framework. |
-| 8 | **Number Series Engine** | Unique, ATP-bounded document numbers; setup surface only | About 25 document types | **M8 CERTIFIED** | Future explicit provisioning beyond SI/CS/OR; engine certification does not certify document workflows. |
-| 9 | **Approval and Workflow Engine** | Governed approval routing and SOD; config/inbox surfaces | Imports now; future transactions | **M4 PARTIAL WORKFLOW; not Certified** | Only import is a proven consumer; future transaction rollout. Approval and Workflow are aliases for one engine. |
-| 10 | **Period Lock and Closing Engine** | Posting-period control and close lifecycle; period surfaces | All posting modules, Accounting | **M4 PARTIAL WORKFLOW; not Certified** | Year-end close and audited reopening. Not the Accounting module. |
-| 11 | **Reversal, Void and Correction Engine** | Preserves corrections without editing history; review surfaces | All posting modules | **M4 PARTIAL WORKFLOW; not Certified** | Void/correction coverage across every transaction. Not a module-specific credit memo workflow. |
-| 12 | **Audit and Immutability Engine** | Append-only change evidence and posted locks; log viewers only | Every module | **M8 CERTIFIED** | Extend only through governed consumer coverage. Log pages are surfaces, not the engine. |
-| 13 | **Permissions and RLS Engine** | Tenant isolation and authorization; hidden | Every module | **M8 CERTIFIED** | Operational user administration remains separate. Do not confuse enforcement with Administration & Security UI. |
-| 14 | **Dimension Engine** | Valid, company-safe analytical attribution; master/report surfaces only | Posting modules, Accounting, Reports | **M8 CERTIFIED** | Adopt its certified report in management surfaces. Dimension masters are not the engine itself. |
-| 15 | **Currency Engine** | FX transaction, revaluation and translation authority; hidden | Future transactional modules and Reports | **M1 ARCHITECTURE; Deferred** | Current supported accounting path is PHP-only; currency list is not multi-currency capability. |
-| 16 | **Reporting and Reconciliation Engine** | Posted-data views, exports and tie-outs; visible through reports | Every module | **M4 PARTIAL WORKFLOW; not Certified** | Evidence all nine critical reconciliations and export parity. Not the Reports module. |
-| 17 | **Attachment and Document Traceability Engine** | Source/journal/document/file trace; trace surface partly visible | Every transaction and report | **M4 PARTIAL WORKFLOW; not Certified** | Source trace works but is unlisted; attachment workflow is absent. Do not infer attachments from empty tabs. |
-| 18 | **Backup and Recovery Process** | Restore books after loss; hidden operational capability | Whole product | **M0 CONCEPT; Not Started** | Architecture, RPO/RTO, backup, restore test and operating owner all absent. This is governance infrastructure, not a user module. |
-| 19 | **Chart of Accounts (COA) Engine** | Deterministic account authority and account lifecycle; COA/config surfaces | Posting, Accounting, Reports | **M4 PARTIAL WORKFLOW; not Certified** | Complete consumer migration and certification. Do not confuse COA master screens with resolver adoption. |
+Every **Measured evidence** cell below was verified against the live database and
+repository on 2026-08-02.
+
+| # | Canonical name | Purpose / visibility | Principal consumers | Maturity and certification | Measured evidence (2026-08-02) | Blocker / future responsibility / must not be confused with |
+| ---: | --- | --- | --- | --- | --- | --- |
+| 1 | **Posting Engine** | Single governed doorway to the GL; hidden | Every posting module | **M7 GOVERNED; Blocked at P6; not Certified** | **24** `fn_post_*` entry points defined; **12** have ever produced a journal. P1–P5.2 staged and armed | Twelve entry points have never posted. Kernel is its guard component, not a peer; future consumer-wide certification. |
+| 2 | **Inventory Accounting Engine** | Economic chronology and future costing; hidden | Inventory, Purchasing, Sales, Posting | **M2 BACKEND FOUNDATION; not Certified; C-01 suspended claim** | **21 `inventory_*` ECC tables, all empty. Zero consumers.** WP-1…WP-4 certified | **Frozen** by Delivery Plan decision. WP-5 rejected; WP-5…WP-9 and IA-6 unauthorised. Not the user-facing Inventory Module. |
+| 3 | **AR Engine** | Receivable position and ageing; visible only through AR surfaces | Sales, Accounting, Reports | **M4 PARTIAL WORKFLOW; not Certified** | `vw_ap_aging`/`vw_ar` equivalents and `vw_customer_ledger` live; as-of ageing test `052`; 75 invoices / 6 receipts posted | Prove every scenario to AR control and corrections. Not the Sales module. |
+| 4 | **AP Engine** | Payable position and ageing; visible only through AP surfaces | Purchasing, Accounting, Reports | **M4 PARTIAL WORKFLOW; not Certified** | `vw_ap_aging`, `vw_supplier_ledger`; as-of ageing test `050`; 36 bills / 5 payment vouchers posted | Prove every scenario to AP control and corrections. Not the Purchasing module. |
+| 5 | **Payment and Application Engine** | Applies receipts/payments and tracks residuals; surfaced inside transactions | Sales, Purchasing, Banking, AR/AP | **M4 PARTIAL WORKFLOW; not Certified** | Receipt and Payment Voucher post; vendor-credit application controls tested; settlement authority test `109` | Over-application, unapplied cash, reversal and concurrency proof. Not a Banking module. |
+| 6 | **Tax Engine** | One authoritative PH-tax calculator; hidden | Sales, Purchasing, Compliance, Posting boundary | **M0 CONCEPT; absent; not Certified** | **Zero `fn_calculate_tax`. Exactly 7 save routines compute VAT independently** (cash purchase, cash sale, credit memo, debit memo, sales invoice, vendor bill, vendor credit). 70+ tax functions exist but are validators, guards and snapshots — not a calculator | **Architecturally required; PAD-001 undecided.** Do not call it merely blocked or confuse it with Tax Setup/Compliance. |
+| 7 | **Document Conversion Engine** | Preserves source chains and remaining quantities; hidden | Sales, Purchasing, Inventory | **M1 ARCHITECTURE; Not Started** | **Zero conversion or copy-forward functions** among 437 | Quote → SO → SI carry-forward absent; nothing prevents double conversion. Not the document lifecycle/workspace framework. |
+| 8 | **Number Series Engine** | Unique, ATP-bounded document numbers; setup surface only | About 25 document types | **M8 CERTIFIED** | 264 series configured, 218 CAS number issuances, 1 governed void event; cert test `079` | Future explicit provisioning beyond SI/CS/OR; engine certification does not certify document workflows. |
+| 9 | **Approval and Workflow Engine** | Governed approval routing and SOD; config/inbox surfaces | Imports now; future transactions | **M4 PARTIAL WORKFLOW; not Certified** | 2 workflows and 2 steps defined; **`approval_requests` = 0 and `approval_instances` = 0 — never executed.** No notification model exists anywhere in the product | Routing cannot notify an approver. PAD-013 undecided. Approval and Workflow are aliases for one engine. |
+| 10 | **Period Lock and Closing Engine** | Posting-period control and close lifecycle; period surfaces | All posting modules, Accounting | **M4 PARTIAL WORKFLOW; not Certified** | 60 fiscal periods across 5 fiscal years; financial-close readiness test `053` | Year-end close and audited reopening unproven. Not the Accounting module. |
+| 11 | **Reversal, Void and Correction Engine** | Preserves corrections without editing history; review surfaces | All posting modules | **M4 PARTIAL WORKFLOW; not Certified** | Reversal journals present in the ledger; GL reversal visibility test `049`; tax-ledger void/reversal test `048` | Void/correction coverage across every transaction. Not a module-specific credit memo workflow. |
+| 12 | **Audit and Immutability Engine** | Append-only change evidence and posted locks; log viewers only | Every module | **M8 CERTIFIED** | 2,358 audit rows; **110 tables carry guard/immutability/status triggers**; 627 user triggers total | Extend only through governed consumer coverage. Log pages are surfaces, not the engine. |
+| 13 | **Permissions and RLS Engine** | Tenant isolation and authorization; hidden | Every module | **M8 CERTIFIED** | **209 of 209 tables RLS-enabled; 519 policies; zero tables without a policy.** Default deny holds | Operational user administration remains separate. Do not confuse enforcement with Administration & Security UI. |
+| 14 | **Dimension Engine** | Valid, company-safe analytical attribution; master/report surfaces only | Posting modules, Accounting, Reports | **M8 CERTIFIED** | Cert test `080`; dimension-push test `087`; line-level guards on both ledger tables; `vw_gl_dimension_summary` | Adopt its certified report in management surfaces. Dimension masters are not the engine itself. |
+| 15 | **Currency Engine** | FX transaction, revaluation and translation authority; hidden | Future transactional modules and Reports | **M1 ARCHITECTURE; Deferred** | 9 currencies listed; **`exchange_rates` empty**; non-PHP fails closed | PAD-005: PHP-only. A currency list is not multi-currency capability. |
+| 16 | **Reporting and Reconciliation Engine** | Posted-data views, exports and tie-outs; visible through reports | Every module | **M4 PARTIAL WORKFLOW; not Certified** | **23 views** (trial balance, GL, AR/AP ageing, ledgers, 6 registers, SLP export, dimension summary); tenant-isolation and security guard tests | **1 of 9** critical reconciliations evidenced; `account_fs_map` empty so no statement presentation exists. Not the Reports module. |
+| 17 | **Attachment and Document Traceability Engine** | Source/journal/document/file trace; trace surface partly visible | Every transaction and report | **M4 PARTIAL WORKFLOW; not Certified** | Accounting trace works and is now routed; **`cas_attachment_register` empty** | No file lifecycle exists. PAD-008 undecided. Do not infer attachments from empty tabs. |
+| 18 | **Backup and Recovery Process** | Restore books after loss; hidden operational capability | Whole product | **M5 TOOLING COMPLETE; operated: No; not Certified** | Fail-closed cycle `backup:operate`; weekly `backup-drill.yml`; **replicated copy restored independently** (93 tables, 0 mismatches, 6s RTO); retention 30/12/7 enforced; all four refusals exercised | PAD-007 decided (S3-compatible). **No bucket, no escrowed passphrase, schedule never fired.** Governance infrastructure, not a user module. |
+| 19 | **Chart of Accounts (COA) Engine** | Deterministic account authority and account lifecycle; COA/config surfaces | Posting, Accounting, Reports | **M4 PARTIAL WORKFLOW; not Certified** | 215 accounts, 55 account mappings, cert test `081` | `account_fs_map` empty — no FS classification. Do not confuse COA master screens with resolver adoption. |
 
 **Accounting Kernel / Kernel Totality Guard.** Hidden component inside engine 1;
 **M7 GOVERNED, fully enforced, not separately certified**. It prevents every
 unsanctioned ledger mutation. Reporting it as a twentieth engine, a module, or a
 separate percentage is prohibited.
+
+*Measured 2026-08-02:* `fn_posting_kernel_origin` plus
+`zz_trg_journal_entries_kernel_origin` and `zz_trg_journal_entry_lines_kernel_origin`
+on both ledger tables. Enforcement **survives a restore into a fresh database** —
+deleting ledger rows in a restored copy is still rejected — which is the
+strongest available evidence that the guard is structural rather than procedural.
 
 ---
 
@@ -1153,16 +1171,38 @@ multi-currency posting.
 
 ---
 
-## 4.17 Backup and Recovery · ⬜ **Not started**
+## 4.17 Backup and Recovery · 🟡 **Mechanised and scheduled; not operated**
 
 **Business meaning.** If the database is lost or corrupted, the business can get
 its books back, within a known time, losing a known and acceptable amount of work.
 
-**Status.** **Nothing exists.** No backup schedule, no restore procedure, no
-successful restore test, no recovery-point or recovery-time objective, and no
-tooling anywhere in the repository. This single absence blocks the module closest
-to certification and blocks *every* module from reaching production readiness. It
-is the most consequential gap in PXL that is not about accounting.
+**Status, measured 2026-08-02.** The earlier entry read "Nothing exists"; that is
+superseded. `npm run backup:operate` runs one unattended, fail-closed cycle —
+backup → restore-verify → encrypted offsite replication with read-back →
+retention → journal — and `.github/workflows/backup-drill.yml` runs it weekly and
+on any change to the recovery scripts.
+
+**What is proven.** A restored database matches its manifest across every
+populated table, all schema-object classes and every financial total; the
+restored ledger balances at 0.00 and **remains kernel-protected**. The
+*replicated* copy — not merely the local archive — was restored independently at
+93 tables, 0 mismatches and a 6-second RTO. Retention of 30 daily / 12 monthly /
+7 annual is enforced by a tested pure selector. All four refusals were exercised
+and observed to refuse: no destination, no verification receipt, an unencrypted
+archive, and a checksum mismatch on the copy. The verifier is proven able to fail
+against a deliberately corrupted restore.
+
+**What is not proven.** **No durable destination exists and no passphrase is
+escrowed**; the weekly schedule has never fired; the replication proof used
+separate storage on the same machine, which is explicitly *not* a separate
+failure domain; nothing has run against a hosted database; point-in-time recovery
+is untested; and no PXL database holds real books. PAD-007 is decided —
+self-managed encrypted backups to S3-compatible object storage, no provider PITR
+for the pilot — so what remains is owner action, not engineering.
+
+Recoverability therefore no longer blocks engineering, but **every M9 and
+"operated" claim still depends on the bucket, the escrowed passphrase and a
+schedule that has actually run.**
 
 ---
 
@@ -1240,7 +1280,7 @@ becoming a navigation node.
 | Accounting | Business Module | Yes | Yes | Product / Accounting | Compliance, Reports | M4 | Accounting Core In Progress; Schedules Not Started |
 | Compliance | Compliance Workspace | Yes | Yes | Product / Philippine Compliance | Tax users, Accounting, auditors | M4 | Philippine Compliance and Tax — Blocked |
 | Reports | Reporting Surface | Yes | Yes | Product / Reporting | Owners, accountants, auditors | M4 | Reports and FS — In Progress |
-| Administration & Security | Business Module | Yes, when built | No | Product / Security Administration | Every module | M1 | Not Started |
+| Administration & Security | Business Module | Yes | Yes, under Setup | Product / Security Administration | Every module | M4 | Not Started |
 | Permissions and RLS | Shared Engine | No | No | Security | Every module | M8 | Certified |
 | Audit and Immutability | Shared Engine | No; logs are visible | Only log surfaces | Audit / Platform | Every module | M8 | Certified |
 | Number Series | Shared Engine | No; setup is visible | Setup surface only | Accounting Platform | Transaction modules | M8 | Certified |
@@ -1335,7 +1375,7 @@ BANKING & TREASURY
    → Number Series · Posting Engine · Period Controls
    → PURCHASING (payment vouchers settle bills)
    → SALES (receipts deposit funds)
-   → Supplier Bank Details (ABSENT — payee accounts cannot be validated)
+   → Supplier Bank Details (verified master; Payment Voucher snapshot and posting guard)
    (depended on by: Reports bank position · BIR cash disbursements book)
 
 FIXED ASSETS
@@ -1372,8 +1412,8 @@ REPORTS
 ADMINISTRATION & SECURITY
    → Permissions Engine (enforcement already exists and is certified)
    → Audit Engine · Approval Engine
-   (depended on by: EVERY module implicitly — but the module itself has no
-    screens, so administration is currently performed outside the product)
+   (depended on by: EVERY module implicitly — restricted administration screens
+    now exist; hosted invite delivery and operating evidence remain external)
 ```
 
 ### 5.2.3 The four dependencies that constrain the whole product
@@ -1382,10 +1422,10 @@ Everything else can proceed in parallel. These four cannot be worked around:
 
 | # | Constraint | What it blocks |
 | --- | --- | --- |
-| 1 | **Receiving increases stock without a journal** | Inventory reconciliation → Posting Engine advancement → Inventory certification → any inventory-bearing financial statement claim |
+| 1 | ~~Receiving increases stock without a journal~~ **CLOSED 2026-08-02 (PXL-AUD-073)** | Inventory now reconciles to its control account at ₱0.00. Posting Engine P6 is unblocked on this constraint; three-way match and sales-side COGS posting remain. |
 | 2 | **No Tax Engine** | Compliance module completion → statutory return generation → seven-way tax-rule maintenance risk |
 | 3 | **No backup or restore evidence** | Every module's production readiness, including Setup & Master Data, which is otherwise ready to certify |
-| 4 | **No opening balances** | Onboarding any real client onto PXL at all |
+| 4 | ~~No opening balances~~ **CLOSED LOCALLY 2026-08-02 (PAD-002)** | Governed cut-over exists; real-company/hosted onboarding evidence remains required before pilot. |
 
 ---
 # 6. Product Maturity
@@ -1432,17 +1472,17 @@ of its parts.
 | **Dashboard** *(Reporting Surface)* | **M4 — PARTIAL WORKFLOW** | Live setup/master/tax-calendar monitoring works; KPI, roll-up, range and export behavior do not. |
 | **Banking & Treasury** | **M3 — UI SKELETON** | Navigable pages exist, but its governed tables are empty and no canonical workflow has run. |
 | **Fixed Assets** | **M3 — UI SKELETON** | Navigable pages and routines exist over governed-empty data; depreciation-policy authority is absent. |
-| **Administration & Security** | **M1 — ARCHITECTURE** | The certification target and product need are governed, but product ownership remains an open decision and no administration surface exists. |
+| **Administration & Security** | **M4 — PARTIAL WORKFLOW** | PAD-003 selected restricted in-product administration; four screens and guarded RPCs exist locally, while hosted invite/browser/UAT and operating evidence remain open. |
 
 ## 6.3 Evidence-based distribution
 
 | Level | Canonical business modules | Dashboard surface | Certification engines |
 | --- | ---: | ---: | ---: |
 | M0 | 0 | 0 | 2 |
-| M1 | 1 | 0 | 2 |
+| M1 | 0 | 0 | 2 |
 | M2 | 0 | 0 | 1 |
 | M3 | 2 | 0 | 0 |
-| M4 | 6 | 1 | 9 |
+| M4 | 7 | 1 | 9 |
 | M5 | 0 | 0 | 0 |
 | M6 | 0 | 0 | 0 |
 | M7 | 2 | 0 | 1 |
@@ -1506,16 +1546,18 @@ programme working as intended.
 **No PXL business module is certified.** Not one.
 
 The closest are **Setup** and **Master Data**, which share a certification review
-that returned zero failures and zero open defects and is blocked on two pieces of
-**missing evidence** — backup/restore, and an automated browser lane.
+that returned zero failures and zero open defects. Its historical decision remains
+blocked: backup/restore has since been demonstrated locally but not operated, and
+an automated browser lane remains absent. A certification re-run is required to
+change that decision.
 
 ## 7.5 Blocked modules and engines
 
 | Scope | Status | The specific blocker |
 | --- | --- | --- |
-| Setup & Master Data (module) | **Blocked** | Backup/restore evidence absent; browser evidence recorded-only. **No defects.** |
+| Setup & Master Data (module) | **Blocked** | Historical certification decision; recoverability is demonstrated but not operated, browser evidence is absent, and no re-run has changed the decision. **No defects.** |
 | Compliance and Tax (module) | **Blocked** | Its certification phase has not been executed. Cannot complete without a Tax Engine. |
-| Posting Engine | **Blocked** | Inventory cannot satisfy independent recomputation: receiving increases stock without a journal. |
+| Posting Engine | **Blocked** | Historical certification decision remains below P6. Receiving now posts through the sealed doorway and reconciles locally, but the full consumer/recomputation evidence gate has not been re-run. |
 | Tax Engine | **ABSENT — M0 CONCEPT** | No accepted architecture or implementation exists. It requires a Product Architecture Decision before any lifecycle can begin. |
 
 > **A caution about the word "Blocked".** In the certification matrix, the Tax
@@ -1696,11 +1738,11 @@ reference. The reasoning, stated plainly:
    masters. Those decisions are implemented, load-bearing, and correct. What was
    missing was the record — not the decision.
 4. **But the blueprint is not simply wrong.** Its domain analysis is sound, and in
-   several places it is *more* correct than the shipped product: it asked for
-   opening balances, CAS registrations, supplier bank details, an adjusted and
-   post-closing trial balance, and a real executive dashboard. **All of those
-   remain valid requirements**, carried forward in §9 and §10.5 rather than
-   discarded.
+   several places it is *more* correct than the earlier shipped product: it asked
+   for opening balances, CAS registrations, supplier bank details, an adjusted
+   and post-closing trial balance, and a real executive dashboard. Opening
+   balances and supplier bank details were delivered locally on 2026-08-02; the
+   remaining requirements stay carried forward in §9 and §10.5.
 
 **The rule going forward:** where the repository has decided something, this
 document records it. Where the blueprint asked for something the repository never
@@ -1722,7 +1764,7 @@ change without rewriting the earlier record.
 | **Deferred** | Banking/Fixed Asset workflows, schedules, returns, statutory generators, multi-currency, document conversion, IA-6 costing | Routes or foundations may exist, but end-to-end supported workflows and authority do not. |
 | **Removed from canonical product tree** | Assets parent; duplicate menu concepts; Payroll as a current ERP module | The parent and duplicates misstate ownership; Payroll is a future separate product. No historical file is deleted. |
 | **Newly introduced** | Shared-engine layer, sealed Posting doorway and Kernel, certification program, coverage governance, source trace, IA-5/ECC chronology foundation, guided provisioning | The repository developed load-bearing architecture the menu-only blueprint could not express. |
-| **Still owed** | Opening balances, CAS registration authority, supplier bank details, depreciation profiles, adjusted/post-closing TB, configurable dashboard, decided rule configuration | The original blueprint identified valid product needs that implementation never completed. |
+| **Still owed** | CAS registration authority, depreciation profiles, adjusted/post-closing TB, configurable dashboard, decided rule configuration | The original blueprint identified valid product needs that implementation never completed. Opening balances and supplier bank details moved to current product on 2026-08-02. |
 
 ---
 
@@ -1758,13 +1800,13 @@ this document wins and the roadmap must be corrected.
       GIVES a business that can operate and close its books
                               ↓
    ┌──────────────────────────────────────────────────────────────┐
-   │  STAGE 2 — ONBOARD A REAL CLIENT             ○ blocked       │
+   │  STAGE 2 — ONBOARD A REAL CLIENT             ◑ local build   │
    └──────────────────────────────────────────────────────────────┘
       An existing business can move onto PXL.
-      NEEDS opening balances · master-data migration ·
-            supplier bank details · user administration screens
-      NOTE  **PXL cannot currently onboard anyone.** This stage has no
-            engineering glamour and is the true gate to a first pilot.
+      DONE  opening balances · surfaced master-data import ·
+            verified supplier bank details · administration screens
+      LEFT  hosted parity/invite deployment · real-company cut-over ·
+            browser/UAT and operated recoverability proof
                               ↓
    ┌──────────────────────────────────────────────────────────────┐
    │  STAGE 3 — INVENTORY THAT TIES OUT           ○ blocked       │
@@ -1817,10 +1859,10 @@ completed review with zero defects, blocked only on backup evidence and an
 automated browser lane. Neither is software. This is the fastest route to PXL's
 first certified module and should be prioritised over new capability.
 
-**Stage 2 is the one everybody skips.** Opening balances, data migration, supplier
-bank details, and user administration are unglamorous and absolutely required. **A
-product that cannot onboard a client cannot pilot**, no matter how good its ledger
-is. This stage is currently invisible in every plan.
+**Stage 2 is the one everybody skips.** Its local build now exists, including
+opening settlement through normal Receipts and Payment Vouchers. It still cannot
+support a pilot claim until hosted deployment, invite delivery, real cut-over,
+browser/UAT and operated recovery are evidenced.
 
 **Stage 5 has a hard prerequisite that is not scheduled.** Compliance cannot be
 completed without a Tax Engine, and the Tax Engine has no owner and no start date.
@@ -1847,7 +1889,7 @@ for its data. Stage 7 depends on everything.
 | 8 | Accounting | M4 | Accounting Core **and** Accounting Schedules | In Progress / Not Started | Yes |
 | 9 | Compliance | M4 | Philippine Compliance and Tax | Blocked | Yes |
 | 10 | Reports | M4 | Reports and Financial Statements | In Progress | Yes |
-| 11 | Administration & Security | M1 | Administration and Security | Not Started | No |
+| 11 | Administration & Security | M4 | Administration and Security | Not Started | Yes, under Setup ▸ Administration |
 
 **Dashboard** is a cross-product Reporting Surface at M4 with no owning
 certification scope. The certification program still has exactly eleven issued
@@ -1904,9 +1946,14 @@ product module 8. That is an evidence boundary, not a second product taxonomy.
 | Automatic guards and triggers | 324 |
 | Automated test files | 110 |
 | Documentation domains | 14 |
-| Open defects | **0** (92 of 92 retested and passed) |
+| Open defects | **0** (93 of 93 retested and passed) |
 
 ## 10.4 High-level statistics
+
+All figures below were **re-measured against the repository and a live canonical
+database on 2026-08-02**. The previous edition of this section carried five
+counts that no longer matched the code; they are corrected here rather than
+restated.
 
 **Certification**
 
@@ -1914,27 +1961,54 @@ product module 8. That is an evidence boundary, not a second product taxonomy.
    Certified modules          0 of 11    ░░░░░░░░░░
    Certified engines          4 of 19    ██░░░░░░░░
    Certified work packages    4 of  9    ████░░░░░░   (dormant inventory only)
-   Critical reconciliations   0 of  9    ░░░░░░░░░░   evidenced
-   Backup / restore tests     0          ░░░░░░░░░░
-   Open defects               0 of 92    ██████████   all retested and passed
+   Critical reconciliations   1 of  9    █░░░░░░░░░   evidenced (inventory→control, test 111)
+   Open defects               0 of 93    ██████████   all retested and passed
+```
+
+**Implementation census** (live database, 176 migrations applied)
+
+```text
+   Tables                          209   all 209 RLS-enabled; 0 without a policy
+   Tables holding data              93   ← 45%; 116 have never held a row
+   Views                            23
+   Functions                       437
+   User triggers                   627
+   RLS policies                    519
+   pgTAP files / assertions   116 / 2,709
+   Frontend source tests            60
+```
+
+**Posting reach — the honest completion measure**
+
+```text
+   Posting entry points defined     24   fn_post_* functions
+   Entry points that have posted    12   SI, OR, VB, PV, RR, CP, CM, VC,
+                                          INV_ADJ, INV_COUNT, manual JE, reversal
+   Never produced a journal         12   check voucher, fund transfer, bank
+                                          adjustment, petty cash, goods issue,
+                                          inter-branch transfer, stock transfer,
+                                          depreciation, amortisation, revenue
+                                          recognition, WHT remittance, debit memo
 ```
 
 **Product surface honesty**
 
 ```text
-   Navigation entries              242
-   Distinct routes behind them     169   ← 55 entries are duplicate labels
-   Routes with exercised data      136   ← 33 routes can only ever show empty
-   Disabled placeholders            18   ← of which only 4 are genuinely absent
-                                          capabilities; 2 shipped elsewhere and
-                                          10 are enforced-but-unconfigurable
+   Navigation leaf entries         247
+   Entries carrying a route        230
+   Disabled placeholders            17   ← nav labels with no page at all
+   Distinct routes behind nav      175   ← 55 entries are duplicate labels
+   Routes declared in App.tsx      185
+   Deferred routes ("Not built")    30   ← finished screens over empty tables
+   Routes backed by real data      145
 ```
 
 **Reading these figures.** Counting menu entries overstates delivered capability
-by roughly thirty percent. The honest surface count is **136 routes backed by real
-data**, not 242 menu entries. This is not a criticism of the navigation — it is a
+by roughly forty percent. The honest surface count is **145 routes backed by real
+data**, not 247 menu entries. This is not a criticism of the navigation — it is a
 consequence of PXL deferring by *building the whole surface then leaving the data
-empty*, which is defensible engineering but invisible to a user.
+empty*, which is defensible engineering but invisible to a user. The product now
+labels those 30 routes "Not built" in the navigation itself.
 
 ## 10.5 Requirements the blueprint asked for that PXL still owes
 
@@ -1942,9 +2016,7 @@ Carried forward deliberately (see §8.7 rule 4). None of these is discarded.
 
 | Requirement | Product state | Standing |
 | --- | --- | --- |
-| **Opening Balances** | **DESIGN ONLY** | No mechanism at all. Blocks client onboarding. Highest-value missing capability. |
 | **CAS Registrations** | **DESIGN ONLY** | No home for BIR accreditation, permit, or machine identification data. Material for a CAS-accredited ERP. |
-| **Supplier Bank Details** | **DESIGN ONLY** | Absent. Payment and check vouchers cannot carry a validated payee account. |
 | **Depreciation Profiles** | **DESIGN ONLY** | Absent. Depreciation policy has no governed master. |
 | **Adjusted / Post-Closing Trial Balance** | **DEFERRED** | Cannot be produced — no closing entries, close not certified. |
 | **Executive dashboard widget grid** | **DEFERRED** | Storage exists and is seeded; no screen uses it. |
@@ -1958,8 +2030,8 @@ Carried forward deliberately (see §8.7 rule 4). None of these is discarded.
 | Top-level domain | Groups | Leaf entries | Feature-gated | Notes |
 | --- | ---: | ---: | --- | --- |
 | Dashboard | 0 | 0 | No | Direct link, no submenu |
-| Setup | 7 | 45 | No | Contains **all 18** disabled placeholders |
-| Master Data | 5 | 11 | No | Owns Bank Accounts and Warehouses |
+| Setup | 8 | 49 | No | Contains most of the 17 disabled placeholders plus the Administration group |
+| Master Data | 5 | 12 | No | Owns Bank Accounts, Warehouses and Master Data Import |
 | Sales | 4 | 16 | `accounts_receivable` | — |
 | Purchasing | 4 | 14 | `accounts_payable` | — |
 | Inventory | 3 | 9 | `inventory_management` | Duplicates Warehouses from Master Data |
@@ -1968,8 +2040,8 @@ Carried forward deliberately (see §8.7 rule 4). None of these is discarded.
 | Accounting | 5 | 18 | No | Tracing exists but is not in this menu |
 | Compliance | 6 | 67 | No | Largest domain; bimodal (real reviews / empty generators) |
 | Reports | 10 | 43 | No | 31 leaves re-point into other domains |
-| **Total** | **50** | **242** | 5 gated | — |
-| **Administration** | — | — | — | **Does not exist in navigation** |
+| **Total** | **51** | **247** | 5 gated | Administration is grouped under Setup |
+| **Administration module** | — | 4 | No | Restricted screens counted under Setup; not a separate top-level menu |
 
 **Feature gating.** Five top-level domains are switched on or off per company by
 Feature Enablement. Setup, Master Data, Accounting, Compliance, and Reports are
@@ -2027,19 +2099,19 @@ The three questions a governance reader needs answered directly.
 
 ### 11.3.2 Outstanding Product Architecture Decisions register
 
-Unresolved decisions are recorded rather than guessed. “Stop” applies only to
-implementation that depends on the decision; unrelated governed work may
-continue.
+Open decisions are recorded rather than guessed; decided rows remain for durable
+product boundaries. “Stop” applies only to implementation that depends on an
+unresolved decision; unrelated governed work may continue.
 
 | Decision ID | Question | Why it matters | Available options | Current evidence | Required owner | Required decision milestone | Consequence of deferral | Implementation stop? |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | **PAD-001** | Who owns the Tax Engine, what is its accepted scope, and when does it start? | Compliance and consistent PH tax calculation depend on it. | Product/Accounting-owned; Compliance-owned; joint authority with one accountable owner | No engine exists; seven save-layer calculators duplicate VAT behavior; tax ledger-to-GL boundary is proven. | Product Owner + Chief Accounting Architect | Before Roadmap Phase G entry; scope decision needed before any Tax Engine design | Rule drift, incomplete filing capability, repeated changes | **Yes** for Tax Engine implementation and Compliance M5+ |
-| **PAD-002** | Will PXL support onboarding existing businesses, and by which opening-balance strategy? | Without opening GL, AR/AP, inventory, FA and bank positions, no existing client can pilot. | Full governed opening-balance workflow; governed cut-over import; new-company-only product | No opening-balance table/page/import; manual JE is not a complete cut-over process. | Product Owner + CPA Owner | Before Phase C exit and before selecting a pilot | Product remains unable to onboard normal clients | **Yes** for pilot readiness and any opening-balance build |
-| **PAD-003** | Is Administration & Security a visible product module or an externally operated platform capability? | PXL cannot administer users/roles/scopes in-product today. | Visible module; restricted admin console; explicitly external administration | Permissions/RLS enforcement is Certified; no administration page exists. | Product Owner + Security Owner | Before Phase K entry | Deployment depends on manual/out-of-product administration | **Yes** for administration UI; no for existing enforcement |
+| **PAD-002 — DECIDED 2026-08-02** | PXL supports existing businesses through one governed PHP-only cut-over batch. | Opening GL, AR/AP, inventory and bank positions must reconcile by construction; fixed assets remain outside the current cut-over. | **Selected:** full governed opening-balance workflow with preview/save/post/reverse, one balanced Kernel journal, explicit subledger detail and ordinary AR/AP settlement. | Migration `20260802000002`; UI route; fresh guards 113 and 116 prove cut-over, controls, settlement, reversal and IA-5 dormancy. | Product Owner + CPA Owner | Decided during Delivery Plan Phase 3 | Hosted/real-company/browser/UAT proof remains required before pilot. | **Resolved** for implementation; operational evidence still gates pilot readiness. |
+| **PAD-003 — DECIDED 2026-08-02** | Administration & Security is a restricted in-product module backed by the existing engines. | Users, memberships, roles and branch scope require a company-scoped product surface without exposing service credentials. | **Selected:** four restricted screens plus a server-side invite boundary; Permissions/Audit remain engine-owned. | Migration `20260802000004`, four routes, `admin-invite` Edge Function and guard 115; owner protections are database-enforced. | Product Owner + Security Owner | Decided during Delivery Plan Phase 3 | Hosted invite/browser/UAT and operating access review remain required. | **Resolved** for local implementation; no hosted or readiness claim. |
 | **PAD-004** | Which module owns Bank Reconciliation and its adjustment boundary? | The workflow crosses Treasury, Accounting and the sealed posting perimeter. | Banking-owned with Accounting engine controls; Accounting-owned; split with an explicit hand-off | Banking is M3; `bank_recon_items` is a recorded UI-write exception. | Product Owner + CPA Owner | Before Phase H architecture | One-sided adjustments or ambiguous responsibility | **Yes** for Bank Reconciliation implementation |
 | **PAD-005** | What is the supported multi-currency boundary? | Current labels can be mistaken for FX support. | PHP-only current product; selected transaction currencies; full FX/revaluation roadmap | Currency list exists; exchange rates are empty; Sales Invoice fails closed outside PHP. | Product Owner + CPA Owner | Before any non-PHP customer commitment | Incorrect posting, revaluation or reporting promises | **Yes** for non-PHP transaction work; no for PHP-only work |
 | **PAD-006** | What exact governance event permits Inventory Accounting production activation? | Dormant ECC structures must not populate prematurely. | Post-WP-9 evidence gate plus explicit source activation; later IA-6 gate; keep dormant | WP-1…WP-4 are certified; WP-5 rejected; C-01 open; production source types disabled. | Product Owner + Inventory Accounting Owner | Before any production source type or IA-6 activation | Dormancy continues; no trustworthy replay costing | **Yes** for activation, source enablement and IA-6 |
-| **PAD-007** | What backup/restore service level and operating model does PXL promise? | M9 and every module's operational gate require recoverability. | Provider-native with tested runbook; independent backup; hybrid | No RPO/RTO, tooling, owner or successful restore test exists. | Product Owner + Operations/Security Owner | Before Setup/Master certification and Phase K exit | No module can be production-ready; current certification blocker persists | **Yes** for M8 decision where Gate 23 applies and all M9 claims |
+| **PAD-007 — DECIDED 2026-08-02** | PXL operates **self-managed encrypted backups replicated to S3-compatible object storage**, drilled weekly. | M9 and every module's operational gate require recoverability. | **Selected:** self-managed offsite to S3-compatible storage (R2/B2/S3), keeping the backups in a different failure domain from the database vendor. Provider-native PITR is **not** adopted for the pilot; the 24h pilot RPO is met by the daily cycle, and the 1h production RPO remains an open commitment to revisit before any production claim. | Implemented and proven 2026-08-02: `npm run backup:operate` runs backup → restore-verify → encrypted replication with read-back → retention → journal, fails closed at every stage, and the **replicated** copy restored independently (93 tables, 0 mismatches, 6s). `npm run backup:offsite:check` proves a destination's write/read/byte-fidelity/delete with a canary holding no client data. `.github/workflows/backup-drill.yml` runs both weekly. | Product Owner + Operations/Security Owner | Decided during Delivery Plan Phase 2 | — | **Resolved** for the operating model and mechanism. **Still Yes** for any *operated* or M9 claim: no bucket is configured, no passphrase is escrowed, the schedule has never fired, and no PXL database holds real books. |
 | **PAD-008** | What attachment/document-management scope belongs in PXL? | Every workspace shows an Attachments tab without a working file lifecycle. | Governed attachments in PXL; external document system link; explicitly unsupported | Trace works; attachment register is future-deferred and empty. | Product Owner + Security/Audit Owner | Before any transaction module certification | Audit evidence remains incomplete or misleading | **Yes** for module certification where attachments are mandatory |
 | **PAD-009** | Is configuration of status, posting, void, reversal and validation rules in product scope? | Eight placeholders imply configurability while rules are code/seed governed. | One governed rules console; configuration remains implementation-owned; selective configuration | Enforcement exists; authoring surfaces do not. | Product Owner + Architecture Owner | Before Phase K UX scope freeze | Persistent misleading placeholders and customization ambiguity | **Yes** for rule-configuration UI only |
 | **PAD-010** | Is the merged AR/AP ageing surface the canonical accounting subsidiary ledger? | Operational ageing and accounting control/cut-off views have different proof duties. | One certified dual-purpose surface; separate accounting ledger; shared data with distinct views | One route serves all aliases; as-of and reconciliation RPCs exist but module certification is incomplete. | CPA Owner | Before Phases D/E exit | Reconciliation ownership remains ambiguous | **Yes** for declaring Sales/Purchasing complete |

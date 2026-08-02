@@ -11,9 +11,12 @@ governed mission, or deciding whether a module or engine is complete
 **Do Not Read For:** Product scope or naming (use the Product Architecture),
 implementation authority (use `AI/AI_STATE.md` and the applicable gate), or
 certification status (use the Certification Matrix)
-**Date:** 2026-08-01
-**Evidence baseline:** Current dirty working tree at base `4aef8b3`; no hosted
-read or mutation was performed for this roadmap
+**Date:** 2026-08-02
+**Evidence baseline:** Re-measured on 2026-08-02 against the live local database
+(176 migrations, 209 tables, 437 functions, 627 triggers, 519 policies), the
+route table, the navigation source and the 116-file pgTAP suite. §9.7 was
+restructured from work packages (Phase A–L) into nine business outcomes on the
+same date. No hosted read or mutation was performed for this roadmap.
 
 > The Product Architecture defines what PXL is. This roadmap defines how that
 > product is planned, sequenced, matured and completed. This roadmap cannot add
@@ -32,42 +35,51 @@ statements, tax reviews and books read real posted data.
 
 That is not the same as a finished ERP. No certification module is Certified.
 No major operational module is M5 Workflow Complete. Banking and Fixed Assets are
-UI skeletons over governed-empty data. A central Tax Engine does not exist.
-Receiving Reports add stock without a journal, so Inventory valuation cannot
-reconcile to the configured control account. Opening balances do not exist, so
-an existing business cannot be onboarded. Backup and restore have never been
-proven. Fifty-one local migrations after `20260716000005` are not on the hosted
-project. PXL remains **Internal QA/demo only — not pilot-ready and not
+UI skeletons over governed-empty data — **all six fixed-asset tables and every
+Banking transaction table are empty**. A central Tax Engine does not exist:
+**seven save routines compute VAT independently** and only one handles
+VAT-inclusive pricing. Three-way match and over-receipt control are open. The
+receipt half of perpetual inventory was closed by `PXL-AUD-073` and inventory now
+reconciles to its control account at ₱0.00. Opening balances, verified supplier
+payees and restricted administration exist locally; operational onboarding
+remains unproven. Recoverability is mechanised and scheduled but not operated
+over anything real. Fifty-five local migrations after `20260716000005` are not on
+the hosted project. PXL remains **Internal QA/demo only — not pilot-ready and not
 production-ready**.
 
-The visible product is ahead of runtime in thirty-three pure-deferred routes,
-eighteen disabled placeholders and whole Banking/Fixed Asset/compliance-generator
+> **Correction, 2026-08-02.** A previous edition of this summary stated that
+> "sales-side COGS posting" was open. That was wrong and is withdrawn.
+> `fn_post_sales_invoice` posts DR COGS / CR inventory with weighted-average or
+> FIFO layer consumption, an insufficient-stock guard and reversal on void; test
+> `054` asserts it and the canonical ledger shows COGS debits equal to inventory
+> credits in all three trading companies. Inventory could not tie out at ₱0.00 if
+> the claim were true. What *is* open on the sales side: **Cash Sales has no
+> posting function at all**, Customer Return has no COGS path, and Delivery
+> Receipt does not relieve inventory.
+
+The visible product is ahead of runtime in **30** deferred routes, **17**
+navigation labels with no page, and whole Banking/Fixed Asset/compliance-generator
 clusters. The backend is ahead of the UI in party contacts, groups, item
-extensions, financial-statement structure, inventory configuration, branch-scope
-administration and the two complete-but-unlisted accounting trace routes. The
+extensions, financial-statement structure and inventory configuration. The
 transaction workspace shell is structurally broad, but only Sales Invoice has a
-source-reviewed workspace slice: **1 of 41** registry entries.
+source-reviewed workspace slice: **1 of 37** registry entries.
 
-The recommended path is dependency-driven:
+The recommended path is outcome-driven (§9.7):
 
-1. finish this consolidation;
-2. repair the rejected WP-5 specification **in documentation only** and re-run
-   its Authorisation Gate;
-3. prove one complete Sales and one complete Purchasing accounting flow;
-4. settle opening-balance, Tax Engine, Administration, backup and other owner
-   decisions at the milestones where they become blocking;
-5. place Tax Engine architecture before module certification that depends on it;
-6. complete and certify Sales, Purchasing and Inventory before expanding Banking
-   and Fixed Assets; and
-7. require hosted parity, restore proof, user acceptance and operating support
-   before pilot or production claims.
+1. close **Phase 2 Customer-to-Cash** — cash-sale posting, document conversion,
+   an AR-to-control guard and a fresh-data sales end-to-end test;
+2. close **Phase 3 Procure-to-Pay** — three-way match and over-receipt control;
+3. close **Phase 4 Period Close** — `account_fs_map` is empty, so no financial
+   statement presentation exists today;
+4. build the **Phase 5 Tax Engine** (PAD-001) and the filing artifacts;
+5. leave Banking, Fixed Assets and the frozen IA-5/ECC programme unbuilt until a
+   pilot need exists; and
+6. require hosted parity, operated recovery, browser evidence, user acceptance
+   and operating support before any pilot or production claim.
 
-The roadmap deliberately prevents the dormant Inventory programme from running
-far ahead of product value. WP-5 remains next because three precise documentation
-defects block an already-open critical programme and the repair is small and
-non-runtime. After its gate, continuation into later work packages is subject to
-a product-value checkpoint; certification machinery must not become a substitute
-for completing usable accounting workflows.
+The dormant IA-5/ECC programme remains frozen. WP-5 is not next and must not
+displace operated recovery, Tax ownership, usable accounting workflows or Phase 3
+operational evidence.
 
 ---
 
@@ -75,32 +87,16 @@ for completing usable accounting workflows.
 
 ## 9.2.1 Exact portfolio facts
 
-| Measure | Current evidence-based value | Meaning and authority |
-| --- | --- | --- |
-| Canonical business modules | **11** | Product Architecture: Setup; Master Data; Sales; Purchasing; Inventory; Banking; Fixed Assets; Accounting; Compliance; Reports; Administration & Security. |
-| Cross-product Dashboard | **1 Reporting Surface** | Not a business module and has no certification scope. |
-| Certification module scopes | **11** | Certification standard; combines Setup/Master Data and separates Accounting Schedules. |
-| Compliance workspaces | **6** | Percentage Tax; VAT; Withholding; Income Tax; BIR Books; Audit & CAS. |
-| Engine assessment scopes | **19** | Engine certification standard; Accounting Kernel is nested inside Posting and not a twentieth engine. |
-| Certified modules | **0 / 11 certification scopes** | No module certification exists. |
-| Certified engines | **4 / 19** | Permissions/RLS, Audit & Immutability, Number Series, Dimension. |
-| Certified work packages | **IA-5 ECC 4 / 9** | WP-1…WP-4 only; dormant bounded scopes; no engine/module certification. |
-| Module maturity | **M1: 1 · M3: 2 · M4: 6 · M7: 2** | Eleven canonical business modules. Dashboard is separately M4. |
-| Engine maturity | **M0: 2 · M1: 2 · M2: 1 · M4: 9 · M7: 1 · M8: 4** | Nineteen engine assessment scopes. |
-| Source-reviewed transaction workspaces | **1 / 41** | Current registry: Sales Invoice reviewed slice; 40 are `transaction-matrix-only`. |
-| UI-only pure scaffold routes | **33** | Reachable routes backed exclusively by `future-deferred` tables. |
-| Disabled navigation placeholders | **18** | Four genuinely absent, two moved, ten backend-ahead-of-UI/configuration gaps, two other future items. |
-| Distinct navigable routes | **169** | From 224 enabled navigation leaves; 55 labels duplicate existing routes. |
-| Backend-only capability clusters | **7**, plus **2 unlisted routes** | Contacts; groups; item extensions; FS structure; inventory config; branch scopes; dashboard layouts/widgets; `/accounting-trace` and `/accounting-source`. |
-| Base tables | **202** | 93 expected-populated; 109 explicitly deferred/empty. |
-| Automated database test files | **110 pgTAP files** | Current test inventory. This documentation mission does not re-run database lanes. |
-| Latest WP-5 prerequisite evidence | **7 focused files / 260 assertions** | Tests `104`…`110` passed at the rejected WP-5 gate. |
-| Canonical portfolio workflows fully proven | **0 / 6** | The six reference flows in §9.5; many components work, but no whole flow meets the Product Definition of Done. |
-| Critical reconciliations certified | **0 / 9** | Certification Matrix. VAT/WHT are known zero-variance and Inventory is known not to reconcile, but none of the nine is certified. |
-| Hosted migration parity | **Through `20260716000005` only** | **51** later local migrations (`20260718000001`…`20260731000019`) are not hosted. |
-| Backup / restore evidence | **NOT TESTED** | No successful restore test, runbook, RPO or RTO. |
-| Audit findings | **92 Retested Passed / 0 open** | A closed findings register certifies no module. |
-| Product readiness | **Internal QA/demo only** | Not Ready for pilot or production. |
+**Deliberately not restated here.** Module counts, engine counts, certification
+standing, finding counts, test counts, reconciliation standing, hosted parity and
+backup standing live in `AI/AI_STATE.md`, and taxonomy lives in the Product
+Architecture. This table previously duplicated all of them and drifted within a
+single day of a code change — reporting inventory as unreconciled after it had
+been fixed, and 110 tests after there were 111. A plan that restates status
+becomes a trap for the next session.
+
+Read `AI/AI_STATE.md` for where the product is. Read this document for the order
+in which work should happen.
 
 ## 9.2.2 What is genuinely working
 
@@ -168,40 +164,40 @@ excellent transaction and one material empty lifecycle remains M4 or below.
 | --- | --- | --- |
 | Setup | **M7** | Formal combined review executed; 14 Pass, 3 Partial, 2 Blocked, 4 N/A, 0 Fail. Not M8 because backup/restore and browser evidence remain open. |
 | Master Data | **M7** | Same review; major masters exercised and governed; certification scope still Blocked. |
-| Sales & Receivables | **M4** | Several posting lifecycles work; conversion, returns-to-stock, attachments, broad approval, source review and certification remain incomplete. |
-| Purchasing & Payables | **M4** | Core payable workflows work; Receiving Report accounting, three-way match and returns are unresolved. |
-| Inventory | **M4** | Operational stock works in part; Goods Issue is deferred and valuation does not reconcile to control. |
-| Banking & Treasury | **M3** | Routes/pages and routines exist; governed data is empty and no canonical workflow is exercised. |
-| Fixed Assets | **M3** | Routes/pages and routines exist; governed data is empty and depreciation policy has no master. |
-| Accounting | **M4** | Journals/ledgers/TB work; schedules, year-end close and consumer-wide posting/reconciliation proof remain incomplete. |
-| Compliance | **M4** | Read/review/books half works; Tax Engine and persisted filing artifacts do not. |
-| Reports | **M4** | Statements render; nine critical reconciliations, dimensional adoption and full drill/export evidence are not certified. |
-| Administration & Security | **M1** | Need and certification target are governed; ownership decision remains and no UI exists. |
+| Sales & Receivables | **M4** | SI posts AR, revenue, output VAT **and** COGS/inventory relief (test `054`; 15 SI journals). Held at M4 by: **no `fn_post_cash_sale`**, no Customer Return COGS path, zero document-conversion functions, and no fresh-data end-to-end test. |
+| Purchasing & Payables | **M4** | PO → RR → Bill proven from first principles by fresh-data test `112`; 36 bills and 5 payment vouchers posted. Held at M4 by three-way match, over-receipt control, and empty `purchase_returns` / `supplier_debit_memos`. |
+| Inventory | **M4** | Inventory ties to control at **₱0.00** in every stock-holding company (guard `111`); adjustments, transfers and counts post. Held at M4 by `inventory_cost_layers` never holding a row (FIFO path unexercised) and `goods_issues` empty. |
+| Banking & Treasury | **M3** | Only `bank_accounts` holds data. `check_vouchers`, `fund_transfers`, `bank_reconciliations`, `petty_cash_vouchers`, `bank_adjustments` are **all empty**; their posting functions have never produced a journal. |
+| Fixed Assets | **M3** | **All six tables empty**; five routes deferred; depreciation policy has no master. |
+| Accounting | **M4** | 51 journals / 144 lines; trial balance out-of-balance **₱0.00 in all five companies**; 60 fiscal periods. Held at M4 by **empty `account_fs_map`** (no statement presentation), year-end close and consumer-wide reconciliation proof. |
+| Compliance | **M4** | VAT/EWT reconcile to GL; 248 calendar events; 218 CAS issuances. Held at M4 by the absent Tax Engine and by **all twelve `compliance_*` working-paper tables, `bir_forms`, `form_2306/2307_*`, `vat_returns` and `withholding_remittances` being empty**. |
+| Reports | **M4** | 23 views read posted data. Held at M4 by **1 of 9** critical reconciliations evidenced and empty `account_fs_map`. |
+| Administration & Security | **M4** | PAD-003 selected restricted in-product administration; four guarded screens exist locally, while hosted invite/browser/UAT and operating evidence remain open. |
 | Dashboard *(not a module)* | **M4** | Live readiness/deadline monitoring works; KPI grid, range, roll-up, export and owner are incomplete. |
 
 ## 9.3.3 Engine placement
 
 | Engine assessment scope | Level | Certification standing and decisive evidence |
 | --- | --- | --- |
-| Posting | **M7** | Governed, Kernel fully enforced, blocked at P6; not Certified. |
-| Inventory Accounting | **M2** | Dormant foundation only; C-01 open; not Certified. |
+| Posting | **M7** | Governed, Kernel fully enforced, blocked at P6; not Certified. **24 entry points defined, 12 have ever produced a journal.** |
+| Inventory Accounting | **M2** | **Frozen.** 21 ECC tables, all empty, zero consumers; C-01 open; not Certified. WP-5…WP-9 and IA-6 unauthorised. |
 | AR | **M4** | As-of engine works; full scenario reconciliation not Certified. |
 | AP | **M4** | As-of engine works; full scenario reconciliation not Certified. |
 | Payment & Application | **M4** | Normal applications work; over-application/unapplied/reversal/concurrency scope incomplete. |
-| Tax | **M0** | Absent; no accepted architecture or owner. |
-| Document Conversion | **M1** | Product need/dependencies governed; implementation not started. |
-| Number Series | **M8** | Certified 2026-07-23. |
-| Approval & Workflow | **M4** | Foundation exists; only import consumer proven. |
+| Tax | **M0** | Absent. **Zero `fn_calculate_tax`; exactly seven save routines compute VAT independently**, only one handling VAT-inclusive pricing. PAD-001 undecided. |
+| Document Conversion | **M1** | **Zero conversion or copy-forward functions** among 437. Implementation not started. |
+| Number Series | **M8** | Certified 2026-07-23. 264 series, 218 CAS issuances. |
+| Approval & Workflow | **M4** | 2 workflows defined; **`approval_requests` = 0, `approval_instances` = 0 — never executed.** No notification model exists anywhere in the product. |
 | Period Lock & Closing | **M4** | Period locking works; year-end close/reopening incomplete. |
 | Reversal, Void & Correction | **M4** | Reversal strong; void/correction coverage incomplete. |
-| Audit & Immutability | **M8** | Certified 2026-07-23. |
-| Permissions & RLS | **M8** | Certified 2026-07-22. |
-| Dimension | **M8** | Certified 2026-07-23. |
-| Currency | **M1** | PHP-only boundary governed; broader scope deferred. |
-| Reporting & Reconciliation | **M4** | Views/exports exist; nine critical reconciliations not certified. |
-| Attachment & Traceability | **M4** | Source trace works; attachment workflow absent. |
-| Backup & Recovery | **M0** | No accepted operational architecture, owner, RPO/RTO or restore evidence. |
-| COA | **M4** | Phase A and partial adoption exist; all-consumer adoption/certification incomplete. |
+| Audit & Immutability | **M8** | Certified 2026-07-23. 2,358 audit rows; 110 tables carry guard/immutability triggers. |
+| Permissions & RLS | **M8** | Certified 2026-07-22. **209 of 209 tables RLS-enabled, 519 policies, zero tables without a policy.** |
+| Dimension | **M8** | Certified 2026-07-23. Line-level guards on both ledger tables; `vw_gl_dimension_summary`. |
+| Currency | **M1** | PHP-only (PAD-005). 9 currencies listed, **`exchange_rates` empty**, non-PHP fails closed. |
+| Reporting & Reconciliation | **M4** | 23 views read posted data. **1 of 9** critical reconciliations evidenced; `account_fs_map` empty. |
+| Attachment & Traceability | **M4** | Source trace works and is now routed; **`cas_attachment_register` empty** — no file lifecycle. PAD-008 undecided. |
+| Backup & Recovery | **M5** | Tooling complete and scheduled: fail-closed `backup:operate`, weekly drill workflow, **replicated copy restored independently** (93 tables / 0 mismatches / 6s), retention 30/12/7 enforced, all refusals exercised. PAD-007 decided (S3-compatible). **No bucket, no escrowed passphrase, schedule never fired, no hosted/PITR proof.** |
+| COA | **M4** | 215 accounts, 55 mappings, cert test `081`. `account_fs_map` empty; all-consumer adoption incomplete. |
 
 The Accounting Kernel is **M7**, fully enforced, and nested inside Posting. It
 is not included in the 19-engine denominator.
@@ -210,7 +206,40 @@ is not included in the 19-engine denominator.
 
 # 9.4 Product Definition of Done
 
-## 9.4.1 Universal criteria
+## 9.4.0 The Pilot Bar — the operative gate for v1
+
+The 26-criterion Production Bar below is correct and it is **not achievable
+first**. Twenty-six criteria across eleven modules is 286 gates, with zero modules
+past gate 3 after months of work. A bar nobody can clear stops functioning as a
+bar and starts functioning as a reason nothing ships.
+
+There are therefore **two bars**, and a module is measured against the Pilot Bar
+until a pilot is running:
+
+| # | Pilot Bar criterion | Production Bar equivalent |
+| ---: | --- | --- |
+| P1 | Transaction lifecycle works end to end (draft → post → correct → void) | 4, 15 |
+| P2 | Posting is correct and goes through the sealed doorway | 8 |
+| P3 | The module reconciles to the General Ledger, evidenced by a guard test | 9 |
+| P4 | Philippine tax treatment is correct where applicable | 10 |
+| P5 | Permissions and segregation of duties hold | 12 |
+| P6 | Audit trail is complete and posted records are immutable | 13 |
+| P7 | Period controls are enforced | 16 |
+| P8 | One canonical end-to-end workflow is proven with real data | 19 |
+| P9 | Automated tests cover the above and run in the regression lane | 18 |
+| P10 | Backup and restore are proven for the whole product | 24 |
+
+Deferred to the Production Bar, explicitly and without apology: hosted parity,
+attachments, approval routing, user acceptance, the release gate, full
+documentation completeness, and the Brutal Audit and certification ceremonies.
+
+**Rule.** A module that passes all ten Pilot Bar criteria may be used in a
+controlled pilot with a named client and a parallel manual process. It may not be
+called *Certified*, *Complete*, or *Production Ready* — those words remain
+reserved for the Production Bar. Nothing in this section lowers the Production
+Bar; it only stops the Production Bar from being the only bar.
+
+## 9.4.1 Universal criteria — the Production Bar
 
 A business module may be called **complete** only when every applicable criterion
 passes across its whole governed scope:
@@ -255,17 +284,17 @@ explicit certification justification.
 
 | Module | Applicable criteria | Known open criteria at this baseline | Decisive reason |
 | --- | --- | --- | --- |
-| Setup | 1–7, 10–14, 16–26 | **4–7, 10–11, 14, 17–26** | Combined review is governed but backup/restore and browser evidence block certification; CAS/opening/rule configuration decisions remain. |
-| Master Data | 1–7, 10–15, 17–26 | **4–7, 10–11, 14–15, 17–26** | Some masters lack UI, supplier bank details are absent, attachment/correction/operational proof incomplete. |
+| Setup | 1–7, 10–14, 16–26 | **4–7, 10–11, 14, 17–26** | Combined review is governed but operated recovery and browser evidence block certification; CAS/rule configuration and real cut-over proof remain. |
+| Master Data | 1–7, 10–15, 17–26 | **4–7, 10–11, 14–15, 17–26** | Supplier bank details and import navigation exist locally; some extension masters lack UI and attachment/correction/operational proof remains incomplete. |
 | Sales & Receivables | 1–26 | **3–26** | Product scope and architecture exist; complete source chain, returns, conversion, approvals, attachments, reconciliations, certification and operations do not. |
-| Purchasing & Payables | 1–26 | **3–26** | Receiving accounting, matching, returns and complete downstream evidence remain open. |
-| Inventory | 1–9, 11–26 | **3–9, 11–26** | Operational partial workflow; valuation/control mismatch; Inventory Accounting dormant; no module certification. |
+| Purchasing & Payables | 1–26 | **3–26** | Receiving accounting is closed locally; matching, over-receipt, returns and complete downstream evidence remain open. |
+| Inventory | 1–9, 11–26 | **3–9, 11–26** | Valuation/control reconciles locally; the operational workflow remains partial, Inventory Accounting is dormant, and no module certification exists. |
 | Banking & Treasury | 1–26 | **2–26** | Product scope is named, but ownership details, canonical data and every workflow/completion gate remain open. Tax applies to withholding-capable disbursement where used. |
 | Fixed Assets | 1–26 | **2–26** | No policy master or canonical asset lifecycle; all completion evidence remains open. |
 | Accounting | 1–9, 11–26 | **3–9, 11–26** | Working ledger core is insufficient for schedules, close, all-consumer posting, reconciliation and operations. |
 | Compliance | 1–26 | **2–26** | Tax Engine architecture is absent and persisted statutory workflows remain deferred. |
 | Reports | 1–2, 5–6, 9, 11–14, 17–26 | **5–6, 9, 11–14, 17–26** | Scope/architecture exist; reconciliations, drill/export contracts, source backing across all reports and operating proof remain open. |
-| Administration & Security | 1–7, 12–15, 17–26 | **2–7, 12–15, 17–26** | Product need exists, but ownership decision, UI, workflows and evidence are absent. |
+| Administration & Security | 1–7, 12–15, 17–26 | **2–7, 12–15, 17–26** | PAD-003 and four guarded local screens establish a partial workflow; hosted invite, browser/UAT, access review, support and certification evidence remain absent. |
 | Dashboard *(Reporting Surface)* | 1–2, 5–6, 11–14, 17–21, 23–26 | **1–2, 5–6, 11–14, 17–21, 23–26** | No owning module or governed KPI contract; it is excluded from module certification counts. |
 
 The table is a product-planning view, not a certification decision. Only the
@@ -436,279 +465,282 @@ Book / Tax Reconciliation             [NOT PROVEN]
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Dashboard | Product/Reports; show readiness and attention items | Reporting; no posting; tax calendar read | Every source module | Readiness, deadlines, future KPIs | M4 / no scope | Owner and KPI contract | PAD ownership decision; retain as surface, not module metric |
 | Setup | Setup; make a company operable | Permissions, Audit, Number Series, COA; tax references | Product decisions | Configuration and readiness checklist | M7 / combined scope Blocked | Restore and browser evidence | Resolve PAD-007; prepare certification evidence without claiming M9 |
-| Master Data | Master Data; govern reusable business entities | Permissions, Audit, Approval, COA | Setup | Parties/items/warehouses/accounts consumed by all modules | M7 / combined scope Blocked | Evidence plus missing/unsurfaced masters | Decide supplier bank details; source-back required masters |
+| Master Data | Master Data; govern reusable business entities | Permissions, Audit, Approval, COA | Setup | Parties/items/warehouses/accounts consumed by all modules | M7 / combined scope Blocked | Operated recovery/browser evidence plus unsurfaced extension masters | Validate supplier-bank/import browser paths; source-back remaining masters |
 | Sales & Receivables | Sales; revenue and collection cycle | Posting, COA, Dimension, AR, Payment, Approval, Correction, Reporting; Tax absent | Setup, Master Data, Inventory availability | AR ledger, sales registers, VAT/PT/CWT/books, GL/FS | M4 / In Progress | Full chain/source/correction/reconciliation | Select canonical Sales flow and prove §9.4 |
-| Purchasing & Payables | Purchasing; procurement, receipt, liability and payment | Posting, COA, Dimension, AP, Payment, Approval, Correction, Reporting; Tax absent | Setup, Master Data | AP ledger, purchase registers, input VAT/EWT/books, Inventory, GL/FS | M4 / In Progress | Receiving-to-journal and matching | Govern Receiving accounting design; prove canonical Purchase flow |
-| Inventory | Inventory Operations; quantity, custody and value | Posting, Dimension, Inventory Accounting, Reporting | Items/warehouses; Sales/Purchasing sources | Stock ledger, valuation, COGS, inventory control | M4 / In Progress | Control mismatch; dormant chronology; Goods Issue deferred | Complete bounded WP-5 decision, then reconcile operational design before activation |
+| Purchasing & Payables | Purchasing; procurement, receipt, liability and payment | Posting, COA, Dimension, AP, Payment, Approval, Correction, Reporting; Tax absent | Setup, Master Data | AP ledger, purchase registers, input VAT/EWT/books, Inventory, GL/FS | M4 / In Progress | Three-way match, over-receipt and returns | Prove the canonical Purchase flow and remaining controls |
+| Inventory | Inventory Operations; quantity, custody and value | Posting, Dimension, Inventory Accounting, Reporting | Items/warehouses; Sales/Purchasing sources | Stock ledger, valuation, COGS, inventory control | M4 / In Progress | FIFO cost-layer path unexercised (`inventory_cost_layers` empty); Goods Issue empty; broad certification | Keep IA-5 frozen; COGS posts on Sales Invoice and inventory ties to control at ₱0.00 (guard `111`) |
 | Banking & Treasury | Treasury; cash custody and bank reconciliation | Payment, Posting, Period, Correction, Reporting; tax on applicable disbursements | Bank accounts, Sales receipts, Purchasing payments | Bank position, check register, cash books, bank/GL reconciliation | M3 / Not Started | Empty canonical data; PAD-004 | Product Architecture Decision then module architecture/evidence |
 | Fixed Assets | Fixed Assets; capitalise, depreciate and dispose | Posting, Dimension, Period, Correction, Reporting; book/tax | Suppliers, COA, dimensions | Asset register, depreciation, disposal, FS/cash flow | M3 / Not Started | No policy master or canonical lifecycle | Define depreciation profiles and source chain before implementation |
 | Accounting | Accounting; own GL, periods and close | Posting/Kernel, COA, Dimension, Period, Correction, Reporting | Every posting module | GL, TB, control reconciliations, FS source | M4 / Core In Progress; Schedules Not Started | All-consumer invariants, schedules, close | Prove canonical Sales/Purchase flows; then close/schedules |
 | Compliance | Compliance; review, file and prove PH obligations | Missing Tax Engine; Number Series, Audit, Reporting, Posting boundary | Sales, Purchasing, Accounting, tax setup | Returns, certificates, SLS/SLP/RELIEF, books, CAS evidence | M4 / Blocked | PAD-001 and deferred artifacts | Product Architecture Decision for Tax Engine, then governed design |
 | Reports | Reporting; financial and cross-domain decision support | Reporting/Reconciliation, COA, Dimension | Accounting and all source modules | FS, management reports, audit support | M4 / In Progress | Nine reconciliations; weak dimensional/FS-registry adoption | Rebuild on certified sources and execute reconciliation pack |
-| Administration & Security | Product/Security decision; administer access | Certified Permissions/Audit, Approval | Product ownership decision | User/access review and support operations | M1 / Not Started | PAD-003; no UI | Decide visible vs external administration before design |
+| Administration & Security | Product/Security; administer access | Certified Permissions/Audit, Approval | PAD-003 decided restricted in-product | User/access review and support operations | M4 / In Progress | Hosted invite, browser/UAT and operating access review | Validate the implemented local boundary before certification |
 
 ---
 
-# 9.7 Development Roadmap
+# 9.7 Development Roadmap — outcome-driven
 
-The order below targets a functional accounting ERP, not a high count of pages,
-tables or work packages. Calendar commitments are intentionally absent.
+**Restructured 2026-08-02.** The previous edition sequenced twelve work packages
+(Phase A–L). It was reorganised into nine **business outcomes** because a work
+package can complete while the business outcome it belongs to remains
+unusable — Phase B was the frozen IA-5 programme, which had zero consumers and
+could have been "finished" without a single user being able to do anything new.
+Phase mapping from the old plan is recorded in §9.7.11 so no history is lost.
 
-## Phase A — Architecture and Planning Consolidation
+A phase is complete when the **outcome** is true for a real company, proven by a
+fresh-data end-to-end test in the style of `112` — never against the demo seed.
+Calendar commitments remain intentionally absent.
 
-- **Objective:** Establish this constitution/roadmap operating model, exact
-  measures, reading order and next mission.
-- **Business value:** Stops scope, taxonomy and progress-report drift before more
-  implementation.
-- **Prerequisites:** Current repository evidence and authority chain.
-- **Included:** Product Architecture, this roadmap, AI_PROGRESS, AI_STATE, index,
-  hand-off.
-- **Excluded:** SQL, runtime, tests, UI/navigation, certification and hosted work.
-- **Entry criteria:** Canonical Product Architecture exists.
-- **Exit criteria:** Documents registered; M0–M9, DoD, dashboard and next mission
-  agree; validation passes.
-- **Proof required:** `docs:check`, links, authority/startup review, diff/scope
-  verification.
-- **Risks:** Creating another authority or carrying stale denominators.
-- **Relative effort:** **Medium**.
-- **Unlocks:** A governed return to engineering.
+**Status legend.** ✅ Working · 🟡 Partial · ⚪ Skeleton/UI only · 🔴 Not started
+· ⏸ Deferred by decision.
 
-## Phase B — Resolve the Current Inventory Engineering Frontier
+## 9.7.0 Where every module and engine sits
 
-- **Objective:** Close WP5-AG-001…003 in documentation, re-run the gate, and—only
-  if authorised—execute the bounded WP-5 lifecycle.
-- **Business value:** Establishes the resolver contract needed for defensible,
-  replayable inventory chronology and eventual COGS/valuation correctness.
-- **Prerequisites:** Phase A; ADR-C01 frozen; ECC-01 accepted; WP-1…WP-4 certified
-  and dormant.
-- **Included:** WP-5 Engineering Amendment; Authorisation Gate; later
-  implementation/audit/fix/certification only if separately authorised.
-- **Excluded:** WP-6+, IA-6, production activation, Posting/Kernel changes, hosted
-  application, operational Inventory changes.
-- **Entry criteria:** Current rejection and three findings remain unchanged.
-- **Exit criteria:** Minimum exit is an unambiguous gate decision. Product-value
-  checkpoint required before continuing beyond WP-5.
-- **Proof required:** Exact writer/resolver/trigger/rollback and dormant-fixture
-  contracts; applicable gate evidence.
-- **Risks:** Dormant foundation work outruns usable accounting value; excessive
-  work-package granularity.
-- **Relative effort:** **Small** for amendment/gate; **Medium** if later authorised
-  implementation lifecycle is included.
-- **Unlocks:** Safe decision on WP-5 and a governed choice whether later ECC work
-  belongs in Phase G rather than continuing automatically.
+Every canonical module and engine is placed in exactly one phase that **completes**
+it. A component may contribute earlier; this table records where it finishes.
 
-## Phase C — Functional Accounting Core Proof
+| Module | Status | Completing phase |
+| --- | --- | --- |
+| Dashboard | 🟡 Partial | Phase 7 |
+| Setup | ✅ Working | Phase 1 (done) |
+| Master Data | ✅ Working | Phase 1 (done) |
+| Sales & Receivables | 🟡 Partial | **Phase 2** |
+| Purchasing & Payables | 🟡 Partial | **Phase 3** |
+| Inventory | 🟡 Partial | Phase 3 (receipt half done in Phase 1 of the Delivery Plan) |
+| Banking & Treasury | ⚪ Skeleton | Check Voucher in Phase 3; remainder ⏸ Phase 6 |
+| Fixed Assets | ⏸ Deferred | Phase 6 |
+| Accounting | ✅ Core working | **Phase 4** |
+| Compliance | 🟡 Partial | **Phase 5** |
+| Reports | 🟡 Partial | Phase 4 (statements) and Phase 7 (management) |
+| Administration & Security | 🟡 Partial | Phase 7 |
 
-- **Objective:** Prove one complete Sales and one complete Purchasing workflow
-  from source through books, tax and financial statements.
-- **Business value:** First demonstrable evidence that PXL is an accounting ERP,
-  not a set of pages and foundations.
-- **Prerequisites:** Phase A; bounded Phase-B gate result recorded; current Posting
-  and certified foundation engines green.
-- **Included:** Select exact canonical scenarios; source review; posting,
-  subledger, GL, TB, FS, VAT/WHT/books, correction and trace evidence; owner
-  decisions PAD-002 and PAD-001 initiated.
-- **Excluded:** Whole-module certification, Banking, Fixed Assets, IA-6, broad UI
-  rollout.
-- **Entry criteria:** Scenario scope and governing rules approved; no prohibited
-  behavior change hidden in an evidence mission.
-- **Exit criteria:** Two repeatable local workflows produce correct, reconciled,
-  traceable outcomes and all gaps are recorded.
-- **Proof required:** Numeric journals/reconciliations, source-to-report trace,
-  positive/negative/correction cases, canonical data and browser evidence.
-- **Risks:** Existing parts may not compose; Tax Engine absence may force a stop
-  rather than a workaround.
-- **Relative effort:** **Large**.
-- **Unlocks:** Evidence-led Sales/Purchasing completion scope and a real product
-  critical path.
+| Engine | Status | Completing phase |
+| --- | --- | --- |
+| Accounting Kernel | ✅ Enforced | Phase 1 (done) |
+| Permissions / RLS | ✅ Certified | Phase 1 (done) |
+| Audit & Immutability | ✅ Certified | Phase 1 (done) |
+| Number Series | ✅ Certified | Phase 1 (done) |
+| Dimensions | ✅ Certified | Phase 1 (done) |
+| Chart of Accounts | 🟡 Partial | Phase 4 (`account_fs_map`) |
+| Posting Engine | 🟡 12 of 24 entry points exercised | Phases 2–6, one module at a time |
+| AR Engine | 🟡 Partial | Phase 2 |
+| AP Engine | 🟡 Partial | Phase 3 |
+| Payment & Application | 🟡 Partial | Phases 2–3 |
+| Document Conversion | 🔴 Not started — zero functions | **Phase 2** |
+| Period Lock & Closing | 🟡 Partial | Phase 4 |
+| Reversal, Void & Correction | 🟡 Partial | Phase 4 |
+| Reporting & Reconciliation | 🟡 1 of 9 reconciliations | Phase 4 |
+| Tax Engine | 🔴 Absent — zero calculators | **Phase 5** |
+| Inventory Accounting (IA-5/ECC) | ⏸ Frozen, zero consumers | Not scheduled. Resume only on a real costing-replay requirement |
+| Approval Engine | ⚪ Defined, never executed | Phase 7 |
+| Attachment & Traceability | 🟡 Trace works, attachments absent | Phase 7 |
+| Currency | ⏸ PHP-only | Post-v1 |
+| Backup & Recovery | ✅ Tooling; not operated | Phase 8 |
 
-## Phase D — Tax and Compliance Architecture
+---
 
-- **Objective:** Decide PAD-001 and define one authoritative Tax Engine and its
-  ownership, inputs, outputs, versioning and migration boundary.
-- **Business value:** Prevents seven calculators from drifting and enables
-  trustworthy filing workflows.
-- **Prerequisites:** Phase C exposes the exact source/tax/report seams; Product
-  Owner and CPA authority available.
-- **Included:** Product Architecture Amendment if scope changes; Tax Engine
-  architecture; PHP/VAT/PT/EWT/CWT/FWT boundaries; adoption sequence; explicit
-  unsupported scope.
-- **Excluded:** Implementation until architecture and engineering authority pass;
-  unsupported tax forms invented from convention.
-- **Entry criteria:** PAD-001 owner assigned and current calculation census
-  refreshed.
-- **Exit criteria:** Accepted architecture with one owner, lifecycle and
-  certification plan.
-- **Proof required:** Contract mapping to source transactions, tax ledger, GL,
-  corrections, reports and BIR outputs.
-- **Risks:** Regulatory error; duplication preserved behind a new name; scope
-  expansion into unsupported forms.
-- **Relative effort:** **Large**.
-- **Unlocks:** Sales/Purchasing/Compliance integration and certification.
+## Phase 1 — Foundation · ✅ SUBSTANTIALLY COMPLETE
 
-## Phase E — Sales & Receivables Completion and Certification
+- **Outcome:** A company can be stood up, and the ledger cannot be corrupted by
+  any route.
+- **Owns:** Setup, Master Data · Accounting Kernel, Permissions/RLS, Audit &
+  Immutability, Number Series, Dimensions.
+- **Evidence (measured 2026-08-02):** 209 of 209 tables RLS-enabled with 519
+  policies and **zero tables without a policy**; 110 tables carry
+  guard/immutability triggers; kernel origin triggers on both ledger tables and
+  enforcement **survives a restore into a fresh database**; 264 number series and
+  218 CAS issuances; 215 accounts, 55 mappings, 5 companies, 60 fiscal periods;
+  customers 66 / suppliers 56 / items 91.
+- **Still open:** `account_fs_map` empty (carried to Phase 4);
+  `user_company_branch_scopes` never exercised and `sys_feature_enablement` empty
+  (carried to Phase 7).
+- **Exit criteria:** met for the ledger-integrity outcome. This is the strongest
+  part of the product and the reason the rest is worth building.
 
-- **Objective:** Move Sales from M4 through M5/M6/M7 to M8 within an explicitly
-  supported scope.
-- **Business value:** Trustworthy quote-to-cash, receivables and revenue/tax books.
-- **Prerequisites:** Phase C canonical Sales proof; Phase D tax contract; required
-  engines certified or explicitly blocking.
-- **Included:** Conversion, partials, returns-to-stock, credit/debit correction,
-  applications, attachments, approval, periods, reports, source review and all
-  applicable DoD gates.
-- **Excluded:** Multi-currency unless PAD-005 expands scope; deferred sales
-  features not accepted into the module.
-- **Entry criteria:** Supported workflow inventory frozen; engines/dependencies
-  mapped.
-- **Exit criteria:** Certification Matrix records the formal decision; M8 only if
-  all mandatory gates pass.
-- **Proof required:** Full revenue-cycle scenarios, AR-control equality,
-  tax-ledger equality, inventory/COGS where applicable, correction and browser
+## Phase 2 — Customer-to-Cash · 🟡 IN PROGRESS
+
+- **Outcome:** A company sells, invoices, collects, and receivables tie to the AR
+  control account with correct tax and cost of sales.
+- **Owns:** Sales & Receivables · AR Engine, Payment & Application, **Document
+  Conversion**.
+- **Already true:** `fn_post_sales_invoice` posts AR, revenue, output VAT **and**
+  DR COGS / CR inventory with weighted-average or FIFO layer consumption, an
+  insufficient-stock guard and reversal on void — test `054`, and the canonical
+  ledger shows COGS debits equal to inventory credits in all three trading
+  companies. Official Receipt, Credit Memo and Vendor-side memos post. AR ageing
+  and customer ledger views read posted data.
+- **Must be built:**
+  1. **`fn_post_cash_sale`** — `fn_save_cash_sale` exists but no posting function
+     does; a cash sale of stock currently produces no journal and no inventory
+     relief.
+  2. **Customer Return COGS path** — returned goods do not reverse cost into
+     inventory.
+  3. **Document Conversion Engine** — zero conversion functions exist; quote → SO
+     → SI carry-forward is entirely manual and nothing prevents double conversion.
+  4. **AR-to-control reconciliation guard** in the regression lane.
+  5. **Fresh-data end-to-end test** — purchasing has `112`; sales has no
+     equivalent, so the revenue side is proven only against the demo seed the
+     project forbids trusting.
+- **Exit criteria:** Quotation → SI → OR → AR → trial balance → financial
+  statements proven on a self-provisioned company at ₱0.00 variance, including
+  credit memo and void.
+
+## Phase 3 — Procure-to-Pay · 🟡 IN PROGRESS
+
+- **Outcome:** A company buys, receives, bills, pays, and payables and inventory
+  both tie to their control accounts.
+- **Owns:** Purchasing & Payables, Inventory · AP Engine, Check Voucher.
+- **Already true:** Fresh-data test `112` proves PO → RR → Bill from first
+  principles on a self-provisioned company. Receiving posts DR inventory control
+  / CR purchase clearing since PXL-AUD-073, and **inventory ties to its control
+  account at ₱0.00 in every stock-holding company**, guarded by test `111`.
+  Payment Voucher carries verified supplier bank accounts and immutable payee
+  snapshots.
+- **Must be built:**
+  1. **Three-way match** (PO ↔ RR ↔ Bill) and **over-receipt control** — all
+     three documents exist with no matching between them.
+  2. **Purchase returns and supplier debit memos** — tables exist and are empty.
+  3. **AP-to-control reconciliation guard.**
+  4. **Check Voucher** — required by the Cash Disbursements Book; the only part
+     of Banking & Treasury in v1 scope.
+  5. **FIFO cost-layer path** — `inventory_cost_layers` has never held a row, so
+     only weighted average is exercised in practice.
+- **Exit criteria:** PO → RR → Bill → PV → AP → trial balance proven on fresh
+  data with three-way match enforced, including vendor credit.
+
+## Phase 4 — Period Close · 🟡 CORE WORKS, CLOSE DOES NOT
+
+- **Outcome:** A month closes, cannot be reopened silently, and produces
+  financial statements from posted data.
+- **Owns:** Accounting, Reports (statements) · Period Lock & Closing, Reversal/
+  Void/Correction, Reporting & Reconciliation, COA (`account_fs_map`).
+- **Already true:** Trial balance out-of-balance is **₱0.00 in all five
+  companies**; 51 journals / 144 lines; 60 fiscal periods; 23 reporting views
+  including GL, trial balance, ageing, ledgers and registers; reversal and void
+  paths post and are tested.
+- **Must be built:**
+  1. **`account_fs_map` is empty** — the trial balance works but **no financial
+     statement presentation mapping exists**. A pilot accountant must sign
+     statements; today they cannot be produced from mapped accounts.
+  2. **Eight of nine critical reconciliations** still unevidenced (inventory is
+     the one that is done).
+  3. **Year-end close and audited reopening** — unproven.
+- **Exit criteria:** a period locks against posting, all nine reconciliation
+  guards run green in the regression lane, and a full statement set is produced
+  from posted data.
+
+## Phase 5 — Tax & Compliance · 🟡 REVIEW WORKS, FILING DOES NOT
+
+- **Outcome:** A company files correct BIR returns generated from the same posted
+  data as its financial statements.
+- **Owns:** Compliance · **Tax Engine (PAD-001)**.
+- **Already true:** VAT and withholding reconcile to the GL at zero variance;
+  248 tax-calendar events; 24 tax detail entries; 218 CAS number issuances with a
+  governed void event; VAT/EWT review surfaces read real posted data; hashed
+  export foundations exist.
+- **Must be built:**
+  1. **`fn_calculate_tax(context) → tax_components[]`** — there is **no tax
+     calculator**. Exactly **seven save routines compute VAT independently**
+     (cash purchase, cash sale, credit memo, debit memo, sales invoice, vendor
+     bill, vendor credit), and only one handles VAT-inclusive pricing. That
+     inconsistency is a live correctness risk, not untidiness.
+  2. **Migrate all seven callers** behind a regression test asserting
+     byte-identical output *before* switching.
+  3. **Filing artifacts** — all twelve `compliance_*` working-paper tables,
+     `bir_forms`, `form_2306/2307_*`, `vat_returns` and `withholding_remittances`
+     are **empty**. Nothing has ever been filed.
+- **Exit criteria:** one full period's VAT, percentage tax and withholding
+  returns generated, reconciled to the GL at zero variance, and exported.
+
+## Phase 6 — Asset Management · ⏸ DEFERRED BY DECISION
+
+- **Outcome:** Assets and treasury instruments depreciate and settle into the
+  ledger.
+- **Owns:** Fixed Assets, Banking & Treasury (beyond Check Voucher).
+- **Measured state:** **all six fixed-asset tables are empty**; five asset routes
+  are on the deferred list. In Banking, only `bank_accounts` holds data —
+  `check_vouchers`, `fund_transfers`, `bank_reconciliations`,
+  `petty_cash_vouchers` and `bank_adjustments` are **all empty**, and their
+  posting functions have never produced a journal.
+- **Scope ruling:** v2 by Delivery Plan decision, with two exceptions — Check
+  Voucher (Phase 3) and a minimal straight-line depreciation run **only if the
+  pilot client holds assets**. PAD-004 (bank reconciliation ownership) must be
+  decided before any bank-reconciliation implementation.
+- **Exit criteria:** not scheduled for v1. Do not build ahead of a pilot need.
+
+## Phase 7 — Reporting & Administration · 🟡 PARTIAL
+
+- **Outcome:** A stranger can administer the system and read management reports
+  without help.
+- **Owns:** Dashboard, Reports (management), Administration & Security ·
+  Approval Engine, Attachment & Traceability.
+- **Already true:** four administration routes, an `admin-invite` Edge Function,
+  contract test `115`, 25 memberships; the accounting trace is complete and now
+  routed; the dimensional report is certified.
+- **Must be built:**
+  1. **Approval routing has never executed** — 2 workflows defined,
+     `approval_requests` = 0 and `approval_instances` = 0 — and **no
+     notification model exists anywhere in the product**, so an approver cannot
+     be told (PAD-013).
+  2. **Attachments** — `cas_attachment_register` is empty; every workspace shows
+     an Attachments tab with no file lifecycle behind it (PAD-008).
+  3. **Branch scoping never exercised** (`user_company_branch_scopes` empty) and
+     `sys_feature_enablement` empty.
+  4. **Deferred-surface honesty** — 30 routes render finished-looking screens over
+     permanently empty tables and 17 navigation labels have no page at all
+     (PAD-012, PAD-014).
+- **Exit criteria:** approvals route and notify, access review is operable, and
+  the pilot menu contains nothing a user cannot use.
+
+## Phase 8 — Pilot Readiness · 🔴 LARGELY NOT STARTED
+
+- **Outcome:** A named client can run real books in a controlled pilot.
+- **Owns:** hosted parity, browser evidence, monitoring, operated recoverability.
+- **Already true:** the backup service is built, scheduled and proven — the
+  replicated copy restored independently at 93 tables / 0 mismatches / 6s, with
+  retention and fail-closed refusals exercised.
+- **Must be built:**
+  1. **Operated recoverability** — PAD-007 is decided (S3-compatible), but there
+     is no bucket, no escrowed passphrase, and the schedule has never fired.
+  2. **Hosted deploy** — 55 migrations are undeployed and the `admin-invite`
+     function has never been deployed.
+  3. **Browser test lane** — there is **no automated browser coverage at all**
+     over 178 pages; frontend evidence is source-contract and build only.
+  4. Error handling, monitoring, and a **daily reconciliation job that alerts if
+     inventory or AR/AP stops tying out**.
+- **Exit criteria:** the Pilot Bar (§9.4.0) met on both canonical flows with
   evidence.
-- **Risks:** Declaring Sales Invoice success equal to module success.
-- **Relative effort:** **Very Large**.
-- **Unlocks:** A dependable revenue cycle and downstream reporting.
 
-## Phase F — Purchasing & Payables Completion and Certification
+## Phase 9 — Production Readiness · 🔴 NOT STARTED
 
-- **Objective:** Move Purchasing from M4 to a certified procure-to-pay scope.
-- **Business value:** Correct liabilities, input tax/EWT, stock receipts and
-  supplier payments.
-- **Prerequisites:** Phase C canonical Purchasing proof; Receiving accounting
-  architecture authorised; Phase D tax contract.
-- **Included:** Three-way match, over-receipt/over-bill controls, partials,
-  returns, credits, payments, supplier bank decision, attachments, approvals,
-  source review and all DoD gates.
-- **Excluded:** Unauthorised Inventory Accounting activation and broad Treasury
-  features.
-- **Entry criteria:** Receiving-to-journal asymmetry has a governed design.
-- **Exit criteria:** AP/control, input tax/EWT and source-to-books proof pass; formal
-  certification decision recorded.
-- **Proof required:** Positive/negative/concurrency/correction scenarios and
-  canonical reconciliations.
-- **Risks:** Fixing Inventory variance heuristically instead of correcting source
-  accounting.
-- **Relative effort:** **Very Large**.
-- **Unlocks:** Reliable procurement, Inventory integration and payables.
+- **Outcome:** A quarter closes correctly on PXL and the client's accountant
+  signs the financial statements.
+- **Owns:** the Production Bar (§9.4.1) and every M9 claim.
+- **Must be true:** one full quarter parallel run; point-in-time recovery for the
+  1-hour production RPO; CAS accreditation; support and user acceptance proven.
+- **Exit criteria:** the Production Bar in full. Until then the words
+  *Certified*, *Complete* and *Production Ready* remain reserved.
 
-## Phase G — Inventory Operational and Accounting Integration
+---
 
-- **Objective:** Make quantity and value reproducible, reconcile Inventory to GL,
-  and activate governed costing only after evidence permits it.
-- **Business value:** Trustworthy COGS, gross margin and inventory balance.
-- **Prerequisites:** Phase F Receiving accounting; WP-5 decision; explicit
-  product-value checkpoint; PAD-006 activation decision.
-- **Included:** Remaining authorised ECC packages as needed, final IA-5 evidence,
-  IA-6 only after authority, operational events, negative-stock/concurrency,
-  returns, UOM, valuation and GL reconciliation.
-- **Excluded:** Production source enablement before its gate; Posting/Kernel
-  deviation; lot/serial/landed cost unless separately accepted.
-- **Entry criteria:** Operational source and costing scope approved; no non-zero
-  dormant event contamination.
-- **Exit criteria:** Quantity and value replay; inventory subledger equals GL;
-  costing and corrections deterministic; formal engine/module decisions.
-- **Proof required:** ADR-C01 executable evidence, replay permutations,
-  concurrency, FIFO/WAC rules, rollback, posting and reconciliation.
-- **Risks:** Highest technical complexity; over-engineering; historical/backdate
-  correctness; performance.
-- **Relative effort:** **Very Large**.
-- **Unlocks:** Reliable gross margin, Inventory certification and Posting P6.
+## 9.7.11 Mapping from the previous Phase A–L plan
 
-## Phase H — Banking & Treasury
+No history is discarded; the work is re-homed under the outcome it serves.
 
-- **Objective:** Convert the M3 shell into controlled cash/bank operations and
-  reconciliation.
-- **Business value:** Cash custody, statement reconciliation and controlled
-  disbursement.
-- **Prerequisites:** PAD-004; Sales/Purchasing payments stable; bank account and
-  supplier bank boundaries decided.
-- **Included:** Petty cash, transfers, adjustments, check lifecycle, statement
-  import/manual match minimum, outstanding items, reversals and bank-to-GL proof.
-- **Excluded:** Auto-match and split sophistication unless needed by pilot.
-- **Entry criteria:** Ownership and sealed-write-boundary architecture accepted.
-- **Exit criteria:** Canonical bank workflow and reconciliation pass; certification
-  decision recorded.
-- **Proof required:** Statement-to-book-to-GL equality, negative/concurrency,
-  reversal and period cases.
-- **Risks:** Direct-write exceptions and cash control failures.
-- **Relative effort:** **Very Large**.
-- **Unlocks:** Complete cash position and stronger balance sheet.
-
-## Phase I — Fixed Assets
-
-- **Objective:** Complete acquisition-through-disposal and book/tax depreciation.
-- **Business value:** Correct non-current assets, depreciation, gains/losses and
-  cash-flow classification.
-- **Prerequisites:** Depreciation-profile architecture; Purchasing and Accounting
-  stable.
-- **Included:** Asset master/register, acquisition, depreciation, transfer,
-  impairment, disposal, duplicate-run/period rules and reconciliation.
-- **Excluded:** Unsupported specialist asset classes unless explicitly accepted.
-- **Entry criteria:** Policy master and source-chain architecture governed.
-- **Exit criteria:** Asset register equals GL; book/tax schedule reconciles; module
-  decision recorded.
-- **Proof required:** Full lifecycle, closed-period, reversal and repeat-run cases.
-- **Risks:** Accounting-policy ambiguity and test-fixture evidence mistaken for
-  operational maturity.
-- **Relative effort:** **Large**.
-- **Unlocks:** Complete balance sheet and cash-flow investing section.
-
-## Phase J — Financial Statements and Management Reporting
-
-- **Objective:** Make every decision-grade report reconcile, drill and export from
-  certified sources.
-- **Business value:** Trustworthy financial statements and management insight.
-- **Prerequisites:** Sales, Purchasing, Inventory and material balance-sheet
-  modules stable; COA/Dimension consumers ready.
-- **Included:** FS registry adoption, nine reconciliation pack, adjusted and
-  post-closing TB, dimensional management reports, drill-down and export parity.
-- **Excluded:** Parallel report data stores and unsupported scheduled delivery.
-- **Entry criteria:** Source modules define report contracts and period semantics.
-- **Exit criteria:** All applicable report gates and nine reconciliations pass;
-  Reports certification decision recorded.
-- **Proof required:** Explicit numbers from canonical data and source-to-FS trace.
-- **Risks:** Beautiful reports over incomplete source modules; double counting.
-- **Relative effort:** **Large**.
-- **Unlocks:** Month-end close, audit support and management acceptance.
-
-## Phase K — Administration, Backup, Security and Operational Readiness
-
-- **Objective:** Make PXL operable and recoverable by accountable humans.
-- **Business value:** Deployability, security administration, recoverability and
-  support.
-- **Prerequisites:** PAD-003 and PAD-007; target hosting/support model.
-- **Included:** User/role/scope administration or explicit external procedure;
-  backup/restore; RPO/RTO; monitoring; support/runbooks; performance; migration
-  parity; security review.
-- **Excluded:** Pilot claim until all exit evidence passes.
-- **Entry criteria:** Operations and Security owners assigned.
-- **Exit criteria:** Successful restore, hosted parity, monitoring/support and
-  operational gates pass.
-- **Proof required:** Timed restore, integrity checks, access tests, incident and
-  deployment runbooks, realistic-volume evidence.
-- **Risks:** Treating provider defaults as evidence; hidden manual operations.
-- **Relative effort:** **Large**.
-- **Unlocks:** Pilot gate consideration.
-
-## Phase L — Pilot and Production Readiness
-
-- **Objective:** Validate PXL with a low-risk real client under parallel control,
-  then decide production readiness.
-- **Business value:** Converts engineering confidence into accountable business
-  acceptance.
-- **Prerequisites:** Applicable module/engine certification; opening balances;
-  Phase K; no unresolved Critical/High defects.
-- **Included:** Controlled onboarding, opening-balance reconciliation, roles,
-  parallel/shadow period, month-end, correction, restore and user acceptance.
-- **Excluded:** Immediate broad launch and unsupported modules.
-- **Entry criteria:** Product Owner approves pilot scope and fallback plan.
-- **Exit criteria:** Pilot acceptance with zero unexplained GL, subledger,
-  inventory, tax or report variance; Production Readiness Gate decision.
-- **Proof required:** Signed acceptance, reconciled cut-over and month-end,
-  operational evidence and support readiness.
-- **Risks:** Pilot scope creep, incomplete opening data, support dependency.
-- **Relative effort:** **Very Large**.
-- **Unlocks:** M9 only for the explicitly proven scope.
+| Previous | Now |
+| --- | --- |
+| A — Architecture and Planning Consolidation | Complete. Absorbed into governance; not a product phase |
+| B — Inventory Engineering Frontier (WP-5) | **Removed from the plan.** IA-5/ECC is frozen with zero consumers; resume only on a real costing-replay requirement |
+| C — Functional Accounting Core Proof | Phase 1 (done) and Phase 4 |
+| D — Tax and Compliance Architecture | Phase 5 |
+| E — Sales & Receivables Completion | Phase 2 |
+| F — Purchasing & Payables Completion | Phase 3 |
+| G — Inventory Operational and Accounting Integration | Phase 3 |
+| H — Banking & Treasury | Phase 6 (Check Voucher pulled into Phase 3) |
+| I — Fixed Assets | Phase 6 |
+| J — Financial Statements and Management Reporting | Phase 4 (statements) and Phase 7 (management) |
+| K — Administration, Backup, Security, Operational Readiness | Phase 7 and Phase 8 |
+| L — Pilot and Production Readiness | Phase 8 and Phase 9 |
 
 ---
 
@@ -725,15 +757,13 @@ tables or work packages. Calendar commitments are intentionally absent.
 ## 9.8.2 Shortest safe route
 
 ```text
-Phase A architecture/roadmap truth
+Finish Phase 2: choose PAD-007 and operate scheduled offsite recovery
   ↓
-WP-5 documentation amendment and gate (clear active frontier; no automatic WP-6+)
+Validate the local Phase 3 onboarding build in an explicitly authorised target
   ↓
 Choose one Sales + one Purchasing canonical scenario
   ↓
 Prove source fields, lifecycle and correction
-  ↓
-Resolve Receiving Report accounting asymmetry
   ↓
 Prove Posting → AR/AP → GL → TB → FS
   ↓
@@ -743,7 +773,7 @@ Prove VAT/WHT/books and source-to-report trace
   ↓
 Close module/engine evidence gates
   ↓
-Opening balances + hosted parity + restore + UAT
+Hosted parity + operated restore + real cut-over + browser/UAT
 ```
 
 ## 9.8.3 What already exists
@@ -753,15 +783,17 @@ Opening balances + hosted parity + restore + UAT
 - Tax detail/ledger and substantial BIR books/read/report surfaces.
 - Certified Permissions, Audit, Number Series and Dimension engines.
 - Source-to-journal trace RPCs and audit history.
+- Receiving-to-journal and Inventory-to-control reconciliation.
+- A local Phase 3 onboarding build: governed opening balances, verified supplier
+  payee accounts, restricted administration and navigable master-data import.
 
 ## 9.8.4 What must be completed
 
 - Whole-flow source qualification, lifecycle/correction and numeric
   reconciliation for one Sales and one Purchasing scenario.
-- Receiving-to-journal correctness and Inventory-to-control reconciliation.
 - Tax Engine ownership/architecture and one authoritative calculation contract.
-- The applicable module/engine gates, hosted parity, opening balances,
-  backup/restore and user acceptance.
+- The applicable module/engine gates, hosted parity, operated backup/restore,
+  a real opening cut-over, browser evidence and user acceptance.
 
 ## 9.8.5 What can wait
 
@@ -784,20 +816,17 @@ Opening balances + hosted parity + restore + UAT
 
 ## 9.8.7 Over-engineering warning
 
-The IA-5/ECC programme solves a real, high-severity determinism problem. WP-5's
-specification repair is justified because it is small, bounded and prevents an
-unsafe implementation. **Automatically executing WP-6…WP-9 because the programme
-exists would be over-engineering** if Sales/Purchasing source proof, Receiving
-accounting, Tax authority, opening balances or backup remain unattended. Each
-later package must demonstrate that it advances Inventory-to-GL and the target
-milestone, not merely that it completes another foundation artifact.
+The IA-5/ECC programme solves a real, high-severity determinism problem, but it is
+frozen with no consumer. **Resuming WP-5…WP-9 because the programme exists would
+be over-engineering** while operated recovery, Sales/Purchasing source proof, Tax
+authority and Phase 3 operational acceptance remain open. Any later package must
+receive fresh authority and demonstrate that it advances the target milestone.
 
-## 9.8.8 More urgent than additional foundation after WP-5
+## 9.8.8 More urgent than additional foundation
 
-Receiving Report accounting, canonical Sales/Purchase flow proof, Tax Engine
-authority, opening-balance strategy and restore evidence yield more direct
-product value than continuing dormant foundation work without an activation
-path. These items must control the value checkpoint after the WP-5 gate.
+Operated/offsite recovery, Phase 3 target-environment acceptance, canonical
+Sales/Purchase flow proof and Tax Engine authority yield more direct product value
+than continuing dormant foundation work without an activation path.
 
 ---
 
@@ -815,8 +844,8 @@ path. These items must control the value checkpoint after the WP-5 gate.
 | PR-08 | No canonical end-to-end workflow | Critical | High | 0/6 portfolio reference flows meet DoD | Cannot demonstrate ERP correctness | Phase C proves Sales and Purchasing flows first | CPA + Product | Phase C exit |
 | PR-09 | Tax Engine authority absent | Critical | High | M0; seven duplicated calculators | Inconsistent tax and incomplete compliance | PAD-001 then Phase D architecture | Product + CPA | Phase D exit |
 | PR-10 | Inventory complexity consumes roadmap | Critical | High | C-01, WP-5 rejected, legacy variance, future IA-6 | Delayed product with continued valuation risk | Bound Phase B; operational/value checkpoint; Phase G only after prerequisites | Inventory Owner | Phase B and G gates |
-| PR-11 | Hosted parity gap | Critical | High | 51 local migrations not hosted | Local evidence does not describe hosted product | Explicit authorised migration/rehearsal plan; no hosted claim until proven | Operations | Phase K exit |
-| PR-12 | Backup/restore absent | Critical | High | No runbook, RPO/RTO or restore test | Permanent loss; no certification/pilot | PAD-007; timed restore test | Operations + Security | Before Setup certification / Phase K |
+| PR-11 | Hosted parity gap | Critical | High | 55 local migrations not hosted | Local evidence does not describe hosted product | Explicit authorised migration/rehearsal plan; no hosted claim until proven | Operations | Phase K exit |
+| PR-12 | Backup/restore not operated | Critical | High | Local drill/runbook/RPO/RTO exist; no schedule, offsite destination or hosted/PITR proof | Permanent loss; no certification/pilot | Decide PAD-007 and operate the demonstrated drill offsite | Operations + Security | Before Setup certification / Phase K |
 | PR-13 | Dirty/uncommitted repository obscures provenance | High | High | Working tree contains many modified/untracked files | Change attribution and rollback risk | Preserve tree; mission-start/end manifests; intentional commits only by owner | Repository Owner | Before implementation branch/release |
 | PR-14 | AI-generated implementation lacks accountable review | High | High | Repository work is heavily AI-driven; human review evidence limited | Subtle accounting/security defects | CPA + engineer review gates; executed evidence; small bounded changes | Product Owner | Every authorisation/certification |
 | PR-15 | Limited human engineering review | High | Medium | Independent reviews are mainly repository missions | Architectural blind spots persist | Assign named human reviewers for accounting, security and operations | Product Owner | Phase C entry |
@@ -824,8 +853,8 @@ path. These items must control the value checkpoint after the WP-5 gate.
 | PR-17 | Philippine compliance error | Critical | High | Tax Engine absent; forms/artifacts deferred | Penalties, invalid books/returns | CPA-owned tax architecture; versioned rules; reconciled filing scenarios | CPA Owner | Phase D/G and before pilot |
 | PR-18 | Support/operations unavailable | High | High | No production operations programme completed | Users cannot recover or get help | Runbooks, monitoring, incident/support ownership and service boundaries | Operations Owner | Phase K exit |
 | PR-19 | Performance fails at realistic volume | High | Medium | High-volume demo exists but production-volume certification is incomplete | Slow posting/reports, adoption failure | Targets, profiling, concurrency/load evidence on critical paths | Engineering Owner | Phases G/J/K |
-| PR-20 | Opening-balance strategy absent | Critical | High | No workflow/table/import | Existing businesses cannot onboard | PAD-002; governed cut-over design and reconciliation | Product + CPA | Phase C decision; Phase L entry |
-| PR-21 | Receiving accounting asymmetry persists | Critical | High | Receipt raises stock without journal; Vendor Bill debits clearing | Inventory/GL and COGS unreliable | Govern source accounting; test and reconcile rather than heuristic adjustment | Purchasing + Inventory + CPA | Phase F entry/exit |
+| PR-20 | Opening cut-over unproven operationally | High | Medium | PAD-002 workflow passes fresh local proof; no real-company/hosted/browser/UAT rehearsal | Onboarding can still fail operationally | Rehearse one real cut-over and reconcile every control in the target environment | Product + CPA | Before pilot |
+| PR-21 | Receiving accounting asymmetry | Closed locally | Low | PXL-AUD-073 posts inventory/purchase clearing and canonical inventory reconciles at zero | Preserve regression | Keep guards 111/112 and complete three-way/sales-side controls separately | Purchasing + Inventory + CPA | Continuous |
 | PR-22 | Maturity metrics are gamed | High | Medium | Prior 42% combined modules/engines/absences | False confidence and bad sequencing | Exact denominators only; methodology in §9.10 | Governance Lead | Continuous |
 | PR-23 | Direct-write exceptions breach architecture | High | Medium | `bank_recon_items`, `book_tax_reconciliation` excluded from P5.0 | Unsealed accounting effects | Resolve in PAD-004/Tax architecture; keep explicit until closed | Accounting Architect | Phases D/H |
 | PR-24 | Historical chronology is rewritten | High | Low | Many issued audits/specs with later corrections | Loss of audit provenance | Prospective correction and supersession only | Governance Lead | Every documentation mission |
@@ -834,99 +863,38 @@ path. These items must control the value checkpoint after the WP-5 gate.
 
 # 9.10 Executive Progress Dashboard
 
-## 9.10.1 Module dashboard
+**Removed on 2026-08-02, deliberately.** This section restated module maturity,
+engine maturity and portfolio metrics that are owned by `AI/AI_STATE.md` and the
+Product Architecture. Three copies of the same numbers guaranteed that at least
+one was wrong at any moment, and that is precisely what happened.
 
-| Module | Maturity | What currently works | What does not yet work | Certification | Main blocker | Next milestone | Production-ready |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Setup | M7 | Provisioning, company/branch/calendar/COA/series/tax setup | CAS/opening/rule decisions; operational evidence | Combined scope Blocked | Restore + browser evidence | Setup/Master certification evidence | **No** |
-| Master Data | M7 | Core parties/items/UOM/warehouses/bank/payment terms | Some masters have no UI; supplier bank absent | Combined scope Blocked | Same evidence plus scope gaps | Source-backed onboarding set | **No** |
-| Sales & Receivables | M4 | SI/CS/OR/CM core lifecycles, AR/read reports | Conversion, returns, broad source review, attachments, full reconciliation | In Progress | Whole-cycle evidence | Canonical Sales flow | **No** |
-| Purchasing & Payables | M4 | PO/VB/CP/PV/VC core workflows | Receiving journal, match, returns, full evidence | In Progress | Receiving asymmetry | Canonical Purchase flow | **No** |
-| Inventory | M4 | Balance, movements, adjustments, transfers, counts | Goods Issue, reliable valuation/replay, control tie-out | In Progress | C-01 + valuation variance | WP-5 gate, then value checkpoint | **No** |
-| Banking & Treasury | M3 | Bank-account master; source-module receipts/payments | Canonical treasury and reconciliation workflows | Not Started | Empty governed data; PAD-004 | Architecture/ownership decision | **No** |
-| Fixed Assets | M3 | Routes and backend routines only | Canonical asset lifecycle and policy master | Not Started | Depreciation authority absent | Phase-I architecture | **No** |
-| Accounting | M4 | JE/reversal, GL, ADL, TB, reviews, trace backend | All-consumer proof, schedules, close, reconciliations | Core In Progress; Schedules Not Started | Integrated flow evidence | Phase-C proof | **No** |
-| Compliance | M4 | Reviews, ledgers, books and audit surfaces in part | Tax Engine, workpapers/returns/certificates/filed artifacts | Blocked | PAD-001 | Tax architecture | **No** |
-| Reports | M4 | Primary FS and several source-backed reports | Nine reconciliations, complete drill/export and dimensional adoption | In Progress | Source/reconciliation proof | Phase-J report pack | **No** |
-| Administration & Security | M1 | Certified enforcement engines exist | No product administration workflow | Not Started | PAD-003 | Ownership decision | **No** |
-| Dashboard *(surface)* | M4 | Setup/count/deadline monitoring | KPI grid, roll-up, export, owner | No scope | Ownership/KPI contract | Product decision | **No** |
+There is exactly one status authority: **`AI/AI_STATE.md`**.
 
-## 9.10.2 Shared-engine dashboard
-
-| Engine | Maturity | Certified scope | Consumers | Main blocker | Next milestone |
-| --- | --- | --- | --- | --- | --- |
-| Posting | M7 | None as whole engine; Kernel P5.2 enforced | All posting modules | Inventory P6 reconciliation | Phase-C flows / later P6 |
-| Inventory Accounting | M2 | WP-1…WP-4 work packages only | Future Inventory/Posting | WP-5 rejected; C-01 | WP-5 amendment and gate |
-| AR | M4 | None | Sales, Accounting, Reports | Scenario-wide control proof | Canonical Sales flow |
-| AP | M4 | None | Purchasing, Accounting, Reports | Scenario-wide control proof | Canonical Purchase flow |
-| Payment & Application | M4 | None | Sales, Purchasing, Banking | Over/unapplied/reversal/concurrency proof | Phase C/E/F/H evidence |
-| Tax | M0 | None; absent | Sales, Purchasing, Compliance | PAD-001 | Phase-D architecture |
-| Document Conversion | M1 | None | Sales, Purchasing | No implementation | Phase-E/F design |
-| Number Series | M8 | **Certified** | Transaction modules | Broader provisioning limitation | Preserve; consumer module evidence |
-| Approval & Workflow | M4 | None | Imports; future transactions | One proven consumer | Transaction rollout plan |
-| Period Lock & Closing | M4 | None | Posting modules | Year-end close/reopen | Phase C/J |
-| Reversal/Void/Correction | M4 | None | Posting modules | Incomplete transaction coverage | Canonical flows then module phases |
-| Audit & Immutability | M8 | **Certified** | Every module | Hosted parity later | Preserve; hosted proof Phase K |
-| Permissions & RLS | M8 | **Certified** | Every module | Hosted/browser strengthening | Preserve; Phase-K proof |
-| Dimension | M8 | **Certified** | Posting modules, Reports | Management reports do not consume certified report | Phase-J adoption |
-| Currency | M1 | None; deferred | Future modules | PAD-005 | PHP-only scope maintained |
-| Reporting & Reconciliation | M4 | None | Every module | 0/9 certified reconciliations | Phase-C then J pack |
-| Attachment & Traceability | M4 | None | Transactions/reports | File workflow absent; trace unlisted | PAD-008 and module adoption |
-| Backup & Recovery | M0 | None | Whole product | No architecture/evidence | PAD-007 and Phase K |
-| COA | M4 | None | Posting, Accounting, Reports | Consumer migration incomplete | Complete adoption/certification |
-
-## 9.10.3 Exact portfolio metrics
-
-- **Certified modules:** 0 / 11 certification scopes.
-- **Certified engines:** 4 / 19 engine assessment scopes.
-- **Certified work packages:** IA-5 ECC 4 / 9; no other programme ratio is
-  asserted here.
-- **Modules by maturity:** M1 1; M3 2; M4 6; M7 2. Dashboard separately M4.
-- **Engines by maturity:** M0 2; M1 2; M2 1; M4 9; M7 1; M8 4.
-- **Canonical workflows proven:** 0 / 6 portfolio reference flows in §9.5.
-- **Source-backed transaction workspaces:** 1 / 41 source-reviewed registry
-  entries. The other 40 are structurally registered but transaction-matrix-only;
-  they are not all equivalent to UI-only routes.
-- **UI-only/scaffold workspaces:** 33 pure-deferred reachable routes.
-- **Disabled/deferred navigation features:** 18 disabled placeholders; 33
-  pure-deferred reachable routes; 55 duplicate labels. These sets overlap in
-  purpose and must not be summed as unique capabilities.
-- **Deferred features:** 18 explicitly disabled navigation placeholders. This
-  is a navigation-entry count, not a count of all deferred product requirements.
-- **Deferred backing structures:** 61 `future-deferred` tables and 21
-  `workflow-deferred` tables. These are homogeneous table-class measures, not
-  feature counts.
-- **Hosted migration parity:** through migration `20260716000005`; 51 later
-  local migrations are not hosted.
-- **Backup/restore evidence:** **Not Tested**.
-- **Product readiness:** **Not Ready — Internal QA/demo only**.
-
-No “Overall ERP” percentage is permitted. Any percentage used in future must
-state a homogeneous numerator, denominator and meaning.
-
----
+If an executive view is needed, generate it from the repository at the time it is
+asked for — exercised posting entry points, evidenced reconciliations, passing
+test counts — rather than maintaining a copy by hand.
 
 # 9.11 Repository Health Assessment
 
 | Area | Evidence-based assessment |
 | --- | --- |
 | Product vision | Strong, differentiated and valuable: accounting-first PH compliance for multi-company businesses. It is broader than current delivery capacity and needs a pilot scope. |
-| Accounting architecture | The strongest part of PXL. The sealed posting doorway and immutable, traceable ledger are excellent. Receiving accounting and Inventory valuation are serious unresolved exceptions. |
+| Accounting architecture | The strongest part of PXL. The sealed posting doorway and immutable, traceable ledger are excellent. Receiving accounting and inventory-to-control now reconcile; three-way match and sales-side COGS remain open. |
 | Engineering architecture | Strong database controls and evidence discipline. Complexity is high, local/hosted states diverge, and dormant architecture risks outrunning product workflows. |
 | Repository structure | Generally governed and navigable, but the dirty tree, large active-doc set and prior missing/assumed review create provenance risk. |
 | Code maturity | Substantial local implementation with many guarded RPCs and tests. Maturity is uneven: strong transaction cores coexist with empty module scaffolds. |
 | Module maturity | No module is M8 or M9; no transactional module is M5. Setup/Master are closest to certification. |
 | Certification maturity | Engine certification is meaningful and has found critical defects. Module certification has produced no certified module; work-package throughput must not become the goal. |
 | Documentation quality | Deep and evidence-rich, but historically fragmented and repetitive. This constitution/roadmap/index model should reduce reconstruction work. |
-| Test quality | Strong pgTAP breadth, negative controls and governance guards. Test presence is sometimes mistaken for workflow maturity; browser and restore evidence remain weak/absent. |
+| Test quality | Strong pgTAP breadth (116 files / 2,709 assertions), negative controls and governance guards, plus 60 frontend source tests. Test presence is sometimes mistaken for workflow maturity; **there is no automated browser coverage at all** over 178 pages, and restore evidence is mechanised but not operated over real books. |
 | UI/runtime alignment | Poor in deferred clusters: 33 pure empty routes and 18 placeholders. Backend/UI adoption gaps also exist. |
 | Security | Locally strong in certified RLS/immutability scope. Hosted parity and operational administration remain unproven. |
 | Auditability | Strong source/journal/audit foundations; attachments and some persisted statutory artifacts are absent. |
-| Production readiness | **Not ready.** Hosted parity, restore, operations, opening balances, module certification and UAT are missing. |
+| Production readiness | **Not ready.** Hosted parity, operated/offsite recovery, real cut-over/browser/UAT, module certification and support operations are missing. |
 | Biggest strength | The database-enforced accounting/security control foundation, especially the single Posting doorway and independently certified engines. |
 | Biggest weakness | No fully proven business-to-financial-statements-to-tax workflow, despite a very large surface and foundation programme. |
 | Most dangerous assumption | That green tests, closed findings, rendered routes or certified work packages imply a deployable ERP. They do not. |
-| Most valuable next investment | After the bounded WP-5 documentation repair, prove the two Phase-C canonical accounting flows and resolve Receiving/Tax/opening/restore decisions. |
+| Most valuable next investment | Finish operated/offsite recovery (PAD-007), then validate the local onboarding build and implement the decided Tax Engine boundary. |
 | Activities that should stop | Mixed-unit percentages; page/table counts as progress; automatic continuation of dormant work packages; duplicate authority documents; unsupported hosted claims; cosmetic expansion before workflow proof. |
 | Activities that should continue | Database-enforced invariants; small governed scopes; independent negative evidence; exact reconciliations; explicit dormancy; preserved chronology; CPA/security review. |
 
@@ -999,7 +967,6 @@ Every future AI agent begins with:
 
 1. `AI/AGENT_SYSTEM_PROMPT.md`
 2. `AI/AI_STATE.md`
-3. `AI_LAST_SESSION.md`
 4. `docs/PXL/01. Architecture/PXL_PRODUCT_ARCHITECTURE.md`
 5. this roadmap when planning, sequencing, reporting maturity or selecting work
 6. only the exact certification/domain authorities named by the active mission
@@ -1011,33 +978,34 @@ implementation instruction.
 
 # 9.13 Selected Next Governed Mission
 
-**Selected mission:** **WP-5 Engineering Amendment — documentation only, limited
-to WP5-AG-001 through WP5-AG-003.**
+**Selected mission: PHASE 2 — OPERATIONAL SAFETY. Prove backup and restore.**
 
-Why it remains next:
+Produce a scheduled `pg_dump`, restore it into a clean database, diff the result,
+record RPO/RTO, and write a rollback runbook you have actually executed once.
 
-1. Phase A is complete when this mission validates; product taxonomy and roadmap
-   no longer need reconstruction.
-2. WP-5 is the current rejected engineering frontier and its three blockers are
-   exact documentation defects, not unknown product scope.
-3. The amendment is the smallest safe mission: it changes no runtime and grants
-   no implementation authority.
-4. Deterministic Inventory economic order is ultimately required for reliable
-   COGS, valuation, Inventory-to-GL reconciliation and Posting P6, so clearing the
-   unsafe contract advances a real accounting dependency.
-5. Higher-value product blockers—Tax ownership, opening balances, backup,
-   Receiving accounting—need Product Owner/CPA/Operations decisions or broader
-   architecture. They are sequenced and cannot be guessed into implementation.
-6. WP-5 is **not** authority to continue WP-6…WP-9 automatically. A value
-   checkpoint after its gate prevents over-engineering and moves priority to the
-   Phase-C accounting flows if later dormant work is not immediately necessary.
+Why it is next:
 
-The next mission must not implement WP-5, resolve the three findings by inference,
-alter ADR-C01/ECC-01, activate Inventory, touch Posting/Kernel, begin IA-6 or make
-hosted changes. After the amendment, a separate WP-5 Authorisation Gate must
-decide whether implementation may begin.
+1. It is Gate 23/24 for **every** module. Nothing reaches M9 without it.
+2. It is the only thing standing between Setup and Master Data — which has a
+   completed review with **zero defects** — and PXL's first certified module.
+3. It is not software. It is the cheapest certification progress available and it
+   has been the stated blocker for weeks.
+4. Losing the books to an unrecoverable database ends the product. No accounting
+   feature outranks that.
 
----
+Then close hosted parity, which grows more dangerous with every undeployed
+migration.
+
+**Superseded on 2026-08-02.** The previously selected mission was the WP-5
+Engineering Amendment and its Authorisation Gate. That programme is **frozen**.
+The reasoning that made it next — that deterministic economic order is required
+for Inventory-to-GL reconciliation — was wrong: `PXL-AUD-073` reconciled inventory
+to its control account at 0.00 variance with no chronology work at all, because
+the actual defect was a missing journal entry on goods receipt. Deterministic
+same-timestamp ordering is a scale and audit-replay refinement, not a correctness
+prerequisite under weighted-average valuation. WP-5…WP-9 and IA-6 remain
+unauthorised and must not resume without a demonstrated costing-replay
+requirement.
 
 # 9.14 Maintenance and Non-Authority
 

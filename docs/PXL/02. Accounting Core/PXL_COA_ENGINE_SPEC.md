@@ -7,7 +7,7 @@
 **Read When:** Implementing or certifying account resolution, posting-account selection, COA lifecycle, change policy, or FS mapping
 **Do Not Read For:** Tax computation/interpretation, report presentation/layout, budgeting, or analytics — those belong to their own engines
 **Last Reviewed:** 2026-07-24 (frozen after approved clarifications)
-**Relationship:** Implements the resolution hierarchy stated in [PXL_ACCOUNTING_RULES.md](PXL_ACCOUNTING_RULES.md); consumes `chart_of_accounts` (as enriched by MDP-04) and `company_accounting_config`; certified under the engine half of the Production Certification Program, [PXL_ENGINE_CERTIFICATION_STANDARD.md](../13. Testing and Validation/PXL_ENGINE_CERTIFICATION_STANDARD.md); status in [PXL_CERTIFICATION_MATRIX.md](../13. Testing and Validation/PXL_CERTIFICATION_MATRIX.md). Supersedes no existing document.
+**Relationship:** Implements the resolution hierarchy stated in [PXL_ACCOUNTING_RULES.md](PXL_ACCOUNTING_RULES.md); consumes `chart_of_accounts` (as enriched by MDP-04) and `company_accounting_config`; certified under the engine half of the Production Certification Program, `docs/PXL/00. Governance/PXL_HOW_WE_WORK.md` §6 (quality bars); status in [PXL_CERTIFICATION_MATRIX.md](../13. Testing and Validation/PXL_CERTIFICATION_MATRIX.md). Supersedes no existing document.
 
 > **Provenance.** No prior "COA Engine Architecture Version 2" document existed in the repository; the primitives (`ref_mapping_key`, `account_mapping`, `fn_resolve_account`, `fs_structure`, `account_fs_map`) did not exist. This specification was authored, reviewed with clarifications, and frozen on 2026-07-24. It is now the authoritative contract; implementation follows it and does not reinterpret it.
 
@@ -139,7 +139,7 @@ A reusable DEFINER provisioning generator, `fn_provision_pxl_standard_coa(compan
 
 ## 10. Certification
 
-- Registered as certifiable engine **#19** in [PXL_ENGINE_CERTIFICATION_STANDARD.md](../13. Testing and Validation/PXL_ENGINE_CERTIFICATION_STANDARD.md) — a distinct shared engine, **not** merged into the Posting Engine.
+- Registered as certifiable engine **#19** in `docs/PXL/00. Governance/PXL_HOW_WE_WORK.md` §6 (quality bars) — a distinct shared engine, **not** merged into the Posting Engine.
 - Gates per that standard: contract documented and matching behavior; invariants (deterministic resolution, fail-closed, ambiguity-rejection, leaf-post-only, valid lifecycle transitions, immutable-attribute rejection, one active FS mapping, historical reproduction) proven by regression test `081_coa_engine_certification_test.sql`; DB-level protections (constraints, triggers, unique indexes, RLS) enforce them server-side; success + failure + equivalence tests pass; full regression green on fresh `--no-seed` replay; canonical lane green.
 - **Phase A certification decision is bounded:** the resolver is proven correct and equivalence-identical to current config, and the lifecycle / change-policy / FS-registry frameworks are proven, but because Phase A rewires no consumer, engine gates 2 and 4 ("every invariant holds / success tests pass across every applicable implemented transaction") are **not** yet satisfiable. The engine therefore remains **In Progress — Phase A foundation certified-green**; full COA Engine certification is gated on Phase B consumer migration. This is recorded honestly in the matrix; no premature "Certified" claim is made.
 

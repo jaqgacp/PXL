@@ -55,7 +55,15 @@ function freshSchema() {
   runStep('fresh-schema', 'Replay every local migration without seed data', 'supabase', ['db', 'reset', '--local', '--no-seed']);
 }
 
+// The regression suite establishes its own database state, exactly as the
+// canonical lane does. It is not a preference: several fresh-data end-to-end
+// tests provision their own tenant through fn_provision_company, whose
+// zero-company bootstrap branch only exists while `companies` is empty. Run
+// without this reset, straight after the canonical lane, the suite reports a
+// red lane that says nothing about the product — only about what ran before it.
+// A gate whose result depends on execution order is not a gate.
 function regression() {
+  freshSchema();
   runStep('regression', 'Run the complete pgTAP regression suite', 'supabase', ['test', 'db', '--local', 'supabase/tests']);
 }
 

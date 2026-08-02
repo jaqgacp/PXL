@@ -114,32 +114,39 @@ SELECT set_eq(
            ('fn_add_posting_line_push')$$,
   'service_role has only the three approved persistence entry points');                -- 9
 
-SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 80,
-  'the complete static ledger-capable call graph contains 80 functions');              -- 10
+-- PXL-AUD-073 added fn_post_receiving_report, its source-locked implementation,
+-- and brought fn_confirm_receiving_report into the ledger-capable graph, because
+-- confirming a goods receipt now posts a journal instead of moving stock silently.
+-- PAD-002 adds the opening-balance post and reversal writers; both reach the
+-- ledger exclusively through the sanctioned Accounting Kernel.
+-- Its Receipt and Payment Voucher continuation layers retain two private,
+-- non-client-executable native-document cores.
+SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 85,
+  'the complete static ledger-capable call graph contains 85 functions');              -- 10
 
 SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
   'every function in the static ledger-capable call graph is SECURITY DEFINER');       -- 11
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions), 420,
-  'the complete application-owned public function census contains 420 functions');    -- 12
+SELECT is((SELECT count(*)::int FROM p52_app_functions), 437,
+  'the complete application-owned public function census contains 437 functions');    -- 12
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 357,
-  'the complete application-owned SECURITY DEFINER census contains 357 functions');   -- 13
+SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 374,
+  'the complete application-owned SECURITY DEFINER census contains 374 functions');   -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('authenticated', oid, 'EXECUTE')),
-  295, 'authenticated EXECUTE coverage is completely counted');                       -- 14
+  304, 'authenticated EXECUTE coverage is completely counted');                       -- 14
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('anon', oid, 'EXECUTE')),
-  199, 'anon EXECUTE coverage is completely counted');                                -- 15
+  197, 'anon EXECUTE coverage is completely counted');                                -- 15
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('service_role', oid, 'EXECUTE')),
-  293, 'service_role EXECUTE coverage is completely counted');                        -- 16
+  303, 'service_role EXECUTE coverage is completely counted');                        -- 16
 
 SELECT is(
   (SELECT count(*)::int

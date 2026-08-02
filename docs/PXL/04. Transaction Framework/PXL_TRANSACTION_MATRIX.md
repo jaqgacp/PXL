@@ -10,7 +10,7 @@
 
 Last synced: 2026-07-23
 
-Findings Status Index checksum: 92 Retested Passed / 0 In Progress / 0 Open (92 findings)
+Findings Status Index checksum: 93 Retested Passed / 0 In Progress / 0 Open (93 findings)
 
 Purpose: this is the living source of truth for PXL transaction lifecycle, source chains, UX status, field-source status, and implementation maturity. Governed posting behavior is now defined in `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md`. Any code change that adds, removes, modifies, fixes, posts, reverses, voids, reports, validates, or re-sources a transaction field must update this file, `docs/PXL/04. Transaction Framework/PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md`, and, when accounting behavior changes, `docs/PXL/02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md` in the same session.
 

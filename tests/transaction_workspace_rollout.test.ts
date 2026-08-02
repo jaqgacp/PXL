@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { IMPLEMENTED_TRANSACTION_WORKSPACES, REQUIRED_TRANSACTION_TABS, TRANSACTION_ROLLOUT_MATRIX } from '../src/lib/transactionWorkspaceCoverage.ts'
 
@@ -137,27 +137,20 @@ test('transaction UI documentation has exactly two current authorities', () => {
   assert.match(standard, /Sole authoritative transaction-workspace UI architecture/)
   assert.match(patterns, /Sole authoritative transaction-content variation standard/)
 
-  const superseded = [
-    'docs/PXL/archive/superseded-ui-standards/PXL_STANDARD_TRANSACTION_WORKSPACE.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_TRANSACTION_WORKSPACE_DESIGN_STANDARD.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_TRANSACTION_EXPERIENCE_STANDARD.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_SALES_INVOICE_UX_STANDARD.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_SALES_INVOICE_VIEW_UX_STANDARD.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_DESIGN_SYSTEM.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_COMPONENT_LIBRARY.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_BUTTON_STANDARD.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_CARD_STANDARD.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_COLOR_SYSTEM.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_FORM_STANDARD.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_TABLE_STANDARD.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_TAB_STANDARD.md',
-    'docs/PXL/archive/superseded-ui-standards/PXL_TYPOGRAPHY_STANDARD.md',
-    'docs/PXL/archive/superseded-ui-standards/UI_UX_PRINCIPLES.md',
-  ]
-  for (const file of superseded) {
-    const source = readFileSync(join(root, file), 'utf8')
-    assert.match(source, /Status:\*\* SUPERSEDED|Status: SUPERSEDED/, `${file} must be explicitly non-authoritative`)
-  }
+  // The invariant is "exactly two current authorities", so assert that directly
+  // against the live documentation tree. This previously verified that fifteen
+  // archived files each carried a SUPERSEDED tombstone — checking that documents
+  // nobody should read still said so. Those files were deleted on 2026-08-02;
+  // the invariant survives them because it is now stated in terms of what exists
+  // rather than what was retired.
+  const uiDocs = readdirSync(join(root, 'docs/PXL/12. UI and UX'))
+    .filter((name) => name.endsWith('.md') && name !== 'README.md')
+    .sort()
+  assert.deepEqual(
+    uiDocs,
+    ['PXL_TRANSACTION_WORKSPACE_PATTERNS.md', 'PXL_TRANSACTION_WORKSPACE_STANDARD.md'],
+    'exactly two transaction-workspace UI authorities may exist; a third would reintroduce ambiguity',
+  )
 })
 
 test('field-source validation state stays explicit for non-reference transactions', () => {

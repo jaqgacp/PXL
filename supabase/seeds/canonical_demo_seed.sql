@@ -303,7 +303,9 @@ INSERT INTO company_accounting_config (
   company_id, ar_account_id, ap_account_id, default_cash_account_id,
   vat_payable_account_id, input_vat_account_id,
   ewt_withheld_account_id, ewt_payable_account_id,
-  supplier_down_payments_account_id, created_by, updated_by
+  supplier_down_payments_account_id,
+  inventory_account_id, purchase_clearing_account_id,
+  created_by, updated_by
 )
 SELECT c.id,
   (SELECT id FROM chart_of_accounts WHERE company_id = c.id AND account_code = '1100'),
@@ -314,6 +316,11 @@ SELECT c.id,
   (SELECT id FROM chart_of_accounts WHERE company_id = c.id AND account_code = '1310'),
   (SELECT id FROM chart_of_accounts WHERE company_id = c.id AND account_code = '2110'),
   (SELECT id FROM chart_of_accounts WHERE company_id = c.id AND account_code = '1330'),
+  -- PXL-AUD-073: inventory control and purchase clearing. This chart uses 1200
+  -- for Inventory and 5010 for purchase clearing, which differ from the standard
+  -- template codes; that is exactly why both are configured rather than assumed.
+  (SELECT id FROM chart_of_accounts WHERE company_id = c.id AND account_code = '1200'),
+  (SELECT id FROM chart_of_accounts WHERE company_id = c.id AND account_code = '5010'),
   auth.uid(), auth.uid()
 FROM companies c
 WHERE c.trade_name IN ('DEMO-SP-NONVAT','DEMO-CORP-VAT','DEMO-OPC-NONVAT','DEMO-SVC-VAT','DEMO-PARTNERSHIP-VAT')
@@ -326,6 +333,8 @@ ON CONFLICT (company_id) DO UPDATE SET
   ewt_withheld_account_id = EXCLUDED.ewt_withheld_account_id,
   ewt_payable_account_id = EXCLUDED.ewt_payable_account_id,
   supplier_down_payments_account_id = EXCLUDED.supplier_down_payments_account_id,
+  inventory_account_id = EXCLUDED.inventory_account_id,
+  purchase_clearing_account_id = EXCLUDED.purchase_clearing_account_id,
   updated_by = auth.uid(),
   updated_at = now();
 
@@ -644,6 +653,35 @@ SET is_active = false, updated_at = now(), updated_by = auth.uid()
 WHERE supplier_code = 'SUP-INACTIVE'
   AND company_id = (SELECT id FROM companies WHERE trade_name = 'DEMO-CORP-VAT');
 
+-- Every active canonical supplier has one verified default payee account so
+-- bank-transfer Payment Vouchers exercise the governed supplier-bank path.
+INSERT INTO supplier_bank_accounts (
+  company_id, supplier_id, bank_id, account_name, account_number, account_type,
+  bank_branch, swift_code, is_default, is_active, verification_status,
+  verified_by, verified_at, notes, created_by, updated_by
+)
+SELECT s.company_id, s.id, rb.id, s.registered_name,
+       replace(s.supplier_code, '-', '') || '-001', 'checking',
+       'Canonical branch', rb.swift_code, true, true, 'verified',
+       auth.uid(), now(), 'Deterministic canonical payee account', auth.uid(), auth.uid()
+FROM suppliers s
+JOIN companies c ON c.id = s.company_id
+JOIN ref_banks rb ON rb.bank_code = 'BDO' AND rb.is_active
+WHERE c.trade_name IN (
+  'DEMO-SP-NONVAT','DEMO-CORP-VAT','DEMO-OPC-NONVAT',
+  'DEMO-SVC-VAT','DEMO-PARTNERSHIP-VAT'
+)
+  AND s.is_active
+ON CONFLICT (supplier_id, bank_id, account_number) DO UPDATE SET
+  account_name = EXCLUDED.account_name,
+  is_default = true,
+  is_active = true,
+  verification_status = 'verified',
+  verified_by = auth.uid(),
+  verified_at = now(),
+  updated_by = auth.uid(),
+  updated_at = now();
+
 -- Simple approval workflows for demo review/SoD exploration.
 INSERT INTO approval_workflows (company_id, workflow_name, module_type, document_type, trigger_condition_type, threshold_value, is_active, created_by, updated_by)
 SELECT c.id, 'Canonical ' || x.document_type || ' approval', x.module_type, x.document_type, 'amount_exceeds', x.threshold_value, true, auth.uid(), auth.uid()
@@ -763,9 +801,13 @@ BEGIN
     PERFORM fn_receive_inventory(jsonb_build_object('company_id', v_company_a, 'warehouse_id', v_wh_golden, 'item_id', (SELECT id FROM items WHERE company_id = v_company_a AND item_code = 'ITEM-STOCK-009'), 'qty', 50, 'unit_cost', 310, 'receipt_date', '2026-01-02', 'reference_doc_type', 'DEMO_OPENING', 'notes', 'Golden opening stock B'));
   END IF;
 
+  -- PXL-AUD-073: opening journal is valued from opening receipts, not from a
+  -- live stock_balances snapshot, so it cannot drift when later seed blocks
+  -- issue stock before this runs.
   SELECT COALESCE(SUM(total_cost), 0) INTO v_total_inventory
-  FROM stock_balances
-  WHERE company_id = v_company;
+  FROM inventory_transactions
+  WHERE company_id = v_company
+    AND reference_doc_type IN ('DEMO_OPENING', 'P3_OPENING');
 
   IF NOT EXISTS (
     SELECT 1 FROM journal_entries
@@ -1062,6 +1104,10 @@ BEGIN
         'supplier_id', (SELECT id FROM suppliers WHERE company_id = v_company AND supplier_code = 'SUP-VAT-INVENTORY'),
         'supplier_name_snapshot', 'National Office Depot Inc.',
         'supplier_tin_snapshot', '902-300-001-00000',
+        'supplier_bank_account_id', (SELECT sba.id FROM supplier_bank_accounts sba
+          JOIN suppliers s ON s.id = sba.supplier_id
+          WHERE s.company_id = v_company AND s.supplier_code = 'SUP-VAT-INVENTORY'
+            AND sba.is_default AND sba.verification_status = 'verified'),
         'voucher_date', '2026-01-25',
         'payment_mode_id', v_bank_mode,
         'reference_number', 'TEST-PV-PARTIAL',

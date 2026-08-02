@@ -559,6 +559,31 @@ SET registered_name = EXCLUDED.registered_name,
     updated_by = auth.uid(),
     updated_at = now();
 
+-- Phase 3 adds suppliers beyond the base seed. Give every active canonical
+-- supplier the same deterministic verified-payee contract before PV scenarios.
+INSERT INTO supplier_bank_accounts (
+  company_id, supplier_id, bank_id, account_name, account_number, account_type,
+  bank_branch, swift_code, is_default, is_active, verification_status,
+  verified_by, verified_at, notes, created_by, updated_by
+)
+SELECT s.company_id, s.id, rb.id, s.registered_name,
+       replace(s.supplier_code, '-', '') || '-001', 'checking',
+       'Canonical branch', rb.swift_code, true, true, 'verified',
+       auth.uid(), now(), 'Deterministic canonical payee account', auth.uid(), auth.uid()
+FROM suppliers s
+JOIN companies c ON c.id = s.company_id
+JOIN ref_banks rb ON rb.bank_code = 'BDO' AND rb.is_active
+WHERE c.trade_name LIKE 'DEMO-%' AND s.is_active
+ON CONFLICT (supplier_id, bank_id, account_number) DO UPDATE SET
+  account_name = EXCLUDED.account_name,
+  is_default = true,
+  is_active = true,
+  verification_status = 'verified',
+  verified_by = auth.uid(),
+  verified_at = now(),
+  updated_by = auth.uid(),
+  updated_at = now();
+
 INSERT INTO employees (
   company_id,
   branch_id,
@@ -738,10 +763,15 @@ BEGIN
     WHERE company_id = v_company
       AND description = 'P3-GRS-OPENING-BALANCES'
   ) THEN
+    -- PXL-AUD-073: value the opening journal from the opening receipts, not
+    -- from a live stock_balances snapshot. Later seed blocks issue stock before
+    -- this runs, so the snapshot understated opening inventory by the value of
+    -- those issues and the opening journal never agreed with opening stock.
     SELECT COALESCE(SUM(total_cost), 0)
     INTO v_inventory_value
-    FROM stock_balances
-    WHERE company_id = v_company;
+    FROM inventory_transactions
+    WHERE company_id = v_company
+      AND reference_doc_type IN ('DEMO_OPENING', 'P3_OPENING');
 
     PERFORM fn_post_manual_je(
       v_company,
@@ -900,6 +930,8 @@ BEGIN
         'supplier_id', v_supplier,
         'supplier_name_snapshot', (SELECT registered_name FROM suppliers WHERE id = v_supplier),
         'supplier_tin_snapshot', (SELECT tin FROM suppliers WHERE id = v_supplier),
+        'supplier_bank_account_id', (SELECT id FROM supplier_bank_accounts
+          WHERE supplier_id = v_supplier AND is_default AND verification_status = 'verified'),
         'voucher_date', '2026-04-15',
         'payment_mode_id', v_bank_mode,
         'reference_number', 'P3-GRS-PV-PARTIAL',
@@ -1143,6 +1175,8 @@ BEGIN
         'supplier_id', v_supplier,
         'supplier_name_snapshot', (SELECT registered_name FROM suppliers WHERE id = v_supplier),
         'supplier_tin_snapshot', (SELECT tin FROM suppliers WHERE id = v_supplier),
+        'supplier_bank_account_id', (SELECT id FROM supplier_bank_accounts
+          WHERE supplier_id = v_supplier AND is_default AND verification_status = 'verified'),
         'voucher_date', '2026-05-20',
         'payment_mode_id', v_bank_mode,
         'reference_number', 'P3-NS-PV-CLOUD',
@@ -1382,6 +1416,8 @@ BEGIN
         'supplier_id', v_supplier_prof,
         'supplier_name_snapshot', (SELECT registered_name FROM suppliers WHERE id = v_supplier_prof),
         'supplier_tin_snapshot', (SELECT tin FROM suppliers WHERE id = v_supplier_prof),
+        'supplier_bank_account_id', (SELECT id FROM supplier_bank_accounts
+          WHERE supplier_id = v_supplier_prof AND is_default AND verification_status = 'verified'),
         'voucher_date', '2026-04-18',
         'payment_mode_id', v_bank_mode,
         'reference_number', 'P3-PBA-PV-PROF-PARTIAL',
@@ -1498,10 +1534,13 @@ BEGIN
     SELECT 1 FROM journal_entries
     WHERE company_id = v_company AND description = 'P3-BPC-OPENING-BALANCES'
   ) THEN
+    -- PXL-AUD-073: opening journal is valued from opening receipts, not from a
+    -- live stock_balances snapshot. See the GRS block above.
     SELECT COALESCE(SUM(total_cost), 0)
     INTO v_inventory_value
-    FROM stock_balances
-    WHERE company_id = v_company;
+    FROM inventory_transactions
+    WHERE company_id = v_company
+      AND reference_doc_type IN ('DEMO_OPENING', 'P3_OPENING');
 
     PERFORM fn_post_manual_je(
       v_company,
@@ -1603,6 +1642,8 @@ BEGIN
         'supplier_id', v_supplier,
         'supplier_name_snapshot', (SELECT registered_name FROM suppliers WHERE id = v_supplier),
         'supplier_tin_snapshot', (SELECT tin FROM suppliers WHERE id = v_supplier),
+        'supplier_bank_account_id', (SELECT id FROM supplier_bank_accounts
+          WHERE supplier_id = v_supplier AND is_default AND verification_status = 'verified'),
         'voucher_date', '2026-03-01',
         'payment_mode_id', v_bank_mode,
         'reference_number', 'P3-BPC-PV-PARTIAL',

@@ -1,0 +1,113 @@
+name: Backup drill
+
+# The Backup and Recovery Runbook §2 requires a full restore drill at least
+# weekly. Until now nothing invoked it, which meant the drill was a capability
+# rather than a service — and a drill that only runs when someone remembers is
+# indistinguishable from no drill at the moment it is needed.
+#
+# 01:00 Monday Philippine time (17:00 UTC Sunday).
+on:
+  schedule:
+    - cron: '0 17 * * 0'
+  workflow_dispatch:
+  # Recovery tooling is the one thing that must not break silently, so changes
+  # to it are drilled on the spot rather than waiting for the weekly run.
+  pull_request:
+    paths:
+      - 'scripts/backup*.sh'
+      - 'scripts/backup_*.mjs'
+      - 'scripts/restore_verify.sh'
+      - '.github/workflows/backup-drill.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  # PAD-007 selects S3-compatible object storage. This job proves that
+  # destination is reachable, writable, byte-faithful and deletable — using a
+  # canary containing no client data, so it is safe to point at the production
+  # bucket. It uploads no books: CI holds only demo data, and demo data must
+  # never land in the bucket that will hold real ones.
+  #
+  # Skipped until PXL_OFFSITE_URL is configured, so the workflow stays green
+  # while the destination is still an owner action rather than pretending the
+  # check passed.
+  destination:
+    name: Offsite destination reachable
+    if: ${{ github.event_name != 'pull_request' && vars.PXL_OFFSITE_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Canary round-trip against the real destination
+        env:
+          PXL_OFFSITE_URL: ${{ vars.PXL_OFFSITE_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.PXL_OFFSITE_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.PXL_OFFSITE_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ${{ vars.PXL_OFFSITE_REGION || 'auto' }}
+          AWS_ENDPOINT_URL: ${{ vars.PXL_OFFSITE_ENDPOINT_URL }}
+        run: npm run backup:offsite:check
+
+  drill:
+    name: Backup, restore, offsite and retention cycle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.108.0
+
+      - name: Start isolated local Supabase
+        run: supabase db start
+
+      # Drill against a populated database. A backup cycle proven only against
+      # an empty schema says nothing about restoring books.
+      - name: Load the canonical dataset
+        run: npm run test:canonical
+
+      - name: Run one full backup service cycle
+        env:
+          # Ephemeral: this archive never leaves the runner. A real deployment
+          # supplies a durable passphrase, without which the archive cannot be
+          # decrypted and the backup is worthless.
+          PXL_BACKUP_PASSPHRASE: ${{ github.run_id }}-drill-passphrase
+          PXL_OFFSITE_URL: ${{ runner.temp }}/pxl-offsite
+        run: bash scripts/backup_operate.sh
+
+      - name: Prove the offsite copy is independently restorable
+        env:
+          PXL_BACKUP_PASSPHRASE: ${{ github.run_id }}-drill-passphrase
+        # Restoring the ORIGINAL archive proves the dump. Restoring the copy
+        # that travelled to the destination proves the replication, which is a
+        # different claim and the one that matters after the host is gone.
+        run: |
+          set -euo pipefail
+          OFFSITE="${{ runner.temp }}/pxl-offsite"
+          SET=$(ls -1 "$OFFSITE"/pxl-*.manifest.json | sort | tail -1 | sed 's/\.manifest\.json$//')
+          echo "Verifying the replicated set: $SET"
+          PXL_RESTORE_DB=pxl_offsite_verify bash scripts/restore_verify.sh "$SET"
+
+      - name: Record what the drill proved
+        if: always()
+        run: |
+          echo '### Backup drill' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          if [ -f backups/drill-history.jsonl ]; then
+            echo '```json' >> "$GITHUB_STEP_SUMMARY"
+            tail -5 backups/drill-history.jsonl >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          cat >> "$GITHUB_STEP_SUMMARY" <<'NOTE'
+
+          This job proves the recovery **tooling** works on a schedule, against a
+          populated database, including replication to a destination and a restore
+          of the replicated copy.
+
+          It is **not** a backup of client books. No PXL database holds real data
+          yet: the hosted project has no deployed frontend and no consumer. Backing
+          up real books additionally requires the deferred hosted deploy and an
+          owner-supplied durable destination and passphrase — see PAD-007 and the
+          Backup and Recovery Runbook §6.
+          NOTE

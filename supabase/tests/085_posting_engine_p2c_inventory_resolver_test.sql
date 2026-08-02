@@ -26,7 +26,7 @@
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(5);
+SELECT plan(6);
 
 -- ── The four Inventory posting writers are present ─────────────────────────────
 SELECT is(
@@ -60,12 +60,20 @@ SELECT ok(
                         'fn_post_stock_transfer_source_locked_impl')),
   'every Inventory writer resolves accounts from item/warehouse-scoped account ownership'); -- 3
 
--- ── Boundary: the resolver has no inventory keys — item/warehouse-scoped resolution
---    is a future COA enhancement, explicitly outside the frozen P2 scope ────────────
+-- ── Boundary: PXL-AUD-073 introduced exactly two governed inventory keys —
+--    INVENTORY_CONTROL and PURCHASE_CLEARING — so a goods receipt can post to a
+--    configured control account instead of moving stock with no ledger effect.
+--    Per-item and per-warehouse account resolution remains future COA work, and
+--    no COGS, variance or offset key exists. ─────────────────────────────────────
 SELECT is(
   (SELECT count(*)::int FROM ref_mapping_key
-    WHERE key_code ~* 'invent|cogs|variance|offset|goods'),
-  0, 'ref_mapping_key has no inventory/COGS/variance key — item/warehouse-scoped resolution is future COA work'); -- 4
+    WHERE key_code ~* 'cogs|variance|offset'),
+  0, 'ref_mapping_key has no COGS/variance/offset key — item/warehouse-scoped resolution is future COA work'); -- 4
+
+SELECT set_eq(
+  $$SELECT key_code::text FROM ref_mapping_key WHERE key_code ~* 'invent|goods|clearing'$$,
+  $$VALUES ('INVENTORY_CONTROL'), ('PURCHASE_CLEARING')$$,
+  'exactly the two governed PXL-AUD-073 inventory keys exist');
 
 -- ── Non-vacuous: the config-read detector fires on code that DOES read config ────
 -- (Check Voucher is migrated in P2D; an out-of-scope reconciliation report still

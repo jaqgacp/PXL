@@ -2,7 +2,7 @@
 
 **Status:** Active repository navigation map
 **Authority:** Tier 1 Documentation Governance; subject-matter standards retain authority in their own domains
-**Last Reviewed:** 2026-08-01 after product-architecture consolidation
+**Last Reviewed:** 2026-08-02 after the measured product status review
 **Applies To:** Active, archived, and trash-review documentation
 **Read When:** Locating the authority for a task or reviewing documentation lifecycle
 **Do Not Read For:** Mandatory fresh-session startup; `AI/AI_STATE.md` provides the smaller task map
@@ -14,13 +14,19 @@ This index routes readers to the current authority without duplicating the speci
 Humans begin with `README.md`, then use this index. After applying platform and
 repository operating instructions, AI agents use this permanent reading order:
 
-1. `AI/AGENT_SYSTEM_PROMPT.md`
-2. `AI/AI_STATE.md`
-3. `AI_LAST_SESSION.md`
-4. `AI_PROGRESS.md`
-5. `01. Architecture/PXL_PRODUCT_ARCHITECTURE.md`
-6. `01. Architecture/PXL_PRODUCT_EXECUTION_ROADMAP.md` when planning or sequencing product work
-7. only the exact finding, code, tests, and governing specifications named by the active task
+1. `AI/AGENT_SYSTEM_PROMPT.md` — how to work in this repository
+2. `AI/AI_STATE.md` — **the only status authority**: what is true today and what to do next
+3. `00. Governance/PXL_HOW_WE_WORK.md` — the build loop, the five things that must stay solid, and when something is done
+4. `01. Architecture/PXL_PRODUCT_ARCHITECTURE.md` — what PXL is
+5. `01. Architecture/PXL_PRODUCT_EXECUTION_ROADMAP.md` when planning or sequencing product work
+6. only the exact finding, code, tests, and governing specifications named by the active task
+
+**Single-source rule.** Status facts — finding counts, test counts, certification
+standing, reconciliation standing, maturity — live in `AI/AI_STATE.md` and
+nowhere else. A document that restates them will drift and become a trap for the
+next session. `AI_PROGRESS.md` and `AI_LAST_SESSION.md` were exactly that failure
+and were archived on 2026-08-02: both still reported inventory as unreconciled
+after it had been fixed. Session history is `git log`, not a hand-maintained file.
 
 The normal AI startup set must not expand to all Markdown, all Compliance files, all Sales Invoice files, or archived reports.
 
@@ -46,11 +52,9 @@ Authority hierarchy:
 | `PXL_DOCUMENTATION_INDEX.md` | Tier 1 Documentation Governance | Master navigation and lifecycle rules | Locating documentation authority |
 | `PXL_END_TO_END_AUDIT_FINDINGS.md` | Tier 1 Findings Register | Only official defect, audit issue, blocker, and remediation register | Opening a specific finding or reconciling official status |
 
-No module-specific findings register, phase tracker, or duplicate backlog is
-current authority. `AI_PROGRESS.md` is the permanent executive status dashboard
-and is not an architecture or certification authority. `AI_LAST_SESSION.md` is
-the current mission hand-off, is overwritten every mission, and is not
-long-term product authority.
+No module-specific findings register, phase tracker, duplicate backlog, or
+second status dashboard is current authority. Do not recreate `AI_PROGRESS.md` or
+`AI_LAST_SESSION.md`; see the single-source rule in §1.
 
 ## 3. AI and Human Startup
 
@@ -58,8 +62,6 @@ long-term product authority.
 | --- | --- | --- | --- |
 | `AI/AGENT_SYSTEM_PROMPT.md` | Tier 0 AI Fast Start | Stable AI operating rules and startup protocol | Current |
 | `AI/AI_STATE.md` | Tier 0 AI Fast Start | Small operational handoff and recommended next task | Current; validate with `npm run docs:ai-state-check` |
-| [`AI_LAST_SESSION.md`](../../AI_LAST_SESSION.md) | Tier 0 Current Mission Handoff | Last mission, validation, findings, next mission, and next-agent instructions; not long-term product authority | Current; overwrite every mission |
-| [`AI_PROGRESS.md`](../../AI_PROGRESS.md) | Executive Status Dashboard | Plain-language evidence-based module, engine, programme, and readiness status; not architecture or certification authority | Current; reconstruct only from current evidence |
 | `.claude/CLAUDE.md` | Non-authoritative adapter | Routes Claude tooling to the Tier 0 startup authorities | Current |
 | `README.md` | Human landing | Repository overview and commands | Current |
 
@@ -138,9 +140,11 @@ long-term product authority.
 | TIN | `10. Compliance/PXL_PHILIPPINE_TIN_STANDARD.md` |
 | Reports | `11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md` |
 | Canonical dataset | `13. Testing and Validation/PXL_CANONICAL_DEMO_DATASET.md` |
-| Module certification standard | `13. Testing and Validation/PXL_MODULE_CERTIFICATION_STANDARD.md` |
-| Engine certification standard | `13. Testing and Validation/PXL_ENGINE_CERTIFICATION_STANDARD.md` |
-| Product completeness checklist (pre-certification capability expectations) | `13. Testing and Validation/PXL_PRODUCT_COMPLETENESS_CHECKLIST.md` |
+| How we work: the build loop and the two quality bars | `00. Governance/PXL_HOW_WE_WORK.md` |
+| The whole plan and the current phase | `01. Architecture/PXL_DELIVERY_PLAN.md` |
+| Outcome-driven phase sequencing (Phases 1–9) and where every module and engine completes | `01. Architecture/PXL_PRODUCT_EXECUTION_ROADMAP.md` §9.7 |
+| Backing up and restoring the books | `00. Governance/PXL_BACKUP_AND_RECOVERY_RUNBOOK.md` |
+| Deploying to the hosted project | `00. Governance/PXL_DEPLOY_RUNBOOK.md` |
 | Certification status dashboard | `13. Testing and Validation/PXL_CERTIFICATION_MATRIX.md` |
 | Findings | `PXL_END_TO_END_AUDIT_FINDINGS.md` |
 

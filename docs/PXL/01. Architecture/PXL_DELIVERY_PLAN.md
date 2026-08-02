@@ -1,0 +1,256 @@
+# PXL Delivery Plan — from here to a finished product
+
+**Status:** Active — the complete end-to-end plan to finish PXL
+**Authority:** Tier 1 Delivery Planning, subordinate to `PXL_PRODUCT_ARCHITECTURE.md`
+**Owner / Domain:** Product
+**Read When:** Asking "what is the whole plan?", "what phase are we in?", or "what do I build next?"
+**Do Not Read For:** Current status (`AI/AI_STATE.md`), what PXL is (Product Architecture), or how we work (`00. Governance/PXL_HOW_WE_WORK.md`)
+**Date:** 2026-08-02
+
+> `PXL_PRODUCT_EXECUTION_ROADMAP.md` holds the dependency map, the two quality
+> bars and the per-module criteria. **This document is the plan itself** — the
+> ordered list of phases, what each delivers, and how you know it is done.
+
+---
+
+## The target
+
+**One Philippine SME — VAT-registered, inventory-carrying — runs its real books
+on PXL for one full quarter, in parallel with its existing process, and the
+quarter closes correctly.**
+
+That is "finished" for v1. Everything below is sequenced to reach it. Nothing
+that does not serve it belongs in v1.
+
+---
+
+## Scope decisions already made
+
+These are settled. Do not reopen them without a Product Architecture Amendment.
+
+| Decision | Ruling |
+|---|---|
+| **Banking & Treasury** | **v2.** Keep only Check Voucher (the Cash Disbursements Book needs it). Petty cash, bank reconciliation, transfers → v2. |
+| **Fixed Assets** | **v2**, except a minimal straight-line depreciation run if the pilot client holds assets. |
+| **Income Tax** | **v2.** Ten screens, none has ever held a row. |
+| **Accounting Schedules** | **v2.** Amortisation and revenue recognition. |
+| **IA-5 / ECC chronology** | **Frozen.** Dormant, no consumers. Inventory reconciles without it. Do not resume without a real costing-replay requirement. |
+| **Multi-currency** | **Deferred.** PHP only. |
+| **Payroll** | **Separate future product.** Never counted in PXL progress. |
+| **Deferred surfaces** | Marked **Not built** in the navigation via `src/lib/deferredSurfaces.ts`. |
+
+---
+
+## The phases
+
+Effort assumes one developer with AI assistance. **Phase 1 is complete.**
+
+### ✅ Phase 1 — Close the accounting break · DONE 2026-08-02
+
+Receiving a goods receipt moved stock without writing a journal, so inventory
+could never reconcile to its control account.
+
+Delivered: `PXL-AUD-073`. Receipt posts DR inventory control / CR purchase
+clearing through the sealed doorway; `INVENTORY_CONTROL` and `PURCHASE_CLEARING`
+governed in `company_accounting_config`; cost layers no longer created for
+weighted-average items; opening journals valued from opening receipts.
+
+**Evidence:** inventory variance ₱0.00 in every stock-holding company; guard test
+`111`; fresh-data end-to-end test `112` proving PO → RR → Bill from first
+principles. First of nine critical reconciliations evidenced.
+
+---
+
+### ◐ Phase 2 — Operational safety · **IN PROGRESS**
+
+Cheapest remaining unblock. Gates every module. Not software.
+
+| Item | Status |
+|---|---|
+| 1. `pg_dump` with checksum, manifest and optional AES-256 encryption | ✅ `scripts/backup.sh` |
+| 2. **Restore into a clean database and diff** | ✅ `scripts/restore_verify.sh` — 92 tables, 0 mismatches |
+| 3. Record RPO and RTO | ✅ measured: restore 6–8 s; RPO 24 h pilot (the 1 h production RPO needs PITR, deferred by PAD-007) |
+| 4. Runbook executed at least once | ✅ `00. Governance/PXL_BACKUP_AND_RECOVERY_RUNBOOK.md` |
+| 5a. Put the drill on a schedule | ✅ `.github/workflows/backup-drill.yml`, weekly + on any recovery-script change |
+| 5b. Offsite replication, retention, fail-closed cycle | ✅ `npm run backup:operate` — replicated copy restored independently; every refusal exercised |
+| 5c. PAD-007 operating model | ✅ **decided 2026-08-02** — self-managed encrypted backups to S3-compatible object storage; no provider PITR for the pilot |
+| 5d. Create the bucket, escrow the passphrase | ☐ **owner action** — `npm run backup:offsite:check` proves a destination with a canary holding no client data |
+| 6. Close hosted parity | ⏸ **deliberately deferred** — nothing consumes the hosted database today. Change set proven non-destructive and the upgrade rehearsed; `npm run deploy:hosted` runs the guarded sequence when wanted. **Must happen before Phase 6.** |
+
+Verified 2026-08-02: full drill passes, encrypted round-trip passes, and the
+verifier was **proven able to fail** against a deliberately corrupted restore
+(dropped function and deleted rows both detected). A restored database also stays
+kernel-protected — deleting ledger rows in the restored copy is still rejected by
+the Accounting Kernel.
+
+**Done when:** the drill runs on a schedule against an offsite copy.
+
+The drill now runs on a schedule and the offsite path is built, proven and fails
+closed. PAD-007 selects self-managed encrypted replication to S3-compatible
+object storage; provider-native PITR is not adopted for the pilot, so the
+promise is the 24-hour pilot RPO and the 1-hour production RPO stays open until
+a production claim is actually on the table. What is left is not code: an actual
+bucket and a passphrase escrowed off the host. Until those exist,
+recoverability is **mechanised but not operated over anything real**, which is
+honest rather than alarming — no PXL database holds real books yet.
+
+Hosted parity is deferred by decision, not blocked by engineering — see the
+Deploy Runbook §2a.
+
+---
+
+### Phase 3 — Make it onboardable · implemented locally 2026-08-02
+
+The local implementation is complete. Operational acceptance remains bounded by
+Phase 2 recoverability, hosted parity, deployment of the invite function, and a
+real-company cut-over/browser/UAT rehearsal.
+
+1. **Opening balances** (PAD-002) — a governed cut-over document: trial balance,
+   AR by customer and invoice, AP by supplier and bill, inventory by item and
+   warehouse with cost, bank balances. Posts one balanced opening journal through
+   the sealed doorway. Must reconcile subledger to control **by construction** —
+   the ₱630 seed defect found in Phase 1 is exactly what happens when it does not.
+2. **Supplier bank details** — a payment voucher cannot carry a validated payee
+   account today.
+3. **Minimum administration UI** (PAD-003) — user list, invite, company
+   membership, role assignment, branch scope. Four screens. Today memberships are
+   created by SQL.
+4. Surface the master-data import framework (built, no menu entry).
+
+**Done when:** you can take a real company's December 31 trial balance and stand
+them up on PXL. The capability and fresh-company accounting proof now exist
+locally; this is not yet evidence that a real or hosted onboarding was operated.
+
+---
+
+### Phase 4 — Tax Engine · 4–6 weeks
+
+PAD-001. Decide it as **Accounting-owned, one calculator.**
+
+1. `fn_calculate_tax(context) → tax_components[]` — one authority for VAT
+   (inclusive and exclusive), percentage tax, EWT by ATC, FWT.
+2. Migrate the six save-routines that compute tax independently today. Only one
+   handles VAT-inclusive pricing — that inconsistency is a live correctness risk.
+3. Regression test asserting every caller produces byte-identical output to today
+   **before** switching.
+
+**Done when:** one place to change a BIR rate. Compliance unblocks.
+
+---
+
+### Phase 5 — Prove the two canonical flows · 3–4 weeks
+
+Mostly proof of what exists, not new features.
+
+1. **Sales:** Quotation → SO → DR → SI → OR → VAT → SLS → Sales Journal → AR →
+   TB → FS, including credit memo and void.
+2. **Purchase:** PO → RR → Bill → PV → EWT → 2307 → SLP → Purchase Journal → AP →
+   TB → FS, including three-way match and vendor credit.
+3. **Close the remaining outbound inventory entry points.** Corrected
+   2026-08-02: Sales Invoice already posts DR COGS / CR inventory with weighted
+   average or FIFO layer consumption, an insufficient-stock guard and reversal
+   on void — `fn_post_sales_invoice`, asserted by test `054`, and visible in the
+   canonical ledger as COGS debits equalling inventory credits. The earlier
+   claim that sales-side COGS did not exist was wrong; inventory could not
+   reconcile at ₱0.00 in trading companies if it were true.
+   What is actually missing: **Cash Sales has no posting function at all**
+   (`fn_save_cash_sale` exists, `fn_post_cash_sale` does not), Customer Return
+   has no COGS path, and Delivery Receipt does not relieve inventory — relief
+   happens at invoice, so goods shipped and not yet invoiced sit in stock at
+   full cost with no unbilled-delivery account.
+4. Evidence the remaining **critical reconciliations (currently 1 of 9)**. VAT and
+   withholding already reconcile at zero variance — nearly free.
+5. **Document Conversion**, minimally: carry quantities forward, prevent double
+   conversion. This is what makes quote → invoice real.
+6. Surface the accounting trace in the menu (complete, currently unreachable).
+
+Each flow proven by a **fresh-data end-to-end test in the style of `112`**, never
+against the demo seed.
+
+**Done when:** both flows meet the Pilot Bar with evidence.
+
+---
+
+### Phase 6 — Pilot hardening · 3–4 weeks
+
+1. **Frontend tests.** Playwright over the two canonical flows plus login,
+   company switch, period lock. ~15 tests. The `npm run test:frontend` lane exists.
+2. Error handling — every RPC failure surfaces a usable message, not a Postgres
+   exception.
+3. Monitoring — error capture, slow-query log, and a **daily reconciliation job
+   that alerts if inventory or AR/AP stops tying out.**
+4. Notifications, minimum viable — approval routing currently notifies nobody.
+5. Retire or finish the remaining **Not built** surfaces so the pilot menu is honest.
+
+**Done when:** a stranger can use it without you sitting beside them.
+
+---
+
+### Phase 7 — Pilot · one quarter, parallel run
+
+One named client. Real transactions. Their existing books alongside. Reconcile
+monthly, fix what breaks.
+
+**This is where the remaining unknowns surface.** No amount of internal testing
+finds what one real bookkeeper finds in a week.
+
+**Done when:** a quarter closes correctly and the client's accountant signs the
+financial statements.
+
+---
+
+### Phase 8 — v2 · after the pilot survives a quarter
+
+Banking & Treasury · full Fixed Assets lifecycle · Income Tax · Accounting
+Schedules · CAS accreditation · multi-currency · IA-5 resumption only if costing
+replay becomes a real complaint.
+
+---
+
+## Timeline
+
+| | |
+|---|---|
+| Phase 1 | ✅ done |
+| Phase 2 | ~2 weeks — **recoverable** |
+| Phases 3–5 | ~11 weeks — **onboardable, one tax authority, two proven flows** |
+| Phase 6 | ~4 weeks — **pilot-ready** |
+| **To pilot** | **~4 months from 2026-08-02** |
+| Phase 7 | one quarter parallel run |
+| **To production-ready** | **~8 months** |
+
+Deliberately front-loaded: after Phase 2 the product is recoverable, which is the
+difference between a setback and a catastrophe.
+
+---
+
+## The four constraints that gate everything
+
+| # | Constraint | Blocks | Phase |
+|---|---|---|---|
+| 1 | ~~Receiving adds stock with no journal~~ | — | ✅ closed |
+| 2 | ~~No schedule, no offsite path~~ Both built and proven; a durable destination and escrowed passphrase remain owner actions | Every module's production readiness | 2 |
+| 3 | ~~No opening balances~~ Local capability complete; real cut-over proof open | Pilot onboarding acceptance | ✅ local / 3 |
+| 4 | No Tax Engine | Compliance completion, statutory filing | 4 |
+
+---
+
+## How to tell if the plan is working
+
+Three honest measures. All others mislead.
+
+| Measure | 2026-08-02 | Pilot target |
+|---|---:|---:|
+| Exercised posting entry points | **12 of 24** | 18 of 24 |
+| Critical reconciliations evidenced | 1 of 9 | 9 of 9 |
+| Canonical flows meeting the Pilot Bar | 0 of 2 | 2 of 2 |
+
+Re-measured 2026-08-02; the first row previously read "11 of 22" and was wrong on
+both numbers.
+
+Menu entries, route counts, page counts and documentation volume are **not**
+progress measures. PXL learned that the hard way: **247 navigation leaf entries
+resolve to 175 distinct routes, of which 145 are backed by real data** —
+overstating delivered capability by roughly forty percent. Thirty routes are
+finished screens over permanently empty tables and are now labelled "Not built"
+in the navigation itself; a further 17 nav labels have no page at all.

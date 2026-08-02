@@ -2195,3 +2195,127 @@ re-executed fresh replay, focused `109`/`110` (2 files / 101 assertions), full
 regression (110 / 2,613), canonical accounting (30 / 748), and direct catalog
 controls before certifying WP-4. WP4-BA-003 and WP4-BA-004 remain non-blocking
 and untouched. This certification applies only to WP-4.
+
+---
+
+## PXL-AUD-073 — Inventory-to-GL reconciliation guard
+
+Status: **REMEDIATED 2026-08-02.** Confirming a Receiving Report increased
+`stock_balances`, cost layers and `inventory_transactions` while producing no
+journal entry, so inventory value drifted from its control account on every
+goods receipt. Migration
+`supabase/migrations/20260802000001_receiving_report_inventory_gl_posting.sql`
+posts the receipt through the sealed doorway as
+**DR inventory control / CR purchase clearing**, which the existing Vendor Bill
+routine already clears on the invoice side. The migration also stops creating
+cost layers for weighted-average items — every outflow path consumed layers only
+for fifo / specific identification, so weighted-average layers accumulated and
+could never deplete — and registers the governed `INVENTORY_CONTROL` and
+`PURCHASE_CLEARING` account keys.
+
+The same finding covers a seed defect: the canonical opening journal was valued
+from a live `stock_balances` snapshot taken after later seed blocks had already
+issued stock, so opening inventory in the ledger understated opening stock. The
+opening journal is now valued from the opening receipts themselves.
+
+Implementation assets:
+
+- `supabase/tests/111_inventory_gl_reconciliation_guard_test.sql`; and
+- `supabase/migrations/20260802000001_receiving_report_inventory_gl_posting.sql`.
+
+Test `111` is a dataset-invariant guard in the style of `075`: it asserts over
+whatever data is loaded rather than building an isolated fixture, so it holds
+for the canonical demo seed and for a real company alike. It proves six
+invariants — subledger equals control account to the centavo (R1), every
+confirmed receipt carrying inventory value is posted (R2), every receipt journal
+balances (R3), receipt journals touch only the two governed accounts (R4), no
+weighted-average item retains an unconsumable cost layer (R5), and every company
+holding stock has both governed account keys configured (R6).
+
+This closes the first of the nine critical reconciliations. It certifies no
+module and no engine.
+
+---
+
+## Fresh-data end-to-end purchase proof
+
+Status: **PASSING 2026-08-02.** `supabase/tests/112_purchase_to_gl_fresh_data_e2e_test.sql`
+provisions its own company, chart of accounts, fiscal calendar, number series,
+warehouse, item, supplier and documents, then drives the real chain through the
+production RPCs — `fn_save_purchase_order` → `fn_approve_purchase_order` →
+`fn_save_receiving_report` → `fn_confirm_receiving_report` → `fn_save_vendor_bill`
+→ `fn_approve_vendor_bill` → `fn_post_vendor_bill` — and proves the accounting
+from first principles across 15 assertions.
+
+**Why it exists separately from test `111`.** Test `111` asserts the
+inventory-to-GL invariant over whatever dataset is loaded, which in practice is
+the canonical demo seed. That seed was produced during early development by logic
+that was not always correct: it shipped an opening journal ₱630 short of opening
+stock because it valued opening inventory from a live `stock_balances` snapshot
+taken after later seed blocks had already issued stock. Verifying a fix against
+data that may encode the defect is circular.
+
+**It immediately earned its place.** On first run it failed at
+`fn_confirm_receiving_report` with `COA resolver: account … type liability does
+not match expected expense for key PURCHASE_CLEARING`. The `PURCHASE_CLEARING`
+key had been declared `expense` because that was inferred from the legacy demo
+chart, where clearing is account `5010 Purchases / Inventory Clearing`. Goods
+received not invoiced is conventionally a **liability**, which is what the
+standard template ships as `2015` — so a **correctly configured company could not
+receive stock at all**, while the legacy demo chart worked. The key now declares
+no expected account type and accepts either shape. The canonical lane could never
+have found this, because it only ever exercises the legacy chart.
+
+Proven: the receipt posts exactly one journal (DR inventory control 25,000.00 /
+CR purchase clearing 25,000.00); stock is 100 units at 25,000.00; the inventory
+subledger equals the control account exactly; no cost layer is created for a
+weighted-average item; posting the vendor bill returns purchase clearing to 0.00
+with no stranded cost; accounts payable carries the full 28,000.00 VAT-inclusive
+amount; the books balance at 0.00; and the net position is inventory on hand at
+cost.
+
+---
+
+## Delivery Plan Phase 3 — opening-balance fresh-company proof
+
+Status: **PASSING 2026-08-02.**
+`supabase/tests/113_opening_balances_fresh_data_e2e_test.sql` provisions an
+independent company and proves the PAD-002 cut-over contract across 31 assertions.
+It drives the production save/post/reverse RPCs, rejects manually entered control
+accounts and unbalanced or duplicate cut-overs, posts exactly one balanced opening
+journal through the sealed doorway, and reconciles opening AR, AP, inventory and
+bank balances to their live subledgers and General Ledger controls. The proof is
+PHP-only and leaves `inventory_events` at zero.
+
+## Delivery Plan Phase 3 — verified supplier payee proof
+
+Status: **PASSING 2026-08-02.**
+`supabase/tests/114_supplier_bank_payment_validation_test.sql` exercises the
+supplier-bank and Payment Voucher contract on fresh tenant data across 15
+assertions. A bank-transfer voucher fails closed without a verified bank account,
+cannot select another supplier's account, snapshots verified instructions on the
+posted voucher, and remains historically stable when the master is edited. The
+voucher still posts one balanced journal through the Accounting Kernel and IA-5
+remains dormant.
+
+## Delivery Plan Phase 3 — minimum-administration contract
+
+Status: **PASSING 2026-08-02.**
+`supabase/tests/115_minimum_administration_contract_test.sql` proves PAD-003's
+company-scoped membership, role and branch-scope RPCs across 14 assertions. It
+includes duplicate branch-input normalization, owner-only owner changes,
+administrator rejection when attempting to demote or remove an owner, last-owner
+protection, and atomic branch-scope cleanup when a membership is removed.
+
+## Delivery Plan Phase 3 — opening-subledger settlement proof
+
+Status: **PASSING 2026-08-02.**
+`supabase/tests/116_opening_subledger_settlement_e2e_test.sql` provisions a fresh
+company, posts balanced opening AR/AP, and then uses the ordinary Receipt and
+Payment Voucher save/post RPCs across 14 assertions. AR/AP ageing and General
+Ledger control balances reduce by the settled amounts, explicit opening-item
+relationships are preserved, over-application fails closed, and the opening batch
+cannot be reversed after operational journals exist. `inventory_events` remains
+zero.
+
+Together tests `113`–`116` form the Phase 3 focused lane: 4 files / 74 assertions.

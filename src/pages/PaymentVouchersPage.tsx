@@ -18,6 +18,10 @@ type PV = {
   voucher_number: string; voucher_date: string
   payment_mode_id: string | null; reference_number: string | null
   bank_account_id: string | null; total_amount: number; total_ewt: number
+  supplier_bank_account_id: string | null
+  payee_bank_name_snapshot: string | null; payee_account_name_snapshot: string | null
+  payee_account_number_snapshot: string | null; payee_bank_branch_snapshot: string | null
+  payee_swift_snapshot: string | null
   remarks: string | null; status: PVStatus
   posted_at: string | null; approved_at?: string | null; updated_at?: string | null; created_at: string
 }
@@ -25,7 +29,7 @@ type PV = {
 type PVLine = {
   _key: string; id?: string
   line_type: 'bill_application' | 'supplier_down_payment'
-  vendor_bill_id: string
+  vendor_bill_id: string; opening_ap_line_id: string
   bill_number: string; bill_total: number; bill_outstanding: number
   bill_net_base: number
   payment_amount: number; ewt_amount: number; atc_code_id: string
@@ -42,12 +46,18 @@ type SupplierRef = {
 type VendorBillRef = {
   id: string; bill_number: string; total_amount: number; outstanding: number
   net_base: number
-  bill_date: string; supplier_invoice_number: string | null
+  bill_date: string; supplier_invoice_number: string | null; source: 'native' | 'opening'
 }
 type COARef = { id: string; account_code: string; account_name: string }
 type PaymentMode = { id: string; code: string; name: string }
 type ATCCode = { id: string; code: string; description: string; rate: number }
 type Branch = { id: string; branch_code: string; branch_name: string }
+type SupplierBankAccount = {
+  id: string; account_name: string; account_number: string; account_type: string
+  bank_branch: string | null; swift_code: string | null; is_default: boolean
+  verification_status: 'unverified' | 'verified' | 'rejected'
+  ref_banks?: { bank_name: string; swift_code: string | null }
+}
 
 const EWT_VARIANCE_REASONS = [
   { value: 'rounding', label: 'Rounding' },
@@ -65,7 +75,7 @@ const today = () => new Date().toISOString().split('T')[0]
 const round2 = (n: number) => Math.round(n * 100) / 100
 
 const newLine = (): PVLine => ({
-  _key: crypto.randomUUID(), line_type: 'bill_application', vendor_bill_id: '', bill_number: '', bill_total: 0,
+  _key: crypto.randomUUID(), line_type: 'bill_application', vendor_bill_id: '', opening_ap_line_id: '', bill_number: '', bill_total: 0,
   bill_outstanding: 0, bill_net_base: 0, payment_amount: 0, ewt_amount: 0, atc_code_id: '',
   ewt_tax_base: 0, ewt_income_nature: '', ewt_variance_reason: '',
 })
@@ -104,6 +114,7 @@ export default function PaymentVouchersPage() {
   const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([])
   const [atcCodes, setAtcCodes] = useState<ATCCode[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
+  const [supplierBankAccounts, setSupplierBankAccounts] = useState<SupplierBankAccount[]>([])
   const [fStatus, setFStatus] = useState('')
   const [fSearch, setFSearch] = useState('')
   const [voiding, setVoiding] = useState(false)
@@ -135,7 +146,7 @@ export default function PaymentVouchersPage() {
       .eq('company_id', companyId).order('voucher_date', { ascending: false }).order('voucher_number', { ascending: false })
     if (fStatus) q = q.eq('status', fStatus)
     const { data } = await q
-    setVouchers(data as PV[] || [])
+    setVouchers((data as unknown as PV[]) || [])
     setLoading(false)
   }, [companyId, fStatus])
 
@@ -168,14 +179,14 @@ export default function PaymentVouchersPage() {
       .in('status', ['posted'])
       .order('bill_date')
 
-    if (!billsData || billsData.length === 0) { setOpenBills([]); return }
-
     // Get payments already applied
-    const billIds = billsData.map((b: any) => b.id)
-    const { data: pvlData } = await supabase
-      .from('payment_voucher_lines')
-      .select('vendor_bill_id,payment_amount,ewt_amount,payment_vouchers(status)')
-      .in('vendor_bill_id', billIds)
+    const billIds = (billsData || []).map((b: any) => b.id)
+    const { data: pvlData } = billIds.length
+      ? await supabase
+          .from('payment_voucher_lines')
+          .select('vendor_bill_id,payment_amount,ewt_amount,payment_vouchers(status)')
+          .in('vendor_bill_id', billIds)
+      : { data: [] }
 
     const paidMap: Record<string, number> = {}
     for (const pvl of pvlData || []) {
@@ -184,7 +195,7 @@ export default function PaymentVouchersPage() {
       paidMap[k] = (paidMap[k] || 0) + Number((pvl as any).payment_amount) + Number((pvl as any).ewt_amount)
     }
 
-    const result: VendorBillRef[] = (billsData as any[])
+    const result: VendorBillRef[] = ((billsData || []) as any[])
       .map(b => {
         const total = Number(b.total_amount)
         const outstanding = Math.max(total - (paidMap[b.id] || 0), 0)
@@ -198,11 +209,48 @@ export default function PaymentVouchersPage() {
           net_base: netBase > 0 ? netBase : fallbackNetBase,
           bill_date: b.bill_date,
           supplier_invoice_number: b.supplier_invoice_number,
+          source: 'native' as const,
         }
       })
       .filter(b => b.outstanding > 0.01)
 
-    setOpenBills(result)
+    const { data: openingRows } = await (supabase as any).from('opening_balance_ap_lines')
+      .select('id,legacy_bill_number,supplier_invoice_number,bill_date,original_amount,opening_balance_batches!inner(status,cutover_date)')
+      .eq('company_id', companyId).eq('supplier_id', supplierId)
+      .eq('opening_balance_batches.status', 'posted')
+      .lte('opening_balance_batches.cutover_date', editPV?.voucher_date || today())
+      .order('bill_date')
+    const openingIds = (openingRows || []).map((row: any) => row.id)
+    const { data: openingApplied } = openingIds.length
+      ? await (supabase as any).from('payment_voucher_lines')
+          .select('opening_ap_line_id,payment_amount,ewt_amount,payment_vouchers(status)')
+          .in('opening_ap_line_id', openingIds)
+          .not('payment_voucher_id', editPV?.id ? 'eq' : 'is', editPV?.id || null)
+      : { data: [] }
+    const openingBills: VendorBillRef[] = (openingRows || []).map((row: any) => {
+      const paid = (openingApplied || [])
+        .filter((application: any) => application.opening_ap_line_id === row.id
+          && application.payment_vouchers?.status !== 'cancelled')
+        .reduce((sum: number, application: any) => sum + Number(application.payment_amount) + Number(application.ewt_amount), 0)
+      const total = Number(row.original_amount)
+      return {
+        id: row.id, bill_number: `${row.legacy_bill_number} · Opening`,
+        total_amount: total, outstanding: Math.max(total - paid, 0), net_base: total,
+        bill_date: row.bill_date, supplier_invoice_number: row.supplier_invoice_number,
+        source: 'opening' as const,
+      }
+    }).filter((bill: VendorBillRef) => bill.outstanding > 0.01)
+
+    setOpenBills([...result, ...openingBills])
+  }, [companyId, editPV?.id, editPV?.voucher_date])
+
+  const loadSupplierBankAccounts = useCallback(async (supplierId: string) => {
+    if (!companyId || !supplierId) { setSupplierBankAccounts([]); return }
+    const { data } = await (supabase as any).from('supplier_bank_accounts')
+      .select('id,account_name,account_number,account_type,bank_branch,swift_code,is_default,verification_status,ref_banks(bank_name,swift_code)')
+      .eq('company_id', companyId).eq('supplier_id', supplierId).eq('is_active', true)
+      .order('is_default', { ascending: false }).order('created_at')
+    setSupplierBankAccounts((data as SupplierBankAccount[]) || [])
   }, [companyId])
 
   const openNew = () => {
@@ -219,16 +267,20 @@ export default function PaymentVouchersPage() {
 
   const openView = (pv: PV) => {
     setEditPV(pv)
+    loadSupplierBankAccounts(pv.supplier_id)
     supabase.from('payment_voucher_lines')
-      .select('*,vendor_bills(bill_number,total_amount)')
+      .select('*,vendor_bills(bill_number,total_amount),opening_balance_ap_lines(legacy_bill_number,original_amount)')
       .eq('payment_voucher_id', pv.id)
       .then(({ data }) => {
         const mapped: PVLine[] = (data || []).map((l: any) => ({
           _key: l.id, id: l.id,
-          line_type: l.line_type === 'supplier_down_payment' || !l.vendor_bill_id ? 'supplier_down_payment' : 'bill_application',
+          line_type: l.line_type === 'supplier_down_payment' ? 'supplier_down_payment' : 'bill_application',
           vendor_bill_id: l.vendor_bill_id || '',
-          bill_number: l.vendor_bill_id ? l.vendor_bills?.bill_number || '' : 'Supplier Down Payment',
-          bill_total: Number(l.vendor_bills?.total_amount || 0),
+          opening_ap_line_id: l.opening_ap_line_id || '',
+          bill_number: l.vendor_bill_id ? l.vendor_bills?.bill_number || ''
+            : l.opening_ap_line_id ? `${l.opening_balance_ap_lines?.legacy_bill_number || 'Opening'} · Opening`
+              : 'Supplier Down Payment',
+          bill_total: Number(l.vendor_bills?.total_amount || l.opening_balance_ap_lines?.original_amount || 0),
           bill_outstanding: 0,
           bill_net_base: 0,
           payment_amount: Number(l.payment_amount),
@@ -247,22 +299,23 @@ export default function PaymentVouchersPage() {
   const pickSupplier = async (id: string) => {
     const s = suppliers.find(x => x.id === id)
     if (!s) return
-    setEditPV(v => ({ ...v, supplier_id: id, supplier_name_snapshot: s.registered_name, supplier_tin_snapshot: normalizePhTin(s.tin) }))
+    setEditPV(v => ({ ...v, supplier_id: id, supplier_name_snapshot: s.registered_name, supplier_tin_snapshot: normalizePhTin(s.tin), supplier_bank_account_id: null }))
     setLines([newLine()])
-    await loadOpenBills(id)
+    await Promise.all([loadOpenBills(id), loadSupplierBankAccounts(id)])
   }
 
   const pickBill = (lineKey: string, billId: string) => {
     const bill = openBills.find(b => b.id === billId)
     if (!bill) {
-      setLines(ls => ls.map(l => l._key !== lineKey ? l : { ...l, line_type: 'bill_application', vendor_bill_id: '', bill_number: '', bill_total: 0, bill_outstanding: 0, bill_net_base: 0, payment_amount: 0 }))
+      setLines(ls => ls.map(l => l._key !== lineKey ? l : { ...l, line_type: 'bill_application', vendor_bill_id: '', opening_ap_line_id: '', bill_number: '', bill_total: 0, bill_outstanding: 0, bill_net_base: 0, payment_amount: 0 }))
       return
     }
     const supplier = suppliers.find(s => s.id === editPV?.supplier_id)
     const defaultAtc = supplier?.is_subject_to_ewt ? supplier.default_atc_code_id || '' : ''
     const defaultTaxBase = proportionalNetBase(bill.outstanding, bill.total_amount, bill.net_base)
     setLines(ls => ls.map(l => l._key !== lineKey ? l : recalcLineEwt(l, {
-      line_type: 'bill_application', vendor_bill_id: bill.id, bill_number: bill.bill_number,
+      line_type: 'bill_application', vendor_bill_id: bill.source === 'native' ? bill.id : '',
+      opening_ap_line_id: bill.source === 'opening' ? bill.id : '', bill_number: bill.bill_number,
       bill_total: bill.total_amount, bill_outstanding: bill.outstanding, bill_net_base: bill.net_base,
       payment_amount: bill.outstanding, ewt_amount: 0,
       ewt_tax_base: l.ewt_tax_base || defaultTaxBase,
@@ -277,7 +330,7 @@ export default function PaymentVouchersPage() {
     setLines(ls => [...ls, {
       _key: crypto.randomUUID(),
       line_type: 'supplier_down_payment',
-      vendor_bill_id: '',
+      vendor_bill_id: '', opening_ap_line_id: '',
       bill_number: 'Supplier Down Payment',
       bill_total: 0,
       bill_outstanding: 0,
@@ -298,7 +351,7 @@ export default function PaymentVouchersPage() {
       return { ...next, ewt_amount: 0, atc_code_id: next.atc_code_id || '', ewt_income_nature: '' }
     }
 
-    if (patch.atc_code_id !== undefined || patch.vendor_bill_id !== undefined || patch.ewt_tax_base !== undefined) {
+    if (patch.atc_code_id !== undefined || patch.vendor_bill_id !== undefined || patch.opening_ap_line_id !== undefined || patch.ewt_tax_base !== undefined) {
       const gross = next.bill_outstanding || next.payment_amount + next.ewt_amount
       const base = next.ewt_tax_base || gross
       const ewt = round2(base * atc.rate / 100)
@@ -354,6 +407,11 @@ export default function PaymentVouchersPage() {
   const save = async (post: boolean) => {
     if (!companyId || !editPV) return
     if (!editPV.supplier_id) { setError('Please select a supplier'); return }
+    const paymentMode = paymentModes.find(mode => mode.id === editPV.payment_mode_id)
+    if (paymentMode?.code === 'BANK_XFER' && !editPV.supplier_bank_account_id) {
+      setError('Select a verified supplier bank account for a bank-transfer voucher.')
+      return
+    }
     if (readiness.blockers.length > 0) {
       setError('Complete setup readiness blockers before saving or posting this payment voucher.')
       return
@@ -391,6 +449,7 @@ export default function PaymentVouchersPage() {
         payment_mode_id: editPV.payment_mode_id || '',
         reference_number: editPV.reference_number || '',
         bank_account_id: editPV.bank_account_id || '',
+        supplier_bank_account_id: editPV.supplier_bank_account_id || '',
         total_amount: totalPayment.toString(),
         total_ewt: totalEWT.toString(),
         remarks: editPV.remarks || '',
@@ -400,6 +459,7 @@ export default function PaymentVouchersPage() {
         .map(l => ({
           line_type: l.line_type,
           vendor_bill_id: l.line_type === 'bill_application' ? l.vendor_bill_id || null : null,
+          opening_ap_line_id: l.line_type === 'bill_application' ? l.opening_ap_line_id || null : null,
           payment_amount: l.payment_amount,
           ewt_amount: l.ewt_amount,
           atc_code_id: l.atc_code_id || null,
@@ -532,6 +592,7 @@ export default function PaymentVouchersPage() {
   const selectedSupplier = suppliers.find(supplier => supplier.id === editPV?.supplier_id)
   const selectedPaymentMode = paymentModes.find(paymentMode => paymentMode.id === editPV?.payment_mode_id)
   const selectedCashAccount = cashAccounts.find(account => account.id === editPV?.bank_account_id)
+  const selectedSupplierBankAccount = supplierBankAccounts.find(account => account.id === editPV?.supplier_bank_account_id)
   const selectedBranch = branches.find(branch => branch.id === editPV?.branch_id)
   const pvStatus = editPV?.status || 'draft'
   const workflowSteps = [
@@ -541,6 +602,7 @@ export default function PaymentVouchersPage() {
   ]
   const validationErrors = [
     !editPV?.supplier_id ? 'Supplier is required.' : '',
+    selectedPaymentMode?.code === 'BANK_XFER' && !editPV?.supplier_bank_account_id ? 'A verified payee bank account is required for a bank transfer.' : '',
     lines.every(line => line.payment_amount + line.ewt_amount <= 0) ? 'At least one bill application or supplier down payment is required.' : '',
     lines.some(line => line.ewt_amount > 0 && !line.atc_code_id) ? 'ATC code is required for every EWT amount.' : '',
     lines.some(line => line.ewt_amount > 0 && line.ewt_tax_base <= 0) ? 'EWT tax base must be greater than zero.' : '',
@@ -598,6 +660,23 @@ export default function PaymentVouchersPage() {
             {h('Payment Mode', <select value={editPV?.payment_mode_id || ''} disabled={readOnly} onChange={e => setEditPV(v => ({ ...v, payment_mode_id: e.target.value }))} className={inputCls}><option value="">—</option>{paymentModes.map(pm => <option key={pm.id} value={pm.id}>{pm.name}</option>)}</select>)}
             {h('Reference / Check #', <input value={editPV?.reference_number || ''} disabled={readOnly} onChange={e => setEditPV(v => ({ ...v, reference_number: e.target.value }))} className={inputCls} />)}
             <div className="sm:col-span-2">{h('Bank / Cash Account', <select value={editPV?.bank_account_id || ''} disabled={readOnly} onChange={e => setEditPV(v => ({ ...v, bank_account_id: e.target.value }))} className={inputCls}><option value="">— use default cash account —</option>{cashAccounts.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select>)}</div>
+            <div className="sm:col-span-2">{h('Supplier Payee Account', readOnly ? (
+              <div className="rounded border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                {editPV?.payee_bank_name_snapshot
+                  ? `${editPV.payee_bank_name_snapshot} · ${editPV.payee_account_name_snapshot} · ••••${(editPV.payee_account_number_snapshot || '').slice(-4)}`
+                  : 'No payee bank account captured'}
+              </div>
+            ) : (
+              <select value={editPV?.supplier_bank_account_id || ''} onChange={e => setEditPV(v => ({ ...v, supplier_bank_account_id: e.target.value }))} className={inputCls}>
+                <option value="">— no payee bank account —</option>
+                {supplierBankAccounts.map(account => <option key={account.id} value={account.id} disabled={account.verification_status !== 'verified'}>
+                  {account.ref_banks?.bank_name} · {account.account_name} · ••••{account.account_number.slice(-4)} · {account.verification_status}
+                </option>)}
+              </select>
+            ))}</div>
+            {selectedSupplierBankAccount && !readOnly && <div className="sm:col-span-2 text-xs text-gray-500">
+              {selectedSupplierBankAccount.ref_banks?.bank_name} · {selectedSupplierBankAccount.bank_branch || 'branch not specified'} · {selectedSupplierBankAccount.verification_status}
+            </div>}
           </div>,
         },
       ]}
@@ -628,7 +707,7 @@ export default function PaymentVouchersPage() {
                         )}
                       </div>
                     ) : (
-                      <select value={l.vendor_bill_id} disabled={readOnly || !editPV?.supplier_id}
+                      <select value={l.opening_ap_line_id || l.vendor_bill_id} disabled={readOnly || !editPV?.supplier_id}
                         onChange={e => pickBill(l._key, e.target.value)}
                         className="border border-gray-300 rounded px-2 py-1 text-xs w-48 focus:outline-none focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50">
                         <option value="">— select bill —</option>
@@ -698,7 +777,7 @@ export default function PaymentVouchersPage() {
         workflow: <ol className="grid gap-2 sm:grid-cols-3">{workflowSteps.map(step => <li key={step.key} className={`pxl-transaction-card p-3 text-xs font-semibold ${step.key === pvStatus ? 'ring-2 ring-[var(--pxl-transaction-accent)]' : ''}`}>{step.label}</li>)}</ol>,
         approval: <div className="grid gap-3 sm:grid-cols-3"><div><div className="pxl-field-label">Approval Status</div><div className="pxl-body-text mt-1">{editPV?.approved_at ? 'Approved' : pvStatus === 'posted' ? 'Posting completed' : 'No separate approval recorded'}</div></div><div><div className="pxl-field-label">Approved At</div><div className="pxl-body-text mt-1">{formatDateTime(editPV?.approved_at)}</div></div><div><div className="pxl-field-label">Next Action</div><div className="pxl-body-text mt-1">{pvStatus === 'draft' ? 'Save & Post' : 'No approval action available'}</div></div></div>,
         audit: editPV?.id ? <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-5">{auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div><AuditTrailSection tableName="payment_vouchers" recordId={editPV.id} /></div> : <TransactionEmptyState>Audit history begins after the Payment Voucher is saved.</TransactionEmptyState>,
-        related: lines.some(line => line.vendor_bill_id) ? <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full"><thead><tr><th className="text-left">Relationship</th><th className="text-left">Document</th><th className="text-right">Amount Applied</th><th className="text-right">EWT</th></tr></thead><tbody>{lines.filter(line => line.vendor_bill_id).map(line => <tr key={line._key}><td>Settles</td><td className="font-mono font-semibold">{line.bill_number}</td><td className="text-right font-mono">₱{fmt(line.payment_amount)}</td><td className="text-right font-mono">₱{fmt(line.ewt_amount)}</td></tr>)}</tbody></table></div> : <TransactionEmptyState>No Vendor Bill is applied to this Payment Voucher.</TransactionEmptyState>,
+        related: lines.some(line => line.vendor_bill_id || line.opening_ap_line_id) ? <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full"><thead><tr><th className="text-left">Relationship</th><th className="text-left">Document</th><th className="text-right">Amount Applied</th><th className="text-right">EWT</th></tr></thead><tbody>{lines.filter(line => line.vendor_bill_id || line.opening_ap_line_id).map(line => <tr key={line._key}><td>Settles</td><td className="font-mono font-semibold">{line.bill_number}</td><td className="text-right font-mono">₱{fmt(line.payment_amount)}</td><td className="text-right font-mono">₱{fmt(line.ewt_amount)}</td></tr>)}</tbody></table></div> : <TransactionEmptyState>No supplier bill is applied to this Payment Voucher.</TransactionEmptyState>,
         party: selectedSupplier ? <dl className="grid gap-3 sm:grid-cols-3"><div><dt className="pxl-field-label">Supplier</dt><dd className="pxl-body-text mt-1">{selectedSupplier.registered_name}</dd></div><div><dt className="pxl-field-label">TIN</dt><dd className="pxl-body-text mt-1 font-mono">{selectedSupplier.tin || '—'}</dd></div><div><dt className="pxl-field-label">Withholding Profile</dt><dd className="pxl-body-text mt-1">{selectedSupplier.is_subject_to_ewt ? 'Subject to EWT' : 'Not subject to EWT'}</dd></div></dl> : <TransactionEmptyState>Select a supplier to see related-party information.</TransactionEmptyState>,
         activity: <div className="grid gap-3 sm:grid-cols-4">{auditFacts.slice(0, 4).map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div>,
         notes: h('Payment Remarks', <textarea value={editPV?.remarks || ''} disabled={readOnly} rows={5} onChange={e => setEditPV(v => ({ ...v, remarks: e.target.value }))} className={inputCls} />),

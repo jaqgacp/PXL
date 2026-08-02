@@ -2,7 +2,7 @@
 
 **Status:** Active authoritative coverage-governance register
 **Authority:** Tier 2 governance artifact for PXL-AUD-059 coverage governance; accounting, tax, transaction, security, and findings sources prevail on product rules
-**Last Verified:** 2026-07-31 deterministic local canonical lane after IA-5 ECC WP-4 (202 public base tables; 93 expected-populated, 109 explicitly deferred/empty)
+**Last Verified:** 2026-08-02 deterministic local canonical lane after PAD-002/PAD-003 onboarding work (209 public base tables; 93 expected-populated, 116 explicitly deferred/empty). Canonical bank-transfer vouchers exercise verified supplier payee accounts; the six opening-balance tables remain workflow-deferred and are proved on fresh company data by guards 113 and 116.
 **Applies To:** Every `public` base table; canonical/local validation coverage boundaries and product-readiness claims
 **Read When:** Adding a table or workflow, classifying coverage, or reconciling readiness against PXL-AUD-059
 **Do Not Read For:** Product accounting/tax rules (see the governing standards) or hosted credentials
@@ -31,14 +31,14 @@ Row counts below are the deterministic **canonical baseline** (fresh migration r
 | --- | ---: | --- |
 | `canonical-populated` | 67 | Expected non-empty; exercised by canonical regression |
 | `reference-populated` | 26 | Expected non-empty; migration/reference seeded |
-| `workflow-deferred` | 21 | Explicitly deferred; supported workflow not yet exercised |
+| `workflow-deferred` | 28 | Explicitly deferred; supported workflow not yet exercised by canonical |
 | `future-deferred` | 61 | Explicitly deferred; module not implemented end-to-end |
 | `reference-empty` | 6 | Intentionally empty reference/config |
 | `control-empty` | 1 | Healthy control state is empty; any row requires investigation |
 | `dormant-foundation` | 20 | Implemented but inactive; population is prohibited during IA-5 |
-| **Total** | **202** | 93 expected-populated / 109 explicitly deferred or empty |
+| **Total** | **209** | 93 expected-populated / 116 explicitly deferred or empty |
 
-All 202 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
+All 209 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
 
 The COA Engine (Phase A, 2026-07-24) added four base tables: `ref_mapping_key` (reference-populated, 9 seeded keys), `account_mapping` (canonical-populated, 45 rows = 5 companies × 9 config-synced bindings), and the FS-registry framework `fs_structure` and `account_fs_map` (workflow-deferred, populated by the FS-registry provisioning workflow in Phase B, intentionally empty under the canonical baseline).
 
@@ -81,6 +81,7 @@ current workflows do not activate them.
 | `customers` | `canonical-populated` | 66 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `customer_groups` | `workflow-deferred` | 0 | Supported UI/RPC workflow (not run in canonical) | on (4) | ✓ | Exercise the supported workflow and add a governed fixture + route/RLS evidence to promote to canonical-populated. |
 | `suppliers` | `canonical-populated` | 56 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
+| `supplier_bank_accounts` | `canonical-populated` | 21 | Canonical verified payee accounts used by bank-transfer Payment Vouchers | on (4) | 075, 114 | Maintain canonical coverage; guard 114 proves tenant isolation, verification, database posting enforcement, and posted snapshot immutability with fresh data. |
 | `supplier_groups` | `workflow-deferred` | 0 | Supported UI/RPC workflow (not run in canonical) | on (4) | ✓ | Exercise the supported workflow and add a governed fixture + route/RLS evidence to promote to canonical-populated. |
 | `party_contacts` | `workflow-deferred` | 0 | Supported UI/RPC workflow (not run in canonical) | on (4) | ✓ | Exercise the supported workflow and add a governed fixture + route/RLS evidence to promote to canonical-populated. |
 | `employees` | `canonical-populated` | 26 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
@@ -164,7 +165,7 @@ current workflows do not activate them.
 | Table | Class | Canonical rows | Population mechanism | RLS (policies) | Test | Next action |
 | --- | --- | ---: | --- | --- | --- | --- |
 | `inventory_transactions` | `canonical-populated` | 26 | Canonical demo seed | on (2) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
-| `inventory_cost_layers` | `canonical-populated` | 12 | Canonical demo seed | on (3) | 075 only | Maintain canonical coverage; guard 075 keeps it non-empty. |
+| `inventory_cost_layers` | `workflow-deferred` | 0 | fifo / specific-identification receipts | on (3) | 075, 111 | Empty under canonical: every canonical item is weighted_average, whose quantity and value are authoritative in `stock_balances`. Guard 111 R5 fails if a weighted-average layer ever survives. |
 | `stock_balances` | `canonical-populated` | 11 | Canonical demo seed | on (3) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `ref_inventory_event_source_types` | `reference-populated` | 1 | IA-5 base plus WP-2 registry-authority migration; certification-only and production-disabled | on (1) | 103, 105–106 | Keep the sole IA-5 source disabled; WP-2 authority remains dormant and IA-6 owns replacement/removal. |
 | `inventory_precision_policies` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved policy activation/conversion phase. |
@@ -204,6 +205,12 @@ current workflows do not activate them.
 | --- | --- | ---: | --- | --- | --- | --- |
 | `journal_entries` | `canonical-populated` | 48 | Canonical demo seed | on (1) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `journal_entry_lines` | `canonical-populated` | 138 | Canonical demo seed | on (1) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
+| `opening_balance_batches` | `workflow-deferred` | 0 | Opening-balance UI/RPC workflow (fresh-data guard only) | on (1) | 075, 113 | Keep canonical empty; guard 113 proves the complete cut-over and reversal flow with fresh company data. |
+| `opening_balance_gl_lines` | `workflow-deferred` | 0 | Opening-balance UI/RPC workflow (fresh-data guard only) | on (1) | 075, 113 | General-ledger cut-over detail; immutable once posted. |
+| `opening_balance_ar_lines` | `workflow-deferred` | 0 | Opening-balance UI/RPC workflow (fresh-data guard only) | on (1) | 075, 113 | Customer opening items reconcile to the derived AR control. |
+| `opening_balance_ap_lines` | `workflow-deferred` | 0 | Opening-balance UI/RPC workflow (fresh-data guard only) | on (1) | 075, 113 | Supplier opening items reconcile to the derived AP control. |
+| `opening_balance_inventory_lines` | `workflow-deferred` | 0 | Opening-balance UI/RPC workflow (fresh-data guard only) | on (1) | 075, 113 | Item/warehouse opening quantities and values reconcile to inventory control without activating IA-5. |
+| `opening_balance_bank_lines` | `workflow-deferred` | 0 | Opening-balance UI/RPC workflow (fresh-data guard only) | on (1) | 075, 113 | Per-account bank openings reconcile to cash controls. |
 | `recurring_journal_templates` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | ✓ | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
 | `recurring_journal_template_lines` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | ✓ | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
 | `transaction_events` | `canonical-populated` | 289 | Canonical demo seed | on (1) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
@@ -384,7 +391,7 @@ current workflows do not activate them.
 | `ref_document_types` | `reference-populated` | 33 | Migration / reference seed | on (1) | ✓ | Maintain migration/reference seed; guard 075 keeps it non-empty. |
 | `ref_feature_definitions` | `reference-populated` | 16 | Migration / reference seed | on (1) | 075 only | Maintain migration/reference seed; guard 075 keeps it non-empty. |
 | `ref_payment_modes` | `reference-populated` | 5 | Migration / reference seed | on (1) | ✓ | Maintain migration/reference seed; guard 075 keeps it non-empty. |
-| `ref_posting_source_types` | `reference-populated` | 30 | Migration / reference seed | on (1) | ✓ | Maintain migration/reference seed; guard 075 keeps it non-empty. |
+| `ref_posting_source_types` | `reference-populated` | 32 | Migration / reference seed | on (1) | ✓ | Maintain migration/reference seed; guard 075 keeps it non-empty. |
 | `ref_rdo_codes` | `reference-populated` | 100 | Migration / reference seed | on (1) | 075 only | Maintain migration/reference seed; guard 075 keeps it non-empty. |
 | `ref_reason_codes` | `reference-populated` | 10 | Migration / reference seed | on (1) | ✓ | Maintain migration/reference seed; guard 075 keeps it non-empty. |
 | `void_reason_codes` | `reference-populated` | 7 | Migration / reference seed | on (1) | ✓ | Maintain migration/reference seed; guard 075 keeps it non-empty. |

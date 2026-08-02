@@ -26,7 +26,7 @@ type Receipt = {
 type ApplicationLine = {
   _key: string
   line_type: 'invoice_application' | 'customer_advance'
-  invoice_id: string; si_number: string; si_date: string
+  invoice_id: string; opening_ar_line_id: string; si_number: string; si_date: string
   original_amount: number; balance_due: number
   payment_amount: number; cwt_amount: number; forex_adjustment: number
   atc_code_id: string | null
@@ -183,26 +183,28 @@ export default function ReceiptsPage() {
       .select('id,si_number,date,total_amount,total_vat_amount,cwt_amount_expected,cwt_atc_code_id,cwt_tax_base')
       .eq('company_id', companyId).eq('customer_id', customerId)
       .eq('status', 'posted').order('date')
-    if (!sis || sis.length === 0) { setLines([]); setOpenInvoicesLoading(false); return }
-
     // Get all applied amounts from receipt_lines (excluding current doc if editing)
-    const siIds = sis.map(s => s.id)
-    const { data: applied } = await supabase.from('receipt_lines')
-      .select('invoice_id,payment_amount,cwt_amount,cwt_tax_base')
-      .in('invoice_id', siIds)
-      // Exclude current receipt if editing
-      .not('receipt_id', editDoc ? 'eq' : 'is', editDoc?.id || null)
+    const siIds = (sis || []).map(s => s.id)
+    const { data: applied } = siIds.length
+      ? await supabase.from('receipt_lines')
+          .select('invoice_id,payment_amount,cwt_amount,cwt_tax_base')
+          .in('invoice_id', siIds)
+          // Exclude current receipt if editing
+          .not('receipt_id', editDoc ? 'eq' : 'is', editDoc?.id || null)
+      : { data: [] }
 
     // Also exclude credit memo applications (offset against AR)
-    const { data: cmApplied } = await supabase.from('credit_memos')
-      .select('invoice_id,total_amount')
-      .in('invoice_id', siIds)
-      .in('status', ['applied'])
+    const { data: cmApplied } = siIds.length
+      ? await supabase.from('credit_memos')
+          .select('invoice_id,total_amount')
+          .in('invoice_id', siIds)
+          .in('status', ['applied'])
+      : { data: [] }
 
     const customer = customers.find(c => c.id === customerId)
     const defaultAtcId = customer?.is_subject_to_cwt ? customer.default_cwt_atc_code_id : null
 
-    const openLines: ApplicationLine[] = sis.map(si => {
+    const openLines: ApplicationLine[] = (sis || []).map(si => {
       const totalPaid = (applied || [])
         .filter(a => a.invoice_id === si.id)
         .reduce((s, a) => s + Number(a.payment_amount) + Number(a.cwt_amount), 0)
@@ -243,7 +245,7 @@ export default function ReceiptsPage() {
       return {
         _key: si.id,
         line_type: 'invoice_application' as const,
-        invoice_id: si.id, si_number: si.si_number, si_date: si.date,
+        invoice_id: si.id, opening_ar_line_id: '', si_number: si.si_number, si_date: si.date,
         original_amount: Number(si.total_amount), balance_due: balance,
         payment_amount: effectiveAtc ? round2(Math.max(balance - defaultCwt, 0)) : 0,
         cwt_amount: defaultCwt,
@@ -256,7 +258,35 @@ export default function ReceiptsPage() {
       }
     }).filter(l => l.balance_due > 0.005)
 
-    setLines(openLines)
+    const { data: openingRows } = await (supabase as any).from('opening_balance_ar_lines')
+      .select('id,legacy_invoice_number,invoice_date,original_amount,opening_balance_batches!inner(status,cutover_date)')
+      .eq('company_id', companyId).eq('customer_id', customerId)
+      .eq('opening_balance_batches.status', 'posted')
+      .lte('opening_balance_batches.cutover_date', fDate || today())
+      .order('invoice_date')
+    const openingIds = (openingRows || []).map((row: any) => row.id)
+    const { data: openingApplied } = openingIds.length
+      ? await (supabase as any).from('receipt_lines')
+          .select('opening_ar_line_id,payment_amount,cwt_amount,receipts(status)')
+          .in('opening_ar_line_id', openingIds)
+          .not('receipt_id', editDoc ? 'eq' : 'is', editDoc?.id || null)
+      : { data: [] }
+    const openingLines: ApplicationLine[] = (openingRows || []).map((row: any) => {
+      const paid = (openingApplied || [])
+        .filter((application: any) => application.opening_ar_line_id === row.id
+          && !['bounced', 'cancelled'].includes(application.receipts?.status))
+        .reduce((sum: number, application: any) => sum + Number(application.payment_amount) + Number(application.cwt_amount), 0)
+      const balance = Number(row.original_amount) - paid
+      return {
+        _key: `opening-${row.id}`, line_type: 'invoice_application', invoice_id: '',
+        opening_ar_line_id: row.id, si_number: `${row.legacy_invoice_number} · Opening`,
+        si_date: row.invoice_date, original_amount: Number(row.original_amount), balance_due: balance,
+        payment_amount: 0, cwt_amount: 0, forex_adjustment: 0, atc_code_id: null,
+        cwt_tax_base: 0, cwt_variance_reason: '', net_ratio: 1, base_auto: true,
+      }
+    }).filter((line: ApplicationLine) => line.balance_due > 0.005)
+
+    setLines([...openLines, ...openingLines])
     setOpenInvoicesLoading(false)
   }
 
@@ -300,16 +330,23 @@ export default function ReceiptsPage() {
       ? await supabase.from('sales_invoices').select('id,si_number,date,total_amount,total_vat_amount')
           .in('id', invoiceIds)
       : { data: [] }
+    const openingIds = (rl || []).map((row: any) => row.opening_ar_line_id).filter(Boolean)
+    const { data: openingData } = openingIds.length
+      ? await (supabase as any).from('opening_balance_ar_lines')
+          .select('id,legacy_invoice_number,invoice_date,original_amount').in('id', openingIds)
+      : { data: [] }
 
     const mapped: ApplicationLine[] = (rl || []).map(r => {
       const si = (siData || []).find(s => s.id === r.invoice_id)
-      const siTotal = Number(si?.total_amount || 0)
-      const isAdvance = r.line_type === 'customer_advance' || !r.invoice_id
+      const opening = (openingData || []).find((row: any) => row.id === (r as any).opening_ar_line_id)
+      const siTotal = Number(si?.total_amount || opening?.original_amount || 0)
+      const isAdvance = r.line_type === 'customer_advance'
       return {
         _key: r.id,
         line_type: isAdvance ? 'customer_advance' : 'invoice_application',
-        invoice_id: r.invoice_id || '', si_number: isAdvance ? 'Customer Advance' : si?.si_number || '—',
-        si_date: si?.date || '', original_amount: siTotal,
+        invoice_id: r.invoice_id || '', opening_ar_line_id: (r as any).opening_ar_line_id || '',
+        si_number: isAdvance ? 'Customer Advance' : si?.si_number || `${opening?.legacy_invoice_number || 'Opening'} · Opening`,
+        si_date: si?.date || opening?.invoice_date || '', original_amount: siTotal,
         balance_due: isAdvance ? Number(r.payment_amount) + Number(r.cwt_amount) : 0,
         payment_amount: Number(r.payment_amount), cwt_amount: Number(r.cwt_amount),
         forex_adjustment: Number(r.forex_adjustment), atc_code_id: r.atc_code_id || null,
@@ -328,7 +365,7 @@ export default function ReceiptsPage() {
     setLines(prev => [...prev, {
       _key: crypto.randomUUID(),
       line_type: 'customer_advance',
-      invoice_id: '',
+      invoice_id: '', opening_ar_line_id: '',
       si_number: 'Customer Advance',
       si_date: fDate,
       original_amount: 0,
@@ -454,6 +491,7 @@ export default function ReceiptsPage() {
       const linesPayload = appliedLines.map(l => ({
         line_type: l.line_type,
         invoice_id: l.line_type === 'invoice_application' ? l.invoice_id : null,
+        opening_ar_line_id: l.line_type === 'invoice_application' ? l.opening_ar_line_id || null : null,
         payment_amount: l.payment_amount,
         cwt_amount: l.cwt_amount,
         forex_adjustment: l.forex_adjustment,
@@ -658,7 +696,7 @@ export default function ReceiptsPage() {
         workflow: <ol className="grid gap-2 sm:grid-cols-4">{workflowSteps.map(step => <li key={step.key} className={`pxl-transaction-card p-3 text-xs font-semibold ${step.key === receiptStatus ? 'ring-2 ring-[var(--pxl-transaction-accent)]' : ''}`}>{step.label}</li>)}</ol>,
         approval: <div className="grid gap-3 sm:grid-cols-3"><div><div className="pxl-field-label">Approval Status</div><div className="pxl-body-text mt-1">{receiptStatus === 'draft' ? 'Posting authorization required' : receiptStatus === 'posted' ? 'Posting completed' : receiptStatus}</div></div><div><div className="pxl-field-label">Control</div><div className="pxl-body-text mt-1">Permission, period, and setup readiness</div></div><div><div className="pxl-field-label">Next Action</div><div className="pxl-body-text mt-1">{receiptStatus === 'draft' ? 'Post Receipt' : receiptStatus === 'posted' ? 'Mark Bounced when applicable' : 'No action available'}</div></div></div>,
         audit: editDoc?.id ? <div className="space-y-4"><div className="grid gap-3 sm:grid-cols-4">{auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div><AuditTrailSection tableName="receipts" recordId={editDoc.id} /></div> : <TransactionEmptyState>Audit history begins after the Official Receipt is saved.</TransactionEmptyState>,
-        related: appliedLines.some(line => line.invoice_id) ? <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full"><thead><tr><th className="text-left">Relationship</th><th className="text-left">Document</th><th className="text-right">Applied</th><th className="text-left">Open</th></tr></thead><tbody>{appliedLines.filter(line => line.invoice_id).map(line => <tr key={line._key}><td>Applies to</td><td className="font-mono font-semibold">{line.si_number}</td><td className="text-right font-mono">₱{fmt(line.payment_amount + line.cwt_amount)}</td><td><Link to={`/sales-invoices/${line.invoice_id}`} className="text-blue-700 hover:underline">Sales Invoice</Link></td></tr>)}</tbody></table></div> : <TransactionEmptyState>No Sales Invoice is linked; the receipt contains customer-advance content only.</TransactionEmptyState>,
+        related: appliedLines.some(line => line.invoice_id || line.opening_ar_line_id) ? <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full"><thead><tr><th className="text-left">Relationship</th><th className="text-left">Document</th><th className="text-right">Applied</th><th className="text-left">Open</th></tr></thead><tbody>{appliedLines.filter(line => line.invoice_id || line.opening_ar_line_id).map(line => <tr key={line._key}><td>Applies to</td><td className="font-mono font-semibold">{line.si_number}</td><td className="text-right font-mono">₱{fmt(line.payment_amount + line.cwt_amount)}</td><td>{line.invoice_id ? <Link to={`/sales-invoices/${line.invoice_id}`} className="text-blue-700 hover:underline">Sales Invoice</Link> : <Link to="/opening-balances" className="text-blue-700 hover:underline">Opening Balance</Link>}</td></tr>)}</tbody></table></div> : <TransactionEmptyState>No invoice is linked; the receipt contains customer-advance content only.</TransactionEmptyState>,
         party: selectedCustomer ? <dl className="grid gap-3 sm:grid-cols-3"><div><dt className="pxl-field-label">Customer</dt><dd className="pxl-body-text mt-1">{selectedCustomer.registered_name}</dd></div><div><dt className="pxl-field-label">TIN</dt><dd className="pxl-body-text mt-1 font-mono">{composePhTin(selectedCustomer.tin, selectedCustomer.tin_branch_code)}</dd></div><div><dt className="pxl-field-label">Registered Address</dt><dd className="pxl-body-text mt-1">{selectedCustomer.registered_address || '—'}</dd></div></dl> : <TransactionEmptyState>Select a customer to see related-party information.</TransactionEmptyState>,
         activity: <div className="grid gap-3 sm:grid-cols-4">{auditFacts.map(fact => <div key={fact.label}><div className="pxl-field-label">{fact.label}</div><div className="pxl-body-text mt-1">{fact.value}</div></div>)}</div>,
         notes: <label className={lbl}>Receipt Remarks<textarea value={fRemarks} onChange={event => setFRemarks(event.target.value)} disabled={readOnly} rows={5} className={`${readOnly ? ro : inp} mt-1 resize-none`} /></label>,

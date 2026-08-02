@@ -38,10 +38,12 @@ SELECT is(
     WHERE p.prosrc ~* 'company_accounting_config'),
   0, 'Inventory account ownership remains item/warehouse scoped');                    -- 3
 
+-- PXL-AUD-073 governs inventory control and purchase clearing through
+-- company_accounting_config. No COGS, variance or offset key was invented.
 SELECT is(
   (SELECT count(*)::int FROM ref_mapping_key
-    WHERE key_code ~* 'invent|cogs|variance|offset|goods'),
-  0, 'no Inventory/COGS mapping keys were invented');                                 -- 4
+    WHERE key_code ~* 'cogs|variance|offset'),
+  0, 'no COGS/variance/offset mapping keys were invented');                           -- 4
 
 SELECT ok(
   (SELECT bool_and(p.prosrc ~ 'inventory_transactions'

@@ -12,13 +12,16 @@ const BranchSetupPage         = lazy(() => import('@/pages/BranchSetupPage'))
 const DepartmentSetupPage     = lazy(() => import('@/pages/DepartmentSetupPage'))
 const FiscalYearsPage         = lazy(() => import('@/pages/FiscalYearsPage'))
 const ChartOfAccountsPage     = lazy(() => import('@/pages/ChartOfAccountsPage'))
+const OpeningBalancesPage     = lazy(() => import('@/pages/OpeningBalancesPage'))
 const CurrencySetupPage       = lazy(() => import('@/pages/CurrencySetupPage'))
 const FeatureEnablementPage   = lazy(() => import('@/pages/FeatureEnablementPage'))
 const NumberSeriesPage        = lazy(() => import('@/pages/NumberSeriesPage'))
 const ApprovalWorkflowPage    = lazy(() => import('@/pages/ApprovalWorkflowPage'))
+const AdministrationPage      = lazy(() => import('@/pages/AdministrationPage'))
 const AuditLogPage            = lazy(() => import('@/pages/AuditLogPage'))
 const CustomersPage           = lazy(() => import('@/pages/CustomersPage'))
 const SuppliersPage           = lazy(() => import('@/pages/SuppliersPage'))
+const MasterDataImportPage    = lazy(() => import('@/pages/MasterDataImportPage'))
 const PaymentTermsPage        = lazy(() => import('@/pages/PaymentTermsPage'))
 const ItemCatalogPage         = lazy(() => import('@/pages/ItemCatalogPage'))
 const TaxSetupPage            = lazy(() => import('@/pages/TaxSetupPage'))
@@ -237,13 +240,19 @@ export default function App() {
             <Route path="/department-setup" element={<DepartmentSetupPage />} />
             <Route path="/fiscal-years" element={<FiscalYearsPage />} />
             <Route path="/chart-of-accounts" element={<ChartOfAccountsPage />} />
+            <Route path="/opening-balances" element={<OpeningBalancesPage />} />
             <Route path="/currency-setup" element={<CurrencySetupPage />} />
             <Route path="/feature-enablement" element={<FeatureEnablementPage />} />
             <Route path="/number-series" element={<NumberSeriesPage />} />
             <Route path="/approval-workflow" element={<ApprovalWorkflowPage />} />
+            <Route path="/admin-users" element={<AdministrationPage screen="users" />} />
+            <Route path="/admin-memberships" element={<AdministrationPage screen="memberships" />} />
+            <Route path="/admin-roles" element={<AdministrationPage screen="roles" />} />
+            <Route path="/admin-branch-scopes" element={<AdministrationPage screen="branch-scopes" />} />
             <Route path="/audit-log" element={<AuditLogPage />} />
             <Route path="/customers" element={<CustomersPage />} />
             <Route path="/suppliers" element={<SuppliersPage />} />
+            <Route path="/master-data-import" element={<MasterDataImportPage />} />
             <Route path="/payment-terms" element={<PaymentTermsPage />} />
             <Route path="/item-catalog" element={<ItemCatalogPage />} />
             <Route path="/tax-setup" element={<TaxSetupPage />} />

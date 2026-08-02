@@ -308,8 +308,9 @@ SELECT set_eq(
       JOIN pg_namespace n ON n.oid=p.pronamespace
      WHERE n.nspname='public'
        AND strpos(p.prosrc, 'fn_receive_inventory(') > 0$$,
-  $$VALUES ('fn_confirm_receiving_report'),('fn_post_cash_purchase')$$,
-  'the live function graph has exactly the two approved generic-receipt callers');    -- 20
+  $$VALUES ('fn_confirm_receiving_report'),('fn_post_cash_purchase'),
+           ('fn_post_opening_balance')$$,
+  'the live function graph has exactly the three approved generic-receipt callers');  -- 20
 
 SELECT is(
   (SELECT count(*)::int
@@ -374,17 +375,30 @@ SELECT set_eq(
   $$VALUES ('fn_ia5_record_dormant_inventory_occurrence')$$,
   'one internal IA-5 authority writes occurrence/event facts');                       -- 24
 
-SELECT is(
-  (SELECT count(*)::int
-     FROM pg_proc p
-     JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public'
-      AND p.prosrc ~*
-        '(insert[[:space:]]+into|update|delete[[:space:]]+from)'
-        '[[:space:]]+(public[.])?'
-        '(stock_balances|inventory_cost_layers|inventory_transactions)'),
-  12,
-  'the legacy direct derived-table writer census remains exactly twelve');             -- 25
+SELECT set_eq(
+  $$SELECT p.proname::text
+      FROM pg_proc p
+      JOIN pg_namespace n ON n.oid=p.pronamespace
+     WHERE n.nspname='public'
+       AND p.prosrc ~*
+         '(insert[[:space:]]+into|update|delete[[:space:]]+from)'
+         '[[:space:]]+(public[.])?'
+         '(stock_balances|inventory_cost_layers|inventory_transactions)'$$,
+  $$VALUES ('fn_add_cost_layer'),
+           ('fn_consume_cost_layers'),
+           ('fn_ensure_stock_balance'),
+           ('fn_post_goods_issue_source_locked_impl'),
+           ('fn_post_opening_balance'),
+           ('fn_post_physical_count_source_locked_impl'),
+           ('fn_post_sales_invoice'),
+           ('fn_post_stock_adjustment_source_locked_impl'),
+           ('fn_post_stock_transfer_source_locked_impl'),
+           ('fn_receive_inventory'),
+           ('fn_reverse_opening_balance'),
+           ('fn_update_wac'),
+           ('fn_void_sales_invoice'),
+           ('fn_void_sales_invoice_aud053_core')$$,
+  'the legacy-active derived-table writer census is exactly the fourteen named functions'); -- 25
 
 SELECT is(
   (SELECT count(*)::int

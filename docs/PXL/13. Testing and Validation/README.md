@@ -11,9 +11,7 @@
 
 | Need | Read |
 | --- | --- |
-| Production certification framework: how a module is certified | `docs/PXL/13. Testing and Validation/PXL_MODULE_CERTIFICATION_STANDARD.md` |
-| Production certification framework: how a shared engine is certified | `docs/PXL/13. Testing and Validation/PXL_ENGINE_CERTIFICATION_STANDARD.md` |
-| Pre-certification capability-expectation checklist (professional-user completeness) | `docs/PXL/13. Testing and Validation/PXL_PRODUCT_COMPLETENESS_CHECKLIST.md` |
+| How work is done and when something is done | `docs/PXL/00. Governance/PXL_HOW_WE_WORK.md` |
 | Master Data implementation roadmap (bounded packages + execution order) | `docs/PXL/13. Testing and Validation/PXL_MASTER_DATA_IMPLEMENTATION_PLAN.md` |
 | Current module/engine certification status and next phase (dashboard only) | `docs/PXL/13. Testing and Validation/PXL_CERTIFICATION_MATRIX.md` |
 | Canonical demo dataset scope, counts, safety rules, and coverage limits | `docs/PXL/13. Testing and Validation/PXL_CANONICAL_DEMO_DATASET.md` |

@@ -85,12 +85,16 @@ SELECT set_eq(
   'the tax-aware posting-writer census is exactly the 20 censused writers');       -- 1
 
 -- The census partitions the GL-writer population: every GL writer is either
--- tax-aware (20) or provably not (30). The obsolete P5.1 line helper was
+-- tax-aware (20) or provably not (33). The obsolete P5.1 line helper was
 -- removed after its callers had already moved to the six sanctioned functions.
+-- PXL-AUD-073 added fn_post_receiving_report_source_locked_impl, which posts a
+-- goods receipt at cost and computes no tax, so the non-tax partition grew by one.
+-- PAD-002 adds the opening-balance post and reversal writers. Both use the
+-- Accounting Kernel and neither calculates or persists tax.
 SELECT is(
   (SELECT count(*)::int FROM v_gl_writer)
     - (SELECT count(*)::int FROM v_tax_writer),
-  30, 'the remaining GL writers are provably not tax-aware (census partition complete)'); -- 2
+  33, 'the remaining GL writers are provably not tax-aware (census partition complete)'); -- 2
 
 SELECT is(
   (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace

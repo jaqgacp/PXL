@@ -130,7 +130,10 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   ('inventory_event_order_policies', 'dormant-foundation'),
   ('inventory_source_type_ranks', 'dormant-foundation'),
   ('inventory_transition_ranks', 'dormant-foundation'),
-  ('inventory_cost_layers', 'canonical-populated'),
+  -- PXL-AUD-073: layers support fifo / specific identification only. Every
+  -- canonical item is weighted_average, whose quantity and value live in
+  -- stock_balances, so no layer is created. Populated when a fifo item is received.
+  ('inventory_cost_layers', 'workflow-deferred'),
   ('inventory_cost_formula_policies', 'dormant-foundation'),
   ('inventory_event_allocations', 'dormant-foundation'),
   ('inventory_event_order_keys', 'dormant-foundation'),
@@ -164,6 +167,12 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   ('mcit_computations', 'future-deferred'),
   ('nolco_schedule', 'future-deferred'),
   ('number_series', 'canonical-populated'),
+  ('opening_balance_ap_lines', 'workflow-deferred'),
+  ('opening_balance_ar_lines', 'workflow-deferred'),
+  ('opening_balance_bank_lines', 'workflow-deferred'),
+  ('opening_balance_batches', 'workflow-deferred'),
+  ('opening_balance_gl_lines', 'workflow-deferred'),
+  ('opening_balance_inventory_lines', 'workflow-deferred'),
   ('party_contacts', 'workflow-deferred'),
   ('payment_terms', 'canonical-populated'),
   ('payment_voucher_lines', 'canonical-populated'),
@@ -212,6 +221,7 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   ('supplier_debit_memo_lines', 'future-deferred'),
   ('supplier_debit_memos', 'future-deferred'),
   ('supplier_groups', 'workflow-deferred'),
+  ('supplier_bank_accounts', 'canonical-populated'),
   ('suppliers', 'canonical-populated'),
   ('sys_audit_logs', 'canonical-populated'),
   ('sys_posting_guard_violations', 'control-empty'),

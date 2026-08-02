@@ -9,14 +9,47 @@
 
 React 19 + TypeScript + Vite frontend backed by Supabase (PostgreSQL + PostgREST + Auth + RLS).
 
-## Current Readiness and Documentation
+## Orientation — read this first
 
-PXL is in accounting-core hardening and canonical-environment validation. It is suitable for controlled internal QA/demo use only and is not production-ready while active Critical and High findings remain.
+**The goal.** A Philippine business runs its real books on PXL. A valid business
+transaction produces the correct subsidiary ledger, General Ledger, trial
+balance, financial statements, BIR tax and books effect, and audit trail — with
+no parallel bookkeeping and nothing that can be quietly altered.
 
-- AI agents start with `AI/AGENT_SYSTEM_PROMPT.md`, then `AI/AI_STATE.md`.
-- Official defects and required fixes live only in `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md`.
-- Documentation authority and task routing live in `docs/PXL/PXL_DOCUMENTATION_INDEX.md`.
-- Validate the current AI handoff with `npm run docs:ai-state-check`, or run both documentation gates with `npm run docs:check`.
+**Where we are.** The accounting core is genuinely strong: one enforced doorway
+into the ledger, a fully enforced kernel guard, certified tenant isolation, audit
+immutability, document numbering and dimensional accounting, a trial balance that
+balances exactly, and inventory that reconciles to its control account. Against
+that: **no business module is certified**, there is no Tax Engine, there is no way
+to load opening balances, there is no proven backup, and about 30 screens are
+scaffolds marked **Not built** in the menu. PXL is **internal QA and demo only —
+not pilot-ready, not production-ready.**
+
+**What is next.** Prove backup and restore. It is the cheapest remaining unblock,
+it gates every module, and it is not software. Then hosted parity.
+
+**Where the detail lives — one place each, never duplicated:**
+
+| Question | Authority |
+|---|---|
+| What is PXL? | `docs/PXL/01. Architecture/PXL_PRODUCT_ARCHITECTURE.md` |
+| Where are we, what is next? | `AI/AI_STATE.md` — **the only status authority** |
+| What is the complete plan to finish? | `docs/PXL/01. Architecture/PXL_DELIVERY_PLAN.md` |
+| In what order / dependency detail? | `docs/PXL/01. Architecture/PXL_PRODUCT_EXECUTION_ROADMAP.md` |
+| Starting a new AI session? | `AI/ONBOARDING_PROMPT.md` — copy-paste front door |
+| What is broken? | `docs/PXL/PXL_END_TO_END_AUDIT_FINDINGS.md` |
+| How do we work / when is it done? | `docs/PXL/00. Governance/PXL_HOW_WE_WORK.md` |
+| Where is everything else? | `docs/PXL/PXL_DOCUMENTATION_INDEX.md` |
+
+AI agents start with `AI/AGENT_SYSTEM_PROMPT.md`, then `AI/AI_STATE.md`, and open
+only what the active task names.
+
+**Two rules that keep this repository honest.** Status facts live in
+`AI/AI_STATE.md` and nowhere else — a second copy always drifts and becomes a trap
+for the next session. And no governance document may be created in a commit that
+contains no application or SQL change.
+
+Validate with `npm run docs:check`.
 
 ---
 
@@ -70,11 +103,42 @@ supabase db push --linked
 # Or apply manually via Supabase SQL editor in filename order.
 ```
 
-### 5. Start the dev server
+### 5. Start the dev server against the LOCAL database
 
 ```bash
-npm run dev
+npx supabase start        # local Postgres + auth + REST
+npm run test:canonical    # load the demo dataset (optional, gives you data to look at)
+npm run dev:login         # set a password on the local demo users
+npm run dev               # http://localhost:5173
 ```
+
+Sign in with `demo.admin@pxl.local` / `pxl-dev-password`.
+
+**In a Codespace or other remote workspace, `localhost:5173` will not open.**
+`localhost` in your browser is your own machine, not the container. Use the
+forwarded URL instead — VS Code shows it in the **Ports** panel, and it looks
+like `https://<codespace-name>-5173.app.github.dev`.
+
+If port 5173 has not appeared in the Ports panel, ask Codespaces to create and
+open its private forward:
+
+```bash
+"$BROWSER" http://localhost:5173
+```
+
+Only port 5173 needs forwarding. The dev server proxies Supabase at `/supabase`
+on its own origin (`VITE_SUPABASE_URL=/supabase`), so the browser never needs to
+reach the container's `127.0.0.1:54321`. That avoids forwarding a second port,
+widening the CSP, or exposing an API endpoint publicly.
+
+**Point dev at local, not hosted.** `.env.local` targets the hosted project, which
+is intentionally behind (see the Deploy Runbook). `.env.development.local` targets
+the local stack through `/supabase` and wins in dev mode, so `npm run dev` runs
+the current build against a database that has every migration. Running the
+current frontend against hosted would fail on everything built since 2026-07-16.
+
+Re-run `npm run dev:login` after any database reset — a reset restores the seeded
+users and clears their password.
 
 ---
 
@@ -116,7 +180,7 @@ scripts/gen_schema_summary.sh
 - **INSERT**: `WITH CHECK (is_company_member(company_id))` on all transactional tables
 - **UPDATE/DELETE**: `USING (is_company_member(company_id))` on all transactional tables
 - Global BIR reference tables (`tax_codes`, `vat_codes`, `atc_codes`) allow reads by any authenticated user; writes require company admin role (`is_any_company_admin()`)
-- Legacy global `bir_forms` and `bir_form_mappings` still have broad authenticated write policies; `PXL-AUD-063` is the active RLS remediation and must be resolved before production readiness.
+- Global BIR form configuration writes are governed by company-admin policy (`PXL-AUD-063`, closed).
 - User dashboard data is scoped to `user_id = auth.uid()`
 
 ### SECURITY DEFINER RPCs

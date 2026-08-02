@@ -224,9 +224,14 @@ for (const line of state.split('\n')) {
 }
 
 const aiMarkdown = readdirSync(join(root, 'AI')).filter((name) => name.endsWith('.md')).sort()
-const expectedAiMarkdown = ['AGENT_SYSTEM_PROMPT.md', 'AI_STATE.md']
+// AGENT_SYSTEM_PROMPT (how to work) and AI_STATE (where we are) are the startup
+// pair. ONBOARDING_PROMPT is the copy-paste front door for a brand new session
+// and is read by a human, not loaded at startup. Nothing else belongs here — a
+// fourth file would mean status has started drifting across multiple documents
+// again, which is what AI_PROGRESS.md and AI_LAST_SESSION.md did before deletion.
+const expectedAiMarkdown = ['AGENT_SYSTEM_PROMPT.md', 'AI_STATE.md', 'ONBOARDING_PROMPT.md']
 if (JSON.stringify(aiMarkdown) !== JSON.stringify(expectedAiMarkdown)) {
-  fail(`AI/ must contain only the two startup files; found ${aiMarkdown.join(', ')}`)
+  fail(`AI/ must contain exactly the startup pair plus the onboarding prompt; found ${aiMarkdown.join(', ')}`)
 }
 
 const duplicateRegisterNames = activeMarkdownFiles()
@@ -252,15 +257,10 @@ for (const relativePath of staleStatusFiles) {
   }
 }
 
-for (const relativePath of [
-  'docs/PXL/archive/phase-reports/PXL_PHASE2_PRODUCT_AUDIT_REPORT.md',
-  'docs/PXL/archive/phase-reports/PXL_PHASE3_CANONICAL_IMPLEMENTATION_REPORT.md',
-]) {
-  const markdown = read(relativePath)
-  if (!markdown.includes('**Status:** Historical Snapshot') || !markdown.includes('**Not Current Source of Truth:**')) {
-    fail(`archived phase report lacks snapshot/source-of-truth label: ${relativePath}`)
-  }
-}
+// Historical phase reports were deleted on 2026-08-02. They were point-in-time
+// snapshots whose only remaining job was to carry a disclaimer saying they were
+// not current — a document that exists to warn you not to read it. Git history
+// retains them. This check went with them.
 
 notes.push(`findings: ${expectedStanding}; active IDs: ${active.map((row) => row.id).join(', ')}`)
 notes.push(`startup length: Agent Prompt ${promptWords} words; AI State ${stateWords} words`)

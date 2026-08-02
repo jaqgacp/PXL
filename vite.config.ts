@@ -27,6 +27,18 @@ export default defineConfig({
     // localhost, and their forwarded Host headers vary by environment.
     host: '0.0.0.0',
     allowedHosts: true,
+    // Proxy the local Supabase stack on the dev server's own origin. In a remote
+    // workspace the browser cannot reach the container's 127.0.0.1:54321, and a
+    // same-origin proxy avoids forwarding a second port, relaxing the CSP, or
+    // exposing an API endpoint publicly. Set VITE_SUPABASE_URL=/supabase to use it.
+    proxy: {
+      '/supabase': {
+        target: 'http://127.0.0.1:54321',
+        changeOrigin: true,
+        ws: true,
+        rewrite: (p) => p.replace(/^\/supabase/, ''),
+      },
+    },
     headers: {
       'X-Content-Type-Options': 'nosniff',
       'Referrer-Policy': 'strict-origin-when-cross-origin',

@@ -7,7 +7,7 @@
 **Read When:** Implementing, extending, or certifying any posting, reversal, void, or correction path
 **Do Not Read For:** Tax computation, inventory costing, depreciation math, FS presentation, reporting, budgeting, analytics — those belong to their own engines
 **Last Reviewed:** 2026-07-26 (**Amendment A8** — P6 reconciliation investigation stopped at the frozen Inventory boundary: canonical stock/movement valuation does not equal the configured Inventory control account, and inventory cost-layer quantity/value does not equal stock. P6 is Blocked; no reconciliation heuristic, adjustment, posting change, inventory change, or P7 work was introduced. Amendments A1–A7 remain authoritative.)
-**Relationship:** Satisfies the 20 mandatory Posting Engine invariants in [PXL_ENGINE_CERTIFICATION_STANDARD.md](../13. Testing and Validation/PXL_ENGINE_CERTIFICATION_STANDARD.md) §5 and the concurrency requirements §10; consumes the COA Engine contract [PXL_COA_ENGINE_SPEC.md](PXL_COA_ENGINE_SPEC.md) and the certified Permissions/RLS, Audit & Immutability, Number Series, and Dimension engines. Supersedes no existing document.
+**Relationship:** Satisfies the 20 mandatory Posting Engine invariants in `docs/PXL/00. Governance/PXL_HOW_WE_WORK.md` §6 (quality bars) §5 and the concurrency requirements §10; consumes the COA Engine contract [PXL_COA_ENGINE_SPEC.md](PXL_COA_ENGINE_SPEC.md) and the certified Permissions/RLS, Audit & Immutability, Number Series, and Dimension engines. Supersedes no existing document.
 
 > **Provenance & nature.** This is a **consolidation architecture, not a greenfield rewrite.** A posting kernel already exists in the codebase and is sound; the certification blocker is inconsistent adoption across the authoritative General Ledger writer census (§4.7), not bad design. This document was authored, reviewed, and **frozen with all decisions approved on 2026-07-24**. Implementation must conform to it and must not redesign it; only a governed architectural review that proves a correctness defect may reopen it. Freezing this architecture does **not** authorize implementation — a separate implementation scope must be approved before any phase begins.
 
@@ -355,7 +355,7 @@ Treating purchase clearing as an additional control account would still leave AB
 
 ## 6. Certification Matrix
 
-Mapped to the 20 governed invariants (`PXL_ENGINE_CERTIFICATION_STANDARD.md` §5); each proven **across every implemented posting transaction**.
+Each invariant is proven **across every implemented posting transaction** by the pgTAP regression lane. The retired engine-certification standard that formerly enumerated them is superseded by `docs/PXL/00. Governance/PXL_HOW_WE_WORK.md` §5, which keeps the invariants and drops the ceremony.
 
 | # | Invariant | Proof mechanism | Structural enforcement |
 |---|---|---|---|

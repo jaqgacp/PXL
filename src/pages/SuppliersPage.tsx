@@ -7,6 +7,14 @@ type Currency = { id: string; currency_code: string; name: string }
 type PaymentTerm = { id: string; term_code: string; term_name: string }
 type COA = { id: string; account_code: string; account_name: string }
 type ATCCode = { id: string; code: string; description: string; rate: number }
+type BankRef = { id: string; bank_code: string; bank_name: string; swift_code: string | null }
+type SupplierBankAccount = {
+  id?: string; bank_id: string; account_name: string; account_number: string
+  account_type: 'checking' | 'savings'; bank_branch: string; swift_code: string
+  is_default: boolean; is_active: boolean
+  verification_status: 'unverified' | 'verified' | 'rejected'
+  ref_banks?: { bank_name: string }
+}
 type Supplier = {
   id: string; company_id: string; supplier_code: string; supplier_group: string | null
   registered_name: string; trade_name: string | null; business_style: string | null
@@ -38,6 +46,12 @@ const EMPTY = {
   default_terms_id: '', default_currency_id: '', default_gl_account_id: '',
 }
 
+const newBankAccount = (): SupplierBankAccount => ({
+  bank_id: '', account_name: '', account_number: '', account_type: 'checking',
+  bank_branch: '', swift_code: '', is_default: false, is_active: true,
+  verification_status: 'unverified',
+})
+
 const inp = 'w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-900'
 const roInp = 'w-full border border-gray-200 rounded-md px-3 py-2 text-sm bg-gray-50 text-gray-700'
 const lbl = 'block text-xs font-medium text-gray-500 mb-1'
@@ -51,6 +65,9 @@ export default function SuppliersPage() {
   const [terms, setTerms] = useState<PaymentTerm[]>([])
   const [coa, setCoa] = useState<COA[]>([])
   const [atcCodes, setAtcCodes] = useState<ATCCode[]>([])
+  const [bankRefs, setBankRefs] = useState<BankRef[]>([])
+  const [bankAccounts, setBankAccounts] = useState<SupplierBankAccount[]>([])
+  const [removedBankIds, setRemovedBankIds] = useState<string[]>([])
   const [search, setSearch] = useState('')
   const [filterCompany, setFilterCompany] = useState('')
   const [filterTaxType, setFilterTaxType] = useState('')
@@ -73,6 +90,7 @@ export default function SuppliersPage() {
     fetchSuppliers()
     supabase.from('companies').select('id,registered_name').order('registered_name').then(({ data }) => setCompanies(data || []))
     supabase.from('currencies').select('id,currency_code,name').eq('is_active', true).order('currency_code').then(({ data }) => setCurrencies(data || []))
+    supabase.from('ref_banks').select('id,bank_code,bank_name,swift_code').eq('is_active', true).order('sort_order').then(({ data }) => setBankRefs(data || []))
   }, [])
 
   useEffect(() => {
@@ -83,6 +101,16 @@ export default function SuppliersPage() {
   }, [form.company_id])
 
   const set = (k: string, v: string | boolean) => { setSaved(false); setForm(f => ({ ...f, [k]: v })) }
+
+  const loadSupplierBanks = async (supplierId: string) => {
+    const { data } = await (supabase as any).from('supplier_bank_accounts')
+      .select('id,bank_id,account_name,account_number,account_type,bank_branch,swift_code,is_default,is_active,verification_status,ref_banks(bank_name)')
+      .eq('supplier_id', supplierId).order('is_default', { ascending: false }).order('created_at')
+    setBankAccounts(((data as SupplierBankAccount[]) || []).map(account => ({
+      ...account, bank_branch: account.bank_branch || '', swift_code: account.swift_code || '',
+    })))
+    setRemovedBankIds([])
+  }
 
   const openEdit = (s: Supplier) => {
     setForm({
@@ -98,10 +126,11 @@ export default function SuppliersPage() {
       default_currency_id: s.default_currency_id || '',
       default_gl_account_id: s.default_gl_account_id || '',
     })
+    loadSupplierBanks(s.id)
     setEditId(s.id); setShowForm(true); setSaved(false)
   }
 
-  const openView = (s: Supplier) => { setViewData(s); setShowView(true) }
+  const openView = (s: Supplier) => { setViewData(s); loadSupplierBanks(s.id); setShowView(true) }
 
   const handleSave = async () => {
     if (!isValidPhTin(form.tin)) {
@@ -109,6 +138,16 @@ export default function SuppliersPage() {
       return
     }
     setSaving(true)
+    if (bankAccounts.some(account => !account.bank_id || !account.account_name.trim() || !account.account_number.trim())) {
+      alert('Each supplier bank account needs a bank, account name, and account number.')
+      setSaving(false)
+      return
+    }
+    if (bankAccounts.filter(account => account.is_active && account.is_default).length > 1) {
+      alert('Only one active supplier bank account can be the default.')
+      setSaving(false)
+      return
+    }
     const payload = {
       company_id: form.company_id, supplier_code: form.supplier_code.toUpperCase(),
       supplier_group: form.supplier_group || null, registered_name: form.registered_name,
@@ -123,12 +162,63 @@ export default function SuppliersPage() {
       default_currency_id: form.default_currency_id || null,
       default_gl_account_id: form.default_gl_account_id || null,
     }
-    const { error } = editId
-      ? await supabase.from('suppliers').update(payload).eq('id', editId)
-      : await supabase.from('suppliers').insert([payload])
-    if (error) alert('Error: ' + error.message)
-    else { setSaved(true); fetchSuppliers() }
+    const supplierResult = editId
+      ? await supabase.from('suppliers').update(payload).eq('id', editId).select('id').single()
+      : await supabase.from('suppliers').insert([payload]).select('id').single()
+    const savedSupplierId = supplierResult.data?.id
+    if (supplierResult.error || !savedSupplierId) {
+      alert('Error: ' + (supplierResult.error?.message || 'Supplier was not saved'))
+    } else {
+      try {
+        if (bankAccounts.some(account => account.is_default)) {
+          const { error } = await (supabase as any).from('supplier_bank_accounts')
+            .update({ is_default: false }).eq('supplier_id', savedSupplierId).eq('is_default', true)
+          if (error) throw error
+        }
+        for (const account of bankAccounts) {
+          const bankPayload = {
+            company_id: form.company_id, supplier_id: savedSupplierId, bank_id: account.bank_id,
+            account_name: account.account_name, account_number: account.account_number,
+            account_type: account.account_type, bank_branch: account.bank_branch || null,
+            swift_code: account.swift_code || null, is_default: account.is_default,
+            is_active: account.is_active, verification_status: account.verification_status,
+          }
+          const result = account.id
+            ? await (supabase as any).from('supplier_bank_accounts').update(bankPayload).eq('id', account.id)
+            : await (supabase as any).from('supplier_bank_accounts').insert([bankPayload])
+          if (result.error) throw result.error
+        }
+        if (removedBankIds.length > 0) {
+          const { error } = await (supabase as any).from('supplier_bank_accounts').delete().in('id', removedBankIds)
+          if (error) throw error
+        }
+        setSaved(true)
+        setEditId(savedSupplierId)
+        setRemovedBankIds([])
+        fetchSuppliers()
+        await loadSupplierBanks(savedSupplierId)
+      } catch (bankError: any) {
+        alert('Supplier saved, but bank details failed: ' + (bankError.message || 'Unknown error'))
+      }
+    }
     setSaving(false)
+  }
+
+  const updateBankAccount = (index: number, patch: Partial<SupplierBankAccount>) => {
+    setSaved(false)
+    setBankAccounts(rows => rows.map((row, rowIndex) => {
+      if (rowIndex !== index) return patch.is_default ? { ...row, is_default: false } : row
+      const bank = patch.bank_id ? bankRefs.find(ref => ref.id === patch.bank_id) : undefined
+      return { ...row, ...patch, swift_code: bank?.swift_code || row.swift_code }
+    }))
+  }
+
+  const removeBankAccount = (index: number) => {
+    setBankAccounts(rows => {
+      const removed = rows[index]
+      if (removed?.id) setRemovedBankIds(ids => [...ids, removed.id!])
+      return rows.filter((_, rowIndex) => rowIndex !== index)
+    })
   }
 
   const toggleStatus = async (s: Supplier) => {
@@ -182,6 +272,17 @@ export default function SuppliersPage() {
             <div><label className={lbl}>Payment Terms</label><input readOnly value={viewData.payment_terms ? `${viewData.payment_terms.term_code} — ${viewData.payment_terms.term_name}` : '—'} className={roInp} /></div>
             <div><label className={lbl}>Default Currency</label><input readOnly value={viewData.currencies?.currency_code || '—'} className={roInp} /></div>
           </div>
+        </div>
+        <div className={sec}><h2 className={hd}>Section 5 — Payment Instructions</h2>
+          {bankAccounts.length === 0 ? <p className="text-sm text-gray-500">No supplier bank account recorded.</p> : (
+            <div className="space-y-3">{bankAccounts.map(account => (
+              <div key={account.id || account.account_number} className="rounded-md border border-gray-200 p-3 text-sm">
+                <div className="font-medium text-gray-900">{account.ref_banks?.bank_name || bankRefs.find(bank => bank.id === account.bank_id)?.bank_name || 'Bank'}</div>
+                <div className="mt-1 text-gray-600">{account.account_name} · ••••{account.account_number.slice(-4)}</div>
+                <div className="mt-1 text-xs text-gray-500">{account.account_type} · {account.bank_branch || 'branch not specified'} · {account.verification_status}{account.is_default ? ' · default' : ''}</div>
+              </div>
+            ))}</div>
+          )}
         </div>
       </div>
     )
@@ -284,6 +385,40 @@ export default function SuppliersPage() {
             </select></div>
         </div>
       </div>
+
+      <div className={sec}>
+        <div className="flex items-center justify-between">
+          <h2 className={hd + ' flex-1'}>Section 5 — Payment Instructions</h2>
+          <button type="button" onClick={() => setBankAccounts(rows => [...rows, newBankAccount()])} className="ml-3 text-xs font-medium text-blue-600 hover:text-blue-800">+ Add bank account</button>
+        </div>
+        <p className="text-xs text-gray-500">Bank-transfer vouchers can only post against a verified supplier account and retain a historical payee snapshot.</p>
+        {bankAccounts.length === 0 ? <p className="text-sm text-gray-400">No payment instructions yet.</p> : (
+          <div className="space-y-4">{bankAccounts.map((account, index) => (
+            <div key={account.id || index} className="rounded-lg border border-gray-200 p-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2"><label className={lbl}>Bank <span className="text-red-500">*</span></label>
+                  <select value={account.bank_id} onChange={e => updateBankAccount(index, { bank_id: e.target.value })} className={inp}>
+                    <option value="">Select bank...</option>
+                    {bankRefs.map(bank => <option key={bank.id} value={bank.id}>{bank.bank_code} — {bank.bank_name}</option>)}
+                  </select></div>
+                <div><label className={lbl}>Account Name <span className="text-red-500">*</span></label><input value={account.account_name} onChange={e => updateBankAccount(index, { account_name: e.target.value })} className={inp} /></div>
+                <div><label className={lbl}>Account Number <span className="text-red-500">*</span></label><input value={account.account_number} onChange={e => updateBankAccount(index, { account_number: e.target.value })} className={inp} autoComplete="off" /></div>
+                <div><label className={lbl}>Account Type</label><select value={account.account_type} onChange={e => updateBankAccount(index, { account_type: e.target.value as 'checking' | 'savings' })} className={inp}><option value="checking">Checking</option><option value="savings">Savings</option></select></div>
+                <div><label className={lbl}>Bank Branch</label><input value={account.bank_branch} onChange={e => updateBankAccount(index, { bank_branch: e.target.value })} className={inp} /></div>
+                <div><label className={lbl}>SWIFT / BIC</label><input value={account.swift_code} onChange={e => updateBankAccount(index, { swift_code: e.target.value.toUpperCase() })} className={inp} /></div>
+                <div><label className={lbl}>Verification</label><select value={account.verification_status} onChange={e => updateBankAccount(index, { verification_status: e.target.value as SupplierBankAccount['verification_status'] })} className={inp}><option value="unverified">Unverified</option><option value="verified">Verified</option><option value="rejected">Rejected</option></select></div>
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <div className="flex gap-4 text-sm text-gray-600">
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={account.is_default} onChange={e => updateBankAccount(index, { is_default: e.target.checked })} />Default</label>
+                  <label className="flex items-center gap-2"><input type="checkbox" checked={account.is_active} onChange={e => updateBankAccount(index, { is_active: e.target.checked })} />Active</label>
+                </div>
+                <button type="button" onClick={() => removeBankAccount(index)} className="text-xs font-medium text-red-600 hover:text-red-800">Remove</button>
+              </div>
+            </div>
+          ))}</div>
+        )}
+      </div>
     </div>
   )
 
@@ -320,7 +455,7 @@ export default function SuppliersPage() {
           <option value="inactive">Inactive</option>
         </select>
         <div className="ml-auto">
-          <button onClick={() => { setForm({ ...EMPTY }); setEditId(null); setShowForm(true); setSaved(false) }}
+          <button onClick={() => { setForm({ ...EMPTY }); setBankAccounts([]); setRemovedBankIds([]); setEditId(null); setShowForm(true); setSaved(false) }}
             className="bg-gray-900 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-gray-800">
             + Create Supplier
           </button>

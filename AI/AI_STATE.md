@@ -1,14 +1,15 @@
 # PXL AI State
 
-**Current Date:** 2026-08-01
+**Current Date:** 2026-08-02
 **Current Branch:** `main`
-**Working Tree:** EA-010 documentation/governance reconciliation is the current
-mission state; commit/push standing is recorded in `AI_LAST_SESSION.md`.
-**Product Phase:** Product Architecture consolidation complete; WP-5 Engineering
-Amendment EA-010 complete, awaiting a separate comprehensive final Authorisation
-Gate re-run.
-**Environment:** Local repository documentation review only; no database test
-lane, runtime, or hosted operation was authorised.
+**Working Tree:** Delivery Plan Phase 3 onboarding implementation is complete
+locally with executed fresh, focused, canonical, regression and frontend evidence.
+Phase 2 recoverability is now mechanised, scheduled and proven; the regression
+lane was made order-independent after it was found to report a false red.
+**Product Phase:** Pilot Execution Plan. The IA-5/ECC dormant programme is
+**frozen**; work is sequenced by product value, not by foundation depth.
+**Environment:** Local Supabase on a fresh schema; fresh replay, canonical and
+full regression lanes all executed and passing. No hosted operation was performed.
 **Product Readiness:** **Internal QA/demo only. Not pilot-ready. Not
 production-ready.** PXL is not production-ready.
 
@@ -16,25 +17,37 @@ production-ready.** PXL is not production-ready.
 
 The canonical product authority is
 `docs/PXL/01. Architecture/PXL_PRODUCT_ARCHITECTURE.md`: what PXL is, its eleven
-business modules, Dashboard reporting surface, nineteen engine assessment scopes,
-canonical names, boundaries and M0–M9 maturity model.
+business modules, nineteen engine scopes, canonical names and M0–M9 maturity.
+`PXL_DELIVERY_PLAN.md` is the complete plan; `PXL_PRODUCT_EXECUTION_ROADMAP.md`
+holds the dependency map, quality bars and per-module criteria. Neither may
+override the Product Architecture or authorise implementation.
 
-The subordinate planning authority is
-`docs/PXL/01. Architecture/PXL_PRODUCT_EXECUTION_ROADMAP.md`: dependency sequence,
-Product Definition of Done, maturity evidence, risks and operating model. It may
-not override the Product Architecture or authorise implementation.
+A brand-new session should be started with `AI/ONBOARDING_PROMPT.md`.
+
+**Current phase: Delivery Plan Phase 2 — Operational safety.** Phase 1 is
+complete. Phase 3 was implemented locally out of sequence on 2026-08-02 because
+its interrupted work already existed in the tree. The backup service is now
+built, scheduled and proven end to end including offsite replication; what
+remains of Phase 2 is **owner-supplied**, not engineering: a destination on a
+separate failure domain, an escrowed passphrase, and a PAD-007 PITR ruling.
 
 Fresh AI startup order: `AI/AGENT_SYSTEM_PROMPT.md` → this file →
-`AI_LAST_SESSION.md` → Product Architecture → Product Execution Roadmap when the
-task concerns planning, maturity or sequencing → only the exact authorities named
-by the active mission.
+`docs/PXL/00. Governance/PXL_HOW_WE_WORK.md` → Product Architecture → Execution
+Roadmap for planning work → only the authorities the active mission names.
 
-`AI_PROGRESS.md` is the executive dashboard only. It uses exact homogeneous
-measures and no mixed-unit overall percentage.
+The certification-ceremony process was **retired on 2026-08-02** and replaced by
+automated invariants (see `PXL_HOW_WE_WORK.md` §3–4). Do not run an audit
+mission. Read the state, run the gates, fix what fails, build the next thing.
+
+**This file is the only status authority.** Finding counts, test counts,
+certification standing, reconciliation standing and maturity live here and
+nowhere else. Do not create a second status dashboard or a session-log file;
+`git log` is the session history. Two former root status files drifted into
+reporting inventory as unreconciled after it was fixed, and were archived.
 
 ## Current Finding Standing
 
-**92 Retested Passed / 0 In Progress / 0 Open (92 total).** The finding program
+**93 Retested Passed / 0 In Progress / 0 Open (93 total).** The finding program
 is complete, but that evidence does not certify any module or engine and does
 not make the product production-ready.
 
@@ -43,18 +56,26 @@ not make the product production-ready.
 - **Certified modules:** 0 / 11 certification scopes.
 - **Certified engines:** 4 / 19 — Permissions/RLS, Audit & Immutability, Number
   Series and Dimension.
-- **Certified work packages:** IA-5 ECC WP-1…WP-4, exactly 4 / 9; work-package
-  certification does not certify the Inventory Accounting Engine or Inventory
-  Module.
-- **Canonical workflows meeting Product DoD:** 0 / 6 reference flows.
-- **Transaction workspaces:** 41 registry entries; Sales Invoice is the sole
-  source-reviewed slice. The other 40 remain `transaction-matrix-only`.
-  Transaction-workspace business qualification remains source-gated.
-- **Visible scaffolds:** 33 reachable routes backed only by future-deferred
-  tables; 18 disabled navigation placeholders.
-- **Tests:** 110 pgTAP files in the repository. This architecture mission ran
-  documentation validation only, not database test lanes.
-- **Backup/restore:** Not Tested; no RPO/RTO or successful restore evidence.
+- **Critical reconciliations evidenced:** **1 / 9.** Inventory-to-control
+  reconciles at 0.00 in every stock-holding company, guarded by test `111`.
+- **Exercised posting entry points:** **12 of 24** (re-measured 2026-08-02; was
+  recorded as 11 of 22) — the honest completion measure.
+- **Certified work packages:** IA-5 ECC WP-1…WP-4, 4 / 9, **frozen, 21 tables all
+  empty, zero consumers.** WP-5…WP-9 and IA-6 stopped.
+- **Canonical workflows meeting Product DoD:** 0 / 6.
+- **Transaction workspaces:** **37** registry entries; Sales Invoice is the sole
+  source-reviewed slice. UI rollout is not business completion:
+  business qualification remains source-gated.
+- **Visible scaffolds:** **30** deferred routes labelled "Not built"; **17** nav
+  labels with no page. 247 nav entries → 175 routes, **145 backed by real data**.
+- **Tests:** 116 pgTAP files / 2,709 assertions plus 58 frontend source tests;
+  full regression, canonical, build and lint lanes pass.
+- **Backup/restore:** **Mechanised and scheduled; not operated over anything
+  real.** `npm run backup:operate` runs one fail-closed cycle: backup →
+  restore-verify → encrypted offsite replication with read-back → retention →
+  journal; `.github/workflows/backup-drill.yml` runs it weekly. RPO 24h pilot.
+  **Still owner-supplied: the bucket and an escrowed passphrase. The schedule
+  has never fired and no PXL database holds real books.**
 
 Payroll is a **future separate product — excluded from current PXL ERP progress**.
 
@@ -62,105 +83,109 @@ Payroll is a **future separate product — excluded from current PXL ERP progres
 
 1. No complete Sales or Purchasing source-to-financial-statements-to-tax workflow
    meets the Product Definition of Done.
-2. Receiving Reports add stock without a journal while Vendor Bills debit
-   purchase clearing; Inventory valuation does not reconcile to control.
+2. Sales Invoice **does** post COGS and inventory relief (test 054; canonical
+   COGS debits equal inventory credits). The "sales-side COGS does not exist"
+   claim was false, corrected 2026-08-02. Actually open: **Cash Sales has no
+   posting function**, Customer Return has no COGS path, Delivery Receipt does
+   not relieve inventory, three-way match and over-receipt control.
 3. No Tax Engine exists. Tax capability is distributed across reference masters,
-   save-layer calculators, tax ledger and Compliance surfaces. Product
-   Architecture Decision PAD-001 is required before engine implementation.
-4. No opening-balance strategy/workflow exists; PAD-002 is required before pilot
-   onboarding.
-5. Backup/restore, operations, support and user acceptance are unproven.
-6. Hosted parity is absent for local work after `20260716000005`.
+   save-layer calculators, tax ledger and Compliance surfaces. PAD-001 is
+   required before engine implementation.
+4. Phase 3 exists locally but is not operationally accepted: no hosted migration,
+   deployed invite function, real-company cut-over rehearsal or browser/UAT proof
+   has occurred.
+5. Recoverability is mechanised but not operated: the weekly workflow has never
+   fired, no durable destination or escrowed passphrase exists, the replication
+   proof used separate storage on the **same machine**, nothing has run against
+   a hosted database, and PITR is untested.
+6. Hosted parity is absent after `20260716000005`.
+7. Frontend evidence is source-contract and production-build coverage only; no
+   automated browser workflow lane exists.
 
 ## Current Engineering Frontier
 
-ADR-C01 remains frozen. ECC-01 remains owner accepted, not frozen. The original
-IA-5 permanent-foundation claim remains **SUSPENDED** by C-01.
+Delivery Plan Phase 3 is implemented locally: one governed PHP opening-balance
+cut-over across GL, AR, AP, inventory and bank detail, posting one balanced
+Kernel journal and continuing into ordinary Receipt/Payment Voucher settlement
+and AR/AP ageing; supplier bank accounts and PV payee snapshots with posting
+guards; Administration for users/invite, memberships, roles and branch scopes;
+the master-data importer made navigable. PAD-002 and PAD-003 decided to those
+boundaries. The fresh settlement proof keeps IA-5 dormant at zero events.
 
-WP-1, WP-2, WP-3 and WP-4 remain **Certified work packages** and dormant. Every
-earlier WP-5 rejection and EA-008/EA-009 remains historical evidence. The latest
-complete gate returned **REJECTED** on WP5-AGR2-001…004: the successor lifecycle
-collided with certified WP-4 canonical uniqueness; persisted-row construction
-was incomplete; policy dates depended on session timezone; and the all-rollback
-fixture could not support two autonomous sessions.
-
-Documentation/governance-only **EA-010** closes all four specification blockers.
-WP-5 is initial-resolution-only and fails `IA5-WP5-026`/`23505` on any prior
-event resolution; all 139 columns across seven writer-target tables are mapped;
-writer/resolver date authority is UTC without modifying the certified guard;
-and future two-session evidence belongs to local-only reset-bounded
-`WP5-CONC-114`. The exact four-object contract, one writer sequence,
-fourteen-component encoding, V-10-preserving contexts, totality, rollback and
-future evidence remain governed in
-`docs/PXL/07. Inventory/04. Implementation/IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md`.
-
-EA-010 grants no authority. WP-5 is unauthorised, unimplemented, unaudited and
-uncertified. No runtime consumer exists and no production source is enabled.
-Re-resolution, dependent WP-7 capability and production activation additionally
-stop on a separate future WP-4 lifecycle/uniqueness decision.
+The IA-5/ECC programme is **frozen** with zero consumers. WP-1…WP-4 remain
+certified; WP-5 is unauthorised and unimplemented. Historical evidence is
+archived under `docs/PXL/archive/ia5-ecc-frozen/`. Resume only when a real
+costing-replay requirement demands it.
 
 Posting P5.2 remains fully enforced. The Accounting Kernel is a component inside
-the Posting Engine, not a separate engine. Posting P6 remains blocked at
-Inventory. P5.3B/P6/P7 remain paused.
+the Posting Engine, not a separate engine.
 
 ## Hosted and UX Status
 
-Hosted project `bskjkogijpbhukjkagfj` is synchronized through migration
-`20260716000005`. Fifty-one local migrations from `20260718000001` through
-`20260731000019` are not hosted. No hosted parity or deployment claim is valid;
-no hosted mutation without explicit approval.
+Hosted project `bskjkogijpbhukjkagfj` is at migration `20260716000005`; **55
+local migrations are pending.** The deploy is **rehearsed, not performed, and
+deliberately deferred** — nothing consumes the hosted database, there is no
+deployed frontend, and CI deploys nothing. The pending set contains **no
+destructive DDL**; `npm run deploy:rehearse` proves it reaches a state
+structurally identical to a fresh replay in 8s. Credentials are absent by design
+(PXL-AUD-055), owner-supplied, never pasted into a transcript or file. See
+`PXL_DEPLOY_RUNBOOK.md`.
 
-The repository has 41 registered transaction workspaces, but only the Sales
-Invoice slice has completed source review; the other 40 are matrix-only. Thirty-
-three reachable routes are backed only by future-deferred tables, and 18
+Thirty-three reachable routes are backed only by future-deferred tables, and 18
 navigation items are disabled placeholders. A route or rendered page is not a
 complete workflow.
 
 ## Last Verified Commands
 
-- `npm run docs:check` — **PASS** on 2026-08-01 after EA-010 reconciliation;
-  the canonical findings standing and 110-file test-book census agree.
-- `git diff --check` — **PASS** on 2026-08-01.
-- EA-010 links/index, fourteen-component/26-column resolver, executable-schema-
-  matched 139-column persistence map, one 18-step writer sequence, four-object/
-  reverse-rollback, 26 failures, future evidence, timezone, identifier and
-  status/terminology censuses — **PASS**.
-- The fixed protected set measured 527 entries. Start/end SHA-256 aggregate
-  `8ddf66f36c63606f8eb0bceaacfe3f3131337758b895fc557ec488ca383d7ba6`
-  is **identical**.
-- No SQL, migration, pgTAP/database lane, test, route, navigation, application
-  source, database object or hosted operation changed or ran under EA-010.
-- Public-push secret/privacy gate — **PASS after owner disposition**. The exact
-  reviewed residual is the Supabase CLI documented default local-development
-  PostgreSQL URI at `127.0.0.1:54322`, not a hosted/project credential. Current
-  prose masks its password; the historical value is classified only by its
-  reviewed SHA-256. This exact false positive requires neither rotation nor
-  history rewrite. No blanket database-URI exemption exists.
+- `npm run test:db:fresh` — **PASS** on 2026-08-02.
+- `npm run test:canonical` — **PASS**, 30 files / 749 assertions.
+- `npm run test:db:regression` — **PASS**, 116 files / 2,709 assertions. The lane
+  now resets to a fresh schema first; previously it inherited the prior lane's
+  state, so the documented order (fresh → canonical → regression) reported a
+  false red — the canonical seed populates `companies`, removing the zero-company
+  bootstrap in `fn_provision_company` that tests 073 and 116 rely on. Guarded by
+  `tests/recoverability_operations.test.ts`.
+- Phase 3 focused lane — **PASS**, 4 files / 74 assertions.
+- `npm run test:frontend` — **PASS**, 58 tests.
+- `npm run build`, `npm run lint`, `git diff --check` — **PASS**; lint reports
+  one pre-existing non-blocking warning in `tests/backup_recovery.test.ts`.
+- `npm run docs:check` — **PASS**; 116 tests indexed.
+- `npm run backup:operate` — **PASS**; the replicated copy restored independently
+  (93 tables / 0 mismatches / 6s RTO). Verifier proven able to fail against a
+  deliberately corrupted restore; all four offsite refusals exercised.
+- Inventory-to-control variance **0.00** for ABC Trading Corporation, Bayani
+  Partners and Company, and Golden Retail Store; trial balance out-of-balance
+  **0.00** in all five companies.
 
 ## Recommended Next Task
 
-**WP-5 AUTHORISATION GATE RE-RUN — COMPREHENSIVE FINAL GATE.** Independently
-review the EA-010-current specification against ADR-C01, ECC-01 and certified
-WP-1…WP-4.
-Do not implement or repair WP-5 during that gate. The owner-approved Git-history
-disposition applies only to the exact documented Supabase CLI localhost default;
-any future credential detection remains a new stop requiring independent review.
+**PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE. The remainder is owner action,
+not code.** PAD-007 is **decided: self-managed encrypted backups to
+S3-compatible object storage**, no provider PITR for the pilot. To close item 5:
+create the bucket (versioning + lifecycle), run `npm run backup:offsite:check`
+to prove it with a canary carrying no client data, then set repository variable
+`PXL_OFFSITE_URL` plus the access-key secrets, and escrow
+`PXL_BACKUP_PASSPHRASE` off the host — an archive whose passphrase died with the
+server is not a backup. Runbook §6 has the exact commands.
 
-No open findings remain; the audit-finding program is complete. This next task
-is a governed engineering-documentation mission, not a finding remediation.
+**The next build task is Delivery Plan Phase 4 — the Tax Engine (PAD-001)**,
+unless the owner authorises the hosted deploy first. Phase 3's local build is
+complete; do not call it pilot-ready until hosted parity, the invite function, a
+real-company cut-over rehearsal and browser/UAT evidence exist.
 
-This remains next because a completed amendment cannot authorise itself and the
-deterministic chronology prerequisite still advances future Inventory-to-GL
-correctness. It does not justify automatic WP-6…WP-9 execution. After the WP-5
-gate, run the roadmap's product-value checkpoint;
-canonical Sales/Purchasing proof, Receiving accounting, Tax ownership, opening
-balances and restore evidence are more urgent than further dormant foundation
-unless a later package is demonstrably required.
+**The hosted deploy is deliberately deferred, not blocked** (Deploy Runbook §2a).
+Re-run `npm run deploy:rehearse` after adding migrations. **Requires explicit
+owner approval before any hosted operation.**
+
+No open findings remain. Do not resume IA-5: operated recovery, Phase 3 target
+acceptance, canonical Sales/Purchasing proof, sales-side COGS and Tax ownership
+all rank above further dormant foundation work.
 
 ## Stop Conditions
 
-No ADR-C01/ECC-01 deviation; no Posting/Kernel change; no production source
-activation; no IA-6; no WP-5 implementation before a successful gate; preserve
-dormancy; a non-zero `inventory_events` count is a governance stop; no hosted
-operation without approval; no product-scope change without Product Architecture
-Amendment. WP-5…WP-9 and IA-6 remain unauthorised.
+No Posting/Kernel change; no production inventory source activation; no IA-6; no
+WP-5 implementation; preserve IA-5 dormancy; a non-zero `inventory_events` count
+is a governance stop; no hosted operation without approval; no product-scope
+change without a Product Architecture Amendment. WP-5…WP-9 and IA-6 remain
+unauthorised. Do not create a governance document in a commit that contains no
+application or SQL change.

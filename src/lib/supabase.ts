@@ -16,4 +16,14 @@ if (missing.length > 0) {
   )
 }
 
-export const supabase = createClient<Database>(supabaseUrl!, supabaseAnonKey!)
+// A root-relative value (for example `/supabase`) is resolved against the page
+// origin. This lets the dev server proxy Supabase on its own origin, which is
+// what makes the app work in a remote workspace: the browser cannot reach the
+// container's 127.0.0.1:54321, and proxying avoids forwarding a second port,
+// widening the CSP, or making an API endpoint publicly visible. Absolute URLs
+// are passed through untouched, so hosted behaviour is unchanged.
+const resolvedUrl = supabaseUrl!.startsWith('/')
+  ? `${window.location.origin}${supabaseUrl!.replace(/\/$/, '')}`
+  : supabaseUrl!
+
+export const supabase = createClient<Database>(resolvedUrl, supabaseAnonKey!)
