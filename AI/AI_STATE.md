@@ -16,13 +16,11 @@ production-ready.** PXL is not production-ready.
 ## Canonical Authority and Startup
 
 Four authorities, four questions — settled 2026-08-02; none answers another's:
-**what** PXL is → `PXL_PRODUCT_ARCHITECTURE.md`; **when/in what order** work
-ships, the only numbered phases and the timeline → `PXL_DELIVERY_PLAN.md`;
-**why** that order — outcome dependencies, quality bars, per-module criteria →
-`PXL_PRODUCT_EXECUTION_ROADMAP.md`, which carries **no phase numbers**;
-**where** we are today → this file. An unqualified "Phase N" always means a
-Delivery Plan phase. Neither planning document may override the Product
-Architecture or authorise implementation.
+**what** PXL is → `PXL_PRODUCT_ARCHITECTURE.md`; **when/in what order**, the only
+numbered phases and the timeline → `PXL_DELIVERY_PLAN.md`; **why** that order —
+outcome dependencies and quality bars → `PXL_PRODUCT_EXECUTION_ROADMAP.md`, which
+carries **no phase numbers**; **where** we are → this file. An unqualified
+"Phase N" means a Delivery Plan phase.
 
 A brand-new session should be started with `AI/ONBOARDING_PROMPT.md`.
 
@@ -162,17 +160,18 @@ complete workflow.
 
 **PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE; the rest is owner action.**
 PAD-007 decided: self-managed encrypted backups to S3-compatible storage, no
-provider PITR for the pilot. To close it: create the bucket (versioning +
-lifecycle), run `npm run backup:offsite:check`, set repository variable
-`PXL_OFFSITE_URL` plus the access-key secrets, and escrow
-`PXL_BACKUP_PASSPHRASE` off the host. Runbook §6 has the commands.
+PITR for the pilot. To close it: create the bucket, run
+`npm run backup:offsite:check`, set `PXL_OFFSITE_URL` plus the access-key
+secrets, and escrow `PXL_BACKUP_PASSPHRASE` off the host. Runbook §6.
 
-**The next build task is Delivery Plan Phase 4 — Tax Engine and filing
-artifacts (PAD-001)**, unless the owner authorises the hosted deploy first.
-Phase 5 now also owns **financial statement presentation**: `account_fs_map`
-has never held a row, so no statements can be produced from mapped accounts.
-Phase 3's local build is complete; not pilot-ready until hosted parity, the
-invite function, a real cut-over rehearsal and browser/UAT evidence exist.
+**The next build task is Delivery Plan Phase 4 — the Tax Engine calculator
+(PAD-001)**, unless the owner authorises the hosted deploy first. It depends only
+on Foundation and is unblocked today. **Filing artifacts are not part of it**:
+they were moved to Phase 5.8 on 2026-08-02 because a return is generated from
+posted, closed data. Phase 5 runs flows → statements (`account_fs_map` has never
+held a row) → filing, in that order. Phase 3's local build is complete; not
+pilot-ready until hosted parity, the invite function, a real cut-over rehearsal
+and browser/UAT evidence exist.
 
 **The hosted deploy is deliberately deferred, not blocked** (Deploy Runbook §2a);
 re-run `npm run deploy:rehearse` after adding migrations. **Requires explicit

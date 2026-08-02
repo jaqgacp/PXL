@@ -521,15 +521,15 @@ it — a reference to that document's numbering, not a second scheme.
 | Module | Status | Completing outcome | Shipped by (Delivery Plan) |
 | --- | --- | --- | --- |
 | Dashboard | 🟡 Partial | Reporting and Administration | Phase 6 |
-| Setup | ✅ Working | Foundation | Phase 1–3 (done) |
-| Master Data | ✅ Working | Foundation | Phase 1–3 (done) |
+| Setup | ✅ Working | Foundation | predates this plan; complete |
+| Master Data | ✅ Working | Foundation | predates this plan; complete |
 | Sales & Receivables | 🟡 Partial | **Customer-to-Cash** | Phase 5 |
 | Purchasing & Payables | 🟡 Partial | **Procure-to-Pay** | Phase 5 |
 | Inventory | 🟡 Partial | Procure-to-Pay (receipt half already closed) | Phase 1 / Phase 5 |
-| Banking & Treasury | ⚪ Skeleton | Asset and Treasury Management | Check Voucher Phase 5; remainder ⏸ v2 |
+| Banking & Treasury | ⚪ Skeleton | Asset and Treasury Management | Check Voucher Phase 5.8 (Cash Disbursements Book); remainder ⏸ v2 |
 | Fixed Assets | ⏸ Deferred | Asset and Treasury Management | ⏸ v2 (Phase 8) |
 | Accounting | ✅ Core working | **Period Close** | Phase 5 |
-| Compliance | 🟡 Partial | **Tax Engine and Compliance** | Phase 4 |
+| Compliance | 🟡 Partial | **Tax Engine and Compliance** | Calculator Phase 4; filing artifacts Phase 5.8 |
 | Reports | 🟡 Partial | Period Close (statements), Reporting and Administration (management) | Phase 5 / Phase 6 |
 | Administration & Security | 🟡 Partial | Reporting and Administration | Phase 6 |
 
@@ -549,7 +549,7 @@ it — a reference to that document's numbering, not a second scheme.
 | Period Lock & Closing | 🟡 Partial | Period Close | Phase 5 |
 | Reversal, Void & Correction | 🟡 Partial | Period Close | Phase 5 |
 | Reporting & Reconciliation | 🟡 1 of 9 reconciliations | Period Close | Phase 5 |
-| Tax Engine | 🔴 Absent — zero calculators | **Tax Engine and Compliance** | Phase 4 |
+| Tax Engine | 🔴 Absent — zero calculators | **Tax Engine and Compliance** | Phase 4 (calculator only) |
 | Inventory Accounting (IA-5/ECC) | ⏸ Frozen, 21 empty tables, zero consumers | **Inventory Accounting — not scheduled** | none |
 | Approval Engine | ⚪ Defined, never executed | Reporting and Administration | Phase 6 |
 | Attachment & Traceability | 🟡 Trace works, attachments absent | Reporting and Administration | Phase 6 |
@@ -564,10 +564,17 @@ constraint, not a convention.
 ```text
   Foundation
       │  a ledger that cannot be corrupted must exist before anything posts into it
-      ├──────────────► Customer-to-Cash ──┐
-      │                                    ├──► Period Close ──► Tax and Compliance
-      └──────────────► Procure-to-Pay ────┘         │                    │
-                                                    │                    │
+      │
+      ├──────────────► Tax calculator ────────────┐   no Period Close dependency:
+      │                (one authority for VAT,    │   it runs at document-save time
+      │                 PT, EWT, FWT)             │
+      │                                           ▼
+      ├──────────────► Customer-to-Cash ──┐   (flows are worth more once tax is
+      │                                    │    computed in one place)
+      │                                    ├──► Period Close ──► Filing artifacts
+      └──────────────► Procure-to-Pay ────┘         │            (returns, working
+                                                    │             papers, 2307,
+                                                    │             SLS/SLP, CDB)
                               Asset and Treasury ◄──┘                    │
                               (deferred; needs Period Close semantics)   │
                                                                          ▼
@@ -589,9 +596,20 @@ it has a fresh-data end-to-end proof (`112`) and Customer-to-Cash does not.
 that feed it are correct; reconciling AR and AP to their control accounts
 requires those flows to be trustworthy first.
 
-**Tax and Compliance depends on Period Close**, not merely on the Tax Engine.
-Returns are generated from posted, closed data. Building filing artifacts over an
-unclosed period produces filings that change after submission.
+**Tax and Compliance splits across the dependency line, and this is the single
+most important edge in the graph to get right.** The two halves do not share a
+dependency:
+
+- The **tax calculator** depends only on Foundation. It runs at document-save
+  time, before anything is posted or closed, so it can and should be built early
+  — it is the fix for seven independent VAT implementations, and every flow proof
+  afterwards is worth more once tax is computed in one place.
+- The **filing artifacts** depend on Period Close. A return is generated from
+  posted, *closed* data; building one over an unclosed period produces filings
+  that change after submission.
+
+Reversing this was a real error in the 2026-08-01 documents, which put all of
+Tax before the flows. Corrected 2026-08-02.
 
 **Asset and Treasury Management depends on Period Close semantics** — depreciation
 and bank reconciliation are period-bound activities. Deferred to v2 regardless,
@@ -652,25 +670,34 @@ hosted parity and browser evidence.
   no AP-to-control guard; `inventory_cost_layers` has never held a row, so the
   FIFO path is unexercised.
 
-## 9.7.5 Period Close · 🟡 CORE WORKS, CLOSE DOES NOT
+## 9.7.5 Period Close · 🟡 CORE WORKS, STATEMENTS DO NOT
 
 - **Outcome:** A month closes, cannot be reopened silently, and produces
   financial statements from posted data.
 - **Depends on:** Customer-to-Cash and Procure-to-Pay.
 - **Already true:** trial balance out of balance by **₱0.00 in all five
-  companies**; 60 fiscal periods; 23 reporting views; reversal and void paths
-  post and are tested.
+  companies**; 60 fiscal periods; **period locking against posting works**;
+  23 reporting views; reversal and void paths post and are tested.
 - **Blocking the outcome:** **`account_fs_map` is empty** — the trial balance is
   correct but no account is mapped to a statement line, so no Statement of
   Financial Position or Comprehensive Income can be produced from mapped
-  accounts. Eight of nine critical reconciliations remain unevidenced. Year-end
-  close and audited reopening are unproven.
+  accounts. Eight of nine critical reconciliations remain unevidenced.
+- **Deliberately not a pilot blocker:** **year-end close and audited reopening**
+  are unproven and are **not** scheduled before the pilot. A pilot is a
+  one-quarter parallel run (Delivery Plan Phase 7), which needs monthly and
+  quarterly close, not a year-end roll. Year-end close belongs to Production
+  Readiness. This is stated explicitly because an earlier edition listed it as
+  blocking Period Close while the Delivery Plan scheduled no work for it —
+  a contradiction resolved on 2026-08-02 in favour of the Delivery Plan.
 
 ## 9.7.6 Tax Engine and Compliance · 🟡 REVIEW WORKS, FILING DOES NOT
 
 - **Outcome:** A company files correct BIR returns generated from the same posted
   data as its financial statements.
-- **Depends on:** Period Close.
+- **Depends on:** split. The **calculator** depends only on Foundation and ships
+  first (Delivery Plan Phase 4). The **filing artifacts** depend on Period Close
+  and ship after the statements (Delivery Plan Phase 5.8). Treating these as one
+  unit is what produced the 2026-08-01 sequencing error.
 - **Already true:** VAT and withholding reconcile to the GL at zero variance; 248
   tax-calendar events; 218 CAS number issuances with a governed void event;
   review surfaces read real posted data.
@@ -737,10 +764,10 @@ hosted parity and browser evidence.
 - **Outcome:** A quarter closes correctly on PXL and the client's accountant
   signs the financial statements.
 - **Depends on:** a surviving pilot.
-- **Requires:** one full quarter parallel run; point-in-time recovery for the
-  1-hour production RPO; CAS accreditation; support and user acceptance proven.
-  Until all of it holds, the words *Certified*, *Complete* and *Production Ready*
-  remain reserved.
+- **Requires:** one full quarter parallel run; **year-end close and audited
+  reopening**; point-in-time recovery for the 1-hour production RPO; CAS
+  accreditation; support and user acceptance proven. Until all of it holds, the
+  words *Certified*, *Complete* and *Production Ready* remain reserved.
 
 ## 9.7.12 Mapping from the retired Phase A–L plan
 

@@ -134,9 +134,17 @@ locally; this is not yet evidence that a real or hosted onboarding was operated.
 
 ---
 
-### Phase 4 — Tax Engine · 4–6 weeks
+### Phase 4 — Tax Engine (the calculator) · 4–6 weeks
 
 PAD-001. Decide it as **Accounting-owned, one calculator.**
+
+> **Scope corrected 2026-08-02.** This phase briefly also owned the BIR filing
+> artifacts. That was a dependency error: a return is generated from posted,
+> *closed* data, so filing cannot precede the period-close and statement work in
+> Phase 5, whereas the calculator can and should come first — it runs at
+> document-save time and has no dependency on Period Close. The filing artifacts
+> moved to **Phase 5.8**. Nothing was added or removed from the plan; one item
+> changed phase.
 
 1. `fn_calculate_tax(context) → tax_components[]` — one authority for VAT
    (inclusive and exclusive), percentage tax, EWT by ATC, FWT.
@@ -149,23 +157,20 @@ PAD-001. Decide it as **Accounting-owned, one calculator.**
    previously said six.*
 3. Regression test asserting every caller produces byte-identical output to today
    **before** switching.
-4. **The filing artifacts themselves.** A calculator does not produce a return.
-   All twelve `compliance_*` working-paper tables are empty, as are `bir_forms`,
-   `form_2306_issuances`, `form_2307_issuances`, `form_2307_tracking`,
-   `vat_returns`, `withholding_remittances` and `tax_credits_schedule`. **Nothing
-   has ever been filed from PXL.** A VAT-registered pilot client cannot operate
-   without at least: VAT return working papers, EWT working papers, Form 2307
-   issuance, and the SLS/SLP exports.
-
-**Done when:** one place to change a BIR rate, **and** one full period's VAT,
-percentage tax and withholding returns generated from posted data and reconciled
-to the General Ledger at zero variance.
+**Done when:** there is one place to change a BIR rate, and every existing caller
+produces identical tax output through it. Filing capability is **not** claimed
+here — that is Phase 5.8.
 
 ---
 
-### Phase 5 — Prove the two canonical flows · 3–4 weeks
+### Phase 5 — Prove the two canonical flows, then close and file · 3–4 weeks plus unestimated additions
 
-Mostly proof of what exists, not new features.
+Items 1–6 are mostly proof of what exists. Items 7–8 are genuine build, added
+2026-08-02, and are the reason this phase no longer carries a single estimate.
+
+**Internal order matters here:** flows (1–6) → statements (7) → filing (8). Each
+depends on the one before it; a return generated before the period's statements
+are right is a return that changes after submission.
 
 1. **Sales:** Quotation → SO → DR → SI → OR → VAT → SLS → Sales Journal → AR →
    TB → FS, including credit memo and void.
@@ -196,12 +201,25 @@ Mostly proof of what exists, not new features.
    client's accountant has to sign statements, so this is pilot-critical rather
    than reporting polish. *Added 2026-08-02; this item was absent from the plan
    entirely.*
+8. **BIR filing artifacts.** *Moved here from Phase 4 on 2026-08-02: a return is
+   generated from posted, closed data, so this depends on items 1–7 above and
+   cannot precede them.* All twelve `compliance_*` working-paper tables are
+   empty, as are `bir_forms`, `form_2306_issuances`, `form_2307_issuances`,
+   `form_2307_tracking`, `vat_returns`, `withholding_remittances` and
+   `tax_credits_schedule`. **Nothing has ever been filed from PXL.** A
+   VAT-registered pilot client cannot operate without at least: VAT return
+   working papers, EWT working papers, Form 2307 issuance, and the SLS/SLP
+   exports. Includes **Check Voucher**, the one Banking document kept in v1
+   because the Cash Disbursements Book needs it — previously named in the scope
+   decisions but never assigned to a phase.
 
 Each flow proven by a **fresh-data end-to-end test in the style of `112`**, never
 against the demo seed.
 
-**Done when:** both flows meet the Pilot Bar with evidence, and a full statement
-set is produced from mapped accounts and ties to the trial balance.
+**Done when:** both flows meet the Pilot Bar with evidence, a full statement set
+is produced from mapped accounts and ties to the trial balance, and one full
+period's VAT, percentage tax and withholding returns are generated from posted
+data and reconciled to the General Ledger at zero variance.
 
 ---
 
@@ -262,8 +280,8 @@ presentation, the BIR filing artifacts, and proving approval routing.
 | Phase 1 — accounting break | ✅ done | — |
 | Phase 2 — operational safety | days, not weeks (owner action only) | **High** — engineering is complete and proven |
 | Phase 3 — onboardable | built locally; hosted/UAT proof outstanding | **Medium** |
-| Phase 4 — Tax Engine **and filing artifacts** | 4–6 weeks calculator; **filing artifacts not estimated** | **Low** — see below |
-| Phase 5 — two canonical flows **and statements** | 3–4 weeks flows; **+ statement presentation not estimated** | **Low** |
+| Phase 4 — Tax Engine (calculator only) | 4–6 weeks | **Medium** — the seven callers and their outputs are enumerable today |
+| Phase 5 — flows, then statements, then filing | 3–4 weeks for the flows; **statements and filing not estimated** | **Low** — see below |
 | Phase 6 — pilot hardening | 3–4 weeks | **Low** — no browser lane exists yet to calibrate against |
 | **To pilot** | **previously ~4 months; now unestimated — see below** | — |
 | Phase 7 — pilot | one quarter parallel run | **High** — fixed by calendar |
@@ -273,20 +291,20 @@ presentation, the BIR filing artifacts, and proving approval routing.
 It was published before three pilot-critical items were known to be missing, and
 none of them has a defensible estimate from repository evidence:
 
-- **Filing artifacts (Phase 4.4).** Twelve working-paper tables, four form
-  tables and the return tables are empty. Nothing in the repository indicates how
-  much of the generation logic exists behind those empty tables, so any duration
-  would be invention.
 - **Statement presentation (Phase 5.7).** `account_fs_map` is empty. Whether this
   is a mapping-data exercise or also a reporting build is not determinable from
   the schema alone.
+- **Filing artifacts (Phase 5.8).** Twelve working-paper tables, four form
+  tables and the return tables are empty. Nothing in the repository indicates how
+  much of the generation logic exists behind those empty tables, so any duration
+  would be invention.
 - **Approval routing (Phase 6.5).** An engine that has never executed once
   carries unknown defect risk. The first run finds what review cannot.
 
 Stating "~4 months" while those three are open would repeat the mistake this plan
-was written to stop. **The next honest estimate becomes possible once Phase 4.4
-and Phase 5.7 are scoped against the code** — that scoping is itself the first
-task of Phase 4.
+was written to stop. **The next honest estimate becomes possible once Phase 5.7
+and Phase 5.8 are scoped against the code.** That scoping can run in parallel
+with Phase 4, which is itself estimable and unblocked.
 
 What has *not* changed: Phases 1–3 are done or nearly done, and the ordering
 below is unaffected. Deliberately front-loaded — after Phase 2 the product is
@@ -294,14 +312,16 @@ recoverable, which is the difference between a setback and a catastrophe.
 
 ---
 
-## The four constraints that gate everything
+## The constraints that gate everything
 
 | # | Constraint | Blocks | Phase |
 |---|---|---|---|
 | 1 | ~~Receiving adds stock with no journal~~ | — | ✅ closed |
 | 2 | ~~No schedule, no offsite path~~ Both built and proven; a durable destination and escrowed passphrase remain owner actions | Every module's production readiness | 2 |
 | 3 | ~~No opening balances~~ Local capability complete; real cut-over proof open | Pilot onboarding acceptance | ✅ local / 3 |
-| 4 | No Tax Engine | Compliance completion, statutory filing | 4 |
+| 4 | No Tax Engine calculator | Consistent tax across all seven callers | 4 |
+| 5 | No financial statement presentation (`account_fs_map` empty) | A pilot accountant cannot sign statements | 5.7 |
+| 6 | No filing artifacts — nothing has ever been filed | Statutory filing; a VAT-registered pilot client | 5.8 |
 
 ---
 

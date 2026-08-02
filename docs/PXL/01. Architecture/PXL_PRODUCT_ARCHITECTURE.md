@@ -725,7 +725,7 @@ that status.
 | **Maturity** | **M4 — PARTIAL WORKFLOW** |
 | **Certification** | Certification module #9 *"Philippine Compliance and Tax"* — **Blocked.** Phase 7 has not been executed. |
 | **Implementation** | **This module is sharply bimodal, and the split is the single most useful fact about it.** Everything that *reads posted data* works and is trustworthy: VAT reviews, the withholding summaries, all thirteen BIR books, the CAS audit logs, and the server-attested hashed exports. VAT and withholding ledgers reconcile to the General Ledger with **exactly zero variance**. Everything that *persists a statutory artifact* is an empty shell: every working paper, every return generator, every certificate register, and the entire income tax branch. Ten of the eleven income tax screens have never held a row. |
-| **Roadmap** | The Roadmap's **Tax Engine and Compliance** outcome first governs Tax architecture (Delivery Plan Phase 4); certification-programme Phase 7 later completes the module. Build return generation on top of the working review surfaces — the computation inputs already exist and reconcile. **This module cannot be completed without a Tax Engine** (§4.18). |
+| **Roadmap** | The Roadmap's **Tax Engine and Compliance** outcome governs Tax architecture. The calculator ships first (Delivery Plan Phase 4); **return generation ships after Period Close and the statements, at Delivery Plan Phase 5.8**, because a return is generated from posted, closed data. Certification-programme Phase 7 later completes the module. Build return generation on top of the working review surfaces — the computation inputs already exist and reconcile. **This module cannot be completed without a Tax Engine** (§4.18). |
 
 ---
 
