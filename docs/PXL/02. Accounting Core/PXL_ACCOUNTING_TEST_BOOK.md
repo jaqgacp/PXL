@@ -2519,3 +2519,81 @@ Not claimed: period close (revenue and expense balances are still not rolled int
 retained earnings by any process — the governed `current_year_earnings` line is
 what makes a mid-year position balance), comparative periods, note disclosures
 and consolidation.
+
+## Delivery Plan Phase 5 (Backlog 18d) — Period close and year-end roll-forward
+
+Status: **PASSING 2026-08-03.**
+`supabase/tests/122_period_close_year_end_rollforward_test.sql` runs the
+accounting cycle to its end: transaction → posting → general ledger → trial
+balance → statements → period close → year-end close → retained earnings → next
+fiscal year.
+
+**Why this file exists in the shape it does.** `fn_close_fiscal_year` had been in
+the schema since PXL-AUD-013 and test `040` passed every assertion about it. It
+could not have committed. The closing journal was posted with
+`reference_doc_type = 'CLOSE'` and a NULL `reference_doc_id`, while the `CLOSE`
+row of `ref_posting_source_types` pointed at `journal_entries`; the deferred
+constraint trigger `trg_journal_entry_source_integrity` resolves every posted
+entry's source at COMMIT and rejects a NULL source for a non-MANUAL type. pgTAP
+rolls back, so a deferred constraint the suite never commits is a constraint the
+suite never checks. The same transaction with `SET CONSTRAINTS ALL IMMEDIATE`
+fails with "Posting source id is required for source type CLOSE". A year-end
+close that passes its test and cannot commit is worse than one that is missing,
+because the test says it is there.
+
+The fix is not a patch: the fiscal year **is** the closing journal's source
+document, so `CLOSE` now resolves against `fiscal_years` and the entry carries
+`reference_doc_id = fiscal_year_id` with the source assertion enforced instead of
+skipped. Assertion 23 asserts that resolution directly, so the gap cannot reopen
+without a red test.
+
+Section A pins the governance. `fiscal_periods.is_locked` and
+`fiscal_years.status` are refused to a direct writer (assertions 1–2) — before
+this, the "Close Year" button wrote `status = 'closed'` straight through
+PostgREST and posted no journal at all, so a year could be declared closed with
+revenue and expense still sitting in the profit-and-loss accounts. The close
+register denies every direct write and enforces row-level security (3–4), and
+readiness is returned as data, so the screen and the engine cannot disagree
+(5–7).
+
+Section B runs the monthly and quarterly close. A closed period locks and is
+recorded with the readiness evidence that admitted it (8–10), refuses a second
+close (11) and refuses further posting (12). Periods close in date order (13).
+The quarterly close is the *same* period close applied to the quarter's
+remaining periods (14–15) — PXL keeps a monthly fiscal calendar, so a quarter is
+not a second closing concept. Reopening requires a reason (16), runs
+last-in-first-out so a posting can never land behind a period that is still
+closed (17), supersedes rather than erases the close it undoes (18–19), and the
+register cannot be deleted (20).
+
+Section C is the year-end close. The closing journal is balanced, classified
+`closing` and sourced on the fiscal year (22); it satisfies the deferred
+source-integrity constraint (23); revenue and expenses are zero afterwards
+(24–25); retained earnings carries the year's net income of 75,000 (26); the
+ledger still balances (27); the year is closed with every period locked (28);
+and the **next fiscal year is open with its twelve periods and the same
+retained-earnings destination** (29) — the roll-forward needs no operator step. A
+second close is refused (30).
+
+Section D is the claim that matters most: the close is repeatable, not
+cumulative. Reopening requires a reason (31) and takes the net income back out of
+retained earnings (32) by counter-posting the closing journal through the
+Accounting Kernel. That counter-entry is itself classified `closing` (33), which
+is precisely why closing the reopened year again lands 75,000 in retained
+earnings rather than 150,000 (34): the aggregation that computes net income
+ignores closing entries, so it never re-consumes its own reversal. The original
+closing journal is never edited, voided or deleted — three immutable journals
+stand in the ledger and net to one close.
+
+**Committed evidence, separate from this file.** Because the defect above was
+exactly a close that survives rollback and dies at COMMIT, the cycle was also run
+end-to-end against a self-provisioned company with real COMMITs: monthly close,
+quarterly close, year-end close (Dr Revenue 310,000 / Cr Expense 90,000 / Cr
+Retained Earnings 220,000, trial balance out-of-balance 0.00), roll-forward into
+FY2027, refusal of a second close, reopen, and re-close leaving retained earnings
+at 220,000 rather than 440,000.
+
+Not claimed: unposted source documents are not yet a readiness check (Backlog
+18h), retained earnings is configured on the fiscal year rather than as governed
+company configuration (18g), and comparative statements and note disclosures
+remain outstanding (18e).

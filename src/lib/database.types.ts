@@ -5434,6 +5434,85 @@ export type Database = {
           },
         ]
       }
+      fiscal_close_runs: {
+        Row: {
+          action: string
+          checks: Json
+          closing_je_id: string | null
+          company_id: string
+          close_type: string
+          effective_date: string
+          fiscal_period_id: string | null
+          fiscal_year_id: string
+          id: string
+          net_income: number | null
+          performed_at: string
+          performed_by: string | null
+          quarter_number: number | null
+          reason: string | null
+          retained_earnings_account_id: string | null
+          superseded_by_id: string | null
+        }
+        Insert: {
+          action: string
+          checks?: Json
+          closing_je_id?: string | null
+          company_id: string
+          close_type: string
+          effective_date: string
+          fiscal_period_id?: string | null
+          fiscal_year_id: string
+          id?: string
+          net_income?: number | null
+          performed_at?: string
+          performed_by?: string | null
+          quarter_number?: number | null
+          reason?: string | null
+          retained_earnings_account_id?: string | null
+          superseded_by_id?: string | null
+        }
+        Update: {
+          action?: string
+          checks?: Json
+          closing_je_id?: string | null
+          company_id?: string
+          close_type?: string
+          effective_date?: string
+          fiscal_period_id?: string | null
+          fiscal_year_id?: string
+          id?: string
+          net_income?: number | null
+          performed_at?: string
+          performed_by?: string | null
+          quarter_number?: number | null
+          reason?: string | null
+          retained_earnings_account_id?: string | null
+          superseded_by_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fiscal_close_runs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_close_runs_fiscal_period_id_fkey"
+            columns: ["fiscal_period_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_close_runs_fiscal_year_id_fkey"
+            columns: ["fiscal_year_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_years"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fiscal_periods: {
         Row: {
           company_id: string
@@ -15470,6 +15549,23 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_close_accounting_period: {
+        Args: {
+          p_company_id: string
+          p_fiscal_period_id: string
+          p_note?: string
+        }
+        Returns: string
+      }
+      fn_close_accounting_quarter: {
+        Args: {
+          p_company_id: string
+          p_fiscal_year_id: string
+          p_note?: string
+          p_quarter: number
+        }
+        Returns: number
+      }
       fn_close_fiscal_year: {
         Args: {
           p_close_date?: string
@@ -16122,6 +16218,10 @@ export type Database = {
         Args: { p_issue_id: string }
         Returns: string
       }
+      fn_period_close_readiness: {
+        Args: { p_company_id: string; p_fiscal_period_id: string }
+        Returns: Json
+      }
       fn_post_inter_branch_transfer: {
         Args: { p_ibt_id: string }
         Returns: undefined
@@ -16358,6 +16458,22 @@ export type Database = {
       fn_resolve_posting_source: {
         Args: { p_document_type: string; p_lock?: boolean; p_source_id: string }
         Returns: Json
+      }
+      fn_reopen_accounting_period: {
+        Args: {
+          p_company_id: string
+          p_fiscal_period_id: string
+          p_reason: string
+        }
+        Returns: string
+      }
+      fn_reopen_fiscal_year: {
+        Args: {
+          p_company_id: string
+          p_fiscal_year_id: string
+          p_reason: string
+        }
+        Returns: string
       }
       fn_reverse_je: {
         Args: { p_je_id: string; p_reversal_date?: string }

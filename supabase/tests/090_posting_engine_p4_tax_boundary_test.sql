@@ -97,10 +97,14 @@ SELECT set_eq(
 -- Accounting Kernel and neither calculates or persists tax.
 -- fn_post_delivery_receipt joined on 2026-08-03 for the same reason: a delivery
 -- moves cost from inventory to goods-delivered-not-invoiced and touches no tax.
+-- Delivery Plan Phase 6 adds fn_reopen_fiscal_year, which counter-posts the
+-- year-end closing journal through the Accounting Kernel. Closing and reopening
+-- move revenue and expense balances to equity and touch no tax whatsoever, so
+-- the non-tax partition grows by one and the tax census above is unchanged.
 SELECT is(
   (SELECT count(*)::int FROM v_gl_writer)
     - (SELECT count(*)::int FROM v_tax_writer),
-  34, 'the remaining GL writers are provably not tax-aware (census partition complete)'); -- 2
+  35, 'the remaining GL writers are provably not tax-aware (census partition complete)'); -- 2
 
 SELECT is(
   (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace

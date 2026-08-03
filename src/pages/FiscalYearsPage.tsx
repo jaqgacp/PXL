@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 
 type Company = { id: string; registered_name: string; accounting_period: string; fiscal_start_month: number | null }
+type EquityAccount = { id: string; company_id: string; account_code: string; account_name: string }
 type FiscalYear = {
   id: string; company_id: string; year_name: string; start_date: string; end_date: string
-  is_calendar: boolean; status: string
+  is_calendar: boolean; status: string; retained_earnings_id: string | null
   companies?: { registered_name: string }
 }
 type FiscalPeriod = {
@@ -48,7 +50,8 @@ export default function FiscalYearsPage() {
   const [showPeriods, setShowPeriods] = useState(false)
   const [selectedYear, setSelectedYear] = useState<FiscalYear | null>(null)
   const [editId, setEditId] = useState<string | null>(null)
-  const [form, setForm] = useState({ company_id: '', year_name: '', start_date: '', end_date: '', is_calendar: false })
+  const [form, setForm] = useState({ company_id: '', year_name: '', start_date: '', end_date: '', is_calendar: false, retained_earnings_id: '' })
+  const [equityAccounts, setEquityAccounts] = useState<EquityAccount[]>([])
   const [generatedPeriods, setGeneratedPeriods] = useState<ReturnType<typeof generatePeriods>>([])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -61,6 +64,13 @@ export default function FiscalYearsPage() {
     fetchYears()
     supabase.from('companies').select('id, registered_name, accounting_period, fiscal_start_month').order('registered_name')
       .then(({ data }) => setCompanies(data || []))
+    // The year-end close carries net income to this account, so it is part of
+    // defining a fiscal year rather than a separate configuration step.
+    supabase.from('chart_of_accounts')
+      .select('id, company_id, account_code, account_name')
+      .eq('account_type', 'equity').eq('is_postable', true).eq('is_active', true)
+      .order('account_code')
+      .then(({ data }) => setEquityAccounts((data as EquityAccount[]) || []))
   }, [])
 
   const set = (k: string, v: string | boolean) => { setSaved(false); setForm(f => ({ ...f, [k]: v })) }
@@ -80,7 +90,7 @@ export default function FiscalYearsPage() {
     const ed = end.toISOString().slice(0, 10)
     const isCalendar = co.accounting_period === 'calendar'
     const yearName = isCalendar ? `FY ${startYear}` : `FY ${startYear}/${String(startYear + 1).slice(2)}`
-    setForm(f => ({ ...f, company_id: companyId, year_name: yearName, start_date: sd, end_date: ed, is_calendar: isCalendar }))
+    setForm(f => ({ ...f, company_id: companyId, year_name: yearName, start_date: sd, end_date: ed, is_calendar: isCalendar, retained_earnings_id: '' }))
     setGeneratedPeriods(generatePeriods(sd, ed))
   }
 
@@ -90,7 +100,11 @@ export default function FiscalYearsPage() {
 
   const handleSave = async () => {
     setSaving(true)
-    const payload = { company_id: form.company_id, year_name: form.year_name, start_date: form.start_date, end_date: form.end_date, is_calendar: form.is_calendar }
+    const payload = {
+      company_id: form.company_id, year_name: form.year_name,
+      start_date: form.start_date, end_date: form.end_date, is_calendar: form.is_calendar,
+      retained_earnings_id: form.retained_earnings_id || null,
+    }
     const { data: yearData, error } = editId
       ? await supabase.from('fiscal_years').update(payload).eq('id', editId).select().single()
       : await supabase.from('fiscal_years').insert([{ ...payload, status: 'open' }]).select().single()
@@ -108,17 +122,6 @@ export default function FiscalYearsPage() {
     setShowPeriods(true)
   }
 
-  const togglePeriodLock = async (p: FiscalPeriod) => {
-    await supabase.from('fiscal_periods').update({ is_locked: !p.is_locked }).eq('id', p.id)
-    openPeriods(selectedYear!)
-  }
-
-  const closeYear = async (fy: FiscalYear) => {
-    if (!confirm(`Close ${fy.year_name}? This cannot be undone.`)) return
-    await supabase.from('fiscal_years').update({ status: 'closed' }).eq('id', fy.id)
-    fetchYears()
-  }
-
   if (showPeriods && selectedYear) return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -127,6 +130,7 @@ export default function FiscalYearsPage() {
           <h1 className="text-xl font-semibold text-gray-900">Fiscal Periods — {selectedYear.year_name}</h1>
           <p className="text-sm text-gray-500">{selectedYear.companies?.registered_name}</p>
         </div>
+        <Link to="/period-closing" className="text-xs text-blue-600 hover:text-blue-800 font-medium">Open Period Close &amp; Year-End →</Link>
       </div>
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
         <table className="w-full text-sm">
@@ -136,11 +140,10 @@ export default function FiscalYearsPage() {
             <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Start Date</th>
             <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">End Date</th>
             <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Actions</th>
           </tr></thead>
           <tbody>
             {periods.length === 0
-              ? <tr><td colSpan={6} className="text-center py-12 text-gray-400">No periods found</td></tr>
+              ? <tr><td colSpan={5} className="text-center py-12 text-gray-400">No periods found</td></tr>
               : periods.map((p, i) => (
                 <tr key={p.id} className={`border-b border-gray-100 ${i % 2 === 1 ? 'bg-gray-50/50' : ''}`}>
                   <td className="px-4 py-3 font-medium text-gray-900">Period {p.period_number}</td>
@@ -149,13 +152,8 @@ export default function FiscalYearsPage() {
                   <td className="px-4 py-3 text-gray-600">{p.end_date}</td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${p.is_locked ? 'bg-orange-50 text-orange-700' : 'bg-green-50 text-green-700'}`}>
-                      {p.is_locked ? 'Locked' : 'Open'}
+                      {p.is_locked ? 'Closed' : 'Open'}
                     </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <button onClick={() => togglePeriodLock(p)} className="text-xs text-gray-500 hover:text-gray-700 font-medium">
-                      {p.is_locked ? 'Unlock' : 'Lock'}
-                    </button>
                   </td>
                 </tr>
               ))}
@@ -194,6 +192,17 @@ export default function FiscalYearsPage() {
               <input type="date" value={form.start_date} onChange={e => { set('start_date', e.target.value); recalcPeriods(e.target.value, form.end_date) }} className={inp} /></div>
             <div><label className={lbl}>End Date <span className="text-red-500">*</span></label>
               <input type="date" value={form.end_date} onChange={e => { set('end_date', e.target.value); recalcPeriods(form.start_date, e.target.value) }} className={inp} /></div>
+            <div className="col-span-2"><label className={lbl}>Retained Earnings Account <span className="text-red-500">*</span></label>
+              <select value={form.retained_earnings_id} onChange={e => set('retained_earnings_id', e.target.value)} className={inp}>
+                <option value="">Select equity account...</option>
+                {equityAccounts.filter(a => a.company_id === form.company_id).map(a => (
+                  <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>
+                ))}
+              </select>
+              <p className="text-xs text-gray-400 mt-1">
+                The year-end close zeroes every revenue and expense account and carries the net result here.
+                Without it the year cannot be closed.
+              </p></div>
             <div className="col-span-2 flex items-center gap-2 pt-1">
               <input type="checkbox" id="is_calendar" checked={form.is_calendar} onChange={e => set('is_calendar', e.target.checked)} className="rounded border-gray-300" />
               <label htmlFor="is_calendar" className="text-sm text-gray-700">Calendar year (Jan – Dec)</label>
@@ -240,7 +249,7 @@ export default function FiscalYearsPage() {
           {companies.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}
         </select>
         <div className="ml-auto">
-          <button onClick={() => { setForm({ company_id: '', year_name: '', start_date: '', end_date: '', is_calendar: false }); setEditId(null); setGeneratedPeriods([]); setShowForm(true); setSaved(false) }}
+          <button onClick={() => { setForm({ company_id: '', year_name: '', start_date: '', end_date: '', is_calendar: false, retained_earnings_id: '' }); setEditId(null); setGeneratedPeriods([]); setShowForm(true); setSaved(false) }}
             className="bg-gray-900 text-white px-4 py-1.5 rounded-md text-sm font-medium hover:bg-gray-800">
             + Create Fiscal Year
           </button>
@@ -270,10 +279,12 @@ export default function FiscalYearsPage() {
                   <td className="px-4 py-3"><span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${fy.status === 'open' ? 'bg-blue-50 text-blue-700' : 'bg-gray-100 text-gray-500'}`}>{fy.status === 'open' ? 'Open' : 'Closed'}</span></td>
                   <td className="px-4 py-3"><div className="flex items-center gap-2">
                     <button onClick={() => openPeriods(fy)} className="text-xs text-gray-500 hover:text-gray-700 font-medium">Periods</button>
-                    {fy.status === 'open' && <>
-                      <button onClick={() => { setForm({ company_id: fy.company_id, year_name: fy.year_name, start_date: fy.start_date, end_date: fy.end_date, is_calendar: fy.is_calendar }); setEditId(fy.id); setShowForm(true); setSaved(false) }} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>
-                      <button onClick={() => closeYear(fy)} className="text-xs text-gray-500 hover:text-red-700 font-medium">Close Year</button>
-                    </>}
+                    {fy.status === 'open' && (
+                      <button onClick={() => { setForm({ company_id: fy.company_id, year_name: fy.year_name, start_date: fy.start_date, end_date: fy.end_date, is_calendar: fy.is_calendar, retained_earnings_id: fy.retained_earnings_id || '' }); setEditId(fy.id); setShowForm(true); setSaved(false) }} className="text-xs text-blue-600 hover:text-blue-800 font-medium">Edit</button>
+                    )}
+                    {/* Closing a year posts the closing journal, so it belongs to the
+                        close workspace rather than a status flag on this list. */}
+                    <Link to="/period-closing" className="text-xs text-gray-500 hover:text-gray-700 font-medium">Close</Link>
                   </div></td>
                 </tr>
               ))}

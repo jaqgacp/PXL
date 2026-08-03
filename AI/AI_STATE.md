@@ -2,10 +2,11 @@
 
 **Current Date:** 2026-08-03
 **Current Branch:** `main`
-**Working Tree:** Delivery Plan Phase 5.7 — **financial statement presentation**
-— is complete locally with executed fresh, canonical, regression, frontend,
-build and lint evidence. All four statements are produced from governed
-`fs_structure` / `account_fs_map` configuration, not from code.
+**Working Tree:** **Period close and year-end roll-forward (Backlog 18d)** is
+complete locally with executed fresh, canonical, regression, frontend, build and
+lint evidence plus a **committed** fresh-data run. The cycle now closes:
+transaction → posting → GL → trial balance → statements → period close →
+year-end close → retained earnings → next fiscal year.
 **Product Phase:** Pilot Execution Plan; IA-5/ECC **frozen**.
 **Environment:** Local Supabase on a fresh schema. No hosted operation was
 performed.
@@ -46,7 +47,9 @@ is complete; that certifies no module or engine and confers no readiness.
 - **Critical reconciliations evidenced:** **1 / 9.** Inventory-to-control
   reconciles at 0.00 in every stock-holding company (`111`) and across the whole
   outbound chain on fresh data (`120`).
-- **Exercised posting entry points:** **14 of 24** — the honest completion measure.
+- **Exercised posting entry points:** **15 of 24** — the honest completion measure.
+  The year-end close joined on 2026-08-03; before that it was registered,
+  tested and **incapable of committing** (see the Frontier).
 - **Certified work packages:** IA-5 ECC WP-1…WP-4, 4 / 9, **frozen, 21 tables
   empty, zero consumers.** WP-5…WP-9 and IA-6 stopped.
 
@@ -57,7 +60,7 @@ is complete; that certifies no module or engine and confers no readiness.
 - **Visible scaffolds:** **30** deferred routes labelled "Not built"; **17** nav
   labels with no page. 247 nav entries → 175 routes, **145** on real data.
 
-- **Tests:** 121 pgTAP files / 2,842 assertions plus 60 frontend source tests;
+- **Tests:** 122 pgTAP files / 2,876 assertions plus 60 frontend source tests;
   full regression, canonical, build and lint lanes pass.
 - **Backup/restore:** **Mechanised and scheduled; never operated over anything
   real.** `npm run backup:operate` runs weekly in CI. RPO 24h pilot. Blocker 5.
@@ -75,8 +78,10 @@ Payroll is a **future separate product, excluded from PXL ERP progress**.
    PT-registered company has nothing to review or file. **Nothing has ever been
    filed**: all twelve `compliance_*` working-paper tables and the return/form
    tables are empty. No governed UI configures a tax-code succession (10) or a
-   statement re-presentation (18f); the tax profile is not effective-dated (11);
-   **period close does not exist** (18d).
+   statement re-presentation (18f); the tax profile is not effective-dated (11).
+   Period close now commits (18d), but its readiness cannot see unposted source
+   documents (18h) and retained earnings is per-fiscal-year, not company
+   configuration (18g).
 4. Phase 3 is not operationally accepted: no hosted migration, deployed invite
    function, cut-over rehearsal or browser/UAT proof.
 5. Recoverability is mechanised but not operated: the weekly workflow has never
@@ -88,40 +93,35 @@ Payroll is a **future separate product, excluded from PXL ERP progress**.
 
 ## Current Engineering Frontier
 
-Phase 4 shipped 2026-08-03: `fn_calculate_tax` (`20260803000001`) — the catalog's
-**eleven** duplicated calculators all migrated. Scope is VAT plus ATC
-withholding; **percentage tax is excluded — nothing calculates it.** VAT became
-effective-date aware the same day (`20260803000002`, test `118`):
-`fn_resolve_vat_code` is the one place a VAT code's validity is decided — version,
-tax side, company profile, as of the document date — and the engine, the trigger
-backstop and the picker `fn_vat_codes_asof` all ask it.
+Shipped 2026-08-03; detail lives in the Delivery Plan and Accounting Test Book —
+do not re-derive it here. `fn_calculate_tax` (`…01`); `fn_resolve_vat_code`
+(`…02`, `118`); Cash Sale (`…03`, `119`) and Delivery Receipt / Customer Return
+(`…04`, `120`), which made every outbound entry point relieve stock through one
+costing path; governed statement presentation (`…05`, `121`).
 
-**Cash Sale posting shipped** (`20260803000003`, test `119`): it relieves stock
-and posts COGS through the *same* costing path as `fn_post_sales_invoice`, and
-carries **Business Tax and Withholding Tax per line**, so one sale can mix goods
-and services under different ATCs.
+**Period close and year-end roll-forward shipped** (`20260803000006`, test `122`,
+34 assertions, Backlog 18d). The cycle runs to its end.
 
-**Delivery Receipt and Customer Return followed** (`20260803000004`, test `120`),
-completing Phase 5 item 3. A delivery relieves stock into **Goods Delivered Not
-Invoiced** (`SALES_DELIVERY_CLEARING`); the invoice recognises that cost as COGS
-and clears it **instead of relieving twice**, keyed on the line's
-`source_document_type = 'DR'` link, with a unique index making double billing
-impossible. A return puts goods back through `fn_receive_inventory`. **Billing a
-delivery is only correct through the delivery's "Bill This Delivery" action** —
-an unlinked invoice for delivered goods relieves stock again (18b).
+The finding that shaped it: **`fn_close_fiscal_year` could never have
+committed.** It posted the closing journal with a NULL `reference_doc_id` while
+`CLOSE` resolved against `journal_entries`, and the deferred trigger
+`trg_journal_entry_source_integrity` rejects that at COMMIT. Test `040` passed
+because pgTAP rolls back — a deferred constraint never committed is never
+checked. **The fiscal year is now the closing journal's source document**, and
+`122` asserts that resolution directly.
 
-**Financial statement presentation shipped** (`20260803000005`, test `121`, 25
-assertions). `fs_structure` and `account_fs_map` had never held a row; the four
-statement screens grouped accounts by `account_type` in the browser with the
-layout hardcoded in TSX. Presentation is now configuration —
-`chart_of_accounts → account_fs_map → fs_structure` — one account bound to exactly
-one line per statement, a subtotal defined as the sum of its children, so no
-formula language exists. `fn_financial_statement_report` is the single reporting
-entry point returning opening/movement/closing per line: the position reads
-closing, comprehensive income movement, equity all three, and cash flows movement
-classified by governed metadata, proving itself by tying to the cash movement.
-Two missing pieces of metadata were added: `is_cash_equivalent` and
-`fs_structure.line_role`. Reporting never writes the ledger.
+`fiscal_close_runs` registers every close and reopen; two partial unique indexes
+give at most one live close per period and per year, which is what makes the
+close **idempotent**. Periods close in date order (`fn_close_accounting_period`
+— blocking on period open, year open, earlier periods closed, ledger balanced)
+and reopen last-in-first-out against a required reason; a quarter close is that
+same close three times. `fn_reopen_fiscal_year` counter-posts through the kernel
+classified `closing`, so a re-close recomputes the same net income instead of
+doubling it and the original entry is never touched. The close opens the next
+fiscal year with its periods and the same retained-earnings account. **The lock
+is governed**: `is_locked` and `fiscal_years.status` change only inside the four
+close functions — the old "Close Year" button wrote `status = 'closed'` through
+PostgREST and posted nothing.
 
 Phase 3 is implemented locally and unchanged (PAD-002, PAD-003). IA-5/ECC is
 **frozen** at zero consumers and zero events; evidence under
@@ -143,13 +143,18 @@ rendered page is not a workflow.
 
 - `npm run test:db:fresh` — **PASS** on 2026-08-03.
 - `npm run test:canonical` — **PASS**, 30 files / 751 assertions.
-- `npm run test:db:regression` — **PASS**, 121 files / 2,842 assertions; the lane
+- `npm run test:db:regression` — **PASS**, 122 files / 2,876 assertions; the lane
   resets to a fresh schema first, so it is order-independent.
-- Focused lane — **PASS**, `121` 25, `120` 24, `119` 26, `118` 25, `117` 31.
+- Focused lane — **PASS**, `122` 34, `121` 25, `120` 24, `119` 26, `118` 25.
+- **Committed** fresh-data close cycle, self-provisioned company (not the demo
+  seed): monthly, quarterly and year-end close (Dr Revenue 310,000 / Cr Expense
+  90,000 / Cr Retained Earnings 220,000, out-of-balance 0.00), roll-forward to
+  FY2027, second close refused, reopen, re-close leaving retained earnings at
+  220,000 — **not 440,000**.
 - `npm run test:frontend` — **PASS**, 60 tests.
 - `npm run build`, `npm run lint`, `git diff --check` — **PASS**; lint reports
   one pre-existing warning in `tests/backup_recovery.test.ts`.
-- `npm run docs:check` — **PASS**; 121 tests indexed.
+- `npm run docs:check` — **PASS**; 122 tests indexed.
 - `npm run backup:operate` — **PASS** (2026-08-02); replicated copy restored
   independently, 0 mismatches.
 - Inventory-to-control variance **0.00** in all three stock-holding companies;
@@ -158,30 +163,27 @@ rendered page is not a workflow.
 
 ## Recommended Next Task
 
-**PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE; the rest is owner action.**
-PAD-007: self-managed encrypted backups to S3-compatible storage, no PITR for the
-pilot. Close it via Runbook §6 — bucket, `PXL_OFFSITE_URL` plus access keys, and
-`PXL_BACKUP_PASSPHRASE` escrowed off the host.
+**PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE; the rest is owner action**
+(PAD-007, Runbook §6 — bucket, `PXL_OFFSITE_URL` plus keys, escrowed
+`PXL_BACKUP_PASSPHRASE`).
 
-**Phase 5 items 3 and 7 are complete.** Next build task: **period close and
-year-end roll-forward (Backlog 18d)** — the largest remaining accounting-cycle
-gap. Nothing rolls revenue and expense into retained earnings, so a company
-entering its second fiscal year shows the prior year's profit in Current Year
-Earnings instead of Retained Earnings, and comparative statements cannot mean
-anything. `CLOSE` is already a registered posting source type.
+**Phase 5 items 3 and 7 and Backlog 18d are complete.** Next build task:
+**comparative periods and statement notes (18e)** — unblocked now that a prior
+year's profit sits in Retained Earnings, so a comparative across a year boundary
+finally means something. `fn_financial_statement_report` returns
+opening/movement/closing for one period and needs a prior-period column beside
+it; the Comparative Financial Statements screen still computes its own figures.
+Alternative pick: **percentage tax (8)** — larger, whole-chain-or-none.
 
-Phase 5 runs flows → statements → filing, in that order. Remaining Product
-Backlog items: percentage tax (8, unblocked — whole chain or none), tax-code
-maintenance (10), effective-dated tax profile (11), per-line tax on the other
-documents (18), delivery-to-invoice conversion (18b), DR cancellation (18c),
-comparatives and notes (18e), FS structure maintenance (18f), line detail (19).
+Phase 5 runs flows → statements → filing. Remaining Backlog: 8, 10, 11, 18, 18b,
+18c, 18e, 18f, 18g, 18h, 19.
 
 **The hosted deploy is deferred, not blocked** (Runbook §2a); re-run
-`npm run deploy:rehearse` after adding migrations — the pending set is **60**.
+`npm run deploy:rehearse` after adding migrations — the pending set is **61**.
 **Requires explicit owner approval.**
 
-No open findings remain. Do not resume IA-5: canonical flow proof, period close
-and operated recovery outrank dormant foundation work.
+No open findings remain. Do not resume IA-5: canonical flow proof and operated
+recovery outrank dormant foundation work.
 
 ## Stop Conditions
 

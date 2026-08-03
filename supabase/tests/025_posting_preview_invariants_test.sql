@@ -534,8 +534,14 @@ SELECT 'locked_si', fn_save_sales_invoice(
   ))
 );
 SELECT fn_approve_sales_invoice((SELECT id FROM t_ctx WHERE key = 'locked_si'));
+-- Fixture manipulation, not a governed close: period locking now belongs to the
+-- close engine (Phase 6), so setting the lock directly requires the certified
+-- maintenance bypass. The assertion under test is the preview's locked-period
+-- rejection, which is indifferent to how the period came to be locked.
+SELECT set_config('pxl.allow_demo_reset', 'on', true);
 UPDATE fiscal_periods SET is_locked = true
 WHERE company_id = '22222222-2222-2222-2222-222222222225' AND period_number = 8;
+SELECT set_config('pxl.allow_demo_reset', 'off', true);
 
 SELECT throws_like(
   format($q$SELECT fn_preview_gl_impact('SI', %L)$q$,

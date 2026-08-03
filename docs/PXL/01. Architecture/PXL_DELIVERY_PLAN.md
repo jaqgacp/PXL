@@ -341,11 +341,45 @@ are right is a return that changes after submission.
    `equity_statement`. Posting logic is untouched: reporting reads the ledger and
    never writes it, so a re-presentation never disturbs a posted number.
 
-   **Still open before the statements are pilot-complete:** period close (nothing
-   rolls revenue and expense into retained earnings — the governed
-   `current_year_earnings` line is what makes a mid-year position balance),
-   comparative periods, note disclosures and consolidation. Recorded in the
-   Product Backlog.
+   ✅ **Period close and year-end roll-forward — DONE 2026-08-03.** Migration
+   `20260803000006_period_close_and_year_end_rollforward.sql`, test `122` (34
+   assertions, self-provisioned company), Backlog item 18d. This completes the
+   cycle the statements sit at the end of: transaction → posting → general
+   ledger → trial balance → statements → period close → year-end close →
+   retained earnings → next fiscal year.
+
+   The finding that shaped the work: `fn_close_fiscal_year` existed and passed
+   test `040`, but **could never have committed.** It posted the closing journal
+   with a NULL `reference_doc_id` while `CLOSE` resolved against
+   `journal_entries`, and the deferred constraint trigger
+   `trg_journal_entry_source_integrity` rejects a NULL source at COMMIT. pgTAP
+   rolls back, so a deferred constraint it never commits is a constraint it never
+   checks. The fiscal year is now the closing journal's source document, which
+   both fixes the defect and gives the close a drillable source. Test `122`
+   asserts the source resolution directly so the gap cannot reopen silently, and
+   the close was additionally proven by a **committed** fresh-data run.
+
+   Around that: `fiscal_close_runs` is the governed register of every close and
+   reopen, with partial unique indexes that make a duplicate live close
+   structurally impossible — that is what makes the close idempotent rather than
+   merely careful. `fn_close_accounting_period` enforces blocking readiness
+   (period open, year open, every earlier period closed, ledger in balance) and
+   `fn_reopen_accounting_period` reopens last-in-first-out against a required
+   reason, so a posting can never land behind a closed period.
+   `fn_close_accounting_quarter` is the same period close applied three times —
+   PXL's fiscal calendar is monthly, so a quarter is not a second closing
+   concept. `fn_reopen_fiscal_year` counter-posts the closing journal through the
+   Accounting Kernel, classified `closing` so a re-close recomputes the same net
+   income instead of doubling it; the original closing entry is never touched.
+   The close opens the next fiscal year with its twelve periods and the same
+   retained-earnings destination, so the roll-forward needs no operator step.
+   `fiscal_periods.is_locked` and `fiscal_years.status` are now writable only
+   from inside the four close functions, so the lock cannot be flipped around the
+   engine — previously the "Close Year" button wrote `status = 'closed'` straight
+   through PostgREST and posted nothing at all.
+
+   **Still open before the statements are pilot-complete:** comparative periods,
+   note disclosures and consolidation. Recorded in the Product Backlog.
 8. **BIR filing artifacts.** *Moved here from Phase 4 on 2026-08-02: a return is
    generated from posted, closed data, so this depends on items 1–7 above and
    cannot precede them.* All twelve `compliance_*` working-paper tables are

@@ -112,6 +112,7 @@ current workflows do not activate them.
 | `payment_terms` | `canonical-populated` | 25 | Canonical demo seed | on (4) | 075 only | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `fiscal_years` | `canonical-populated` | 5 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `fiscal_periods` | `canonical-populated` | 60 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
+| `fiscal_close_runs` | `workflow-deferred` | 0 | Close engine only (`fn_close_accounting_period` / `fn_close_fiscal_year` and their reopens); the canonical seed deliberately leaves its books open | on (4) | ✓ (`122`) | Keep deferred: a canonical demo whose periods are closed cannot demonstrate posting. Promote only if the seed grows a closed prior year. |
 
 ### Sales / Accounts Receivable
 

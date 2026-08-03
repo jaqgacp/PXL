@@ -121,8 +121,13 @@ SELECT set_eq(
 -- ledger exclusively through the sanctioned Accounting Kernel.
 -- Its Receipt and Payment Voucher continuation layers retain two private,
 -- non-client-executable native-document cores.
-SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 86,
-  'the complete static ledger-capable call graph contains 86 functions');              -- 10
+-- Delivery Plan Phase 6 adds exactly one entry point to the graph:
+-- fn_reopen_fiscal_year, which counter-posts the year-end closing journal through
+-- the Accounting Kernel. fn_close_fiscal_year was already in the graph, and the
+-- period close posts nothing at all — an accounting-period close is a lock, not
+-- an entry — so the close engine's other five functions stay outside it.
+SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 87,
+  'the complete static ledger-capable call graph contains 87 functions');              -- 10
 
 SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
   'every function in the static ledger-capable call graph is SECURITY DEFINER');       -- 11
@@ -150,16 +155,27 @@ SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
 -- fn_vat_codes_asof (the picker the UI reads so it cannot offer what the
 -- database refuses). All three read reference masters and write nothing, so
 -- assertion 10 stays at 85.
-SELECT is((SELECT count(*)::int FROM p52_app_functions), 446,
-  'the complete application-owned public function census contains 446 functions');    -- 12
+--
+-- Period close and year-end roll-forward add nine, taking the census from 446 to
+-- 455. Seven are SECURITY DEFINER (383 -> 390): the readiness reader, the four
+-- close/reopen entry points, the internal roll-forward, and the lock-origin
+-- trigger body. Two are not: the close-run immutability trigger body and
+-- fn_fiscal_close_engine_origin, an IMMUTABLE SQL classifier that reads only its
+-- argument. Six become client-executable (313 -> 319 minus the one below):
+-- readiness plus the four close/reopen entry points reach `authenticated` and
+-- `service_role`; the roll-forward, both trigger bodies and the classifier reach
+-- no role at all, so anon stays exactly where it was. The classifier is closed to
+-- PUBLIC on the same terms as fn_posting_kernel_origin.
+SELECT is((SELECT count(*)::int FROM p52_app_functions), 455,
+  'the complete application-owned public function census contains 455 functions');    -- 12
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 383,
-  'the complete application-owned SECURITY DEFINER census contains 383 functions');   -- 13
+SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 390,
+  'the complete application-owned SECURITY DEFINER census contains 390 functions');   -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('authenticated', oid, 'EXECUTE')),
-  313, 'authenticated EXECUTE coverage is completely counted');                       -- 14
+  318, 'authenticated EXECUTE coverage is completely counted');                       -- 14
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
@@ -169,7 +185,7 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('service_role', oid, 'EXECUTE')),
-  308, 'service_role EXECUTE coverage is completely counted');                        -- 16
+  313, 'service_role EXECUTE coverage is completely counted');                        -- 16
 
 SELECT is(
   (SELECT count(*)::int

@@ -108,6 +108,7 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   ('employees', 'canonical-populated'),
   ('ewt_returns', 'future-deferred'),
   ('exchange_rates', 'reference-empty'),
+  ('fiscal_close_runs', 'workflow-deferred'),
   ('fiscal_periods', 'canonical-populated'),
   ('fiscal_years', 'canonical-populated'),
   ('fixed_asset_categories', 'future-deferred'),
