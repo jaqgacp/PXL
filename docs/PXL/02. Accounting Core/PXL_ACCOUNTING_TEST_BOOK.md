@@ -2597,3 +2597,74 @@ Not claimed: unposted source documents are not yet a readiness check (Backlog
 18h), retained earnings is configured on the fiscal year rather than as governed
 company configuration (18g), and comparative statements and note disclosures
 remain outstanding (18e).
+
+## Delivery Plan Phase 5 (Backlog 18e) — Comparative statements and basic notes
+
+Status: **PASSING 2026-08-03.**
+`supabase/tests/123_comparative_statements_and_notes_test.sql` completes the
+reporting path: posted transactions → general ledger → trial balance →
+current-period statements → comparative statements → basic notes.
+
+**The regression this file exists to hold.** Period close (18d) shipped hours
+earlier and, in doing so, silently broke two of the four statements for any
+closed year. A closing journal debits the revenue accounts and credits the
+expense accounts, and the report read every posted line regardless of
+`entry_class`, so — measured on a fresh company before the fix —
+
+* the Statement of Comprehensive Income of a **closed** year read as **all
+  zeroes**: revenue of 50,000 became 0.00 the moment the year closed; and
+* the Statement of Cash Flows **re-labelled the whole year**: 30,000 of
+  operating cash flow moved to financing, because the closing entry's credit to
+  Retained Earnings is an equity movement and equity is financing.
+
+Nothing had ever closed a year until 18d, and comparatives are the first feature
+that reads a closed year on purpose — the prior column would have been blank.
+The rule now follows from what a closing entry is: **excluded** from the income
+statement and the cash flow statement, **included** in the position and in
+changes in equity, where retained earnings is only correct because of it.
+Assertions 1–6 pin all four statements before and after a close.
+
+Section B is period resolution. The comparative is not "last year" as a browser
+understands it: `fn_resolve_comparative_period` reads the company's own fiscal
+calendar, offsetting by a calendar year for consecutive twelve-month years and
+falling back to matching fiscal period *numbers* for an irregular calendar.
+A half-year compares against the same half (11). The honest answers come back as
+data rather than exceptions — the earliest fiscal year has no comparative (12,
+13) and a range crossing a fiscal-year boundary is refused with its own reason
+(14) — while the report itself fails loudly when asked to compare nothing (15).
+
+Section C runs all four comparative statements across two fiscal years, the
+first of them closed. Revenue 150,000 against 100,000 is +50,000 and +50.00%
+(16); net income 100,000 against 60,000 is +40,000 and +66.67% (17). The
+comparison basis is a property of the statement, not of the screen: a
+performance statement compares movements, a position compares balances (18, 19).
+**The position balances in both columns** (21, 22), the cash flow statement ties
+to the movement in cash in the comparative column too (24), and closing equity
+agrees with the comparative position (26). A percentage against a nil base is
+returned as NULL, because that is no percentage rather than a large one (27).
+
+Section D is the claim that makes a comparative a comparative. The accounts
+behind a line are fetched by the same signing rule as the line, so they sum to
+the subtotal they were opened from (28, 29). Re-mapping cash to a different
+governed line moves the current **and** the comparative column together (30) and
+leaves total assets unchanged in both (31) — a comparative read on two different
+structures compares nothing, so the prior period is deliberately presented as of
+the *current* period end.
+
+Section E is the notes. They are rows, not prose: every item names the
+configuration or ledger fact behind it and carries whether that fact is actually
+configured, so an unset policy reads as unset instead of silently reading as a
+default (33).
+
+**Real-data evidence, separate from this file.** On a self-provisioned company
+with FY2026 closed and FY2027 open: revenue 1,100,000 against 800,000 (+37.50%),
+net income 680,000 against 500,000 (+36.00%), assets 1,180,000 against 500,000
+balancing against equity in both columns, the revenue line drilling to account
+4010 at 1,100,000 / 800,000, and thirty-eight note items reporting `Not set` and
+`is_configured = false` for revenue district office, BIR registration date, CAS
+permit, depreciation and income tax, with trial-balance agreement 0.00 in both
+periods.
+
+Not claimed: this is not a complete PFRS or PFRS for SMEs disclosure set, and the
+notes say so in their own text. Note templates, per-note narrative editing,
+signature blocks and consolidation remain outstanding (Backlog 18i).

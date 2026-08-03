@@ -16145,12 +16145,86 @@ export type Database = {
         Returns: undefined
       }
       fn_post_check_voucher: { Args: { p_cv_id: string }; Returns: undefined }
+      fn_comparative_financial_statement_report: {
+        Args: {
+          p_branch_id?: string
+          p_company_id: string
+          p_period_end: string
+          p_period_start: string
+          p_prior_end?: string
+          p_prior_start?: string
+          p_statement: string
+        }
+        Returns: {
+          comparison_basis: string
+          current_amount: number
+          current_closing: number
+          current_movement: number
+          current_opening: number
+          depth: number
+          display_order: number
+          is_subtotal: boolean
+          line_code: string
+          line_label: string
+          line_role: string
+          parent_code: string
+          prior_amount: number
+          prior_closing: number
+          prior_movement: number
+          prior_opening: number
+          variance_amount: number
+          variance_percent: number
+        }[]
+      }
+      fn_financial_statement_line_accounts: {
+        Args: {
+          p_branch_id?: string
+          p_company_id: string
+          p_line_code: string
+          p_period_end: string
+          p_period_start: string
+          p_prior_end?: string
+          p_prior_start?: string
+          p_statement: string
+        }
+        Returns: {
+          account_code: string
+          account_id: string
+          account_name: string
+          account_type: string
+          comparison_basis: string
+          current_amount: number
+          prior_amount: number
+          variance_amount: number
+          variance_percent: number
+        }[]
+      }
+      fn_financial_statement_notes: {
+        Args: {
+          p_company_id: string
+          p_period_end: string
+          p_period_start: string
+          p_prior_end?: string
+          p_prior_start?: string
+        }
+        Returns: {
+          is_configured: boolean
+          item_label: string
+          item_order: number
+          item_source: string
+          item_value: string
+          note_code: string
+          note_order: number
+          note_title: string
+        }[]
+      }
       fn_financial_statement_report: {
         Args: {
           p_branch_id?: string
           p_company_id: string
           p_period_end: string
           p_period_start: string
+          p_presentation_asof?: string
           p_statement: string
         }
         Returns: {
@@ -16165,6 +16239,14 @@ export type Database = {
           opening_amount: number
           parent_code: string
         }[]
+      }
+      fn_fs_presentation_sign: {
+        Args: {
+          p_is_cash_equivalent: boolean
+          p_normal_balance: string
+          p_statement: string
+        }
+        Returns: number
       }
       fn_fs_line_is_descendant: {
         Args: { p_ancestor_id: string; p_line_id: string }
@@ -16454,6 +16536,14 @@ export type Database = {
           p_module_type: string
         }
         Returns: string
+      }
+      fn_resolve_comparative_period: {
+        Args: {
+          p_company_id: string
+          p_period_end: string
+          p_period_start: string
+        }
+        Returns: Json
       }
       fn_resolve_posting_source: {
         Args: { p_document_type: string; p_lock?: boolean; p_source_id: string }

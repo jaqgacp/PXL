@@ -166,16 +166,27 @@ SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
 -- `service_role`; the roll-forward, both trigger bodies and the classifier reach
 -- no role at all, so anon stays exactly where it was. The classifier is closed to
 -- PUBLIC on the same terms as fn_posting_kernel_origin.
-SELECT is((SELECT count(*)::int FROM p52_app_functions), 455,
-  'the complete application-owned public function census contains 455 functions');    -- 12
+--
+-- Comparative statements and notes add five, 455 -> 460. Four are SECURITY
+-- DEFINER (390 -> 394) because they read governed company data across RLS:
+-- fn_resolve_comparative_period, fn_comparative_financial_statement_report,
+-- fn_financial_statement_line_accounts and fn_financial_statement_notes. The
+-- fifth, fn_fs_presentation_sign, is an IMMUTABLE SQL classifier that reads only
+-- its arguments. All five reach `authenticated` and `service_role` and none
+-- reaches anon. fn_financial_statement_report was REPLACED rather than added:
+-- its five-argument form is dropped so the new re-presentation argument cannot
+-- make an existing five-argument call ambiguous. Assertion 10 stays at 87 —
+-- reporting reads the ledger and never writes it.
+SELECT is((SELECT count(*)::int FROM p52_app_functions), 460,
+  'the complete application-owned public function census contains 460 functions');    -- 12
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 390,
-  'the complete application-owned SECURITY DEFINER census contains 390 functions');   -- 13
+SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 394,
+  'the complete application-owned SECURITY DEFINER census contains 394 functions');   -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('authenticated', oid, 'EXECUTE')),
-  318, 'authenticated EXECUTE coverage is completely counted');                       -- 14
+  323, 'authenticated EXECUTE coverage is completely counted');                       -- 14
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
@@ -185,7 +196,7 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('service_role', oid, 'EXECUTE')),
-  313, 'service_role EXECUTE coverage is completely counted');                        -- 16
+  318, 'service_role EXECUTE coverage is completely counted');                        -- 16
 
 SELECT is(
   (SELECT count(*)::int

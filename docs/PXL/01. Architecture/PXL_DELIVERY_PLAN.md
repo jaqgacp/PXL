@@ -378,8 +378,51 @@ are right is a return that changes after submission.
    engine — previously the "Close Year" button wrote `status = 'closed'` straight
    through PostgREST and posted nothing at all.
 
-   **Still open before the statements are pilot-complete:** comparative periods,
-   note disclosures and consolidation. Recorded in the Product Backlog.
+   ✅ **Comparative statements and basic notes — DONE 2026-08-03.** Migration
+   `20260803000007_comparative_statements_and_notes.sql`, test `123` (33
+   assertions, self-provisioned company), Backlog item 18e. All four statements
+   carry current period, prior comparable period, amount variance and percentage
+   variance, and every line — comparative or single-period — opens to the
+   accounts behind it and on to the ledger.
+
+   The prerequisite was a defect, not a feature. Period close, shipped hours
+   earlier the same day, had silently broken two of the four statements for any
+   **closed** year: the report read every posted line regardless of
+   `entry_class`, so a closing journal's debit to revenue made the Statement of
+   Comprehensive Income of a closed year read as **all zeroes**, and its credit
+   to Retained Earnings moved the year's entire operating cash flow into
+   **financing**. Measured on a fresh company: revenue 50,000 → 0.00; operating
+   30,000 → 0.00 with financing 0.00 → 30,000. Nothing had ever closed a year
+   before, and comparatives are the first feature that reads a closed year on
+   purpose — the prior column would have been blank. Closing entries are now
+   excluded from the income statement and the cash flow statement and included
+   in the position and in changes in equity, where retained earnings is only
+   correct because of them (Backlog 18j).
+
+   The comparative is one contract, not a second engine:
+   `fn_comparative_financial_statement_report` calls
+   `fn_financial_statement_report` twice and joins on the governed line code,
+   passing the **current** period end as the presentation date for the prior
+   call so both columns are read on today's structure — a comparative shown on
+   two different mappings compares nothing. `fn_resolve_comparative_period`
+   resolves the prior period from the company's own fiscal calendar (a calendar
+   year offset for consecutive twelve-month years, matching fiscal period
+   numbers otherwise) and returns `available:false` with a readable reason
+   rather than raising, because a company in its first year legitimately has no
+   comparative. `fn_financial_statement_line_accounts` serves the drill-down and
+   the supporting schedules from one query, signed through the shared
+   `fn_fs_presentation_sign` so the accounts always sum to the line they were
+   opened from. `fn_financial_statement_notes` returns company information,
+   reporting period, basis of preparation, significant accounting policies and
+   supporting schedules as rows, each naming its source and flagging whether it
+   is configured — an unset policy reads as unset rather than as a default. The
+   Comparative Financial Statements screen, which had been reading the ledger
+   and totalling accounts in the browser, now computes nothing.
+
+   **Still open before the statements are signature-ready:** note templates and
+   company-authored narrative, statement-line-to-note cross-references, a
+   signature block, and consolidation. Recorded in the Product Backlog as items
+   18i and 18f.
 8. **BIR filing artifacts.** *Moved here from Phase 4 on 2026-08-02: a return is
    generated from posted, closed data, so this depends on items 1–7 above and
    cannot precede them.* All twelve `compliance_*` working-paper tables are
