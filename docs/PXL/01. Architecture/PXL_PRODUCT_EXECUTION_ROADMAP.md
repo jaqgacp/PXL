@@ -59,25 +59,29 @@ production-ready**.
 > FIFO layer consumption, an insufficient-stock guard and reversal on void; test
 > `054` asserts it and the canonical ledger shows COGS debits equal to inventory
 > credits in all three trading companies. Inventory could not tie out at ₱0.00 if
-> the claim were true. What *is* open on the sales side: **Cash Sales has no
-> posting function at all**, Customer Return has no COGS path, and Delivery
-> Receipt does not relieve inventory.
+> the claim were true. **Every outbound entry point relieves stock as of
+> 2026-08-03** — Cash Sale (test `119`), Delivery Receipt and Customer Return
+> (test `120`) joined Sales Invoice, all through the same costing path. What *is*
+> open on the sales side: document conversion beyond the delivery-to-invoice
+> link, and Delivery Receipt cancellation.
 
 The visible product is ahead of runtime in **30** deferred routes, **17**
 navigation labels with no page, and whole Banking/Fixed Asset/compliance-generator
 clusters. The backend is ahead of the UI in party contacts, groups, item
-extensions, financial-statement structure and inventory configuration. The
+extensions and inventory configuration. The
 transaction workspace shell is structurally broad, but only Sales Invoice has a
 source-reviewed workspace slice: **1 of 37** registry entries.
 
 The dependency-forced order of outcomes is (§9.7):
 
-1. **Customer-to-Cash** — cash-sale posting, document conversion, an
-   AR-to-control guard and a fresh-data sales end-to-end test;
+1. **Customer-to-Cash** — document conversion, an AR-to-control guard and a
+   fresh-data sales end-to-end test; cash-sale and delivery posting closed
+   2026-08-03;
 2. **Procure-to-Pay** — three-way match and over-receipt control (independent of
    Customer-to-Cash; the two can run in parallel);
-3. **Period Close** — `account_fs_map` is empty, so no financial statement
-   presentation exists today;
+3. **Period Close** — the four financial statements are produced from governed
+   configuration since 2026-08-03; what is missing is the **close itself**, which
+   never rolls profit into retained earnings;
 4. **Tax Engine and Compliance** — the calculator (PAD-001) *and* the filing
    artifacts, which are a separate body of work;
 5. leave **Asset and Treasury Management** and the frozen **Inventory
@@ -178,14 +182,14 @@ excellent transaction and one material empty lifecycle remains M4 or below.
 | --- | --- | --- |
 | Setup | **M7** | Formal combined review executed; 14 Pass, 3 Partial, 2 Blocked, 4 N/A, 0 Fail. Not M8 because backup/restore and browser evidence remain open. |
 | Master Data | **M7** | Same review; major masters exercised and governed; certification scope still Blocked. |
-| Sales & Receivables | **M4** | SI posts AR, revenue, output VAT **and** COGS/inventory relief (test `054`; 15 SI journals). Held at M4 by: **no `fn_post_cash_sale`**, no Customer Return COGS path, zero document-conversion functions, and no fresh-data end-to-end test. |
+| Sales & Receivables | **M4** | SI, Cash Sale, Delivery Receipt and Customer Return all move inventory and COGS correctly (tests `054`, `119`, `120`). Held at M4 by: zero general document-conversion functions, no AR-to-control reconciliation guard, and no Quotation→SO→SI fresh-data proof. |
 | Purchasing & Payables | **M4** | PO → RR → Bill proven from first principles by fresh-data test `112`; 36 bills and 5 payment vouchers posted. Held at M4 by three-way match, over-receipt control, and empty `purchase_returns` / `supplier_debit_memos`. |
 | Inventory | **M4** | Inventory ties to control at **₱0.00** in every stock-holding company (guard `111`); adjustments, transfers and counts post. Held at M4 by `inventory_cost_layers` never holding a row (FIFO path unexercised) and `goods_issues` empty. |
 | Banking & Treasury | **M3** | Only `bank_accounts` holds data. `check_vouchers`, `fund_transfers`, `bank_reconciliations`, `petty_cash_vouchers`, `bank_adjustments` are **all empty**; their posting functions have never produced a journal. |
 | Fixed Assets | **M3** | **All six tables empty**; five routes deferred; depreciation policy has no master. |
-| Accounting | **M4** | 51 journals / 144 lines; trial balance out-of-balance **₱0.00 in all five companies**; 60 fiscal periods. Held at M4 by **empty `account_fs_map`** (no statement presentation), year-end close and consumer-wide reconciliation proof. |
+| Accounting | **M4** | 51 journals / 144 lines; trial balance out-of-balance **₱0.00 in all five companies**; 60 fiscal periods; all four statements produced from governed configuration since 2026-08-03. Held at M4 by **period close** (profit is never rolled into retained earnings) and consumer-wide reconciliation proof. |
 | Compliance | **M4** | VAT/EWT reconcile to GL; 248 calendar events; 218 CAS issuances. Held at M4 by the absent Tax Engine and by **all twelve `compliance_*` working-paper tables, `bir_forms`, `form_2306/2307_*`, `vat_returns` and `withholding_remittances` being empty**. |
-| Reports | **M4** | 23 views read posted data. Held at M4 by **1 of 9** critical reconciliations evidenced and empty `account_fs_map`. |
+| Reports | **M4** | 23 views plus the statement reporting entry point read posted data. Held at M4 by **1 of 9** critical reconciliations evidenced, and by comparatives and note disclosures. |
 | Administration & Security | **M4** | PAD-003 selected restricted in-product administration; four guarded screens exist locally, while hosted invite/browser/UAT and operating evidence remain open. |
 | Dashboard *(not a module)* | **M4** | Live readiness/deadline monitoring works; KPI grid, range, roll-up, export and owner are incomplete. |
 
@@ -208,10 +212,10 @@ excellent transaction and one material empty lifecycle remains M4 or below.
 | Permissions & RLS | **M8** | Certified 2026-07-22. **209 of 209 tables RLS-enabled, 519 policies, zero tables without a policy.** |
 | Dimension | **M8** | Certified 2026-07-23. Line-level guards on both ledger tables; `vw_gl_dimension_summary`. |
 | Currency | **M1** | PHP-only (PAD-005). 9 currencies listed, **`exchange_rates` empty**, non-PHP fails closed. |
-| Reporting & Reconciliation | **M4** | 23 views read posted data. **1 of 9** critical reconciliations evidenced; `account_fs_map` empty. |
+| Reporting & Reconciliation | **M4** | 23 views plus `fn_financial_statement_report` read posted data. **1 of 9** critical reconciliations evidenced; comparatives and notes absent. |
 | Attachment & Traceability | **M4** | Source trace works and is now routed; **`cas_attachment_register` empty** — no file lifecycle. PAD-008 undecided. |
 | Backup & Recovery | **M5** | Tooling complete and scheduled: fail-closed `backup:operate`, weekly drill workflow, **replicated copy restored independently** (93 tables / 0 mismatches / 6s), retention 30/12/7 enforced, all refusals exercised. PAD-007 decided (S3-compatible). **No bucket, no escrowed passphrase, schedule never fired, no hosted/PITR proof.** |
-| COA | **M4** | 215 accounts, 55 mappings, cert test `081`. `account_fs_map` empty; all-consumer adoption incomplete. |
+| COA | **M4** | 215 accounts, 55 mappings, cert test `081`. FS classification seeded and mapped with every chart since 2026-08-03; all-consumer adoption incomplete. |
 
 The Accounting Kernel is **M7**, fully enforced, and nested inside Posting. It
 is not included in the 19-engine denominator.
@@ -542,8 +546,8 @@ it — a reference to that document's numbering, not a second scheme.
 | Audit & Immutability | ✅ Certified | Foundation | done |
 | Number Series | ✅ Certified | Foundation | done |
 | Dimensions | ✅ Certified | Foundation | done |
-| Chart of Accounts | 🟡 `account_fs_map` empty | **Period Close** | Phase 5 |
-| Posting Engine | 🟡 12 of 24 entry points exercised | Every transactional outcome | Phases 4–6 |
+| Chart of Accounts | 🟡 all-consumer resolver adoption | **Period Close** | Phase 5 |
+| Posting Engine | 🟡 14 of 24 entry points exercised | Every transactional outcome | Phases 4–6 |
 | AR Engine | 🟡 Partial | Customer-to-Cash | Phase 5 |
 | AP Engine | 🟡 Partial | Procure-to-Pay | Phase 5 |
 | Payment & Application | 🟡 Partial | Customer-to-Cash and Procure-to-Pay | Phase 5 |
@@ -637,7 +641,7 @@ hosted parity and browser evidence.
   triggers on both ledger tables, and enforcement **survives a restore into a
   fresh database**; 264 number series; 215 accounts; trial balance ₱0.00 in all
   five companies.
-- **Carried forward:** `account_fs_map` empty → Period Close;
+- **Carried forward:** period close (no retained-earnings roll) → Period Close;
   `user_company_branch_scopes` and `sys_feature_enablement` empty → Reporting and
   Administration.
 
@@ -651,11 +655,15 @@ hosted parity and browser evidence.
   insufficient-stock guard and reversal on void (test `054`; canonical COGS
   debits equal inventory credits in all three trading companies). Official
   Receipt and Credit Memo post. AR ageing and customer ledger read posted data.
-- **Blocking the outcome:** `fn_post_cash_sale` does not exist, so a cash sale of
-  stock produces no journal; Customer Return has no COGS path; **zero document
-  conversion functions**; no AR-to-control reconciliation guard; and no
-  fresh-data end-to-end test, so the revenue side is proven only against the
-  demo seed the project forbids trusting.
+- **Closed 2026-08-03:** Cash Sale relieves inventory and posts COGS with
+  per-line business and withholding tax (test `119`); Delivery Receipt relieves
+  stock into Goods Delivered Not Invoiced and the invoice clears it instead of
+  relieving twice; Customer Return puts stock and cost back (test `120`). Both
+  are fresh-data proofs, not seed-backed.
+- **Blocking the outcome:** **zero general document-conversion functions** (the
+  delivery-to-invoice link is the only one, and it is deliberately the only
+  supported billing path); no AR-to-control reconciliation guard; and no
+  Quotation → Sales Order → Sales Invoice fresh-data proof.
 
 ## 9.7.4 Procure-to-Pay · 🟡 IN PROGRESS
 
@@ -680,10 +688,14 @@ hosted parity and browser evidence.
 - **Already true:** trial balance out of balance by **₱0.00 in all five
   companies**; 60 fiscal periods; **period locking against posting works**;
   23 reporting views; reversal and void paths post and are tested.
-- **Blocking the outcome:** **`account_fs_map` is empty** — the trial balance is
-  correct but no account is mapped to a statement line, so no Statement of
-  Financial Position or Comprehensive Income can be produced from mapped
-  accounts. Eight of nine critical reconciliations remain unevidenced.
+- **Closed 2026-08-03:** all four financial statements are produced from governed
+  `fs_structure` / `account_fs_map` configuration through one reporting entry
+  point, with the position balancing and the cash flow tying to cash movement
+  (test `121`). Presentation is a data change, not a release.
+- **Blocking the outcome:** **the close itself does not exist.** Nothing rolls
+  revenue and expense into retained earnings, so a second fiscal year would show
+  the prior year's profit in Current Year Earnings. Eight of nine critical
+  reconciliations remain unevidenced.
 - **Deliberately not a pilot blocker:** **year-end close and audited reopening**
   are unproven and are **not** scheduled before the pilot. A pilot is a
   one-quarter parallel run (Delivery Plan Phase 7), which needs monthly and
@@ -930,7 +942,7 @@ test counts — rather than maintaining a copy by hand.
 | Area | Evidence-based assessment |
 | --- | --- |
 | Product vision | Strong, differentiated and valuable: accounting-first PH compliance for multi-company businesses. It is broader than current delivery capacity and needs a pilot scope. |
-| Accounting architecture | The strongest part of PXL. The sealed posting doorway and immutable, traceable ledger are excellent. Receiving accounting and inventory-to-control now reconcile; three-way match, over-receipt control and Cash Sale posting remain open. |
+| Accounting architecture | The strongest part of PXL. The sealed posting doorway and immutable, traceable ledger are excellent. Receiving, all outbound inventory entry points and financial statement presentation now work; three-way match, over-receipt control and period close remain open. |
 | Engineering architecture | Strong database controls and evidence discipline. Complexity is high, local/hosted states diverge, and dormant architecture risks outrunning product workflows. |
 | Repository structure | Generally governed and navigable, but the dirty tree, large active-doc set and prior missing/assumed review create provenance risk. |
 | Code maturity | Substantial local implementation with many guarded RPCs and tests. Maturity is uneven: strong transaction cores coexist with empty module scaffolds. |

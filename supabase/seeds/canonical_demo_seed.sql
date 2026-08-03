@@ -1205,3 +1205,28 @@ BEGIN
     v_summary.posted_vendor_bills,
     v_summary.inventory_transactions;
 END $$;
+
+-- ── Financial statement presentation for the demo companies ──────────────────
+-- The canonical seed builds its chart of accounts by direct insert rather than
+-- from a template, so it does not pass through fn_seed_company_coa and would
+-- otherwise leave every demo company with accounts it cannot present. Mapping
+-- runs as each company's own owner because it is an administered provisioning
+-- step, exactly as it is for a real company.
+DO $$
+DECLARE c RECORD;
+BEGIN
+  FOR c IN
+    SELECT co.id,
+           (SELECT m.user_id FROM user_company_memberships m
+             WHERE m.company_id = co.id AND m.role IN ('owner','admin')
+             ORDER BY m.granted_at LIMIT 1) AS admin_user
+    FROM companies co
+    WHERE co.trade_name LIKE 'DEMO-%'
+  LOOP
+    CONTINUE WHEN c.admin_user IS NULL;
+    PERFORM set_config('request.jwt.claims',
+      json_build_object('sub', c.admin_user::text, 'role', 'authenticated')::text, true);
+    PERFORM fn_map_company_fs_accounts(c.id);
+  END LOOP;
+  PERFORM set_config('request.jwt.claims', '', true);
+END $$;

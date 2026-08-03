@@ -203,7 +203,7 @@ produced from governed configuration but **period close does not exist**, so
 profit is never rolled into retained earnings; **14 of 24 posting entry points
 have never produced a journal**; every Banking and Fixed Asset transaction table is empty; and all
 twelve compliance working-paper tables are empty, so nothing has ever been filed.
-Of 209 tables, **116 have never held a row**. Opening balances, verified supplier
+Of 209 tables, **114 have never held a row** (was 116; the two financial-statement registry tables became populated on 2026-08-03). Opening balances, verified supplier
 payee accounts and minimum administration exist locally; recoverability is
 mechanised and scheduled but not operated over anything real. PXL is suitable for
 **internal QA and demonstration only. It is not production-ready and not
@@ -2033,7 +2033,7 @@ restated.
 
 ```text
    Tables                          209   all 209 RLS-enabled; 0 without a policy
-   Tables holding data              93   ← 45%; 116 have never held a row
+   Tables holding data              95   ← 45%; 114 have never held a row
    Views                            23
    Functions                       437
    User triggers                   627

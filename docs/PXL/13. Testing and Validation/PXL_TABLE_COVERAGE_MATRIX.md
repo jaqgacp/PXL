@@ -40,7 +40,7 @@ Row counts below are the deterministic **canonical baseline** (fresh migration r
 
 All 209 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
 
-The COA Engine (Phase A, 2026-07-24) added four base tables: `ref_mapping_key` (reference-populated, 9 seeded keys), `account_mapping` (canonical-populated, 45 rows = 5 companies × 9 config-synced bindings), and the FS-registry framework `fs_structure` and `account_fs_map` (workflow-deferred, populated by the FS-registry provisioning workflow in Phase B, intentionally empty under the canonical baseline).
+The COA Engine (Phase A, 2026-07-24) added four base tables: `ref_mapping_key` (reference-populated), `account_mapping` (canonical-populated, config-synced bindings), and the FS-registry framework `fs_structure` and `account_fs_map`. **Both FS tables became canonical-populated on 2026-08-03** (Delivery Plan Phase 5.7): seeding a chart of accounts now provisions its statement presentation with it, and the canonical demo seed — which builds its chart by direct insert — maps its companies explicitly. They are no longer workflow-deferred, and the coverage guard was reclassified rather than silenced.
 
 Inventory Accounting IA-5 adds one disabled certification source registry row and
 seventeen `dormant-foundation` tables (eleven from the IA-5 foundation plus six

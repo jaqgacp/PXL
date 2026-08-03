@@ -34,7 +34,7 @@ CREATE TEMP TABLE _coverage_registry (
 );
 
 INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
-  ('account_fs_map', 'workflow-deferred'),
+  ('account_fs_map', 'canonical-populated'),
   ('account_mapping', 'canonical-populated'),
   ('amortization_entries', 'future-deferred'),
   ('amortization_schedules', 'future-deferred'),
@@ -55,7 +55,7 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   ('bir_form_mappings', 'reference-empty'),
   ('bir_forms', 'reference-empty'),
   ('book_tax_reconciliation', 'future-deferred'),
-  ('fs_structure', 'workflow-deferred'),
+  ('fs_structure', 'canonical-populated'),
   ('ref_mapping_key', 'reference-populated'),
   ('branches', 'canonical-populated'),
   ('cas_attachment_register', 'future-deferred'),

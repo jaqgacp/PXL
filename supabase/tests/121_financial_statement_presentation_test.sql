@@ -73,8 +73,11 @@ FROM generate_series(1, 12) AS m;
 SELECT is(fn_seed_company_coa('12100000-0000-0000-0000-0000000000c1'), 43,
   'the standard chart of accounts seeds 43 accounts');                              -- 1
 
-SELECT ok(fn_map_company_fs_accounts('12100000-0000-0000-0000-0000000000c1') > 0,
-  'mapping the chart binds accounts to governed statement lines');                  -- 2
+-- Seeding the chart maps it: a company can never end up with accounts it cannot
+-- present. Re-running the mapper therefore has nothing left to do, which is also
+-- what makes an administrator's own re-mapping safe from re-provisioning.
+SELECT is(fn_map_company_fs_accounts('12100000-0000-0000-0000-0000000000c1'), 0,
+  'seeding the chart already bound every account — re-mapping is a no-op');         -- 2
 
 CREATE TEMP VIEW acct AS
 SELECT account_code, id FROM chart_of_accounts

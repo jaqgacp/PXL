@@ -151,8 +151,8 @@ call the engine, and that assertion reads exactly one function.
 engine's arithmetic. Test `090` proves the structure — and its assertions
 17–43, 45 and 46 passed **unchanged** across the migration, which is the
 "every existing caller produces identical tax output" requirement satisfied by
-the suite rather than by assertion. Full regression 117 files / 2,742
-assertions; canonical 30 files / 751.
+the suite rather than by assertion. Full regression at the time was 117 files /
+2,742 assertions; it stands at **121 files / 2,842** after Phase 5 items 3 and 7.
 
 **One deliberate behaviour change, not a byte-identical migration.**
 `fn_save_cash_sale` resolved its CWT rate with no active, deprecation or
@@ -436,9 +436,10 @@ presentation, the BIR filing artifacts, and proving approval routing.
 It was published before three pilot-critical items were known to be missing, and
 none of them has a defensible estimate from repository evidence:
 
-- **Statement presentation (Phase 5.7).** `account_fs_map` is empty. Whether this
-  is a mapping-data exercise or also a reporting build is not determinable from
-  the schema alone.
+- ~~**Statement presentation (Phase 5.7).**~~ **Closed 2026-08-03.** It was both a
+  mapping exercise and a reporting build, and it took one migration and one test.
+  What it revealed instead is the item below it: statements without a period
+  close are correct for one year and wrong for the second.
 - **Filing artifacts (Phase 5.8).** Twelve working-paper tables, four form
   tables and the return tables are empty. Nothing in the repository indicates how
   much of the generation logic exists behind those empty tables, so any duration
@@ -465,7 +466,7 @@ recoverable, which is the difference between a setback and a catastrophe.
 | 2 | ~~No schedule, no offsite path~~ Both built and proven; a durable destination and escrowed passphrase remain owner actions | Every module's production readiness | 2 |
 | 3 | ~~No opening balances~~ Local capability complete; real cut-over proof open | Pilot onboarding acceptance | ✅ local / 3 |
 | 4 | ~~No Tax Engine calculator~~ **CLOSED 2026-08-03 (PAD-001).** One calculator, eleven callers migrated. Percentage tax still calculated nowhere | Percentage-tax companies only | ✅ / 5 |
-| 5 | No financial statement presentation (`account_fs_map` empty) | A pilot accountant cannot sign statements | 5.7 |
+| 5 | ~~No financial statement presentation~~ **CLOSED 2026-08-03.** All four statements produced from governed configuration (test `121`). **Successor risk: no period close** — profit is never rolled into retained earnings, so a second fiscal year misstates equity | A pilot accountant signing a second year | ✅ / Backlog 18d |
 | 6 | No filing artifacts — nothing has ever been filed | Statutory filing; a VAT-registered pilot client | 5.8 |
 
 ---
@@ -474,14 +475,15 @@ recoverable, which is the difference between a setback and a catastrophe.
 
 Three honest measures. All others mislead.
 
-| Measure | 2026-08-02 | Pilot target |
+| Measure | 2026-08-03 | Pilot target |
 |---|---:|---:|
-| Exercised posting entry points | **12 of 24** | 18 of 24 |
+| Exercised posting entry points | **14 of 24** | 18 of 24 |
 | Critical reconciliations evidenced | 1 of 9 | 9 of 9 |
 | Canonical flows meeting the Pilot Bar | 0 of 2 | 2 of 2 |
 
-Re-measured 2026-08-02; the first row previously read "11 of 22" and was wrong on
-both numbers.
+Re-measured 2026-08-02 (the first row previously read "11 of 22" and was wrong on
+both numbers) and again on 2026-08-03, when Cash Sale and Delivery Receipt
+posting took it from 12 to 14.
 
 Menu entries, route counts, page counts and documentation volume are **not**
 progress measures. PXL learned that the hard way: **247 navigation leaf entries

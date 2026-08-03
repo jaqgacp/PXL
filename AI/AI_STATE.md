@@ -39,16 +39,17 @@ is complete; that certifies no module or engine and confers no readiness.
 
 ## Active Work Map
 
-- **Certified modules:** 0 / 11 certification scopes.
+- **Certified modules:** 0 / 11.
 - **Certified engines:** 4 / 19 — Permissions/RLS, Audit & Immutability, Number
   Series and Dimension. The **Tax Engine exists at M5** (PAD-001), guarded, **not
   certified**; no engine became certified this session.
 - **Critical reconciliations evidenced:** **1 / 9.** Inventory-to-control
-  reconciles at 0.00 in every stock-holding company (test `111`) and across the
-  whole outbound chain on fresh data (test `120`).
+  reconciles at 0.00 in every stock-holding company (`111`) and across the whole
+  outbound chain on fresh data (`120`).
 - **Exercised posting entry points:** **14 of 24** — the honest completion measure.
 - **Certified work packages:** IA-5 ECC WP-1…WP-4, 4 / 9, **frozen, 21 tables
   empty, zero consumers.** WP-5…WP-9 and IA-6 stopped.
+
 - **Canonical workflows meeting Product DoD:** 0 / 6.
 - **Transaction workspaces:** **37** registry entries; Sales Invoice the sole
   source-reviewed slice. UI rollout is not business completion:
@@ -61,7 +62,7 @@ is complete; that certifies no module or engine and confers no readiness.
 - **Backup/restore:** **Mechanised and scheduled; never operated over anything
   real.** `npm run backup:operate` runs weekly in CI. RPO 24h pilot. Blocker 5.
 
-Payroll is a **future separate product — excluded from current PXL ERP progress**.
+Payroll is a **future separate product, excluded from PXL ERP progress**.
 
 ## Known Blockers and Non-Assumptions
 
@@ -70,12 +71,12 @@ Payroll is a **future separate product — excluded from current PXL ERP progres
 2. Every outbound entry point relieves stock as of 2026-08-03 — Sales Invoice
    (054), Cash Sale (119), Delivery Receipt and Customer Return (120). Open:
    three-way match, over-receipt control, Delivery Receipt cancellation.
-3. **Percentage tax is calculated nowhere in PXL and never has been**, so a
-   PT-registered company has no percentage tax to review or file. **Nothing has
-   ever been filed**: all twelve `compliance_*` working-paper tables and the
-   return/form tables are empty. No governed UI configures a tax-code succession
-   (Backlog 10) or a statement re-presentation (18f); the company tax profile is
-   not effective-dated (11); **period close does not exist** (18d).
+3. **Percentage tax is calculated nowhere and never has been**, so a
+   PT-registered company has nothing to review or file. **Nothing has ever been
+   filed**: all twelve `compliance_*` working-paper tables and the return/form
+   tables are empty. No governed UI configures a tax-code succession (10) or a
+   statement re-presentation (18f); the tax profile is not effective-dated (11);
+   **period close does not exist** (18d).
 4. Phase 3 is not operationally accepted: no hosted migration, deployed invite
    function, cut-over rehearsal or browser/UAT proof.
 5. Recoverability is mechanised but not operated: the weekly workflow has never
@@ -147,19 +148,20 @@ rendered page is not a workflow.
 - Focused lane — **PASS**, `121` 25, `120` 24, `119` 26, `118` 25, `117` 31.
 - `npm run test:frontend` — **PASS**, 60 tests.
 - `npm run build`, `npm run lint`, `git diff --check` — **PASS**; lint reports
-  one pre-existing non-blocking warning in `tests/backup_recovery.test.ts`.
+  one pre-existing warning in `tests/backup_recovery.test.ts`.
 - `npm run docs:check` — **PASS**; 121 tests indexed.
 - `npm run backup:operate` — **PASS** (2026-08-02); replicated copy restored
-  independently, 93 tables / 0 mismatches.
+  independently, 0 mismatches.
 - Inventory-to-control variance **0.00** in all three stock-holding companies;
-  trial balance out-of-balance **0.00** in all five.
+  trial balance out-of-balance **0.00** in all five; the canonical demo
+  Statement of Financial Position balances at **0.00** (assets 622,768.80).
 
 ## Recommended Next Task
 
 **PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE; the rest is owner action.**
-PAD-007: self-managed encrypted backups to S3-compatible storage, no PITR for
-the pilot. Close it via Runbook §6 — bucket, `PXL_OFFSITE_URL` plus access-key
-secrets, and `PXL_BACKUP_PASSPHRASE` escrowed off the host.
+PAD-007: self-managed encrypted backups to S3-compatible storage, no PITR for the
+pilot. Close it via Runbook §6 — bucket, `PXL_OFFSITE_URL` plus access keys, and
+`PXL_BACKUP_PASSPHRASE` escrowed off the host.
 
 **Phase 5 items 3 and 7 are complete.** Next build task: **period close and
 year-end roll-forward (Backlog 18d)** — the largest remaining accounting-cycle

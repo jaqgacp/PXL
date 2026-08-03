@@ -538,8 +538,11 @@ DECLARE
   v_company  UUID := (p_context->>'company_id')::UUID;
   v_fs_lines INTEGER;
 BEGIN
+  -- fn_seed_company_coa maps the statement lines itself; this reports how many
+  -- bindings the company ended up with so provisioning evidence shows it.
   v_count := fn_seed_company_coa(v_company, p_context->>'coa_template_code');
-  v_fs_lines := fn_map_company_fs_accounts(v_company);
+  SELECT count(*)::INTEGER INTO v_fs_lines
+  FROM account_fs_map WHERE company_id = v_company AND effective_to IS NULL;
   RETURN jsonb_build_object('account_count', v_count, 'fs_mapping_count', v_fs_lines);
 END;
 $function$;
@@ -601,6 +604,78 @@ BEGIN
     AND c.account_code = l.account_code
     AND l.parent_account_code IS NOT NULL
     AND c.parent_id IS NULL;
+
+  SELECT count(*)::INTEGER INTO v_count
+  FROM chart_of_accounts c
+  WHERE c.company_id = p_company_id
+    AND c.account_code IN (SELECT account_code FROM coa_template_lines WHERE template_id = v_template_id);
+  RETURN v_count;
+END;
+$function$
+
+;
+
+-- ── 9. Seeding a chart provisions its presentation ─────────────────────────
+-- fn_mdp08_module_coa is only one caller. Hooking the seeder itself means every
+-- template-provisioned company gets a statement structure, whichever path
+-- created it. A chart built by direct insert (the canonical demo seed) still
+-- needs fn_map_company_fs_accounts run once — the seed does that itself.
+CREATE OR REPLACE FUNCTION public.fn_seed_company_coa(p_company_id uuid, p_template_code text DEFAULT NULL::text)
+ RETURNS integer
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+ SET search_path TO 'public'
+AS $function$
+DECLARE
+  v_template_id UUID;
+  v_code        TEXT := p_template_code;
+  v_count       INTEGER := 0;
+BEGIN
+  IF NOT can_admin_company(p_company_id) THEN
+    RAISE EXCEPTION 'not authorized to seed defaults for company %', p_company_id USING ERRCODE = '42501';
+  END IF;
+
+  -- Default template selection: resolve from the company's entity_type when the
+  -- caller does not name one explicitly.
+  IF v_code IS NULL THEN
+    SELECT t.template_code INTO v_code
+    FROM coa_templates t
+    JOIN companies c ON c.id = p_company_id
+    WHERE t.is_active AND c.entity_type = ANY (t.entity_types)
+    ORDER BY t.template_code
+    LIMIT 1;
+  END IF;
+
+  SELECT id INTO v_template_id FROM coa_templates WHERE template_code = v_code AND is_active;
+  IF v_template_id IS NULL THEN
+    RAISE EXCEPTION 'COA template % not found or inactive', COALESCE(v_code, '(none)') USING ERRCODE = 'P0002';
+  END IF;
+
+  INSERT INTO chart_of_accounts (
+    company_id, account_code, account_name, account_type, normal_balance, is_postable,
+    fs_group, fs_subgroup, cash_flow_category, is_control_account, allow_subledger,
+    subledger_type, is_tax_account, is_cash_equivalent, created_by, updated_by)
+  SELECT p_company_id, l.account_code, l.account_name, l.account_type, l.normal_balance, l.is_postable,
+         l.fs_group, l.fs_subgroup, l.cash_flow_category, l.is_control_account, l.allow_subledger,
+         l.subledger_type, l.is_tax_account, l.is_cash_equivalent, auth.uid(), auth.uid()
+  FROM coa_template_lines l
+  WHERE l.template_id = v_template_id
+  ON CONFLICT (company_id, account_code) DO NOTHING;
+
+  -- Resolve parent hierarchy by account_code within the same company.
+  UPDATE chart_of_accounts c
+     SET parent_id = p.id
+  FROM coa_template_lines l
+  JOIN chart_of_accounts p
+    ON p.company_id = p_company_id AND p.account_code = l.parent_account_code
+  WHERE l.template_id = v_template_id
+    AND c.company_id = p_company_id
+    AND c.account_code = l.account_code
+    AND l.parent_account_code IS NOT NULL
+    AND c.parent_id IS NULL;
+
+  -- A company must never end up with accounts it cannot present.
+  PERFORM fn_map_company_fs_accounts(p_company_id);
 
   SELECT count(*)::INTEGER INTO v_count
   FROM chart_of_accounts c
