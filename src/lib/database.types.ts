@@ -16049,6 +16049,39 @@ export type Database = {
         Returns: undefined
       }
       fn_post_check_voucher: { Args: { p_cv_id: string }; Returns: undefined }
+      fn_financial_statement_report: {
+        Args: {
+          p_branch_id?: string
+          p_company_id: string
+          p_period_end: string
+          p_period_start: string
+          p_statement: string
+        }
+        Returns: {
+          closing_amount: number
+          depth: number
+          display_order: number
+          is_subtotal: boolean
+          line_code: string
+          line_label: string
+          line_role: string
+          movement_amount: number
+          opening_amount: number
+          parent_code: string
+        }[]
+      }
+      fn_fs_line_is_descendant: {
+        Args: { p_ancestor_id: string; p_line_id: string }
+        Returns: boolean
+      }
+      fn_map_company_fs_accounts: {
+        Args: { p_company_id: string }
+        Returns: number
+      }
+      fn_seed_company_fs_structure: {
+        Args: { p_company_id: string }
+        Returns: number
+      }
       fn_post_delivery_receipt: {
         Args: { p_dr_id: string }
         Returns: undefined

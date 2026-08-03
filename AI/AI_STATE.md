@@ -2,10 +2,10 @@
 
 **Current Date:** 2026-08-03
 **Current Branch:** `main`
-**Working Tree:** Delivery Plan Phase 5 item 3 — **the outbound inventory entry
-points** — is **complete** locally with executed fresh, canonical, regression,
-frontend, build and lint evidence. Sales Invoice, Cash Sale and Delivery Receipt
-all relieve stock; Customer Return puts it back.
+**Working Tree:** Delivery Plan Phase 5.7 — **financial statement presentation**
+— is complete locally with executed fresh, canonical, regression, frontend,
+build and lint evidence. All four statements are produced from governed
+`fs_structure` / `account_fs_map` configuration, not from code.
 **Product Phase:** Pilot Execution Plan; IA-5/ECC **frozen**.
 **Environment:** Local Supabase on a fresh schema. No hosted operation was
 performed.
@@ -14,23 +14,23 @@ production-ready.** PXL is not production-ready.
 
 ## Canonical Authority and Startup
 
-Four authorities, four questions — settled 2026-08-02; none answers another's:
-**what** PXL is → `PXL_PRODUCT_ARCHITECTURE.md`; **when/in what order**, the only
-numbered phases → `PXL_DELIVERY_PLAN.md`; **why** that order →
-`PXL_PRODUCT_EXECUTION_ROADMAP.md`, which carries **no phase numbers**; **where**
-we are → this file. An unqualified "Phase N" is a Delivery Plan phase. Startup
-order: `AI/AGENT_SYSTEM_PROMPT.md` → this file → `PXL_HOW_WE_WORK.md` → Product
-Architecture → Roadmap for planning → only what the mission names; start a new
-session with `AI/ONBOARDING_PROMPT.md`.
+Four authorities, four questions — settled 2026-08-02: **what** PXL is →
+`PXL_PRODUCT_ARCHITECTURE.md`; **when/in what order**, the only numbered phases →
+`PXL_DELIVERY_PLAN.md`; **why** → `PXL_PRODUCT_EXECUTION_ROADMAP.md`, which
+carries **no phase numbers**; **where** we are → this file. An unqualified
+"Phase N" is a Delivery Plan phase. Startup order:
+`AI/AGENT_SYSTEM_PROMPT.md` → this file → `PXL_HOW_WE_WORK.md` → Product
+Architecture → Roadmap → only what the mission names; new sessions start with
+`AI/ONBOARDING_PROMPT.md`.
 
 **Current phase: Delivery Plan Phase 5 — the two canonical flows.** Phases 1, 3
-and 4 are built locally; Phase 2's remaining work is **owner-supplied** (a backup
+and 4 are built locally; Phase 2's remainder is **owner-supplied** (a backup
 destination on a separate failure domain and an escrowed passphrase).
 
 The certification ceremony was **retired 2026-08-02** for automated invariants
 (`PXL_HOW_WE_WORK.md` §3–4). Do not run an audit mission. Read the state, run the
 gates, fix what fails, build the next thing. **This file is the only status
-authority**; `git log` is the session history.
+authority**; `git log` is the history.
 
 ## Current Finding Standing
 
@@ -41,8 +41,8 @@ is complete; that certifies no module or engine and confers no readiness.
 
 - **Certified modules:** 0 / 11 certification scopes.
 - **Certified engines:** 4 / 19 — Permissions/RLS, Audit & Immutability, Number
-  Series and Dimension. The **Tax Engine exists at M5** (PAD-001), is guarded and
-  is **not certified**; no engine became certified this session.
+  Series and Dimension. The **Tax Engine exists at M5** (PAD-001), guarded, **not
+  certified**; no engine became certified this session.
 - **Critical reconciliations evidenced:** **1 / 9.** Inventory-to-control
   reconciles at 0.00 in every stock-holding company (test `111`) and across the
   whole outbound chain on fresh data (test `120`).
@@ -50,85 +50,90 @@ is complete; that certifies no module or engine and confers no readiness.
 - **Certified work packages:** IA-5 ECC WP-1…WP-4, 4 / 9, **frozen, 21 tables
   empty, zero consumers.** WP-5…WP-9 and IA-6 stopped.
 - **Canonical workflows meeting Product DoD:** 0 / 6.
-- **Transaction workspaces:** **37** registry entries; Sales Invoice is the sole
+- **Transaction workspaces:** **37** registry entries; Sales Invoice the sole
   source-reviewed slice. UI rollout is not business completion:
   business qualification remains source-gated.
 - **Visible scaffolds:** **30** deferred routes labelled "Not built"; **17** nav
   labels with no page. 247 nav entries → 175 routes, **145** on real data.
-- **Tests:** 120 pgTAP files / 2,817 assertions plus 60 frontend source tests;
+
+- **Tests:** 121 pgTAP files / 2,842 assertions plus 60 frontend source tests;
   full regression, canonical, build and lint lanes pass.
 - **Backup/restore:** **Mechanised and scheduled; never operated over anything
-  real.** `npm run backup:operate` runs weekly via
-  `.github/workflows/backup-drill.yml`. RPO 24h pilot. See blocker 5.
+  real.** `npm run backup:operate` runs weekly in CI. RPO 24h pilot. Blocker 5.
 
 Payroll is a **future separate product — excluded from current PXL ERP progress**.
 
 ## Known Blockers and Non-Assumptions
 
-1. No complete Sales or Purchasing source-to-financial-statements-to-tax workflow
-   meets the Product Definition of Done.
+1. No complete Sales or Purchasing source-to-statements-to-tax workflow meets
+   the Product Definition of Done.
 2. Every outbound entry point relieves stock as of 2026-08-03 — Sales Invoice
    (054), Cash Sale (119), Delivery Receipt and Customer Return (120). Open:
-   three-way match, over-receipt control, and Delivery Receipt cancellation.
+   three-way match, over-receipt control, Delivery Receipt cancellation.
 3. **Percentage tax is calculated nowhere in PXL and never has been**, so a
    PT-registered company has no percentage tax to review or file. **Nothing has
    ever been filed**: all twelve `compliance_*` working-paper tables and the
-   return/form tables are empty. No governed UI can configure a tax-code
-   succession (Backlog 10) and the company tax profile is not effective-dated
-   (Backlog 11).
-4. Phase 3 exists locally but is not operationally accepted: no hosted migration,
-   deployed invite function, cut-over rehearsal or browser/UAT proof.
+   return/form tables are empty. No governed UI configures a tax-code succession
+   (Backlog 10) or a statement re-presentation (18f); the company tax profile is
+   not effective-dated (11); **period close does not exist** (18d).
+4. Phase 3 is not operationally accepted: no hosted migration, deployed invite
+   function, cut-over rehearsal or browser/UAT proof.
 5. Recoverability is mechanised but not operated: the weekly workflow has never
    fired, no durable destination or escrowed passphrase exists, the replication
    proof used storage on the **same machine**, and no PXL database holds real books.
 6. Hosted parity is absent after `20260716000005`.
-7. Frontend evidence is source-contract and production-build coverage only; no
-   automated browser workflow lane exists.
+7. Frontend evidence is source-contract and build coverage only; no automated
+   browser workflow lane exists.
 
 ## Current Engineering Frontier
 
-Phase 4 shipped 2026-08-03: `fn_calculate_tax`, migration `20260803000001` — the
-catalog's **eleven** duplicated calculators all migrated. Scope is VAT plus ATC
-withholding; **percentage tax is excluded — nothing calculates it.**
+Phase 4 shipped 2026-08-03: `fn_calculate_tax` (`20260803000001`) — the catalog's
+**eleven** duplicated calculators all migrated. Scope is VAT plus ATC
+withholding; **percentage tax is excluded — nothing calculates it.** VAT became
+effective-date aware the same day (`20260803000002`, test `118`):
+`fn_resolve_vat_code` is the one place a VAT code's validity is decided — version,
+tax side, company profile, as of the document date — and the engine, the trigger
+backstop and the picker `fn_vat_codes_asof` all ask it.
 
-VAT became effective-date aware the same day (`20260803000002`, test `118`, 25
-assertions). `fn_resolve_vat_code` is the one place a VAT code's validity is
-decided — version, tax-code version, tax side, company profile, all as of the
-document date — and the engine, the line/header trigger backstop and the picker
-`fn_vat_codes_asof` all ask it, so the UI offers exactly what the database
-accepts. A rate change is a closed window plus a successor.
+**Cash Sale posting shipped** (`20260803000003`, test `119`): it relieves stock
+and posts COGS through the *same* costing path as `fn_post_sales_invoice`, and
+carries **Business Tax and Withholding Tax per line**, so one sale can mix goods
+and services under different ATCs.
 
-**Cash Sale posting shipped** (`20260803000003`, test `119`, 26 assertions): it
-relieves stock and posts COGS through the *same* costing path as
-`fn_post_sales_invoice`, and carries **Business Tax and Withholding Tax per
-line** (`sales_invoice_lines.withholding_*`), so one sale can mix goods and
-services under different ATCs.
-
-**Delivery Receipt and Customer Return followed** (`20260803000004`, test `120`,
-24 assertions). A delivery relieves stock into **Goods Delivered Not Invoiced**
-(`SALES_DELIVERY_CLEARING`, the outbound mirror of `PURCHASE_CLEARING`); the
-invoice recognises that cost as COGS and clears it **instead of relieving
-twice**, keyed on the line's `source_document_type = 'DR'` link, with a partial
-unique index making double billing impossible. A return puts goods back through
-`fn_receive_inventory` at the cost they were issued at. Two prerequisites shipped
-with it: `DR` registered in `ref_posting_source_types`, and
-`fn_save_sales_invoice` accepting `DR` as a governed line source. **Billing a
+**Delivery Receipt and Customer Return followed** (`20260803000004`, test `120`),
+completing Phase 5 item 3. A delivery relieves stock into **Goods Delivered Not
+Invoiced** (`SALES_DELIVERY_CLEARING`); the invoice recognises that cost as COGS
+and clears it **instead of relieving twice**, keyed on the line's
+`source_document_type = 'DR'` link, with a unique index making double billing
+impossible. A return puts goods back through `fn_receive_inventory`. **Billing a
 delivery is only correct through the delivery's "Bill This Delivery" action** —
-an unlinked invoice for delivered goods relieves the stock again (Backlog 18b).
+an unlinked invoice for delivered goods relieves stock again (18b).
+
+**Financial statement presentation shipped** (`20260803000005`, test `121`, 25
+assertions). `fs_structure` and `account_fs_map` had never held a row; the four
+statement screens grouped accounts by `account_type` in the browser with the
+layout hardcoded in TSX. Presentation is now configuration —
+`chart_of_accounts → account_fs_map → fs_structure` — one account bound to exactly
+one line per statement, a subtotal defined as the sum of its children, so no
+formula language exists. `fn_financial_statement_report` is the single reporting
+entry point returning opening/movement/closing per line: the position reads
+closing, comprehensive income movement, equity all three, and cash flows movement
+classified by governed metadata, proving itself by tying to the cash movement.
+Two missing pieces of metadata were added: `is_cash_equivalent` and
+`fs_structure.line_role`. Reporting never writes the ledger.
 
 Phase 3 is implemented locally and unchanged (PAD-002, PAD-003). IA-5/ECC is
-**frozen** at zero consumers and zero events; WP-1…WP-4 certified, WP-5
-unauthorised, evidence under `docs/PXL/archive/ia5-ecc-frozen/`. Posting P5.2
-remains fully enforced; the Accounting Kernel is a component inside the Posting
-Engine, not an engine.
+**frozen** at zero consumers and zero events; evidence under
+`docs/PXL/archive/ia5-ecc-frozen/`. Posting P5.2 remains fully enforced; the
+Accounting Kernel is a component inside the Posting Engine, not an engine.
 
 ## Hosted and UX Status
 
-Hosted project `bskjkogijpbhukjkagfj` is at migration `20260716000005`; **59
+Hosted project `bskjkogijpbhukjkagfj` is at migration `20260716000005`; **60
 local migrations are pending**, with **no destructive DDL**. The deploy is
 **rehearsed, not performed, and deliberately deferred** — nothing consumes the
 hosted database and CI deploys nothing. Credentials are absent by design
-(PXL-AUD-055). See `PXL_DEPLOY_RUNBOOK.md`.
+(PXL-AUD-055). See the Deploy Runbook.
 
 Thirty-three reachable routes are backed only by future-deferred tables. A
 rendered page is not a workflow.
@@ -137,14 +142,13 @@ rendered page is not a workflow.
 
 - `npm run test:db:fresh` — **PASS** on 2026-08-03.
 - `npm run test:canonical` — **PASS**, 30 files / 751 assertions.
-- `npm run test:db:regression` — **PASS**, 120 files / 2,817 assertions; the lane
+- `npm run test:db:regression` — **PASS**, 121 files / 2,842 assertions; the lane
   resets to a fresh schema first, so it is order-independent.
-- Focused lane — **PASS**, `120` 24, `119` 26, `118` 25, `117` 31, `090`, `102`,
-  `103`.
+- Focused lane — **PASS**, `121` 25, `120` 24, `119` 26, `118` 25, `117` 31.
 - `npm run test:frontend` — **PASS**, 60 tests.
 - `npm run build`, `npm run lint`, `git diff --check` — **PASS**; lint reports
   one pre-existing non-blocking warning in `tests/backup_recovery.test.ts`.
-- `npm run docs:check` — **PASS**; 120 tests indexed.
+- `npm run docs:check` — **PASS**; 121 tests indexed.
 - `npm run backup:operate` — **PASS** (2026-08-02); replicated copy restored
   independently, 93 tables / 0 mismatches.
 - Inventory-to-control variance **0.00** in all three stock-holding companies;
@@ -154,30 +158,28 @@ rendered page is not a workflow.
 
 **PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE; the rest is owner action.**
 PAD-007: self-managed encrypted backups to S3-compatible storage, no PITR for
-the pilot. To close it, follow Runbook §6 — bucket, `PXL_OFFSITE_URL` plus
-access-key secrets, and `PXL_BACKUP_PASSPHRASE` escrowed off the host.
+the pilot. Close it via Runbook §6 — bucket, `PXL_OFFSITE_URL` plus access-key
+secrets, and `PXL_BACKUP_PASSPHRASE` escrowed off the host.
 
-**Phase 5 item 3 is complete.** Next build task: **Delivery Plan Phase 5 item 7
-— financial statement presentation.** `account_fs_map` has **never held a row**,
-so no account maps to a statement line: the trial balance is correct and out of
-balance by ₱0.00 in every company, but no Statement of Financial Position or
-Comprehensive Income can be produced. A pilot client's accountant has to sign
-statements, so this is the largest remaining pilot-critical gap and it now
-blocks both flow proofs (items 1–2), which end in "→ TB → FS".
+**Phase 5 items 3 and 7 are complete.** Next build task: **period close and
+year-end roll-forward (Backlog 18d)** — the largest remaining accounting-cycle
+gap. Nothing rolls revenue and expense into retained earnings, so a company
+entering its second fiscal year shows the prior year's profit in Current Year
+Earnings instead of Retained Earnings, and comparative statements cannot mean
+anything. `CLOSE` is already a registered posting source type.
 
-Phase 5 runs flows → statements → filing, in that order. Tax remainders are
-Product Backlog Tax Engine items 8–19: percentage tax (unblocked — build the
-whole chain or none of it), the governed tax-code maintenance screen (10), the
-effective-dated company tax profile (11), the per-line tax model on the other
-documents (18), delivery-to-invoice conversion beyond the one supported path
-(18b), Delivery Receipt cancellation (18c), and Lines-workspace line detail (19).
+Phase 5 runs flows → statements → filing, in that order. Remaining Product
+Backlog items: percentage tax (8, unblocked — whole chain or none), tax-code
+maintenance (10), effective-dated tax profile (11), per-line tax on the other
+documents (18), delivery-to-invoice conversion (18b), DR cancellation (18c),
+comparatives and notes (18e), FS structure maintenance (18f), line detail (19).
 
-**The hosted deploy is deferred, not blocked** (Deploy Runbook §2a); re-run
-`npm run deploy:rehearse` after adding migrations — the pending set is now **59**.
+**The hosted deploy is deferred, not blocked** (Runbook §2a); re-run
+`npm run deploy:rehearse` after adding migrations — the pending set is **60**.
 **Requires explicit owner approval.**
 
-No open findings remain. Do not resume IA-5: canonical Sales/Purchasing proof,
-statement presentation and operated recovery outrank dormant foundation work.
+No open findings remain. Do not resume IA-5: canonical flow proof, period close
+and operated recovery outrank dormant foundation work.
 
 ## Stop Conditions
 

@@ -138,22 +138,28 @@ SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
 -- goods-delivered-not-invoiced. It IS ledger-capable, so assertion 10 above
 -- moves from 85 to 86 — the only entry point added to the graph.
 --
+-- Financial statement presentation adds four, none of them ledger-capable:
+-- fn_seed_company_fs_structure and fn_map_company_fs_accounts (provisioning,
+-- admin-gated) and fn_financial_statement_report / fn_fs_line_is_descendant
+-- (reporting, STABLE, read-only). Assertion 10 stays at 86: reporting reads the
+-- ledger and never writes it, which is the boundary this file exists to hold.
+--
 -- Effective-dated VAT resolution adds exactly three more, on the same terms:
 -- fn_resolve_vat_code (the one place a VAT code's validity is decided),
 -- fn_company_tax_registration_asof (the tax-profile seam it reads), and
 -- fn_vat_codes_asof (the picker the UI reads so it cannot offer what the
 -- database refuses). All three read reference masters and write nothing, so
 -- assertion 10 stays at 85.
-SELECT is((SELECT count(*)::int FROM p52_app_functions), 442,
-  'the complete application-owned public function census contains 442 functions');    -- 12
+SELECT is((SELECT count(*)::int FROM p52_app_functions), 446,
+  'the complete application-owned public function census contains 446 functions');    -- 12
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 379,
-  'the complete application-owned SECURITY DEFINER census contains 379 functions');   -- 13
+SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 383,
+  'the complete application-owned SECURITY DEFINER census contains 383 functions');   -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('authenticated', oid, 'EXECUTE')),
-  309, 'authenticated EXECUTE coverage is completely counted');                       -- 14
+  313, 'authenticated EXECUTE coverage is completely counted');                       -- 14
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
@@ -163,7 +169,7 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('service_role', oid, 'EXECUTE')),
-  304, 'service_role EXECUTE coverage is completely counted');                        -- 16
+  308, 'service_role EXECUTE coverage is completely counted');                        -- 16
 
 SELECT is(
   (SELECT count(*)::int

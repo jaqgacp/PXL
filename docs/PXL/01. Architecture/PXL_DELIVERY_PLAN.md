@@ -311,14 +311,41 @@ are right is a return that changes after submission.
 5. **Document Conversion**, minimally: carry quantities forward, prevent double
    conversion. This is what makes quote → invoice real.
 6. Surface the accounting trace in the menu (complete, currently unreachable).
-7. **Financial statement presentation.** Both flows above end in "→ TB → FS",
-   but **`account_fs_map` has never held a row**, so no account is mapped to a
-   statement line. The trial balance is correct and out of balance by ₱0.00 in
-   every company; a Statement of Financial Position and Statement of
-   Comprehensive Income cannot be produced from mapped accounts today. A pilot
-   client's accountant has to sign statements, so this is pilot-critical rather
-   than reporting polish. *Added 2026-08-02; this item was absent from the plan
-   entirely.*
+7. ✅ **Financial statement presentation — DONE 2026-08-03.** Migration
+   `20260803000005_financial_statement_presentation.sql`, test `121` (25
+   assertions, self-provisioned company). `account_fs_map` and `fs_structure`
+   had never held a row, so the four statement screens grouped accounts by
+   `account_type` in the browser with the layout hardcoded in TSX — a trial
+   balance with headings.
+
+   Presentation is now configuration held per company:
+   `chart_of_accounts → account_fs_map → fs_structure → the statement`.
+   `account_fs_map` binds each account to exactly **one** line per statement
+   (already enforced by `uq_account_fs_map_active`); a subtotal is a parent line
+   whose amount is the plain sum of its children, so there is no formula
+   language and no layout in code. `fn_financial_statement_report` is the single
+   reporting entry point and returns opening / movement / closing for every
+   line, from which all four statements are read: **Statement of Financial
+   Position** (closing), **Statement of Comprehensive Income** (movement),
+   **Statement of Changes in Equity** (all three) and **Statement of Cash Flows**
+   (movement, classified by the governed cash-flow metadata). The four pages
+   became thin wrappers over one shared renderer.
+
+   The COA already carried nearly everything needed — `fs_statement`, `fs_group`,
+   `fs_subgroup`, `cash_flow_category`, `is_operating_expense`. Only two pieces
+   of structure were genuinely missing and both were added: `chart_of_accounts.
+   is_cash_equivalent` (a cash flow statement must know which accounts ARE cash;
+   `cash_flow_category` says why a movement happened, not what cash is) and
+   `fs_structure.line_role` (detail / subtotal / current_year_earnings /
+   cash_reconciliation — roles, not formulas). `statement` also gained
+   `equity_statement`. Posting logic is untouched: reporting reads the ledger and
+   never writes it, so a re-presentation never disturbs a posted number.
+
+   **Still open before the statements are pilot-complete:** period close (nothing
+   rolls revenue and expense into retained earnings — the governed
+   `current_year_earnings` line is what makes a mid-year position balance),
+   comparative periods, note disclosures and consolidation. Recorded in the
+   Product Backlog.
 8. **BIR filing artifacts.** *Moved here from Phase 4 on 2026-08-02: a return is
    generated from posted, closed data, so this depends on items 1–7 above and
    cannot precede them.* All twelve `compliance_*` working-paper tables are

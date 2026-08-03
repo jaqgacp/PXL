@@ -2471,8 +2471,51 @@ graph, function, SECURITY DEFINER and grant censuses each grew by one (`102`);
 and the derived-table writer census is seventeen with the generic-receipt callers
 at four (`103`).
 
-Not claimed: financial statement presentation (`account_fs_map` still holds no
-row) and Quotation/Sales Order conversion (the Document Conversion engine is not
-started). This file links the invoice to the delivery through the governed
-`source_document_type` / `source_line_id` columns, which is what the clearing
-consumption keys on.
+Not claimed here: Quotation/Sales Order conversion (the Document Conversion
+engine is not started). This file links the invoice to the delivery through the
+governed `source_document_type` / `source_line_id` columns, which is what the
+clearing consumption keys on. Financial statement presentation is now covered by
+test `121` below.
+
+## Delivery Plan Phase 5.7 — Financial statement presentation
+
+Status: **PASSING 2026-08-03.**
+`supabase/tests/121_financial_statement_presentation_test.sql` closes the gap
+between a correct trial balance and a statement an accountant can sign.
+`fs_structure` and `account_fs_map` had existed since the schema was laid down
+and had **never held a single row**; the four Financial Statement screens
+compensated by grouping postable accounts by `account_type` in the browser, with
+the layout hardcoded in TSX.
+
+The file provisions a company the normal way — standard 43-account template chart,
+governed statement structure seeded with it, opening position posted through the
+production cut-over RPC, then one real cash sale — and asserts across 25
+assertions that the result is a statement rather than a grouped trial balance.
+
+Section A asserts the configuration exists and is well-formed: all four
+statements have a structure; **no account maps to more than one line of the same
+statement**; every postable account reaches a position or income-statement line
+*and* a cash-flow classification; the two cash accounts are marked
+`is_cash_equivalent`; and no account is mapped to a subtotal or to current-year
+earnings, because those are computed, not posted.
+
+Section B runs the statements. Comprehensive income: revenue 4,000, cost of sales
+shown as −2,400, and Gross Profit and Net Income **rolled up from the hierarchy**
+rather than re-derived. Financial position: assets 8,080, liabilities 480,
+current-year earnings 1,600 without any closing entry, **the statement balances**
+(assets = liabilities + equity), and it **ties to the general ledger it came
+from**. Cash flows: cash moved 4,480 and operating + investing + financing equals
+that movement exactly — the statement's own proof — split −1,520 operating and
+6,000 financing from the governed metadata. Changes in equity: opening plus
+movement equals closing, and total equity agrees with the position.
+
+Section C is the claim that matters for the future: **the layout is
+configuration.** Re-mapping inventory to a different governed line moves 3,600 to
+Non-current Assets and leaves total assets unchanged — presentation moved, the
+ledger did not, and no code changed. That is what makes a local-GAAP or IFRS
+re-presentation a data change rather than a release.
+
+Not claimed: period close (revenue and expense balances are still not rolled into
+retained earnings by any process — the governed `current_year_earnings` line is
+what makes a mid-year position balance), comparative periods, note disclosures
+and consolidation.
