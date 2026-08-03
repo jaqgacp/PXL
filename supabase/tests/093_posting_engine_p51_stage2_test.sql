@@ -51,7 +51,7 @@ SELECT is(
   (SELECT (SELECT count(*)::int FROM regexp_matches(p.prosrc, 'fn_add_posting_line_push', 'g'))
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public' AND p.proname='fn_post_credit_memo_vat_lump_impl'),
-  3, 'the Credit Memo poster persists its three lines through the helper');           -- 3
+  5, 'the Credit Memo poster persists its five lines through the helper');            -- 3
 
 -- The helper is now sanctioned, and remains unreachable by any client role.
 SELECT ok(

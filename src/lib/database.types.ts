@@ -4158,6 +4158,10 @@ export type Database = {
           line_number: number
           net_amount: number
           quantity: number
+          inventory_cost: number | null
+          inventory_transaction_id: string | null
+          unit_cost: number | null
+          warehouse_id: string | null
           revenue_account_id: string | null
           total_amount: number
           unit_price: number
@@ -4178,6 +4182,10 @@ export type Database = {
           line_number?: number
           net_amount?: number
           quantity?: number
+          inventory_cost?: number | null
+          inventory_transaction_id?: string | null
+          unit_cost?: number | null
+          warehouse_id?: string | null
           revenue_account_id?: string | null
           total_amount?: number
           unit_price?: number
@@ -4198,6 +4206,10 @@ export type Database = {
           line_number?: number
           net_amount?: number
           quantity?: number
+          inventory_cost?: number | null
+          inventory_transaction_id?: string | null
+          unit_cost?: number | null
+          warehouse_id?: string | null
           revenue_account_id?: string | null
           total_amount?: number
           unit_price?: number
@@ -4918,6 +4930,10 @@ export type Database = {
           line_number: number
           lot_serial_no: string | null
           quantity: number
+          inventory_cost: number | null
+          inventory_transaction_id: string | null
+          unit_cost: number | null
+          warehouse_id: string | null
           so_line_id: string | null
           uom_id: string | null
           updated_at: string
@@ -4934,6 +4950,10 @@ export type Database = {
           line_number?: number
           lot_serial_no?: string | null
           quantity?: number
+          inventory_cost?: number | null
+          inventory_transaction_id?: string | null
+          unit_cost?: number | null
+          warehouse_id?: string | null
           so_line_id?: string | null
           uom_id?: string | null
           updated_at?: string
@@ -4950,6 +4970,10 @@ export type Database = {
           line_number?: number
           lot_serial_no?: string | null
           quantity?: number
+          inventory_cost?: number | null
+          inventory_transaction_id?: string | null
+          unit_cost?: number | null
+          warehouse_id?: string | null
           so_line_id?: string | null
           uom_id?: string | null
           updated_at?: string
@@ -16025,6 +16049,10 @@ export type Database = {
         Returns: undefined
       }
       fn_post_check_voucher: { Args: { p_cv_id: string }; Returns: undefined }
+      fn_post_delivery_receipt: {
+        Args: { p_dr_id: string }
+        Returns: undefined
+      }
       fn_post_credit_memo: { Args: { p_cm_id: string }; Returns: undefined }
       fn_post_credit_memo_source_locked_impl: {
         Args: { p_cm_id: string }

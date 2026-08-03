@@ -121,8 +121,8 @@ SELECT set_eq(
 -- ledger exclusively through the sanctioned Accounting Kernel.
 -- Its Receipt and Payment Voucher continuation layers retain two private,
 -- non-client-executable native-document cores.
-SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 85,
-  'the complete static ledger-capable call graph contains 85 functions');              -- 10
+SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 86,
+  'the complete static ledger-capable call graph contains 86 functions');              -- 10
 
 SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
   'every function in the static ledger-capable call graph is SECURITY DEFINER');       -- 11
@@ -133,22 +133,27 @@ SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
 -- is NOT ledger-capable — assertion 10 above is unchanged at 85, because the
 -- calculator writes nothing.
 --
+-- Delivery Receipt posting adds exactly one more to all three censuses on
+-- 2026-08-03: fn_post_delivery_receipt, which relieves stock into
+-- goods-delivered-not-invoiced. It IS ledger-capable, so assertion 10 above
+-- moves from 85 to 86 — the only entry point added to the graph.
+--
 -- Effective-dated VAT resolution adds exactly three more, on the same terms:
 -- fn_resolve_vat_code (the one place a VAT code's validity is decided),
 -- fn_company_tax_registration_asof (the tax-profile seam it reads), and
 -- fn_vat_codes_asof (the picker the UI reads so it cannot offer what the
 -- database refuses). All three read reference masters and write nothing, so
 -- assertion 10 stays at 85.
-SELECT is((SELECT count(*)::int FROM p52_app_functions), 441,
-  'the complete application-owned public function census contains 441 functions');    -- 12
+SELECT is((SELECT count(*)::int FROM p52_app_functions), 442,
+  'the complete application-owned public function census contains 442 functions');    -- 12
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 378,
-  'the complete application-owned SECURITY DEFINER census contains 378 functions');   -- 13
+SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 379,
+  'the complete application-owned SECURITY DEFINER census contains 379 functions');   -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('authenticated', oid, 'EXECUTE')),
-  308, 'authenticated EXECUTE coverage is completely counted');                       -- 14
+  309, 'authenticated EXECUTE coverage is completely counted');                       -- 14
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
@@ -158,7 +163,7 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('service_role', oid, 'EXECUTE')),
-  303, 'service_role EXECUTE coverage is completely counted');                        -- 16
+  304, 'service_role EXECUTE coverage is completely counted');                        -- 16
 
 SELECT is(
   (SELECT count(*)::int

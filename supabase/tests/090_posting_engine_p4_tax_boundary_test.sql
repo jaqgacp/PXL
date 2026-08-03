@@ -95,10 +95,12 @@ SELECT set_eq(
 -- goods receipt at cost and computes no tax, so the non-tax partition grew by one.
 -- PAD-002 adds the opening-balance post and reversal writers. Both use the
 -- Accounting Kernel and neither calculates or persists tax.
+-- fn_post_delivery_receipt joined on 2026-08-03 for the same reason: a delivery
+-- moves cost from inventory to goods-delivered-not-invoiced and touches no tax.
 SELECT is(
   (SELECT count(*)::int FROM v_gl_writer)
     - (SELECT count(*)::int FROM v_tax_writer),
-  33, 'the remaining GL writers are provably not tax-aware (census partition complete)'); -- 2
+  34, 'the remaining GL writers are provably not tax-aware (census partition complete)'); -- 2
 
 SELECT is(
   (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace

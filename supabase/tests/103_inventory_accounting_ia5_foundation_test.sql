@@ -308,9 +308,12 @@ SELECT set_eq(
       JOIN pg_namespace n ON n.oid=p.pronamespace
      WHERE n.nspname='public'
        AND strpos(p.prosrc, 'fn_receive_inventory(') > 0$$,
+-- fn_post_credit_memo_vat_lump_impl joined on 2026-08-03: a customer return puts
+-- goods back on hand, and it uses the one shared inbound path rather than a
+-- second implementation of weighted-average roll-forward and layer creation.
   $$VALUES ('fn_confirm_receiving_report'),('fn_post_cash_purchase'),
-           ('fn_post_opening_balance')$$,
-  'the live function graph has exactly the three approved generic-receipt callers');  -- 20
+           ('fn_post_opening_balance'),('fn_post_credit_memo_vat_lump_impl')$$,
+  'the live function graph has exactly the four approved generic-receipt callers');   -- 20
 
 SELECT is(
   (SELECT count(*)::int
@@ -398,12 +401,14 @@ SELECT set_eq(
            ('fn_post_stock_adjustment_source_locked_impl'),
            ('fn_post_stock_transfer_source_locked_impl'),
            ('fn_receive_inventory'),
+           ('fn_post_credit_memo_vat_lump_impl'),
+           ('fn_post_delivery_receipt'),
            ('fn_reverse_opening_balance'),
            ('fn_save_cash_sale'),
            ('fn_update_wac'),
            ('fn_void_sales_invoice'),
            ('fn_void_sales_invoice_aud053_core')$$,
-  'the legacy-active derived-table writer census is exactly the fifteen named functions'); -- 25
+  'the legacy-active derived-table writer census is exactly the seventeen named functions'); -- 25
 
 SELECT is(
   (SELECT count(*)::int

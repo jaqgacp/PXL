@@ -21,6 +21,8 @@ type DRLine = {
   _key: string; id?: string; line_number: number; so_line_id: string | null
   item_id: string; description: string
   quantity: number; uom_id: string; lot_serial_no: string
+  // Stock leaves a place. A delivery of an inventory item cannot post without it.
+  warehouse_id: string
 }
 
 type CustomerRef = { id: string; registered_name: string; address: string | null }
@@ -35,6 +37,7 @@ const today = () => new Date().toISOString().split('T')[0]
 const newLine = (idx = 0): DRLine => ({
   _key: crypto.randomUUID(), line_number: idx + 1, so_line_id: null,
   item_id: '', description: '', quantity: 1, uom_id: '', lot_serial_no: '',
+  warehouse_id: '',
 })
 
 
@@ -52,6 +55,7 @@ export default function DeliveryReceiptsPage() {
   const [items, setItems] = useState<ItemRef[]>([])
   const [uoms, setUOMs] = useState<UOMRef[]>([])
   const [salesOrders, setSalesOrders] = useState<SORef[]>([])
+  const [warehouses, setWarehouses] = useState<{ id: string; warehouse_code: string; warehouse_name: string }[]>([])
   const [branches, setBranches] = useState<Branch[]>([])
 
   const [list, setList] = useState<DR[]>([])
@@ -76,6 +80,7 @@ export default function DeliveryReceiptsPage() {
   const [fTracking, setFTracking] = useState('')
   const [fDriver, setFDriver] = useState('')
   const [fAddress, setFAddress] = useState('')
+  const [fWarehouse, setFWarehouse] = useState('')
   const [lines, setLines] = useState<DRLine[]>([newLine(0)])
 
   useEffect(() => {
@@ -90,12 +95,15 @@ export default function DeliveryReceiptsPage() {
         .eq('company_id', companyId).eq('approval_status', 'approved')
         .in('fulfillment_status', ['open', 'partial']).order('so_date', { ascending: false }),
       supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
-    ]).then(([{ data: cs }, { data: is }, { data: us }, { data: sos }, { data: bs }]) => {
+      supabase.from('warehouses').select('id,warehouse_code,warehouse_name')
+        .eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
+    ]).then(([{ data: cs }, { data: is }, { data: us }, { data: sos }, { data: bs }, { data: whs }]) => {
       setCustomers(cs as CustomerRef[] || [])
       setItems(is as ItemRef[] || [])
       setUOMs(us as UOMRef[] || [])
       setSalesOrders(sos as SORef[] || [])
       setBranches(bs as Branch[] || [])
+      setWarehouses(whs as { id: string; warehouse_code: string; warehouse_name: string }[] || [])
     })
   }, [companyId])
 
@@ -141,7 +149,7 @@ export default function DeliveryReceiptsPage() {
         _key: crypto.randomUUID(), line_number: l.line_number, so_line_id: l.id,
         item_id: l.item_id || '', description: l.description,
         quantity: Math.max(0, l.quantity - l.fulfilled_quantity),
-        uom_id: l.uom_id || '', lot_serial_no: '',
+        uom_id: l.uom_id || '', lot_serial_no: '', warehouse_id: '',
       })).filter(l => l.quantity > 0))
     }
   }
@@ -172,9 +180,70 @@ export default function DeliveryReceiptsPage() {
     setFTracking(doc.tracking_number || ''); setFDriver(doc.driver_name || '')
     setFAddress(doc.delivery_address); setError('')
     const { data: lns } = await supabase.from('delivery_receipt_lines').select('*').eq('dr_id', doc.id).order('line_number')
-    if (lns && lns.length) setLines(lns.map(l => ({ _key: l.id, id: l.id, line_number: l.line_number, so_line_id: l.so_line_id, item_id: l.item_id || '', description: l.description, quantity: Number(l.quantity), uom_id: l.uom_id || '', lot_serial_no: l.lot_serial_no || '' })))
+    if (lns && lns.length) setLines(lns.map(l => ({ _key: l.id, id: l.id, line_number: l.line_number, so_line_id: l.so_line_id, item_id: l.item_id || '', description: l.description, quantity: Number(l.quantity), uom_id: l.uom_id || '', lot_serial_no: l.lot_serial_no || '', warehouse_id: l.warehouse_id || '' })))
     else setLines([newLine(0)])
+    if (doc.status === 'delivered') void loadBilledLines(doc.id)
+    else setBilledLineIds([])
     setMode(doc.status === 'draft' || doc.status === 'in_transit' ? 'edit' : 'view')
+  }
+
+  // Billing a delivered receipt. The invoice lines MUST carry the delivery line
+  // they bill: that link is what makes fn_post_sales_invoice recognise the cost
+  // already sitting in Goods Delivered Not Invoiced instead of relieving the
+  // stock a second time. An unlinked invoice for delivered goods would relieve
+  // twice, so this is the only supported way to bill a delivery.
+  const [billing, setBilling] = useState(false)
+  const [billedLineIds, setBilledLineIds] = useState<string[]>([])
+
+  const loadBilledLines = useCallback(async (drId: string) => {
+    const { data: drl } = await supabase.from('delivery_receipt_lines').select('id').eq('dr_id', drId)
+    const ids = (drl || []).map(l => l.id)
+    if (!ids.length) { setBilledLineIds([]); return }
+    const { data: billed } = await supabase.from('sales_invoice_lines')
+      .select('source_line_id').eq('source_document_type', 'DR').in('source_line_id', ids)
+    setBilledLineIds((billed || []).map(b => b.source_line_id as string))
+  }, [])
+
+  const billDelivery = async () => {
+    if (!companyId || !editDoc) return
+    setBilling(true); setError('')
+    try {
+      const { data: drLines, error: le } = await supabase.from('delivery_receipt_lines')
+        .select('id,line_number,item_id,description,quantity,warehouse_id,so_line:sales_order_lines(unit_price),item:items(default_sales_vat_id,sales_account_id)')
+        .eq('dr_id', editDoc.id).order('line_number')
+      if (le) throw le
+      const unbilled = (drLines || []).filter(l => !billedLineIds.includes(l.id))
+      if (!unbilled.length) throw new Error('Every line on this delivery has already been billed.')
+
+      const payload = unbilled.map(l => ({
+        item_id: l.item_id || '',
+        description: l.description,
+        quantity: Number(l.quantity),
+        unit_price: Number(l.so_line?.unit_price ?? 0),
+        vat_code_id: l.item?.default_sales_vat_id || '',
+        revenue_account_id: l.item?.sales_account_id || '',
+        warehouse_id: l.warehouse_id || '',
+        source_document_type: 'DR',
+        source_line_id: l.id,
+      }))
+      const { data: siId, error: se } = await supabase.rpc('fn_save_sales_invoice', {
+        p_invoice_id: null!,
+        p_header: {
+          company_id: companyId, branch_id: editDoc.branch_id,
+          customer_id: editDoc.customer_id,
+          customer_name_snapshot: editDoc.customer_name_snapshot,
+          customer_address_snapshot: editDoc.delivery_address,
+          date: today(),
+          reference: editDoc.dr_number,
+          memo: `Billing of Delivery Receipt ${editDoc.dr_number}`,
+        },
+        p_lines: payload,
+      })
+      if (se) throw se
+      await loadBilledLines(editDoc.id)
+      alert(`Draft Sales Invoice created from ${editDoc.dr_number}.\nApprove and post it from Sales Invoices.\nInvoice id: ${siId}`)
+    } catch (e) { setError(e instanceof Error ? e.message : 'Could not bill this delivery.') }
+    setBilling(false)
   }
 
   const requiredConfig = useMemo<ConfigField[]>(() => [], [])
@@ -230,9 +299,16 @@ export default function DeliveryReceiptsPage() {
             so_line_id: l.so_line_id, item_id: l.item_id || null,
             description: l.description, quantity: l.quantity,
             uom_id: l.uom_id || null, lot_serial_no: l.lot_serial_no || null,
+            warehouse_id: l.warehouse_id || fWarehouse || null,
           }))
         )
         if (le) throw le
+      }
+      // Delivering is an accounting event: the stock leaves and its cost waits
+      // in Goods Delivered Not Invoiced until the invoice recognises it.
+      if (nextStatus === 'delivered') {
+        const { error: pe } = await supabase.rpc('fn_post_delivery_receipt', { p_dr_id: docId! })
+        if (pe) throw pe
       }
       setMode('list')
     } catch (e) { setError(e instanceof Error ? e.message : 'Save failed.') }
@@ -320,6 +396,7 @@ export default function DeliveryReceiptsPage() {
         { key: 'cancel', label: 'Cancel', onClick: () => setMode('list') },
         { key: 'save', label: saving ? 'Saving…' : drStatus === 'in_transit' ? 'Update' : 'Save Draft', onClick: () => save(drStatus === 'in_transit' ? 'in_transit' : 'draft'), disabled: saving, hidden: readOnly || !['draft','in_transit'].includes(drStatus) },
         { key: 'advance', label: drStatus === 'in_transit' ? 'Confirm Delivered' : 'Dispatch', onClick: () => save(drStatus === 'in_transit' ? 'delivered' : 'in_transit'), disabled: saving, hidden: readOnly || !['draft','in_transit'].includes(drStatus), variant: 'primary' },
+        { key: 'bill', label: billing ? 'Creating…' : 'Bill This Delivery', onClick: billDelivery, disabled: billing, hidden: drStatus !== 'delivered', variant: 'primary' },
       ]}
       headerFields={[
         { key: 'number', label: 'Delivery Receipt Number', card: 0, content: <div className="pxl-readonly-field">{editDoc?.dr_number || 'Auto-assigned on save'}</div> },
@@ -327,6 +404,7 @@ export default function DeliveryReceiptsPage() {
         { key: 'branch', label: 'Branch', card: 0, content: readOnly ? <div className="pxl-readonly-field">{branches.find(b => b.id === fBranch)?.branch_name || '—'}</div> : <select value={fBranch} onChange={e => setFBranch(e.target.value)} className="pxl-input w-full"><option value="">Select branch…</option>{branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}</select> },
         { key: 'customer', label: 'Customer *', card: 1, span: 2, content: readOnly || !!fSO ? <div className="pxl-readonly-field">{fCustomerName || '—'}</div> : <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className="pxl-input w-full"><option value="">Select customer…</option>{customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}</select> },
         { key: 'address', label: 'Delivery Address *', card: 1, span: 2, content: readOnly ? <div className="pxl-readonly-field">{fAddress || '—'}</div> : <input value={fAddress} onChange={e => setFAddress(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'warehouse', label: 'Ship From Warehouse', card: 1, content: readOnly ? <div className="pxl-readonly-field">{warehouses.find(w => w.id === fWarehouse)?.warehouse_code || 'Per line'}</div> : <select value={fWarehouse} onChange={e => setFWarehouse(e.target.value)} className="pxl-input w-full"><option value="">Set per line</option>{warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}</select> },
         { key: 'source', label: 'Source Sales Order', card: 2, content: readOnly ? <div className="pxl-readonly-field">{salesOrders.find(s => s.id === fSO)?.so_number || '—'}</div> : <select value={fSO} onChange={e => onSOChange(e.target.value)} className="pxl-input w-full"><option value="">None (standalone)</option>{salesOrders.map(s => <option key={s.id} value={s.id}>{s.so_number} — {s.customer_name_snapshot}</option>)}</select> },
         { key: 'shipping', label: 'Shipping Method *', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fShipping.replace('_', ' ')}</div> : <select value={fShipping} onChange={e => setFShipping(e.target.value as typeof fShipping)} className="pxl-input w-full"><option value="in_house">In-House</option><option value="courier">Courier</option><option value="pickup">Customer Pickup</option></select> },
         { key: 'tracking', label: 'Tracking Number', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fTracking || '—'}</div> : <input value={fTracking} onChange={e => setFTracking(e.target.value)} className="pxl-input w-full" /> },
@@ -355,6 +433,7 @@ export default function DeliveryReceiptsPage() {
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 min-w-[200px]">Description</th>
                   <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-24">Qty to Deliver</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-16">UOM</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 min-w-[140px]">Warehouse</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 min-w-[140px]">Lot / Serial No.</th>
                   {canEdit && !fSO && <th className="px-2 w-8" />}
                 </tr>
@@ -388,6 +467,15 @@ export default function DeliveryReceiptsPage() {
                           {uoms.map(u => <option key={u.id} value={u.id}>{u.uom_code}</option>)}
                         </select>
                       ) : <span>{uoms.find(u => u.id === l.uom_id)?.uom_code || '—'}</span>}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      {canEdit ? (
+                        <select value={l.warehouse_id} onChange={e => setLineField(l._key, 'warehouse_id', e.target.value)}
+                          className="text-xs border-0 bg-transparent focus:outline-none w-full">
+                          <option value="">{fWarehouse ? 'Document default' : '— Select warehouse —'}</option>
+                          {warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}
+                        </select>
+                      ) : <span className="text-xs text-gray-500">{warehouses.find(w => w.id === l.warehouse_id)?.warehouse_code || '—'}</span>}
                     </td>
                     <td className="px-4 py-2.5">
                       {canEdit ? <input value={l.lot_serial_no} onChange={e => setLineField(l._key, 'lot_serial_no', e.target.value)} className="w-full bg-transparent border-0 text-xs py-0 px-0 focus:outline-none text-gray-500" placeholder="Lot / serial #…" />

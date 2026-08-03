@@ -2424,3 +2424,55 @@ stamped on the line by the engine, so the posting layer never reads the ATC mast
 
 Percentage tax is **not** asserted. A PT-registered company still computes none,
 because the PT liability posting line and the 2551Q artifact do not exist.
+
+## Delivery Plan Phase 5 item 3 — Sales outbound inventory flow
+
+Status: **PASSING 2026-08-03.**
+`supabase/tests/120_sales_outbound_inventory_flow_test.sql` closes the last two
+ways stock could move without the ledger noticing, and proves them as one act
+rather than as two functions.
+
+A **Delivery Receipt** shipped goods and relieved nothing: stock stayed on the
+books at full cost until somebody invoiced it, so a count taken between shipping
+and billing disagreed with the ledger and no account explained the difference. A
+**Customer Return** credited the customer and returned no stock, so gross margin
+stayed overstated by the cost of every return ever processed.
+
+The file provisions its own trading company and walks the whole outbound act
+across 24 assertions: deliver five of twenty units, bill the delivery, then take
+two back. It asserts that delivery relieves stock (20 → 15) and posts
+**DR Goods Delivered Not Invoiced / CR Inventory** with **no COGS yet**, because
+the sale has not happened; that posting the same delivery twice is a no-op rather
+than a second relief; that billing the delivery moves **no stock at all** and
+writes no inventory transaction of its own, recognising the 3,000 of COGS by
+clearing the delivery account instead; that the clearing account **nets to zero**
+once the delivery is billed; that a delivery line cannot be billed twice
+(`uq_sil_delivery_source`); and that a return puts two units back at the 600 they
+were issued at through the shared `fn_receive_inventory` path, reversing 1,200 of
+COGS and 240 of output VAT.
+
+The two closing assertions are the ones that matter for a pilot: inventory
+reconciles to its control account across delivery, invoice and return, and net
+COGS is 1,800 — the three units the customer actually kept.
+
+Two prerequisites surfaced during implementation and were completed with it,
+because the workflow is incorrect without either: `DR` had to be registered in
+`ref_posting_source_types` (a delivery journal is impossible until it is, since
+`journal_entries.reference_doc_type` is a foreign key into that registry), and
+`fn_save_sales_invoice` had to accept `DR` as a line source with its own
+validation that the source line is a *delivered* line of the same company and
+customer.
+
+Census consequences, updated rather than worked around: the COA template gained
+account `1310` (43 accounts, tests `063`/`073`); the governed inventory movement
+keys became three (`085`); the non-tax GL writer partition grew by one (`090`);
+the Credit Memo poster now writes five helper lines (`093`); the ledger-capable
+graph, function, SECURITY DEFINER and grant censuses each grew by one (`102`);
+and the derived-table writer census is seventeen with the generic-receipt callers
+at four (`103`).
+
+Not claimed: financial statement presentation (`account_fs_map` still holds no
+row) and Quotation/Sales Order conversion (the Document Conversion engine is not
+started). This file links the invoice to the delivery through the governed
+`source_document_type` / `source_line_id` columns, which is what the clearing
+consumption keys on.

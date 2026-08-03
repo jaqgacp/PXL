@@ -280,9 +280,32 @@ are right is a return that changes after submission.
    `vat_price_basis` instead of assuming exclusive. Lines also carry warehouse,
    department, cost center, salesperson and account overrides.
 
-   Still missing here: Customer Return has no COGS path, and Delivery Receipt
-   does not relieve inventory — relief happens at invoice, so goods shipped and
-   not yet invoiced sit in stock at full cost with no unbilled-delivery account.
+   ✅ **Delivery Receipt and Customer Return closed 2026-08-03** — migration
+   `20260803000004_sales_outbound_inventory.sql`, test `120` (24 assertions,
+   self-provisioned company). A delivery now relieves stock and parks the cost in
+   **Goods Delivered Not Invoiced** (`SALES_DELIVERY_CLEARING`, the outbound
+   mirror of the `PURCHASE_CLEARING` key receiving already uses); the Sales
+   Invoice recognises that cost as COGS and clears it **instead of relieving the
+   stock a second time**, keyed on the line's `source_document_type = 'DR'` link,
+   with a partial unique index making a delivery line impossible to bill twice.
+   A Customer Return puts the goods back through `fn_receive_inventory` — the
+   same inbound path receiving uses — at the cost they were issued at, reversing
+   COGS. A credit-memo line with no warehouse remains a price adjustment and
+   moves no stock, which is the common case and must stay possible.
+
+   **This item is now complete.** All three outbound entry points relieve
+   inventory, and the flow reconciles: cost leaves stock once, reaches COGS when
+   the revenue does, and returns when the goods do.
+
+   Two prerequisites were completed with it because the workflow is incorrect
+   without either: `DR` registered in `ref_posting_source_types` (the delivery
+   journal's `reference_doc_type` is a foreign key into it) and
+   `fn_save_sales_invoice` accepting `DR` as a governed line source. Billing a
+   delivery is driven from the Delivery Receipt ("Bill This Delivery"), which
+   creates a draft invoice with the delivery links already in place — an
+   unlinked invoice for delivered goods would relieve the stock twice, so that
+   is deliberately the only supported path until Document Conversion (item 5)
+   generalises it.
 4. Evidence the remaining **critical reconciliations (currently 1 of 9)**. VAT and
    withholding already reconcile at zero variance — nearly free.
 5. **Document Conversion**, minimally: carry quantities forward, prevent double

@@ -70,10 +70,13 @@ SELECT is(
     WHERE key_code ~* 'cogs|variance|offset'),
   0, 'ref_mapping_key has no COGS/variance/offset key — item/warehouse-scoped resolution is future COA work'); -- 4
 
+-- SALES_DELIVERY_CLEARING joined on 2026-08-03: the outbound mirror of
+-- PURCHASE_CLEARING, so a delivery can relieve stock into goods-delivered-not-
+-- invoiced and the invoice can recognise it as COGS without relieving twice.
 SELECT set_eq(
   $$SELECT key_code::text FROM ref_mapping_key WHERE key_code ~* 'invent|goods|clearing'$$,
-  $$VALUES ('INVENTORY_CONTROL'), ('PURCHASE_CLEARING')$$,
-  'exactly the two governed PXL-AUD-073 inventory keys exist');
+  $$VALUES ('INVENTORY_CONTROL'), ('PURCHASE_CLEARING'), ('SALES_DELIVERY_CLEARING')$$,
+  'exactly the three governed inventory movement keys exist');
 
 -- ── Non-vacuous: the config-read detector fires on code that DOES read config ────
 -- (Check Voucher is migrated in P2D; an out-of-scope reconciliation report still

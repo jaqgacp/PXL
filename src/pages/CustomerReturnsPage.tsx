@@ -57,6 +57,10 @@ export default function CustomerReturnsPage() {
 
   // Form state
   const [fDate, setFDate] = useState(today())
+  // Returned goods come back somewhere. Without a warehouse the credit memo is a
+  // price adjustment and moves no stock — which is a real case, so it stays optional.
+  const [fWarehouse, setFWarehouse] = useState('')
+  const [warehouses, setWarehouses] = useState<{ id: string; warehouse_code: string; warehouse_name: string }[]>([])
   const [fDR, setFDR] = useState<DR | null>(null)
   const [fReason, setFReason] = useState('')
   const [fRemarks, setFRemarks] = useState('')
@@ -101,6 +105,9 @@ export default function CustomerReturnsPage() {
     supabase.from('ref_reason_codes').select('id,code,description')
       .in('applies_to', ['credit_memo','both']).order('code')
       .then(({ data }) => setReasonCodes(data as ReasonCode[] || []))
+    supabase.from('warehouses').select('id,warehouse_code,warehouse_name')
+      .eq('company_id', companyId).eq('is_active', true).order('warehouse_code')
+      .then(({ data }) => setWarehouses(data as { id: string; warehouse_code: string; warehouse_name: string }[] || []))
   }, [companyId])
 
   // A customer return raises a credit memo, so it carries OUTPUT VAT; this
@@ -178,12 +185,16 @@ export default function CustomerReturnsPage() {
       invoice_id: invoiceId || '',
       cm_date: fDate, reason_code_id: fReason,
       remarks: `Customer Return — DR: ${fDR.dr_number}${fRemarks ? ' · ' + fRemarks : ''}`,
+      warehouse_id: fWarehouse || '',
     }
     const linesPayload = activeLines.map(l => ({
       invoice_line_id: '', item_id: l.item_id || '',
       description: l.description,
       quantity: l.quantity_returned, unit_price: l.unit_price,
       vat_code_id: l.vat_code_id, revenue_account_id: l.revenue_account_id,
+      // A warehouse turns the credit into a physical return: the goods go back on
+      // hand and the COGS charged when they shipped is reversed.
+      warehouse_id: fWarehouse || '',
     }))
 
     const { error: rpcErr } = await supabase.rpc('fn_save_credit_memo', {
@@ -287,6 +298,7 @@ export default function CustomerReturnsPage() {
         { key: 'customer', label: 'Customer', card: 1, span: 2, content: <div className="pxl-readonly-field">{fDR?.customer_name_snapshot || 'Select a delivery receipt'}</div> },
         { key: 'dr', label: 'Delivery Receipt *', card: 1, span: 2, content: <div className="relative"><input value={fDR ? `${fDR.dr_number} — ${fDR.customer_name_snapshot}` : drSearch} onChange={e => { setDRSearch(e.target.value); setFDR(null); searchDRs(e.target.value) }} placeholder="Type DR number to search…" className={`${inp} pxl-input`} />{drs.length > 0 && !fDR && <div className="absolute z-50 mt-1 max-h-48 w-full overflow-auto rounded border border-gray-200 bg-white shadow-lg">{drs.map(dr => <button key={dr.id} type="button" onClick={() => selectDR(dr)} className="w-full px-3 py-2 text-left text-xs hover:bg-gray-50"><span className="font-mono font-semibold">{dr.dr_number}</span><span className="ml-2">{dr.customer_name_snapshot}</span></button>)}</div>}</div> },
         { key: 'reason', label: 'Reason Code *', card: 2, span: 2, content: <select value={fReason} onChange={e => setFReason(e.target.value)} className={`${inp} pxl-input`}><option value="">Select reason…</option>{reasonCodes.map(r => <option key={r.id} value={r.id}>{r.code} — {r.description}</option>)}</select> },
+        { key: 'return-warehouse', label: 'Return To Warehouse', card: 2, span: 2, content: <select value={fWarehouse} onChange={e => setFWarehouse(e.target.value)} className={`${inp} pxl-input`}><option value="">No stock returned (price adjustment)</option>{warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}</select> },
         { key: 'remarks', label: 'Remarks', card: 2, span: 2, content: <input value={fRemarks} onChange={e => setFRemarks(e.target.value)} className={`${inp} pxl-input`} placeholder="Additional notes…" /> },
       ]}
       tabContent={{
