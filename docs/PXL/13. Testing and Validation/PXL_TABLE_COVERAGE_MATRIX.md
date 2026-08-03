@@ -2,7 +2,7 @@
 
 **Status:** Active authoritative coverage-governance register
 **Authority:** Tier 2 governance artifact for PXL-AUD-059 coverage governance; accounting, tax, transaction, security, and findings sources prevail on product rules
-**Last Verified:** 2026-08-02 deterministic local canonical lane after PAD-002/PAD-003 onboarding work (209 public base tables; 93 expected-populated, 116 explicitly deferred/empty). Canonical bank-transfer vouchers exercise verified supplier payee accounts; the six opening-balance tables remain workflow-deferred and are proved on fresh company data by guards 113 and 116.
+**Last Verified:** 2026-08-03 deterministic local canonical lane after Backlog 18d/18e (210 public base tables; 95 expected-populated, 115 explicitly deferred/empty). Canonical bank-transfer vouchers exercise verified supplier payee accounts; the six opening-balance tables remain workflow-deferred and are proved on fresh company data by guards 113 and 116.
 **Applies To:** Every `public` base table; canonical/local validation coverage boundaries and product-readiness claims
 **Read When:** Adding a table or workflow, classifying coverage, or reconciling readiness against PXL-AUD-059
 **Do Not Read For:** Product accounting/tax rules (see the governing standards) or hosted credentials
@@ -29,16 +29,23 @@ Row counts below are the deterministic **canonical baseline** (fresh migration r
 
 | Class | Tables | Governance |
 | --- | ---: | --- |
-| `canonical-populated` | 67 | Expected non-empty; exercised by canonical regression |
+| `canonical-populated` | 69 | Expected non-empty; exercised by canonical regression |
 | `reference-populated` | 26 | Expected non-empty; migration/reference seeded |
-| `workflow-deferred` | 28 | Explicitly deferred; supported workflow not yet exercised by canonical |
+| `workflow-deferred` | 27 | Explicitly deferred; supported workflow not yet exercised by canonical |
 | `future-deferred` | 61 | Explicitly deferred; module not implemented end-to-end |
 | `reference-empty` | 6 | Intentionally empty reference/config |
 | `control-empty` | 1 | Healthy control state is empty; any row requires investigation |
 | `dormant-foundation` | 20 | Implemented but inactive; population is prohibited during IA-5 |
-| **Total** | **209** | 93 expected-populated / 116 explicitly deferred or empty |
+| **Total** | **210** | 95 expected-populated / 115 explicitly deferred or empty |
 
-All 209 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
+These figures are the guard's own registry, not a separate tally: re-derive them
+from `supabase/tests/075_table_coverage_governance_test.sql`, which is the
+machine-checked source and fails on any table this table forgets. The 2026-08-03
+movement was `fs_structure` and `account_fs_map` promoted from `workflow-deferred`
+to `canonical-populated` (Phase 5.7) and `fiscal_close_runs` added as
+`workflow-deferred` (Backlog 18d).
+
+All 210 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
 
 The COA Engine (Phase A, 2026-07-24) added four base tables: `ref_mapping_key` (reference-populated), `account_mapping` (canonical-populated, config-synced bindings), and the FS-registry framework `fs_structure` and `account_fs_map`. **Both FS tables became canonical-populated on 2026-08-03** (Delivery Plan Phase 5.7): seeding a chart of accounts now provisions its statement presentation with it, and the canonical demo seed — which builds its chart by direct insert — maps its companies explicitly. They are no longer workflow-deferred, and the coverage guard was reclassified rather than silenced.
 

@@ -983,6 +983,18 @@ Until a report is audited against this standard, use explicit values such as `As
 
 ## 29. Current report rollout matrix
 
+> **Reconciliation note, 2026-08-03.** `Current Status` and `Source Data` for the
+> five financial-statement rows below are no longer accurate as written. The four
+> statements have been produced from governed `fs_structure` / `account_fs_map`
+> configuration since Backlog 18d/18e, the Comparative Financial Statements page
+> reads `fn_comparative_financial_statement_report` and computes nothing itself,
+> and every statement line drills to its accounts and on to the ledger.
+> `Standard Workspace Adoption` remains **Not started** for all of them — the
+> statements are correct but have not been rebuilt on the Standard Report
+> Workspace, which is what this matrix tracks. The remaining columns are
+> unaudited against that standard and still read `TBD` by design.
+
+
 This matrix inventories current routed report pages and the work required to adopt the PXL Standard Report Workspace. `Assessment pending` means the route exists, but the page has not yet been certified against this standard.
 
 | Report Name | Module | Canonical Route | Current Status | Source Data | Standard Workspace Adoption | Filters | Modes | Summary Metrics | Reconciliation | Drilldown | Drillback | Export | Snapshot | Audit / Provenance | Permissions | Performance Risk | Missing Tests | Remaining Gaps | Recommended Priority |
@@ -994,7 +1006,7 @@ This matrix inventories current routed report pages and the work required to ado
 | Income Statement | Accounting | `/income-statement` | Existing route, assessment pending | Financial statement definitions TBD | Not started | Required | Period, YTD, comparative | Required | To trial balance | Required to account detail | Required | Required | Snapshot recommended | Required | Required | High | TBD | Statement presentation and line definitions | P0 |
 | Statement of Cash Flows | Accounting | `/statement-of-cash-flows` | Existing route, assessment pending | Cash flow definitions TBD | Not started | Required | Direct or indirect TBD, comparative | Required | To GL and cash accounts | Required to account detail | Required | Required | Snapshot recommended | Required | Required | High | TBD | Statement rules and reconciliation | P1 |
 | Statement of Changes in Equity | Accounting | `/statement-of-changes-in-equity` | Existing route, assessment pending | Equity movement definitions TBD | Not started | Required | Period, comparative | Required | To equity accounts | Required to account detail | Required | Required | Snapshot recommended | Required | Required | Medium | TBD | Statement rules and reconciliation | P1 |
-| Comparative Financial Statements | Management | `/comparative-financial-statements` | Existing route, assessment pending | Financial statement definitions TBD | Not started | Required | Period, prior period, prior year | Required | To trial balance | Required | Required | Required | Snapshot recommended | Required | Required | High | TBD | Comparative mode standardization | P1 |
+| Comparative Financial Statements | Management | `/comparative-financial-statements` | Delivered 2026-08-03 (Backlog 18e) | Governed `fs_structure` / `account_fs_map` via `fn_comparative_financial_statement_report` | Not started | Required | Period, prior period, prior year | Required | To trial balance | Required | Required | Required | Snapshot recommended | Required | Required | High | TBD | Comparative mode standardization | P1 |
 | Journal Register | Accounting | `/posting-review` | Existing route, assessment pending | Journal/posting tables TBD | Not started | Required | Register, exception | Optional | To GL posting totals | Required to JE/source | Required | Required | Optional | Required | Required | Medium | TBD | Clarify route/report name and standard table | P0 |
 | Reversal Review | Accounting | `/reversal-review` | Existing route, assessment pending | Journal reversal tables TBD | Not started | Required | Detail, exception | Optional | To reversal journals | Required to JE/source | Required | Required | Optional | Required | Required | Medium | TBD | Exception and drillback standard | P1 |
 | Control Account Reconciliation | Accounting | `/control-account-recon` | Existing route, assessment pending | Control/subledger reconciliation TBD | Not started | Required | By control account, exception | Required | Required by definition | Required to exceptions | Required | Required | Snapshot recommended | Required | Required | High | TBD | Recommended reconciliation pattern source | P0 |

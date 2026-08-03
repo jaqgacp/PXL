@@ -198,12 +198,13 @@ and VAT and withholding reconcile to the General Ledger at exactly zero variance
 
 Against that: **no business module is certified**; the Tax Engine now exists as
 one calculator (PAD-001, 2026-08-03) but **percentage tax is still calculated
-nowhere and nothing has ever been filed**; the four financial statements are now
-produced from governed configuration but **period close does not exist**, so
-profit is never rolled into retained earnings; **14 of 24 posting entry points
-have never produced a journal**; every Banking and Fixed Asset transaction table is empty; and all
+nowhere and nothing has ever been filed**; the four financial statements are
+produced from governed configuration and, since 2026-08-03, carry a comparative
+period and basic notes, and the accounting cycle closes — period close, year-end
+close and retained-earnings roll-forward all commit; **only 15 of 24 posting
+entry points have ever produced a journal**; every Banking and Fixed Asset transaction table is empty; and all
 twelve compliance working-paper tables are empty, so nothing has ever been filed.
-Of 209 tables, **114 have never held a row** (was 116; the two financial-statement registry tables became populated on 2026-08-03). Opening balances, verified supplier
+Of 210 tables, **115 have never held a row** (the close register `fiscal_close_runs` is the newest, and is populated only by the close engine). Opening balances, verified supplier
 payee accounts and minimum administration exist locally; recoverability is
 mechanised and scheduled but not operated over anything real. PXL is suitable for
 **internal QA and demonstration only. It is not production-ready and not
@@ -841,7 +842,7 @@ repository on 2026-08-02.
 | 10 | **Period Lock and Closing Engine** | Posting-period control and close lifecycle; period surfaces | All posting modules, Accounting | **M4 PARTIAL WORKFLOW; not Certified** | 60 fiscal periods across 5 fiscal years; financial-close readiness test `053` | Year-end close and audited reopening unproven. Not the Accounting module. |
 | 11 | **Reversal, Void and Correction Engine** | Preserves corrections without editing history; review surfaces | All posting modules | **M4 PARTIAL WORKFLOW; not Certified** | Reversal journals present in the ledger; GL reversal visibility test `049`; tax-ledger void/reversal test `048` | Void/correction coverage across every transaction. Not a module-specific credit memo workflow. |
 | 12 | **Audit and Immutability Engine** | Append-only change evidence and posted locks; log viewers only | Every module | **M8 CERTIFIED** | 2,358 audit rows; **110 tables carry guard/immutability/status triggers**; 627 user triggers total | Extend only through governed consumer coverage. Log pages are surfaces, not the engine. |
-| 13 | **Permissions and RLS Engine** | Tenant isolation and authorization; hidden | Every module | **M8 CERTIFIED** | **209 of 209 tables RLS-enabled; 519 policies; zero tables without a policy.** Default deny holds | Operational user administration remains separate. Do not confuse enforcement with Administration & Security UI. |
+| 13 | **Permissions and RLS Engine** | Tenant isolation and authorization; hidden | Every module | **M8 CERTIFIED** | **210 of 210 tables RLS-enabled; 523 policies; zero tables without a policy.** Default deny holds | Operational user administration remains separate. Do not confuse enforcement with Administration & Security UI. |
 | 14 | **Dimension Engine** | Valid, company-safe analytical attribution; master/report surfaces only | Posting modules, Accounting, Reports | **M8 CERTIFIED** | Cert test `080`; dimension-push test `087`; line-level guards on both ledger tables; `vw_gl_dimension_summary` | Adopt its certified report in management surfaces. Dimension masters are not the engine itself. |
 | 15 | **Currency Engine** | FX transaction, revaluation and translation authority; hidden | Future transactional modules and Reports | **M1 ARCHITECTURE; Deferred** | 9 currencies listed; **`exchange_rates` empty**; non-PHP fails closed | PAD-005: PHP-only. A currency list is not multi-currency capability. |
 | 16 | **Reporting and Reconciliation Engine** | Posted-data views, exports and tie-outs; visible through reports | Every module | **M4 PARTIAL WORKFLOW; not Certified** | **23 views** plus `fn_financial_statement_report`, the single statement entry point (test `121`, 25 assertions); tenant-isolation and security guard tests | **1 of 9** critical reconciliations evidenced. Statement presentation is configuration-driven and complete for the four statements; period close, comparatives and notes are not. Not the Reports module. |
@@ -2029,16 +2030,16 @@ restated.
    Open defects               0 of 93    ██████████   all retested and passed
 ```
 
-**Implementation census** (live database, 176 migrations applied)
+**Implementation census** (live database, 183 migrations applied)
 
 ```text
-   Tables                          209   all 209 RLS-enabled; 0 without a policy
-   Tables holding data              95   ← 45%; 114 have never held a row
+   Tables                          210   all 210 RLS-enabled; 0 without a policy
+   Tables holding data              95   ← 45%; 115 have never held a row
    Views                            23
-   Functions                       437
-   User triggers                   627
-   RLS policies                    519
-   pgTAP files / assertions   116 / 2,709
+   Functions                       460
+   User triggers                   631
+   RLS policies                    523
+   pgTAP files / assertions   123 / 2,909
    Frontend source tests            60
 ```
 

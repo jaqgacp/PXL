@@ -13,7 +13,7 @@ implementation authority (use `AI/AI_STATE.md` and the applicable gate), or
 certification status (use the Certification Matrix)
 **Date:** 2026-08-02
 **Evidence baseline:** Re-measured on 2026-08-02 against the live local database
-(176 migrations, 209 tables, 437 functions, 627 triggers, 519 policies), the
+(183 migrations, 210 tables, 460 functions, 631 triggers, 523 policies), the
 route table, the navigation source and the 116-file pgTAP suite. §9.7 was
 restructured from work packages (Phase A–L) into named business outcomes on the
 same date. No hosted read or mutation was performed for this roadmap.
@@ -79,9 +79,10 @@ The dependency-forced order of outcomes is (§9.7):
    2026-08-03;
 2. **Procure-to-Pay** — three-way match and over-receipt control (independent of
    Customer-to-Cash; the two can run in parallel);
-3. **Period Close** — the four financial statements are produced from governed
-   configuration since 2026-08-03; what is missing is the **close itself**, which
-   never rolls profit into retained earnings;
+3. ~~**Period Close**~~ — **closed 2026-08-03.** The statements are produced from
+   governed configuration, the cycle closes into retained earnings, and the
+   statements carry a comparative period and basic notes. What remains is a
+   signature-ready note set, not a close;
 4. **Tax Engine and Compliance** — the calculator (PAD-001) *and* the filing
    artifacts, which are a separate body of work;
 5. leave **Asset and Treasury Management** and the frozen **Inventory
@@ -187,9 +188,9 @@ excellent transaction and one material empty lifecycle remains M4 or below.
 | Inventory | **M4** | Inventory ties to control at **₱0.00** in every stock-holding company (guard `111`); adjustments, transfers and counts post. Held at M4 by `inventory_cost_layers` never holding a row (FIFO path unexercised) and `goods_issues` empty. |
 | Banking & Treasury | **M3** | Only `bank_accounts` holds data. `check_vouchers`, `fund_transfers`, `bank_reconciliations`, `petty_cash_vouchers`, `bank_adjustments` are **all empty**; their posting functions have never produced a journal. |
 | Fixed Assets | **M3** | **All six tables empty**; five routes deferred; depreciation policy has no master. |
-| Accounting | **M4** | 51 journals / 144 lines; trial balance out-of-balance **₱0.00 in all five companies**; 60 fiscal periods; all four statements produced from governed configuration since 2026-08-03. Held at M4 by **period close** (profit is never rolled into retained earnings) and consumer-wide reconciliation proof. |
+| Accounting | **M4** | 51 journals / 144 lines; trial balance out-of-balance **₱0.00 in all five companies**; 60 fiscal periods; all four statements produced from governed configuration, with comparatives and basic notes, since 2026-08-03; period close, year-end close and retained-earnings roll-forward all commit and are governed. Held at M4 by consumer-wide reconciliation proof — the close has never been operated over real books. |
 | Compliance | **M4** | VAT/EWT reconcile to GL; 248 calendar events; 218 CAS issuances. Held at M4 by the absent Tax Engine and by **all twelve `compliance_*` working-paper tables, `bir_forms`, `form_2306/2307_*`, `vat_returns` and `withholding_remittances` being empty**. |
-| Reports | **M4** | 23 views plus the statement reporting entry point read posted data. Held at M4 by **1 of 9** critical reconciliations evidenced, and by comparatives and note disclosures. |
+| Reports | **M4** | 23 views plus the statement reporting entry point read posted data; comparatives, statement-line drill-down and basic notes shipped 2026-08-03. Held at M4 by **1 of 9** critical reconciliations evidenced, and by a signature-ready note set (Backlog 18i). |
 | Administration & Security | **M4** | PAD-003 selected restricted in-product administration; four guarded screens exist locally, while hosted invite/browser/UAT and operating evidence remain open. |
 | Dashboard *(not a module)* | **M4** | Live readiness/deadline monitoring works; KPI grid, range, roll-up, export and owner are incomplete. |
 
@@ -209,7 +210,7 @@ excellent transaction and one material empty lifecycle remains M4 or below.
 | Period Lock & Closing | **M4** | Period locking works; year-end close/reopening incomplete. |
 | Reversal, Void & Correction | **M4** | Reversal strong; void/correction coverage incomplete. |
 | Audit & Immutability | **M8** | Certified 2026-07-23. 2,358 audit rows; 110 tables carry guard/immutability triggers. |
-| Permissions & RLS | **M8** | Certified 2026-07-22. **209 of 209 tables RLS-enabled, 519 policies, zero tables without a policy.** |
+| Permissions & RLS | **M8** | Certified 2026-07-22. **210 of 210 tables RLS-enabled, 523 policies, zero tables without a policy.** |
 | Dimension | **M8** | Certified 2026-07-23. Line-level guards on both ledger tables; `vw_gl_dimension_summary`. |
 | Currency | **M1** | PHP-only (PAD-005). 9 currencies listed, **`exchange_rates` empty**, non-PHP fails closed. |
 | Reporting & Reconciliation | **M4** | 23 views plus `fn_financial_statement_report` read posted data. **1 of 9** critical reconciliations evidenced; comparatives and notes absent. |
@@ -547,15 +548,15 @@ it — a reference to that document's numbering, not a second scheme.
 | Number Series | ✅ Certified | Foundation | done |
 | Dimensions | ✅ Certified | Foundation | done |
 | Chart of Accounts | 🟡 all-consumer resolver adoption | **Period Close** | Phase 5 |
-| Posting Engine | 🟡 14 of 24 entry points exercised | Every transactional outcome | Phases 4–6 |
+| Posting Engine | 🟡 15 of 24 entry points exercised | Every transactional outcome | Phases 4–6 |
 | AR Engine | 🟡 Partial | Customer-to-Cash | Phase 5 |
 | AP Engine | 🟡 Partial | Procure-to-Pay | Phase 5 |
 | Payment & Application | 🟡 Partial | Customer-to-Cash and Procure-to-Pay | Phase 5 |
 | Document Conversion | 🔴 Zero functions | **Customer-to-Cash** | Phase 5 |
-| Period Lock & Closing | 🟡 Partial | Period Close | Phase 5 |
+| Period Lock & Closing | 🟡 Governed period/quarter/year close and reopen shipped 2026-08-03; never operated over real books | Period Close | Phase 5 |
 | Reversal, Void & Correction | 🟡 Partial | Period Close | Phase 5 |
-| Reporting & Reconciliation | 🟡 1 of 9 reconciliations | Period Close | Phase 5 |
-| Tax Engine | 🔴 Absent — zero calculators | **Tax Engine and Compliance** | Phase 4 (calculator only) |
+| Reporting & Reconciliation | 🟡 1 of 9 reconciliations; comparatives and basic notes shipped 2026-08-03 | Period Close | Phase 5 |
+| Tax Engine | 🟡 One calculator (PAD-001, 2026-08-03); percentage tax still calculated nowhere | **Tax Engine and Compliance** | Phase 4 (calculator only) |
 | Inventory Accounting (IA-5/ECC) | ⏸ Frozen, 21 empty tables, zero consumers | **Inventory Accounting — not scheduled** | none |
 | Approval Engine | ⚪ Defined, never executed | Reporting and Administration | Phase 6 |
 | Attachment & Traceability | 🟡 Trace works, attachments absent | Reporting and Administration | Phase 6 |
@@ -636,14 +637,14 @@ hosted parity and browser evidence.
   any route.
 - **Owns:** Setup, Master Data · Accounting Kernel, Permissions/RLS, Audit &
   Immutability, Number Series, Dimensions.
-- **Evidence:** 209 of 209 tables RLS-enabled with 519 policies and **zero tables
+- **Evidence:** 210 of 210 tables RLS-enabled with 523 policies and **zero tables
   without a policy**; 110 tables carry guard/immutability triggers; kernel origin
   triggers on both ledger tables, and enforcement **survives a restore into a
   fresh database**; 264 number series; 215 accounts; trial balance ₱0.00 in all
   five companies.
-- **Carried forward:** period close (no retained-earnings roll) → Period Close;
-  `user_company_branch_scopes` and `sys_feature_enablement` empty → Reporting and
-  Administration.
+- **Carried forward:** `user_company_branch_scopes` and `sys_feature_enablement`
+  empty → Reporting and Administration. Period close is no longer carried: the
+  retained-earnings roll shipped 2026-08-03.
 
 ## 9.7.3 Customer-to-Cash · 🟡 IN PROGRESS
 
@@ -680,7 +681,7 @@ hosted parity and browser evidence.
   no AP-to-control guard; `inventory_cost_layers` has never held a row, so the
   FIFO path is unexercised.
 
-## 9.7.5 Period Close · 🟡 CORE WORKS, STATEMENTS DO NOT
+## 9.7.5 Period Close · 🟡 CLOSE AND STATEMENTS WORK, NEVER OPERATED
 
 - **Outcome:** A month closes, cannot be reopened silently, and produces
   financial statements from posted data.
@@ -692,17 +693,22 @@ hosted parity and browser evidence.
   `fs_structure` / `account_fs_map` configuration through one reporting entry
   point, with the position balancing and the cash flow tying to cash movement
   (test `121`). Presentation is a data change, not a release.
-- **Blocking the outcome:** **the close itself does not exist.** Nothing rolls
-  revenue and expense into retained earnings, so a second fiscal year would show
-  the prior year's profit in Current Year Earnings. Eight of nine critical
-  reconciliations remain unevidenced.
-- **Deliberately not a pilot blocker:** **year-end close and audited reopening**
-  are unproven and are **not** scheduled before the pilot. A pilot is a
+- **Closed 2026-08-03:** the close itself. Period, quarter and year-end close
+  commit, retained earnings rolls forward automatically into the next fiscal
+  year, and reopening counter-posts through the kernel (test `122`). The
+  statements gained a comparative period and basic notes the same day (test
+  `123`), which is also when a defect was found and fixed: a closed year's income
+  statement had read as all zeroes and its operating cash flow had been
+  reclassified as financing.
+- **Blocking the outcome:** eight of nine critical reconciliations remain
+  unevidenced, and the close has never been operated over real books.
+- **Deliberately not a pilot blocker:** **audited reopening over real books** is
+  unproven and is **not** scheduled before the pilot. A pilot is a
   one-quarter parallel run (Delivery Plan Phase 7), which needs monthly and
-  quarterly close, not a year-end roll. Year-end close belongs to Production
-  Readiness. This is stated explicitly because an earlier edition listed it as
-  blocking Period Close while the Delivery Plan scheduled no work for it —
-  a contradiction resolved on 2026-08-02 in favour of the Delivery Plan.
+  quarterly close, not a year-end roll. This was stated when year-end close did
+  not exist; it now does, and the statement stands for a different reason —
+  the mechanism is built and tested but has never run over a real company's
+  books, so operating it is pilot work rather than build work.
 
 ## 9.7.6 Tax Engine and Compliance · 🟡 REVIEW WORKS, FILING DOES NOT
 
@@ -897,7 +903,7 @@ than continuing dormant foundation work without an activation path.
 
 | ID | Risk | Severity | Likelihood | Evidence | Consequence | Mitigation | Owner | Resolve by |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| PR-01 | Scope size exceeds delivery capacity | High | High | 11 modules, 19 engine scopes, 209 tables, large visible surface | Endless partial product | Freeze supported pilot scope; use DoD and dependency gates | Product Owner | Customer-to-Cash entry |
+| PR-01 | Scope size exceeds delivery capacity | High | High | 11 modules, 19 engine scopes, 210 tables, large visible surface | Endless partial product | Freeze supported pilot scope; use DoD and dependency gates | Product Owner | Customer-to-Cash entry |
 | PR-02 | Product architecture drift | High | Medium | Historical blueprint, routes and certification boundaries diverged | Contradictory work and rework | Product Architecture is canonical; amendment required for scope change | Product Architect | Continuous; first review at Customer-to-Cash |
 | PR-03 | Documentation proliferation | High | High | Many active specifications and prior assumed missing review | Readers choose wrong authority | One constitution, one roadmap, one dashboard; index routes only | Governance Lead | Done — governance consolidated |
 | PR-04 | Certification detaches from product value | High | High | 4 work packages certified while no module is certified | Foundation throughput masks unusable ERP | Value checkpoint after WP-5; require workflow outcome per programme | Product Owner | Inventory Accounting freeze (standing) |
@@ -942,7 +948,7 @@ test counts — rather than maintaining a copy by hand.
 | Area | Evidence-based assessment |
 | --- | --- |
 | Product vision | Strong, differentiated and valuable: accounting-first PH compliance for multi-company businesses. It is broader than current delivery capacity and needs a pilot scope. |
-| Accounting architecture | The strongest part of PXL. The sealed posting doorway and immutable, traceable ledger are excellent. Receiving, all outbound inventory entry points and financial statement presentation now work; three-way match, over-receipt control and period close remain open. |
+| Accounting architecture | The strongest part of PXL. The sealed posting doorway and immutable, traceable ledger are excellent. Receiving, all outbound inventory entry points, financial statement presentation, period close and comparatives now work; three-way match and over-receipt control remain open. |
 | Engineering architecture | Strong database controls and evidence discipline. Complexity is high, local/hosted states diverge, and dormant architecture risks outrunning product workflows. |
 | Repository structure | Generally governed and navigable, but the dirty tree, large active-doc set and prior missing/assumed review create provenance risk. |
 | Code maturity | Substantial local implementation with many guarded RPCs and tests. Maturity is uneven: strong transaction cores coexist with empty module scaffolds. |
