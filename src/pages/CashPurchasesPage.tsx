@@ -7,6 +7,7 @@ import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { ReportTraceLink } from '@/components/AccountingTraceLink'
 import { normalizePhTin } from '@/lib/philippines'
+import { loadVatCodesAsOf } from '@/lib/vatCodes'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 import { useBranchLabel } from '@/hooks/useBranchLabel'
 
@@ -112,15 +113,6 @@ export default function CashPurchasesPage() {
     if (!companyId) return
     supabase.from('suppliers').select('id,registered_name,tin,is_subject_to_ewt,default_atc_code_id').eq('company_id', companyId).eq('is_active', true).order('registered_name').then(({ data }) => setSuppliers(data as SupplierRef[] || []))
     supabase.from('items').select('id,item_code,description,item_type,uom_id,uom:units_of_measure(uom_code),standard_cost,default_purchase_vat_id,purchase_account_id:purchase_expense_account_id,inventory_account_id').eq('company_id', companyId).eq('is_active', true).order('description').then(({ data, error }) => { setItems((data || []).map((i: any) => ({ ...i, uom_label: i.uom?.uom_code || '' }))); if (error) setError(`Unable to load item picker: ${error.message}`) })
-    Promise.all([
-      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
-      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true),
-    ]).then(([companyRes, vatRes]) => {
-      const taxRegistration = companyRes.data?.tax_registration || 'vat'
-      setVatCodes((vatRes.data || [])
-        .map((v: any) => ({ id: v.id, vat_code: v.vat_code, description: v.description, vat_classification: v.vat_classification, rate: v.tax_codes?.rate || 0 }))
-        .filter(v => taxRegistration === 'vat' || v.rate === 0))
-    })
     supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code').then(({ data }) => setAtcCodes(data as ATCCode[] || []))
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['asset']).eq('is_active', true).ilike('account_name', '%cash%').order('account_code').then(({ data }) => setCashAccounts(data as COARef[] || []))
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['asset','expense','cost_of_goods']).eq('is_active', true).eq('is_postable', true).order('account_code').then(({ data }) => setExpenseAccounts(data as COARef[] || []))
@@ -134,6 +126,17 @@ export default function CashPurchasesPage() {
       setCostCenters((costCenterRes.data || []).map((row: any) => ({ id: row.id, branch_id: row.branch_id, department_id: row.department_id, code: row.cost_center_code, name: row.cost_center_name })))
     })
   }, [companyId])
+
+  // VAT codes are resolved as of the transaction date, not as of today.
+  useEffect(() => {
+    if (!companyId) return
+    loadVatCodesAsOf(companyId, editCP?.transaction_date, 'input_vat').then(codes =>
+      setVatCodes(codes.map(v => ({
+        id: v.id, vat_code: v.vat_code, description: v.description,
+        vat_classification: v.vat_classification as VATRef['vat_classification'],
+        rate: v.rate,
+      }))))
+  }, [companyId, editCP?.transaction_date])
 
   const openNew = () => {
     setEditCP({ transaction_date: today(), payment_method: 'cash', branch_id: branchId || '', warehouse_id: warehouses[0]?.id || '', department_id: departments[0]?.id || '', cost_center_id: costCenters[0]?.id || '' })

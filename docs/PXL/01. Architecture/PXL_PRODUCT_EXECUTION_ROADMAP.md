@@ -198,7 +198,7 @@ excellent transaction and one material empty lifecycle remains M4 or below.
 | AR | **M4** | As-of engine works; full scenario reconciliation not Certified. |
 | AP | **M4** | As-of engine works; full scenario reconciliation not Certified. |
 | Payment & Application | **M4** | Normal applications work; over-application/unapplied/reversal/concurrency scope incomplete. |
-| Tax | **M0** | Absent. **Zero `fn_calculate_tax`; exactly seven save routines compute VAT independently**, only one handling VAT-inclusive pricing. PAD-001 undecided. |
+| Tax | **M5** | Implemented 2026-08-03 (PAD-001). `fn_calculate_tax` is the only tax arithmetic in the schema; all **eleven** former calculators migrated. VAT and ATC withholding only — **percentage tax is calculated nowhere**. Not certified. |
 | Document Conversion | **M1** | **Zero conversion or copy-forward functions** among 437. Implementation not started. |
 | Number Series | **M8** | Certified 2026-07-23. 264 series, 218 CAS issuances. |
 | Approval & Workflow | **M4** | 2 workflows defined; **`approval_requests` = 0, `approval_instances` = 0 — never executed.** No notification model exists anywhere in the product. |
@@ -431,9 +431,11 @@ Schedule / DAT / RELIEF Export        [mixed: review exports work; persisted art
 Books and Audit Evidence              [PARTIAL; many read surfaces work]
 ```
 
-**Central Tax Engine:** absent at M0. Tax reference masters, save-layer tax
-calculation, the tax ledger and Compliance surfaces are real but distributed.
-PAD-001 must establish architecture and ownership before engine work.
+**Central Tax Engine:** implemented at M5 on 2026-08-03. PAD-001 settled it as
+Accounting-owned and exactly one calculator; tax calculation is no longer
+distributed across the save layer. Tax reference masters, the tax ledger and the
+Compliance surfaces are unchanged. Percentage tax remains uncalculated, and the
+filing artifacts remain unbuilt.
 
 ## 9.5.6 Banking and Cash
 
@@ -701,12 +703,13 @@ hosted parity and browser evidence.
 - **Already true:** VAT and withholding reconcile to the GL at zero variance; 248
   tax-calendar events; 218 CAS number issuances with a governed void event;
   review surfaces read real posted data.
-- **Blocking the outcome:** there is **no tax calculator** — exactly seven save
-  routines compute VAT independently and only one handles VAT-inclusive pricing,
-  which is a live correctness risk (PAD-001). Separately, **all twelve
-  `compliance_*` working-paper tables, the BIR form tables, `vat_returns` and
-  `withholding_remittances` are empty; nothing has ever been filed.** A
-  calculator does not produce a return — both halves are required.
+- **Blocking the outcome:** the calculator half is done — PAD-001 shipped
+  `fn_calculate_tax` on 2026-08-03 and the eleven duplicated calculators are
+  gone. The filing half is untouched: **all twelve `compliance_*` working-paper
+  tables, the BIR form tables, `vat_returns` and `withholding_remittances` are
+  empty; nothing has ever been filed.** A calculator does not produce a return.
+  **Percentage tax is also still calculated nowhere**, so a PT-registered
+  company has no tax to review or file.
 
 ## 9.7.7 Inventory Accounting · ⏸ FROZEN, NOT SCHEDULED
 
@@ -856,7 +859,8 @@ Hosted parity + operated restore + real cut-over + browser/UAT
 - WP-5 implementation before a successful Authorisation Gate.
 - WP-6…WP-9, IA-6 or production Inventory source activation without their own
   authority.
-- A Tax Engine implementation before PAD-001 and accepted architecture.
+- Tax Engine scope beyond PAD-001's decided boundary (VAT and ATC withholding);
+  percentage tax needs its own document consumer and a posting change.
 - Multi-currency behavior before PAD-005.
 - Bank Reconciliation before PAD-004.
 - UI/navigation redesign under an accounting implementation mission.
@@ -889,7 +893,7 @@ than continuing dormant foundation work without an activation path.
 | PR-06 | Backend ahead of usable workflows | Medium | High | Seven backend-only clusters; two unlisted trace routes | Valuable work unused; duplicate rebuilds | Adoption backlog tied to owning module and DoD | Module Owners | Relevant module phase |
 | PR-07 | Excessive work-package granularity | High | Medium | Repeated IA-5 amendments/gates around dormant structures | Governance cost exceeds product value | Package only independent rollback/risk units; merge inseparable work; value gate | Architecture Owner | Inventory Accounting freeze (standing) |
 | PR-08 | No canonical end-to-end workflow | Critical | High | 0/6 portfolio reference flows meet DoD | Cannot demonstrate ERP correctness | prove the Customer-to-Cash and Procure-to-Pay outcomes first | CPA + Product | Customer-to-Cash and Procure-to-Pay exit |
-| PR-09 | Tax Engine authority absent | Critical | High | M0; seven duplicated calculators | Inconsistent tax and incomplete compliance | PAD-001 then the Tax Engine and Compliance outcome | Product + CPA | Tax Engine and Compliance exit |
+| PR-09 | ~~Tax Engine authority absent~~ **CLOSED 2026-08-03** | Critical | Low | M5; one calculator, eleven callers migrated, guarded by tests `090` and `117` | Residual: percentage tax uncalculated, filing artifacts absent | Percentage tax with a document consumer (Phase 5 flows); filing artifacts (Phase 5.8) | Product + CPA | Tax Engine and Compliance exit |
 | PR-10 | Inventory complexity consumes roadmap | Critical | High | C-01, WP-5 rejected, legacy variance, future IA-6 | Delayed product with continued valuation risk | Keep Inventory Accounting frozen; operational/value checkpoint; resume only after a real costing-replay requirement | Inventory Owner | Inventory Accounting freeze; Procure-to-Pay |
 | PR-11 | Hosted parity gap | Critical | High | 55 local migrations not hosted | Local evidence does not describe hosted product | Explicit authorised migration/rehearsal plan; no hosted claim until proven | Operations | Pilot Readiness exit |
 | PR-12 | Backup/restore not operated | Critical | High | Local drill/runbook/RPO/RTO exist; no schedule, offsite destination or hosted/PITR proof | Permanent loss; no certification/pilot | Decide PAD-007 and operate the demonstrated drill offsite | Operations + Security | Before Setup certification / Pilot Readiness |

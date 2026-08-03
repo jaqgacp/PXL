@@ -127,16 +127,28 @@ SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 85,
 SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
   'every function in the static ledger-capable call graph is SECURITY DEFINER');       -- 11
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions), 437,
-  'the complete application-owned public function census contains 437 functions');    -- 12
+-- PAD-001 adds exactly one function to all three censuses: fn_calculate_tax,
+-- the Tax Engine. It is SECURITY DEFINER (it reads governed reference masters),
+-- authenticated-executable (a form can price a line before saving it), and it
+-- is NOT ledger-capable — assertion 10 above is unchanged at 85, because the
+-- calculator writes nothing.
+--
+-- Effective-dated VAT resolution adds exactly three more, on the same terms:
+-- fn_resolve_vat_code (the one place a VAT code's validity is decided),
+-- fn_company_tax_registration_asof (the tax-profile seam it reads), and
+-- fn_vat_codes_asof (the picker the UI reads so it cannot offer what the
+-- database refuses). All three read reference masters and write nothing, so
+-- assertion 10 stays at 85.
+SELECT is((SELECT count(*)::int FROM p52_app_functions), 441,
+  'the complete application-owned public function census contains 441 functions');    -- 12
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 374,
-  'the complete application-owned SECURITY DEFINER census contains 374 functions');   -- 13
+SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 378,
+  'the complete application-owned SECURITY DEFINER census contains 378 functions');   -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('authenticated', oid, 'EXECUTE')),
-  304, 'authenticated EXECUTE coverage is completely counted');                       -- 14
+  308, 'authenticated EXECUTE coverage is completely counted');                       -- 14
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions

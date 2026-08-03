@@ -1,15 +1,15 @@
 # PXL AI State
 
-**Current Date:** 2026-08-02
+**Current Date:** 2026-08-03
 **Current Branch:** `main`
-**Working Tree:** Delivery Plan Phase 3 onboarding implementation is complete
-locally with executed fresh, focused, canonical, regression and frontend evidence.
-Phase 2 recoverability is now mechanised, scheduled and proven; the regression
-lane was made order-independent after it was found to report a false red.
-**Product Phase:** Pilot Execution Plan. The IA-5/ECC dormant programme is
-**frozen**; work is sequenced by product value, not by foundation depth.
-**Environment:** Local Supabase on a fresh schema; fresh replay, canonical and
-full regression lanes all executed and passing. No hosted operation was performed.
+**Working Tree:** Delivery Plan Phase 4 — the Tax Engine — is implemented
+locally with executed fresh, canonical, regression, frontend, build and lint
+evidence. `fn_calculate_tax` is the only function that turns a tax rate into a
+tax amount; all eleven former calculators call it. VAT is now resolved from the
+version in force on the document date, like withholding already was.
+**Product Phase:** Pilot Execution Plan; IA-5/ECC **frozen**.
+**Environment:** Local Supabase on a fresh schema. No hosted operation was
+performed.
 **Product Readiness:** **Internal QA/demo only. Not pilot-ready. Not
 production-ready.** PXL is not production-ready.
 
@@ -17,48 +17,40 @@ production-ready.** PXL is not production-ready.
 
 Four authorities, four questions — settled 2026-08-02; none answers another's:
 **what** PXL is → `PXL_PRODUCT_ARCHITECTURE.md`; **when/in what order**, the only
-numbered phases and the timeline → `PXL_DELIVERY_PLAN.md`; **why** that order —
-outcome dependencies and quality bars → `PXL_PRODUCT_EXECUTION_ROADMAP.md`, which
-carries **no phase numbers**; **where** we are → this file. An unqualified
-"Phase N" means a Delivery Plan phase.
-
-A brand-new session should be started with `AI/ONBOARDING_PROMPT.md`.
-
-**Current phase: Delivery Plan Phase 2 — Operational safety.** Phase 1 complete;
-Phase 3 was built locally out of sequence on 2026-08-02 because its interrupted
-work already existed in the tree. The backup service is built, scheduled and
-proven including offsite replication; what remains of Phase 2 is
-**owner-supplied**: a destination on a separate failure domain and an escrowed
-passphrase.
+numbered phases → `PXL_DELIVERY_PLAN.md`; **why** that order →
+`PXL_PRODUCT_EXECUTION_ROADMAP.md`, which carries **no phase numbers**; **where**
+we are → this file. An unqualified "Phase N" is a Delivery Plan phase.
 
 Startup order: `AI/AGENT_SYSTEM_PROMPT.md` → this file → `PXL_HOW_WE_WORK.md` →
-Product Architecture → Roadmap for planning → only what the mission names.
+Product Architecture → Roadmap for planning → only what the mission names; start
+a new session with `AI/ONBOARDING_PROMPT.md`.
 
-The certification-ceremony process was **retired on 2026-08-02** and replaced by
-automated invariants (see `PXL_HOW_WE_WORK.md` §3–4). Do not run an audit
-mission. Read the state, run the gates, fix what fails, build the next thing.
+**Current phase: Delivery Plan Phase 5 — the two canonical flows.** Phases 1, 3
+and 4 are built locally; Phase 2's remaining work is **owner-supplied** (a backup
+destination on a separate failure domain and an escrowed passphrase).
 
-**This file is the only status authority.** Finding counts, test counts,
-certification standing, reconciliation standing and maturity live here and
-nowhere else. Do not create a second status dashboard or a session-log file;
-`git log` is the session history. Two former root status files drifted into
-reporting inventory as unreconciled after it was fixed, and were archived.
+The certification ceremony was **retired 2026-08-02** for automated invariants
+(`PXL_HOW_WE_WORK.md` §3–4). Do not run an audit mission. Read the state, run the
+gates, fix what fails, build the next thing.
+
+**This file is the only status authority** for finding counts, test counts,
+certification, reconciliation standing and maturity. Do not create a second
+status dashboard or session log; `git log` is the session history.
 
 ## Current Finding Standing
 
 **93 Retested Passed / 0 In Progress / 0 Open (93 total).** The finding program
-is complete, but that evidence does not certify any module or engine and does
-not make the product production-ready.
+is complete; that certifies no module or engine and confers no readiness.
 
 ## Active Work Map
 
 - **Certified modules:** 0 / 11 certification scopes.
 - **Certified engines:** 4 / 19 — Permissions/RLS, Audit & Immutability, Number
-  Series and Dimension.
+  Series and Dimension. The **Tax Engine exists at M5** (PAD-001), is guarded and
+  is **not certified**; no engine became certified this session.
 - **Critical reconciliations evidenced:** **1 / 9.** Inventory-to-control
   reconciles at 0.00 in every stock-holding company, guarded by test `111`.
-- **Exercised posting entry points:** **12 of 24** (re-measured 2026-08-02; was
-  recorded as 11 of 22) — the honest completion measure.
+- **Exercised posting entry points:** **12 of 24** — the honest completion measure.
 - **Certified work packages:** IA-5 ECC WP-1…WP-4, 4 / 9, **frozen, 21 tables all
   empty, zero consumers.** WP-5…WP-9 and IA-6 stopped.
 - **Canonical workflows meeting Product DoD:** 0 / 6.
@@ -67,14 +59,12 @@ not make the product production-ready.
   business qualification remains source-gated.
 - **Visible scaffolds:** **30** deferred routes labelled "Not built"; **17** nav
   labels with no page. 247 nav entries → 175 routes, **145 backed by real data**.
-- **Tests:** 116 pgTAP files / 2,709 assertions plus 58 frontend source tests;
+- **Tests:** 118 pgTAP files / 2,767 assertions plus 60 frontend source tests;
   full regression, canonical, build and lint lanes pass.
 - **Backup/restore:** **Mechanised and scheduled; not operated over anything
-  real.** `npm run backup:operate` runs one fail-closed cycle: backup →
-  restore-verify → encrypted offsite replication with read-back → retention →
-  journal; `.github/workflows/backup-drill.yml` runs it weekly. RPO 24h pilot.
-  **Still owner-supplied: the bucket and an escrowed passphrase. The schedule
-  has never fired and no PXL database holds real books.**
+  real.** `npm run backup:operate` runs one fail-closed cycle;
+  `.github/workflows/backup-drill.yml` runs it weekly. RPO 24h pilot. See
+  blocker 5.
 
 Payroll is a **future separate product — excluded from current PXL ERP progress**.
 
@@ -82,110 +72,118 @@ Payroll is a **future separate product — excluded from current PXL ERP progres
 
 1. No complete Sales or Purchasing source-to-financial-statements-to-tax workflow
    meets the Product Definition of Done.
-2. Sales Invoice **does** post COGS and inventory relief (test 054; canonical
-   COGS debits equal inventory credits). The "sales-side COGS does not exist"
-   claim was false, corrected 2026-08-02. Actually open: **Cash Sales has no
-   posting function**, Customer Return has no COGS path, Delivery Receipt does
-   not relieve inventory, three-way match and over-receipt control.
-3. No Tax Engine exists. Tax capability is distributed across reference masters,
-   save-layer calculators, tax ledger and Compliance surfaces. PAD-001 is
-   required before engine implementation.
+2. Sales Invoice **does** post COGS and inventory relief (test 054). Open:
+   **Cash Sales has no posting function**, Customer Return has no COGS path,
+   Delivery Receipt does not relieve inventory, three-way match and over-receipt
+   control.
+3. The Tax Engine exists (PAD-001, 2026-08-03) but **percentage tax is
+   calculated nowhere in PXL and never has been**, so a PT-registered company
+   has no percentage tax to review or file. **Nothing has ever been filed**: all
+   twelve `compliance_*` working-paper tables and the return/form tables are
+   empty. A calculator is not a filing capability. No governed UI can configure
+   a tax-code succession yet (Backlog 10), and the company tax profile is not
+   effective-dated (Backlog 11).
 4. Phase 3 exists locally but is not operationally accepted: no hosted migration,
    deployed invite function, real-company cut-over rehearsal or browser/UAT proof
    has occurred.
 5. Recoverability is mechanised but not operated: the weekly workflow has never
    fired, no durable destination or escrowed passphrase exists, the replication
-   proof used separate storage on the **same machine**, nothing has run against
-   a hosted database, and PITR is untested.
+   proof used separate storage on the **same machine**, PITR is untested, and no
+   PXL database holds real books.
 6. Hosted parity is absent after `20260716000005`.
 7. Frontend evidence is source-contract and production-build coverage only; no
    automated browser workflow lane exists.
 
 ## Current Engineering Frontier
 
-Delivery Plan Phase 3 is implemented locally: one governed PHP opening-balance
-cut-over across GL, AR, AP, inventory and bank detail, posting one balanced
-Kernel journal and continuing into ordinary Receipt/Payment Voucher settlement
-and AR/AP ageing; supplier bank accounts and PV payee snapshots with posting
-guards; Administration for users/invite, memberships, roles and branch scopes;
-the master-data importer made navigable. PAD-002 and PAD-003 decided to those
-boundaries. The fresh settlement proof keeps IA-5 dormant at zero events.
+Delivery Plan Phase 4 shipped 2026-08-03: `fn_calculate_tax(context) → SETOF
+tax_component`, migration `20260803000001_tax_engine_calculator.sql`. The plan
+said seven duplicated calculators; the catalog said **eleven**, and all eleven
+migrated. Scope is VAT plus ATC withholding (EWT/CWT/FWT); **percentage tax is
+excluded — nothing calculates it.**
 
-The IA-5/ECC programme is **frozen** with zero consumers. WP-1…WP-4 remain
-certified; WP-5 is unauthorised and unimplemented. Historical evidence is
-archived under `docs/PXL/archive/ia5-ecc-frozen/`. Resume only when a real
-costing-replay requirement demands it.
+Its VAT half was then made effective-date aware, migration
+`20260803000002_vat_effective_date_resolution.sql`, test `118` (25 assertions).
+VAT had resolved `WHERE vc.id = <id>`, ignoring active state, deprecation,
+succession and effective windows, and degraded an unresolvable code to `exempt
+at 0%`. `fn_resolve_vat_code` is now the one place a VAT code's validity is
+decided — version, tax-code version, tax side, company profile, all as of the
+document date — and the engine, the line/header trigger backstop (evaluated
+against the parent document's date, not today) and the picker
+`fn_vat_codes_asof` all ask it, so the UI offers exactly what the database
+accepts. A rate change is a closed window plus a successor; history is never
+edited and posted documents keep their governing version. Two defects closed:
+`fn_save_cash_sale` resolved CWT rates unfiltered, and Customer Returns offered
+input-VAT codes on an output document.
 
-Posting P5.2 remains fully enforced. The Accounting Kernel is a component inside
-the Posting Engine, not a separate engine.
+Phase 3 is implemented locally and unchanged (PAD-002, PAD-003). IA-5/ECC is
+**frozen** at zero consumers and zero events; WP-1…WP-4 certified, WP-5
+unauthorised, evidence archived under `docs/PXL/archive/ia5-ecc-frozen/`. Resume
+only for a real costing-replay requirement. Posting P5.2 remains fully enforced;
+the Accounting Kernel is a component inside the Posting Engine, not an engine.
 
 ## Hosted and UX Status
 
-Hosted project `bskjkogijpbhukjkagfj` is at migration `20260716000005`; **55
-local migrations are pending.** The deploy is **rehearsed, not performed, and
-deliberately deferred** — nothing consumes the hosted database, there is no
-deployed frontend, and CI deploys nothing. The pending set contains **no
-destructive DDL**; `npm run deploy:rehearse` proves it reaches a state
-structurally identical to a fresh replay in 8s. Credentials are absent by design
-(PXL-AUD-055), owner-supplied, never pasted into a transcript or file. See
-`PXL_DEPLOY_RUNBOOK.md`.
+Hosted project `bskjkogijpbhukjkagfj` is at migration `20260716000005`; **57
+local migrations are pending**, with **no destructive DDL**. The deploy is
+**rehearsed, not performed, and deliberately deferred** — nothing consumes the
+hosted database, there is no deployed frontend, and CI deploys nothing.
+Credentials are absent by design (PXL-AUD-055). See `PXL_DEPLOY_RUNBOOK.md`.
 
-Thirty-three reachable routes are backed only by future-deferred tables, and 18
-navigation items are disabled placeholders. A route or rendered page is not a
-complete workflow.
+Thirty-three reachable routes are backed only by future-deferred tables and 18
+nav items are disabled placeholders. A rendered page is not a workflow.
 
 ## Last Verified Commands
 
-- `npm run test:db:fresh` — **PASS** on 2026-08-02.
-- `npm run test:canonical` — **PASS**, 30 files / 749 assertions.
-- `npm run test:db:regression` — **PASS**, 116 files / 2,709 assertions. The lane
-  now resets to a fresh schema first; previously it inherited the prior lane's
-  state, so the documented order (fresh → canonical → regression) reported a
-  false red — the canonical seed populates `companies`, removing the zero-company
-  bootstrap in `fn_provision_company` that tests 073 and 116 rely on. Guarded by
-  `tests/recoverability_operations.test.ts`.
-- Phase 3 focused lane — **PASS**, 4 files / 74 assertions.
-- `npm run test:frontend` — **PASS**, 58 tests.
+- `npm run test:db:fresh` — **PASS** on 2026-08-03.
+- `npm run test:canonical` — **PASS**, 30 files / 751 assertions.
+- `npm run test:db:regression` — **PASS**, 118 files / 2,767 assertions; the lane
+  resets to a fresh schema first, so it is order-independent.
+- Phase 4 focused lane — **PASS**, `117` 31, `118` 25, `090` 51, `102` 78,
+  `024` 35, `005`, `039`, `033`.
+- `npm run test:frontend` — **PASS**, 60 tests.
 - `npm run build`, `npm run lint`, `git diff --check` — **PASS**; lint reports
   one pre-existing non-blocking warning in `tests/backup_recovery.test.ts`.
-- `npm run docs:check` — **PASS**; 116 tests indexed.
-- `npm run backup:operate` — **PASS**; the replicated copy restored independently
-  (93 tables / 0 mismatches / 6s RTO). Verifier proven able to fail against a
-  deliberately corrupted restore; all four offsite refusals exercised.
-- Inventory-to-control variance **0.00** for ABC Trading Corporation, Bayani
-  Partners and Company, and Golden Retail Store; trial balance out-of-balance
-  **0.00** in all five companies.
+- `npm run docs:check` — **PASS**; 118 tests indexed.
+- `npm run backup:operate` — **PASS** (2026-08-02); replicated copy restored
+  independently, 93 tables / 0 mismatches.
+- Inventory-to-control variance **0.00** in all three stock-holding companies;
+  trial balance out-of-balance **0.00** in all five.
 
 ## Recommended Next Task
 
 **PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE; the rest is owner action.**
-PAD-007 decided: self-managed encrypted backups to S3-compatible storage, no
-PITR for the pilot. To close it: create the bucket, run
-`npm run backup:offsite:check`, set `PXL_OFFSITE_URL` plus the access-key
-secrets, and escrow `PXL_BACKUP_PASSPHRASE` off the host. Runbook §6.
+PAD-007: self-managed encrypted backups to S3-compatible storage, no PITR for
+the pilot. To close it, follow Runbook §6 — bucket, `PXL_OFFSITE_URL` plus
+access-key secrets, and `PXL_BACKUP_PASSPHRASE` escrowed off the host.
 
-**The next build task is Delivery Plan Phase 4 — the Tax Engine calculator
-(PAD-001)**, unless the owner authorises the hosted deploy first. It depends only
-on Foundation and is unblocked today. **Filing artifacts are not part of it**:
-they were moved to Phase 5.8 on 2026-08-02 because a return is generated from
-posted, closed data. Phase 5 runs flows → statements (`account_fs_map` has never
-held a row) → filing, in that order. Phase 3's local build is complete; not
-pilot-ready until hosted parity, the invite function, a real cut-over rehearsal
-and browser/UAT evidence exist.
+**Phase 4 is done, VAT included.** Next build task: **Delivery Plan Phase 5 item
+3 — close the remaining outbound inventory entry points, starting with Cash Sale
+posting.** `fn_post_cash_sale` does not exist, so Cash Sale has no COGS or
+inventory relief; Customer Return has no COGS path and Delivery Receipt does not
+relieve inventory. These gate the Sales flow proof — and Cash Sale posting is the
+prerequisite percentage tax waits on, because PT ships as one chain (document →
+computation → ledger → liability posting → reconciliation → 2551Q) or not at all.
 
-**The hosted deploy is deliberately deferred, not blocked** (Deploy Runbook §2a);
-re-run `npm run deploy:rehearse` after adding migrations. **Requires explicit
-owner approval.**
+Phase 5 runs flows → statements (`account_fs_map` has **never held a row**) →
+filing, in that order. Phase 4 remainders are Product Backlog Tax Engine items
+8–17: percentage tax, the governed tax-code maintenance screen (item 10, needed
+before any real BIR rate change), the effective-dated company tax profile
+(item 11), configurable TWA default ATCs, one governed withholding tolerance,
+and front-end preview through the engine.
 
-No open findings remain. Do not resume IA-5: operated recovery, canonical
-Sales/Purchasing proof, statement presentation and Tax ownership all rank above
-dormant foundation work.
+**The hosted deploy is deferred, not blocked** (Deploy Runbook §2a); re-run
+`npm run deploy:rehearse` after adding migrations — the pending set is now **57**.
+**Requires explicit owner approval.**
+
+No open findings remain. Do not resume IA-5: canonical Sales/Purchasing proof,
+statement presentation and operated recovery outrank dormant foundation work.
 
 ## Stop Conditions
 
 No Posting/Kernel change; no production inventory source activation; no IA-6; no
 WP-5 implementation; preserve IA-5 dormancy; a non-zero `inventory_events` count
 is a governance stop; no hosted operation without approval; no product-scope
-change without a Product Architecture Amendment. WP-5…WP-9 and IA-6 remain
+change without a Product Architecture Amendment. WP-5…WP-9 remain
 unauthorised. Do not create a governance document in a commit that contains no
 application or SQL change.

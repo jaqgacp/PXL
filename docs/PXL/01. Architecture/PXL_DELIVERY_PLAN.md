@@ -134,9 +134,80 @@ locally; this is not yet evidence that a real or hosted onboarding was operated.
 
 ---
 
-### Phase 4 — Tax Engine (the calculator) · 4–6 weeks
+### ✅ Phase 4 — Tax Engine (the calculator) · calculator DONE 2026-08-03
 
-PAD-001. Decide it as **Accounting-owned, one calculator.**
+PAD-001 **decided and implemented 2026-08-03: Accounting-owned, one calculator.**
+
+`fn_calculate_tax(context) → SETOF tax_component` is now the only function in
+the schema that turns a governed rate into a tax amount. Migration
+`20260803000001_tax_engine_calculator.sql`.
+
+The census was **eleven**, not seven. The seven document-save routines named
+below plus two withholding validators and two EWT profile appliers all computed
+`rate / 100` independently; test `090` assertion 6 measured it. All eleven now
+call the engine, and that assertion reads exactly one function.
+
+**Evidence.** Test `117` (31 assertions, self-provisioned company) proves the
+engine's arithmetic. Test `090` proves the structure — and its assertions
+17–43, 45 and 46 passed **unchanged** across the migration, which is the
+"every existing caller produces identical tax output" requirement satisfied by
+the suite rather than by assertion. Full regression 117 files / 2,742
+assertions; canonical 30 files / 751.
+
+**One deliberate behaviour change, not a byte-identical migration.**
+`fn_save_cash_sale` resolved its CWT rate with no active, deprecation or
+effective-date filter, so a cash sale could withhold at a superseded ATC
+version; every other withholding path already refused this. It now goes through
+the engine like the rest. Guarded by test `090` assertion 47a.
+
+**VAT made effective-date aware 2026-08-03** — migration
+`20260803000002_vat_effective_date_resolution.sql`. The calculator shipped
+governing *withholding* by the document date while VAT resolved
+`WHERE vc.id = <id>` and ignored active state, deprecation, succession and
+effective windows; an unresolvable code degraded silently to `exempt at 0%`.
+The version machinery for VAT had existed since `20260713000012` and the engine
+simply did not consult it.
+
+`fn_resolve_vat_code` is now the single place PXL decides whether a VAT code may
+be used: both the VAT-code version and its rate-bearing tax-code version must be
+active, undeprecated and in force on the document date; the code must match the
+document's tax side; and the company tax profile must permit a VAT-bearing rate.
+It fails closed. The engine, the line and header trigger backstop
+(`fn_validate_company_vat_code`, now evaluated against the *parent document's*
+date rather than today) and the picker `fn_vat_codes_asof` all ask that one
+resolver, so the frontend offers exactly what the database accepts. A BIR rate
+change is made by closing the current window and configuring a successor;
+history is never edited in place, and a document dated inside a closed window
+still resolves — and still keeps — the version that governed it. Test `118`,
+25 assertions, self-provisioned companies, across a real 12% → 14% succession.
+
+**Still open in this phase:**
+
+- **Percentage tax is calculated nowhere** — not by the engine, and not by
+  anything before it. A non-VAT, PT-registered company's sales compute no
+  percentage tax at all, so the PT review surfaces have no source. Adding a PT
+  branch to the engine without a document calling it would be foundation with
+  no consumer, which this repository has already paid for once. The whole chain
+  ships together or not at all: Sales Invoice or Cash Sale → PT computation →
+  PT tax detail/ledger → PT liability posting → PT reconciliation → 2551Q
+  working paper and return. It needs a posting change (a PT liability line), so
+  it belongs with the Phase 5 flows. Recorded in the Product Backlog, item 8.
+- **The company tax profile is not effective-dated.**
+  `companies.tax_registration` is one scalar with no history, so VAT validation
+  resolves a document's profile from today's registration. Every tax-profile
+  read now goes through `fn_company_tax_registration_asof(company, date)`, which
+  accepts the date and cannot yet honour it — one seam, so the fix is one
+  function plus a history table. It does **not** block correct VAT resolution
+  and was deliberately not attempted here. Product Backlog item 11; test `118`
+  assertion 25 pins it.
+- **No governed maintenance screen exists for tax codes.** The secured RPCs and
+  the version guards do; nothing in the UI drives them, so a real BIR rate
+  change cannot yet be configured by an administrator. Product Backlog item 10 —
+  the prerequisite for real tax maintenance.
+- The frontend still prices lines for preview independently of the engine;
+  `fn_calculate_tax` is authenticated-executable so a form can call it, but no
+  form does yet. The reference half is closed: the pickers read
+  `fn_vat_codes_asof`, not `vat_codes` filtered on `is_active`.
 
 > **Scope corrected 2026-08-02.** This phase briefly also owned the BIR filing
 > artifacts. That was a dependency error: a return is generated from posted,
@@ -146,20 +217,27 @@ PAD-001. Decide it as **Accounting-owned, one calculator.**
 > moved to **Phase 5.8**. Nothing was added or removed from the plan; one item
 > changed phase.
 
-1. `fn_calculate_tax(context) → tax_components[]` — one authority for VAT
-   (inclusive and exclusive), percentage tax, EWT by ATC, FWT.
-2. Migrate the **seven** save-routines that compute tax independently today
-   (`fn_save_cash_purchase_core_20260718`, `fn_save_cash_sale`,
+1. ✅ `fn_calculate_tax(context) → SETOF tax_component` — one authority for VAT
+   (inclusive and exclusive) and withholding by ATC (EWT and FWT share the
+   mechanism). **Percentage tax is not implemented — see above.**
+2. ✅ Migrate the **eleven** routines that computed tax independently. The seven
+   save routines (`fn_save_cash_purchase_core_20260718`, `fn_save_cash_sale`,
    `fn_save_credit_memo`, `fn_save_debit_memo`,
    `fn_save_sales_invoice_aud053_core`, `fn_save_vendor_bill_core_20260718`,
-   `fn_save_vendor_credit`). Only one handles VAT-inclusive pricing — that
-   inconsistency is a live correctness risk. *Measured 2026-08-02; this item
-   previously said six.*
-3. Regression test asserting every caller produces byte-identical output to today
-   **before** switching.
+   `fn_save_vendor_credit`), the two withholding validators
+   (`fn_validate_payment_voucher_line_ewt`, `fn_validate_receipt_line_cwt`) and
+   the two EWT profile appliers (`fn_apply_vendor_bill_line_ewt_profile`,
+   `fn_apply_cash_purchase_line_ewt_profile`). *This item said seven; the
+   schema-wide census in test `090` said eleven, and the census was right.*
+   VAT-inclusive pricing existed in exactly one of them and is now shared.
+3. ✅ Regression proof that every caller produces identical output — carried by
+   the pre-existing assertions in test `090`, which passed unchanged.
+
 **Done when:** there is one place to change a BIR rate, and every existing caller
-produces identical tax output through it. Filing capability is **not** claimed
-here — that is Phase 5.8.
+produces identical tax output through it. **Met for VAT and withholding on
+2026-08-03.** Filing capability is **not** claimed here — that is Phase 5.8, and
+percentage tax calculation moves to the Phase 5 flows because it needs a posting
+change and a document that calls it.
 
 ---
 
@@ -280,7 +358,7 @@ presentation, the BIR filing artifacts, and proving approval routing.
 | Phase 1 — accounting break | ✅ done | — |
 | Phase 2 — operational safety | days, not weeks (owner action only) | **High** — engineering is complete and proven |
 | Phase 3 — onboardable | built locally; hosted/UAT proof outstanding | **Medium** |
-| Phase 4 — Tax Engine (calculator only) | 4–6 weeks | **Medium** — the seven callers and their outputs are enumerable today |
+| Phase 4 — Tax Engine (calculator only) | ✅ done 2026-08-03, incl. effective-dated VAT | — — the estimate was 4–6 weeks; the callers turned out to be enumerable and the outputs already pinned by test `090`, so the migration was mechanical once the census was believed over the prose. VAT effective-date resolution followed the same day: the version machinery already existed and only the resolution path had to be routed through it |
 | Phase 5 — flows, then statements, then filing | 3–4 weeks for the flows; **statements and filing not estimated** | **Low** — see below |
 | Phase 6 — pilot hardening | 3–4 weeks | **Low** — no browser lane exists yet to calibrate against |
 | **To pilot** | **previously ~4 months; now unestimated — see below** | — |
@@ -319,7 +397,7 @@ recoverable, which is the difference between a setback and a catastrophe.
 | 1 | ~~Receiving adds stock with no journal~~ | — | ✅ closed |
 | 2 | ~~No schedule, no offsite path~~ Both built and proven; a durable destination and escrowed passphrase remain owner actions | Every module's production readiness | 2 |
 | 3 | ~~No opening balances~~ Local capability complete; real cut-over proof open | Pilot onboarding acceptance | ✅ local / 3 |
-| 4 | No Tax Engine calculator | Consistent tax across all seven callers | 4 |
+| 4 | ~~No Tax Engine calculator~~ **CLOSED 2026-08-03 (PAD-001).** One calculator, eleven callers migrated. Percentage tax still calculated nowhere | Percentage-tax companies only | ✅ / 5 |
 | 5 | No financial statement presentation (`account_fs_map` empty) | A pilot accountant cannot sign statements | 5.7 |
 | 6 | No filing artifacts — nothing has ever been filed | Statutory filing; a VAT-registered pilot client | 5.8 |
 

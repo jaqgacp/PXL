@@ -8,6 +8,7 @@ import { TransactionWorkspace } from '@/components/document/TransactionWorkspace
 import { SystemMetadataPanel, TransactionEmptyState } from '@/components/document/TransactionPrimitives'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { normalizePhTin } from '@/lib/philippines'
+import { loadVatCodesAsOf } from '@/lib/vatCodes'
 
 // ── Types ─────────────────────────────────────────────────────
 type VBStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
@@ -168,10 +169,9 @@ export default function VendorBillsPage() {
 
   const loadRefs = useCallback(async () => {
     if (!companyId) return
-    const [companyRes, suppRes, vatRes, coaRes, brRes, vrRes, rrRes] = await Promise.all([
+    const [companyRes, suppRes, coaRes, brRes, vrRes, rrRes] = await Promise.all([
       supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('suppliers').select('id,registered_name,tin,registered_address,default_tax_type,default_terms_id,default_gl_account_id,payment_terms(days_to_due)').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true),
       supabase.from('chart_of_accounts').select('id,account_code,account_name,account_type').eq('company_id', companyId).eq('is_active', true).eq('is_postable', true).order('account_code'),
       supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
       supabase.from('void_reason_codes').select('id,code,description'),
@@ -183,9 +183,6 @@ export default function VendorBillsPage() {
     const companyTaxRegistration = ((companyRes.data?.tax_registration as TaxRegistration) || 'vat')
     setTaxRegistration(companyTaxRegistration)
     setSuppliers((suppRes.data || []).map((s: any) => ({ ...s, payment_terms: s.payment_terms })))
-    setVatCodes((vatRes.data || [])
-      .map((v: any) => ({ id: v.id, vat_code: v.vat_code, description: v.description, vat_classification: v.vat_classification, rate: v.tax_codes?.rate ?? 0 }))
-      .filter((v: VATRef) => companyTaxRegistration === 'vat' || v.rate === 0))
     setExpenseAccounts(coaRes.data as COARef[] || [])
     setBranches(brRes.data as Branch[] || [])
     setVoidReasons(vrRes.data as VoidReason[] || [])
@@ -206,6 +203,17 @@ export default function VendorBillsPage() {
 
   useEffect(() => { if (companyId) { load(); loadRefs() } }, [load, loadRefs, companyId])
   useEffect(() => { if (companyId) load() }, [load, fStatus, companyId])
+
+  // VAT codes are resolved as of the bill date, not as of today.
+  useEffect(() => {
+    if (!companyId) return
+    loadVatCodesAsOf(companyId, editVB?.bill_date, 'input_vat').then(codes =>
+      setVatCodes(codes.map(v => ({
+        id: v.id, vat_code: v.vat_code, description: v.description,
+        vat_classification: v.vat_classification as VATRef['vat_classification'],
+        rate: v.rate,
+      }))))
+  }, [companyId, editVB?.bill_date])
 
   const openNew = () => {
     if (readiness.blockers.length > 0) {

@@ -57,12 +57,16 @@ SELECT ok(
       AND p.proname='fn_complete_purchase_return_source_locked_impl'),
   'Purchase Return validation, posted-bill attribution, and fallback gate remain'); -- 5
 
+-- PAD-001 moved the arithmetic, not the responsibility. Cash Sale still prices
+-- every line and still refuses a CWT that does not match the ATC — it just asks
+-- the Tax Engine for the numbers instead of holding its own copy of the rules.
 SELECT ok(
-  (SELECT strpos(p.prosrc, 'ROUND(v_net * v_rate / 100, 2)') > 0
+  (SELECT p.prosrc ~ 'fn_calculate_tax'
       AND p.prosrc ~ 'CWT % does not match ATC rate'
+      AND p.prosrc !~ 'rate\s*/\s*100'
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public' AND p.proname='fn_save_cash_sale'),
-  'Cash Sale calculation and CWT validation remain unchanged');                     -- 6
+  'Cash Sale delegates calculation to the Tax Engine and keeps CWT validation'); -- 6
 
 SELECT is(
   (SELECT (SELECT count(*)::int

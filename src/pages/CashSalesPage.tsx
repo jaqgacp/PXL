@@ -7,6 +7,7 @@ import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { ReportTraceLink } from '@/components/AccountingTraceLink'
 import { formatPhTinInput, normalizePhTin } from '@/lib/philippines'
+import { loadVatCodesAsOf } from '@/lib/vatCodes'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -126,22 +127,14 @@ export default function CashSalesPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
-      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('customers').select('id,registered_name,tin,address:registered_address').eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'output_vat').eq('is_active', true).order('vat_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'revenue').eq('is_postable', true).eq('is_active', true).order('account_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'asset').eq('is_postable', true).eq('is_active', true).order('account_code'),
       supabase.from('ref_payment_modes').select('id,name').eq('is_active', true).order('sort_order'),
       supabase.from('items').select('id,item_code,item_name:description,unit_price:standard_selling_price,vat_code_id:default_sales_vat_id').eq('company_id', companyId).eq('is_active', true).order('description'),
       supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code'),
-    ]).then(([companyR, custR, vatR, accR, bankR, pmR, itemR, atcR]) => {
-      const taxRegistration = companyR.data?.tax_registration || 'vat'
+    ]).then(([custR, accR, bankR, pmR, itemR, atcR]) => {
       setCustomers(custR.data as Customer[] || [])
-      setVatCodes((vatR.data || []).map((v: Record<string, unknown>) => ({
-        id: v.id as string, vat_code: v.vat_code as string, description: v.description as string,
-        vat_classification: v.vat_classification as string,
-        rate: ((v.tax_codes as Record<string, unknown>)?.rate as number) || 0,
-      })).filter(v => taxRegistration === 'vat' || v.rate === 0))
       setAccounts(accR.data as COAAccount[] || [])
       setBankAccounts(bankR.data as COAAccount[] || [])
       setPaymentModes(pmR.data as PaymentMode[] || [])
@@ -149,6 +142,12 @@ export default function CashSalesPage() {
       setAtcCodes(atcR.data as { id: string; code: string; description: string; rate: number }[] || [])
     })
   }, [companyId])
+
+  // VAT codes are resolved as of the cash sale date, not as of today.
+  useEffect(() => {
+    if (!companyId) return
+    loadVatCodesAsOf(companyId, fDate, 'output_vat').then(setVatCodes)
+  }, [companyId, fDate])
 
   const selectCustomer = (cid: string) => {
     setFCustomer(cid)

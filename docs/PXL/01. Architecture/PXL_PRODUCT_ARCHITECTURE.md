@@ -196,10 +196,10 @@ and dimensional accounting are formally certified. The trial balance is out of
 balance by ₱0.00 in all five companies, inventory ties to its control account,
 and VAT and withholding reconcile to the General Ledger at exactly zero variance.
 
-Against that: **no business module is certified**; there is **no Tax Engine** —
-seven document-save routines compute VAT independently and only one handles
-VAT-inclusive pricing; **`account_fs_map` is empty**, so no financial-statement
-presentation exists; **12 of 24 posting entry points have never produced a
+Against that: **no business module is certified**; the Tax Engine now exists as
+one calculator (PAD-001, 2026-08-03) but **percentage tax is still calculated
+nowhere and nothing has ever been filed**; **`account_fs_map` is empty**, so no
+financial-statement presentation exists; **12 of 24 posting entry points have never produced a
 journal**; every Banking and Fixed Asset transaction table is empty; and all
 twelve compliance working-paper tables are empty, so nothing has ever been filed.
 Of 209 tables, **116 have never held a row**. Opening balances, verified supplier
@@ -607,7 +607,7 @@ that status.
 | **Major business processes** | Quote → order → delivery → invoice · cash sale with immediate settlement · collection with creditable withholding capture · credit memo correction · customer return · receivables ageing and collection follow-up |
 | **Major transactions** | Sales Invoice · Cash Sale · Official Receipt · Credit Memo · Quotation · Sales Order · Delivery Receipt · Debit Memo · Customer Return |
 | **Major reports** | AR Aging & Customer Ledger · Sales Registers · Summary List of Sales · Output VAT Review · Percentage Tax Review · 2307 Received Review |
-| **Dependencies** | Customers · Items · Payment Terms · Number Series · Posting engine · Dimension engine · Approval engine · COA engine · **Tax calculation (currently inside the save routines, because no Tax Engine exists)** |
+| **Dependencies** | Customers · Items · Payment Terms · Number Series · Posting engine · Dimension engine · Approval engine · COA engine · **Tax Engine** (since PAD-001; tax calculation left the save routines on 2026-08-03) |
 | **Maturity** | **M4 — PARTIAL WORKFLOW** |
 | **Certification** | Certification module #3 — **In Progress.** Named blockers: Sales Invoice completeness, and returns/credit reconciliation. |
 | **Implementation** | Sales Invoice is the strongest transaction in PXL: a full draft → approve → post → void → revert lifecycle, all six analytical dimensions reaching the posted journal, saved-source GL preview, immutability after posting, and the only dedicated form/document route pair in the product. Cash Sale, Official Receipt, and Credit Memo have complete posting lifecycles. Against that: **Debit Memo is a finished screen over a data table the governance register classifies as an unimplemented future module**; Customer Return is a conversion surface that produces a credit memo but returns no stock; and Quotation → Order → Invoice conversion is not verified because the Document Conversion engine has not been started. |
@@ -725,7 +725,7 @@ that status.
 | **Maturity** | **M4 — PARTIAL WORKFLOW** |
 | **Certification** | Certification module #9 *"Philippine Compliance and Tax"* — **Blocked.** Phase 7 has not been executed. |
 | **Implementation** | **This module is sharply bimodal, and the split is the single most useful fact about it.** Everything that *reads posted data* works and is trustworthy: VAT reviews, the withholding summaries, all thirteen BIR books, the CAS audit logs, and the server-attested hashed exports. VAT and withholding ledgers reconcile to the General Ledger with **exactly zero variance**. Everything that *persists a statutory artifact* is an empty shell: every working paper, every return generator, every certificate register, and the entire income tax branch. Ten of the eleven income tax screens have never held a row. |
-| **Roadmap** | The Roadmap's **Tax Engine and Compliance** outcome governs Tax architecture. The calculator ships first (Delivery Plan Phase 4); **return generation ships after Period Close and the statements, at Delivery Plan Phase 5.8**, because a return is generated from posted, closed data. Certification-programme Phase 7 later completes the module. Build return generation on top of the working review surfaces — the computation inputs already exist and reconcile. **This module cannot be completed without a Tax Engine** (§4.18). |
+| **Roadmap** | The Roadmap's **Tax Engine and Compliance** outcome governs Tax architecture. The calculator ships first (Delivery Plan Phase 4); **return generation ships after Period Close and the statements, at Delivery Plan Phase 5.8**, because a return is generated from posted, closed data. Certification-programme Phase 7 later completes the module. Build return generation on top of the working review surfaces — the computation inputs already exist and reconcile. The Tax Engine prerequisite is met (§4.18); the filing artifacts remain the blocker. |
 
 ---
 
@@ -780,7 +780,7 @@ or absent workflow is never implied by a route, table, or test.
 | **Banking & Treasury** | Bank/cash accounts, petty-cash funds, suppliers/payees | Receipt/payment settlement, deposits/disbursements, transfers, petty cash, bank adjustment and reconciliation | Bank position, check register, outstanding checks, deposits in transit, bank-to-GL reconciliation. |
 | **Fixed Assets** | Asset categories and the missing depreciation-profile master | Acquisition → recognition → depreciation → transfer/impairment/disposal | Asset register, depreciation schedule, book/tax reconciliation, disposal report, asset-register-to-GL reconciliation. |
 | **Accounting** | COA, fiscal calendar, dimensions, posting mappings | Journal/reversal, source trace, recurring/amortisation/revenue schedules, period close | GL, account ledger, trial balance, control reconciliations, posting/reversal review, financial-statement source. |
-| **Compliance** | Compliance profile, VAT/PT/ATC/tax codes, tax calendar, BIR form configuration | Review posted tax; prepare working papers/returns/certificates/exports when implemented | VAT/WHT/PT reviews, books, SLS/SLP/RELIEF, BIR returns/certificates, CAS and audit evidence. A central Tax Engine is absent. |
+| **Compliance** | Compliance profile, VAT/PT/ATC/tax codes, tax calendar, BIR form configuration | Review posted tax; prepare working papers/returns/certificates/exports when implemented | VAT/WHT/PT reviews, books, SLS/SLP/RELIEF, BIR returns/certificates, CAS and audit evidence. The central Tax Engine exists; the filing artifacts do not. |
 | **Reports** | COA statement classification, financial-statement structure, dimensions | Read-only financial and management reporting | Financial statements, comparative reports, branch/department/cost-centre analysis, audit support and drill-down. |
 | **Administration & Security** | Users, memberships, roles, permissions, branch scope | Invite/list users; provision/revoke access; assign roles/scopes; review privileged activity | User/system activity and access review; hosted invite delivery and browser/UAT remain unproven. |
 
@@ -789,13 +789,13 @@ or absent workflow is never implied by a route, table, or test.
 | **Dashboard** | Reporting/Reconciliation; all source modules; no posting | **M4 — PARTIAL WORKFLOW** | No owning certification scope / **No** | Ownership and required KPI contract undecided | No transaction origination. Widget grid, roll-up and export are deferred. |
 | **Setup** | Permissions, Audit, Number Series, COA; opening cut-over posts through the Kernel | **M7 — GOVERNED** | Setup & Master Data scope **Blocked** / **No** | Operated backup/offsite and automated browser evidence | User administration belongs to Administration & Security; opening cut-over needs real onboarding/UAT proof. |
 | **Master Data** | Permissions, Audit, Approval, COA | **M7 — GOVERNED** | Setup & Master Data scope **Blocked** / **No** | Same evidence gates; some extension masters have no UI | Payroll processing excluded. Surface contacts/groups/UOM extensions; validate supplier-bank/import browser paths. |
-| **Sales & Receivables** | Number Series, Posting, COA, Dimension, AR, Payment, Approval, Correction, missing Tax Engine | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | **Cash Sales cannot post** (`fn_post_cash_sale` absent); Customer Return has no COGS path; no fresh-data end-to-end proof; document conversion absent | Foreign currency unsupported. SI itself posts AR, revenue, output VAT **and** COGS/inventory relief; the gap is the other entry points, not COGS. |
-| **Purchasing & Payables** | Number Series, Posting, COA, Dimension, AP, Payment, Approval, Correction, missing Tax Engine | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Three-way match and over-receipt control absent; `purchase_returns` and `supplier_debit_memos` empty | Foreign currency unsupported. PO → RR → Bill is proven from first principles by fresh-data test `112`; receiving posts to the GL since PXL-AUD-073. |
+| **Sales & Receivables** | Number Series, Posting, COA, Dimension, AR, Payment, Approval, Correction, Tax Engine | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | **Cash Sales cannot post** (`fn_post_cash_sale` absent); Customer Return has no COGS path; no fresh-data end-to-end proof; document conversion absent | Foreign currency unsupported. SI itself posts AR, revenue, output VAT **and** COGS/inventory relief; the gap is the other entry points, not COGS. |
+| **Purchasing & Payables** | Number Series, Posting, COA, Dimension, AP, Payment, Approval, Correction, Tax Engine | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Three-way match and over-receipt control absent; `purchase_returns` and `supplier_debit_memos` empty | Foreign currency unsupported. PO → RR → Bill is proven from first principles by fresh-data test `112`; receiving posts to the GL since PXL-AUD-073. |
 | **Inventory** | Posting, Dimension, Purchasing/Sales, Inventory Accounting | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | `inventory_cost_layers` never exercised (FIFO path unproven, only weighted average runs); `goods_issues` empty | IA-5/ECC is hidden costing infrastructure, not this module, and is frozen with zero consumers. Inventory ties to control at **₱0.00** in every stock-holding company (guard `111`). Lot/serial and landed cost remain future. |
 | **Banking & Treasury** | Payment, Posting, Period, Reversal, Reporting | **M3 — UI SKELETON** | Not Started / **No** | Only `bank_accounts` holds data. `check_vouchers`, `fund_transfers`, `bank_reconciliations`, `petty_cash_vouchers`, `bank_adjustments` are **all empty**; posting functions exist but have never produced a journal. PAD-004 unresolved | v2 by Delivery Plan decision, except Check Voucher for the Cash Disbursements Book. No production banking claim. |
 | **Fixed Assets** | Posting, Dimension, Period, Reversal, Reporting | **M3 — UI SKELETON** | Not Started / **No** | **All six tables empty** (`fixed_assets`, `fixed_asset_categories`, depreciation entries, disposals, impairments, transfers); five routes on the deferred list; no depreciation-profile master | v2 by Delivery Plan decision, except a minimal straight-line run if the pilot client holds assets. |
 | **Accounting** | Posting/Kernel, COA, Dimension, Period, Reversal, Reporting; all source modules | **M4 — PARTIAL WORKFLOW** | Accounting Core In Progress; Schedules Not Started / **No** | Posting invariants across all consumers, schedules and year-end close unproven | Operational source workflows remain owned by their modules. Close and reconciliation proof are next. |
-| **Compliance** | Missing Tax Engine, Posting boundary, Number Series, Audit, Reporting; Sales/Purchasing/Accounting | **M4 — PARTIAL WORKFLOW** | Blocked / **No** | No Tax Engine (PAD-001). **All twelve `compliance_*` working-paper tables are empty**, as are `bir_forms`, `form_2306/2307_*`, `vat_returns` and `withholding_remittances`. Nothing has ever been filed | Review surfaces read real posted data (tax calendar 248 rows, tax detail entries, VAT/EWT reconcile to GL); the **filing artifacts** do not exist. Income tax is v2. Do not claim filing readiness. |
+| **Compliance** | Tax Engine, Posting boundary, Number Series, Audit, Reporting; Sales/Purchasing/Accounting | **M4 — PARTIAL WORKFLOW** | Blocked / **No** | Tax Engine shipped (PAD-001, 2026-08-03); percentage tax still uncalculated. **All twelve `compliance_*` working-paper tables are empty**, as are `bir_forms`, `form_2306/2307_*`, `vat_returns` and `withholding_remittances`. Nothing has ever been filed | Review surfaces read real posted data (tax calendar 248 rows, tax detail entries, VAT/EWT reconcile to GL); the **filing artifacts** do not exist. Income tax is v2. Do not claim filing readiness. |
 | **Reports** | Reporting/Reconciliation, COA, Dimension, GL and every source module | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Eight of nine critical reconciliations unevidenced; **`account_fs_map` empty**, so no financial-statement presentation mapping exists | Trial balance and GL read real posted data across 23 views. Reports is a cross-domain index where stated; no parallel books. |
 | **Administration & Security** | Certified Permissions and Audit; Approval | **M4 — PARTIAL WORKFLOW** | Not Started / **No** | `user_company_branch_scopes` **empty** — branch scoping never exercised; the `admin-invite` Edge Function is written but **never deployed**; browser/UAT unproven | Restricted in-product administration is the decided PAD-003 boundary; enforcement remains engine-owned. |
 
@@ -807,9 +807,9 @@ and never a user concept. Users experience an engine only through the module
 surfaces it powers.
 
 The certification program recognises **nineteen** engine assessment scopes. Four
-are certified. The Posting Engine is blocked; the Tax Engine is **absent at M0**,
-not merely blocked. This section documents each in business terms and labels
-absence explicitly.
+are certified. The Posting Engine is blocked; the Tax Engine now **exists at M5
+and is not certified** — it was absent at M0 until PAD-001 on 2026-08-03. This
+section documents each in business terms and labels absence explicitly.
 
 > **The rule that must never be broken:** certifying an engine certifies a
 > mechanism. It certifies **no module** that uses that mechanism. PXL has four
@@ -833,7 +833,7 @@ repository on 2026-08-02.
 | 3 | **AR Engine** | Receivable position and ageing; visible only through AR surfaces | Sales, Accounting, Reports | **M4 PARTIAL WORKFLOW; not Certified** | `vw_ap_aging`/`vw_ar` equivalents and `vw_customer_ledger` live; as-of ageing test `052`; 75 invoices / 6 receipts posted | Prove every scenario to AR control and corrections. Not the Sales module. |
 | 4 | **AP Engine** | Payable position and ageing; visible only through AP surfaces | Purchasing, Accounting, Reports | **M4 PARTIAL WORKFLOW; not Certified** | `vw_ap_aging`, `vw_supplier_ledger`; as-of ageing test `050`; 36 bills / 5 payment vouchers posted | Prove every scenario to AP control and corrections. Not the Purchasing module. |
 | 5 | **Payment and Application Engine** | Applies receipts/payments and tracks residuals; surfaced inside transactions | Sales, Purchasing, Banking, AR/AP | **M4 PARTIAL WORKFLOW; not Certified** | Receipt and Payment Voucher post; vendor-credit application controls tested; settlement authority test `109` | Over-application, unapplied cash, reversal and concurrency proof. Not a Banking module. |
-| 6 | **Tax Engine** | One authoritative PH-tax calculator; hidden | Sales, Purchasing, Compliance, Posting boundary | **M0 CONCEPT; absent; not Certified** | **Zero `fn_calculate_tax`. Exactly 7 save routines compute VAT independently** (cash purchase, cash sale, credit memo, debit memo, sales invoice, vendor bill, vendor credit). 70+ tax functions exist but are validators, guards and snapshots — not a calculator | **Architecturally required; PAD-001 undecided.** Do not call it merely blocked or confuse it with Tax Setup/Compliance. |
+| 6 | **Tax Engine** | One authoritative PH-tax calculator; hidden | Sales, Purchasing, Compliance, Posting boundary | **M5 IMPLEMENTED; not Certified** | `fn_calculate_tax` is the only function in the schema performing tax arithmetic (test `090` assertion 6, was 11 functions). All **eleven** former calculators migrated. `fn_resolve_vat_code` is the only place a VAT code's validity is decided. Guards `117` (31) and `118` (25) | **PAD-001 decided 2026-08-03.** VAT (both bases, effective-dated since `20260803000002`) and ATC withholding only — **percentage tax is calculated nowhere**. The company tax profile is not yet effective-dated (Backlog 11). A calculator is not filing capability; do not confuse it with Tax Setup/Compliance. |
 | 7 | **Document Conversion Engine** | Preserves source chains and remaining quantities; hidden | Sales, Purchasing, Inventory | **M1 ARCHITECTURE; Not Started** | **Zero conversion or copy-forward functions** among 437 | Quote → SO → SI carry-forward absent; nothing prevents double conversion. Not the document lifecycle/workspace framework. |
 | 8 | **Number Series Engine** | Unique, ATP-bounded document numbers; setup surface only | About 25 document types | **M8 CERTIFIED** | 264 series configured, 218 CAS number issuances, 1 governed void event; cert test `079` | Future explicit provisioning beyond SI/CS/OR; engine certification does not certify document workflows. |
 | 9 | **Approval and Workflow Engine** | Governed approval routing and SOD; config/inbox surfaces | Imports now; future transactions | **M4 PARTIAL WORKFLOW; not Certified** | 2 workflows and 2 steps defined; **`approval_requests` = 0 and `approval_instances` = 0 — never executed.** No notification model exists anywhere in the product | Routing cannot notify an approver. PAD-013 undecided. Approval and Workflow are aliases for one engine. |
@@ -1206,42 +1206,86 @@ schedule that has actually run.**
 
 ---
 
-## 4.18 Tax Engine · 🔴 **DOES NOT EXIST**
+## 4.18 Tax Engine · 🟡 **EXISTS — CALCULATOR ONLY, NOT CERTIFIED**
 
-**This is the most important entry in this section. Read it in full.**
+*Rewritten 2026-08-03. This entry previously recorded a named, owned absence.
+PAD-001 closed it.*
 
-**Business meaning of what is missing.** There is no single authority in PXL that
-computes Philippine tax. There is no component you can point at and say "this is
-where VAT is calculated" or "this is the rule for expanded withholding".
+**What it is.** `fn_calculate_tax(context) → SETOF tax_component` is the single
+authority in PXL that turns a governed Philippine tax rate into a tax amount.
+It is hidden infrastructure: no menu entry, no user concept. It calculates and
+returns components; it never posts, never persists and never resolves an
+account.
 
-**What exists instead.** Tax rates and codes live in properly governed,
-effective-dated reference masters — that part is sound. But the *calculation* is
-performed inside seven separate document-save routines, one per document type.
-They agree with each other today, but nothing structurally makes them agree, and
-VAT-inclusive pricing is handled by only **one** of the seven. Of twenty
-tax-aware routines examined, only one actually computes tax at all; the rest carry
-tax forward as recorded data.
+**Scope implemented.** VAT in both price bases — exclusive, and inclusive with
+the residual rule that makes net + VAT reconstitute a quoted price exactly —
+across regular, zero-rated and exempt classification, plus withholding by ATC
+covering EWT/CWT and FWT. **Both families resolve the version in force on the
+document date**; neither reads a rate by id alone.
 
-**What is verified.** The absence is not an assumption. It was confirmed against
-the live system and is now permanently asserted by an automated test: there is no
-tax-engine component, no central tax calculator, and no tax-component object
-anywhere in PXL.
+**One configurable framework, not one per tax type.** VAT, non-VAT, Percentage
+Tax, EWT and FWT are configuration over the same governed masters, not separate
+architectures. The user selects a configured code on the transaction and the
+database restricts and validates that selection against the company's tax
+profile, the code's applicability, its effective dates and active status, the
+transaction type and tax side, and the exact version resolved.
+`fn_resolve_vat_code` is the single place a VAT code's validity is decided; the
+engine, the line/header trigger backstop and the picker `fn_vat_codes_asof` all
+ask it, so the frontend offers exactly what the database accepts and cannot
+disagree with it. A BIR rate change is configured by closing the current
+effective window and adding a successor version; historical rate records are
+never edited in place, posted documents keep resolving the version that governed
+them, and an unresolvable code is refused rather than degraded to exempt.
+Migration `20260803000002_vat_effective_date_resolution.sql`; test `118`.
 
-**What *is* certified is the boundary around the absence.** The Posting Engine
-computes no tax. The account resolver owns tax accounts. The tax ledger owns tax
-detail and its reversal. And the tax ledger reconciles to the General Ledger at
-**exactly zero variance** for both VAT and withholding. In other words: the
-plumbing around the missing engine is correct and proven. The engine itself is
-simply not there.
+**One known gap in that framework.** `companies.tax_registration` is a single
+scalar with no history, so the *company tax profile* is not effective-dated: a
+document's profile is resolved from today's registration. Every tax-profile read
+in tax-code validation goes through `fn_company_tax_registration_asof(company,
+date)`, which accepts the date it cannot yet honour, so the fix is that one
+function plus a registration-history table. Product Backlog item 11.
 
-**Why this matters to the product.** The Compliance module cannot be completed
-without it. Every future tax rule change must be made in seven places. And the
-gap is invisible in the original blueprint, which has no vocabulary for engines at
-all — which is exactly how a missing core component went unnamed for so long.
+**Scope deliberately excluded.** **Percentage tax is calculated nowhere in
+PXL**, by the engine or otherwise, and was not calculated before it either. A
+non-VAT, PT-registered company's sales produce no percentage tax, so the PT
+review surfaces have no source. Adding a PT branch with no document calling it
+would be foundation without a consumer. It requires a posting change and belongs
+with the Delivery Plan Phase 5 flows.
 
-**Status.** Registered as a governed future programme. **It must be carried
-permanently in this document as a named, owned absence** — not as a "blocked"
-component, which implies it exists.
+**What changed structurally.** Calculation lived in **eleven** routines: seven
+document-save routines, two withholding validators and two EWT profile
+appliers. They agreed by coincidence rather than by construction, and
+VAT-inclusive pricing existed in exactly one of them — so six document types
+could not price tax-inclusively at all. All eleven now call the engine. The
+schema-wide census of tax arithmetic in test `090` returns exactly one function.
+
+**What is verified.** Test `117` proves the arithmetic on a company it
+provisions itself through the current production RPCs, never against the
+canonical seed. Test `118` proves the effective-dated VAT resolution the same
+way, across a real deprecate-and-succeed 12% → 14% rate change, including that
+the database — not only the save RPCs — refuses a superseded code on a directly
+written document line. Test `090` proves the structure, and — importantly — its
+output assertions passed **unchanged** across the migration: stored tax facts,
+posted GL tax lines, tax-ledger rows, both GL reconciliations, reversal
+provenance under a changed rate, and cross-calculator rounding agreement all
+produced identical figures before and after.
+
+**One defect was closed on the way.** `fn_save_cash_sale` resolved its CWT rate
+with no active, deprecation or effective-date filter, so a cash sale could
+withhold at a superseded ATC version. Every other withholding path already
+refused this. Guarded by `090` assertion 47a.
+
+**What is still true.** The boundary around the engine is unchanged and remains
+correct: the Posting Engine computes no tax, the account resolver owns tax
+accounts, the tax ledger owns tax detail and its reversal, and the tax ledger
+reconciles to the General Ledger at exactly zero variance for both VAT and
+withholding.
+
+**Status.** **M5 — the engine exists, is exercised by every tax-bearing document
+and is guarded. It is NOT certified**, and the Compliance module still cannot be
+completed, because the filing artifacts (Delivery Plan Phase 5.8) do not exist
+and nothing has ever been filed from PXL. A working calculator is not a filing
+capability.
 
 ---
 
@@ -1398,7 +1442,8 @@ COMPLIANCE
    → Compliance Profile (decides what applies) · Tax Codes · ATC Codes
    → Number Series Engine (CAS numbering and ATP evidence)
    → Audit Engine (the CAS audit trail)
-   → TAX ENGINE (DOES NOT EXIST — the binding constraint on this module)
+   → Tax Engine (EXISTS since PAD-001; the binding constraint is now the
+     filing artifacts, not the calculator)
    (depended on by: nothing — Compliance is a terminal consumer)
 
 REPORTS
@@ -1423,7 +1468,7 @@ Everything else can proceed in parallel. These four cannot be worked around:
 | # | Constraint | What it blocks |
 | --- | --- | --- |
 | 1 | ~~Receiving increases stock without a journal~~ **CLOSED 2026-08-02 (PXL-AUD-073)** | Inventory now reconciles to its control account at ₱0.00. Posting Engine P6 is unblocked on this constraint; three-way match, over-receipt control and Cash Sale posting remain. |
-| 2 | **No Tax Engine** | Compliance module completion → statutory return generation → seven-way tax-rule maintenance risk |
+| 2 | ~~No Tax Engine~~ **CLOSED 2026-08-03 (PAD-001)** | One calculator, eleven callers migrated. The eleven-way rule-maintenance risk is gone. Compliance completion is now blocked by the filing artifacts alone; percentage tax remains uncalculated. |
 | 3 | **No backup or restore evidence** | Every module's production readiness, including Setup & Master Data, which is otherwise ready to certify |
 | 4 | ~~No opening balances~~ **CLOSED LOCALLY 2026-08-02 (PAD-002)** | Governed cut-over exists; real-company/hosted onboarding evidence remains required before pilot. |
 
@@ -1467,7 +1512,7 @@ of its parts.
 | **Sales & Receivables** | **M4 — PARTIAL WORKFLOW** | Several posting lifecycles work; conversion, returns-to-stock, source review beyond Sales Invoice, attachments and module-wide reconciliation remain open. |
 | **Purchasing & Payables** | **M4 — PARTIAL WORKFLOW** | Core purchase/payable transactions work, but Receiving Report accounting, three-way match and returns remain open. |
 | **Inventory** | **M4 — PARTIAL WORKFLOW** | Operational stock workflows work in part; Goods Issue is deferred and valuation does not reconcile to the control account. |
-| **Compliance** | **M4 — PARTIAL WORKFLOW** | Posted-data reviews and books work in part; the Tax Engine is absent and persisted statutory artifacts are mainly deferred. |
+| **Compliance** | **M4 — PARTIAL WORKFLOW** | Posted-data reviews and books work in part; the Tax Engine now exists, but persisted statutory artifacts are still mainly deferred. |
 | **Reports** | **M4 — PARTIAL WORKFLOW** | Primary statements render, but critical reconciliation, statement structure use, dimensional management reports and fixed-asset content remain open. |
 | **Dashboard** *(Reporting Surface)* | **M4 — PARTIAL WORKFLOW** | Live setup/master/tax-calendar monitoring works; KPI, roll-up, range and export behavior do not. |
 | **Banking & Treasury** | **M3 — UI SKELETON** | Navigable pages exist, but its governed tables are empty and no canonical workflow has run. |
@@ -1556,9 +1601,9 @@ change that decision.
 | Scope | Status | The specific blocker |
 | --- | --- | --- |
 | Setup & Master Data (module) | **Blocked** | Historical certification decision; recoverability is demonstrated but not operated, browser evidence is absent, and no re-run has changed the decision. **No defects.** |
-| Compliance and Tax (module) | **Blocked** | Its certification phase has not been executed. Cannot complete without a Tax Engine. |
+| Compliance and Tax (module) | **Blocked** | Its certification phase has not been executed. The Tax Engine prerequisite is met; the filing artifacts are not. |
 | Posting Engine | **Blocked** | Historical certification decision remains below P6. Receiving now posts through the sealed doorway and reconciles locally, but the full consumer/recomputation evidence gate has not been re-run. |
-| Tax Engine | **ABSENT — M0 CONCEPT** | No accepted architecture or implementation exists. It requires a Product Architecture Decision before any lifecycle can begin. |
+| Tax Engine | **M5 IMPLEMENTED — not certified** | PAD-001 decided 2026-08-03: one Accounting-owned calculator, `fn_calculate_tax`. VAT and ATC withholding only; percentage tax remains uncalculated. |
 
 > **A caution about the word "Blocked".** In the certification matrix, the Tax
 > Engine reads "Blocked", which naturally implies a component that exists and is
@@ -1589,7 +1634,7 @@ Accounts.
 | Inventory costing programme (layers, FIFO, moving average) | **DESIGN ONLY** | **Unauthorised.** |
 | Posting Engine phases beyond current enforcement | **DEFERRED** | **Paused.** |
 | Chart of Accounts consumer migration | **CURRENT BUT PARTIAL** | In progress. |
-| Tax Engine | **FUTURE ROADMAP** | Architecturally required/proposed; no accepted architecture or lifecycle. |
+| Tax Engine | **CURRENT PRODUCT** | Implemented 2026-08-03 under PAD-001 as one hidden calculator; not certified. |
 | Multi-currency · Budgeting · Notifications | **FUTURE ROADMAP** | No complete implementation; Budgeting and Notifications have no schema. |
 | **Payroll** | **OUT OF CURRENT SCOPE** | **Future separate product. Not a PXL module. Must not appear in any PXL completion metric.** |
 
@@ -1718,7 +1763,7 @@ was wrong.**
 | **Inventory Module** | *(never "Inventory Engine")* | Operational stock. |
 | **Inventory Accounting Engine** | IA-5 / ECC chronology foundation | Dormant costing foundation. **Never abbreviate to "Inventory".** |
 | **Banking & Treasury** | Bank · Banking · Cash Management | Canonical module name. “Bank Accounts” remains a Master Data capability. |
-| **Compliance** | Tax Module | User-facing reviews, books, workpapers and filing surfaces; not the absent Tax Engine. |
+| **Compliance** | Tax Module | User-facing reviews, books, workpapers and filing surfaces; not the Tax Engine itself, which is hidden infrastructure. |
 | **Posting Engine** | Posting pipeline | Canonical shared-engine name. |
 | **Accounting Kernel / Kernel Totality Guard** | Kernel | A hidden component inside the Posting Engine, never a peer engine or module. |
 
@@ -1830,9 +1875,10 @@ this document wins and the roadmap must be corrected.
    │  STAGE 5 — FILE WITH CONFIDENCE              ○ blocked       │
    └──────────────────────────────────────────────────────────────┘
       Every BIR obligation produced from posted data.
-      NEEDS **build the Tax Engine** · statutory return generation ·
-            working papers · certificate registers · income tax ·
-            complete CAS export artifacts
+      NEEDS statutory return generation · working papers ·
+            certificate registers · income tax · percentage-tax
+            calculation · complete CAS export artifacts
+            (the Tax Engine calculator itself now exists)
       NOTE  the review and reconciliation surfaces already work at
             zero variance — this stage builds the *filing* half
                               ↓
@@ -1864,9 +1910,11 @@ opening settlement through normal Receipts and Payment Vouchers. It still cannot
 support a pilot claim until hosted deployment, invite delivery, real cut-over,
 browser/UAT and operated recovery are evidenced.
 
-**Stage 5 has a hard prerequisite that is not scheduled.** Compliance cannot be
-completed without a Tax Engine, and the Tax Engine has no owner and no start date.
-Every month it waits, the seven duplicated tax calculators accumulate more risk.
+**Stage 5's calculator prerequisite is met; its filing prerequisite is not.**
+The Tax Engine shipped on 2026-08-03 (PAD-001), so the eleven duplicated
+calculators no longer accumulate risk. What Compliance still cannot do is
+produce a statutory artifact: every working paper, return generator and
+certificate register is empty, and nothing has ever been filed.
 
 **Stages are not strictly sequential.** Stage 4 (cash and assets) is independent of
 Stage 3 (inventory) and can run in parallel. Stage 6 depends on Stages 1, 3, and 4
@@ -1919,7 +1967,7 @@ product module 8. That is an evidence boundary, not a second product taxonomy.
 | 16 | Document Conversion | Not Started | No |
 | 17 | Currency | **Deferred** | Only its currency list |
 | 18 | Backup and Recovery | Not Started | No |
-| 19 | **Tax Engine** | 🔴 **DOES NOT EXIST** | No |
+| 19 | **Tax Engine** | 🟡 **Implemented, not certified** | No |
 
 ## 10.3 Repository inventory
 
@@ -2074,8 +2122,9 @@ The three questions a governance reader needs answered directly.
    structured in §2 — with Assets dissolved, Administration & Security
    recognised as a real (unbuilt) module, and Dashboard explicitly not counted
    as a business or certification module.
-3. **Nineteen engines**, four certified, one non-existent — with the Accounting
-   Kernel recorded as a *component* of the Posting Engine, not a peer.
+3. **Nineteen engines**, four certified, none non-existent since PAD-001 — with
+   the Accounting Kernel recorded as a *component* of the Posting Engine, not a
+   peer.
 4. **The canonical naming record** in §8.6 governs every future document, menu
    label, and status report.
 5. **The M0–M9 maturity ladder** in §6.1 is the only vocabulary for
@@ -2094,7 +2143,7 @@ The three questions a governance reader needs answered directly.
 | Cash Sale versus Official Receipt | **Distinct concepts.** Cash Sale is the immediate-settlement sales transaction; Official Receipt is the customer collection document. Neither is an alias of the other. |
 | Product-level production readiness | **M9 plus the universal Product Definition of Done in the subordinate roadmap.** Certification alone is insufficient; hosted parity, backup/restore, monitoring/support, security, UAT and release evidence are mandatory. |
 | Accounting Kernel status | A hidden Totality Guard component inside the Posting Engine, never a peer engine or module. |
-| Tax Engine current state | Architecturally required/proposed and **absent at M0**. Current tax behavior is distributed; no engine lifecycle exists until PAD-001 is decided. |
+| Tax Engine current state | **Implemented at M5** under PAD-001 (2026-08-03). Tax calculation is centralised in `fn_calculate_tax`; percentage tax is out of scope until a document calls it. |
 | Payroll | Future separate product, outside current PXL ERP scope and metrics. |
 
 ### 11.3.2 Outstanding Product Architecture Decisions register
@@ -2105,7 +2154,7 @@ unresolved decision; unrelated governed work may continue.
 
 | Decision ID | Question | Why it matters | Available options | Current evidence | Required owner | Required decision milestone | Consequence of deferral | Implementation stop? |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| **PAD-001** | Who owns the Tax Engine, what is its accepted scope, and when does it start? | Compliance and consistent PH tax calculation depend on it. | Product/Accounting-owned; Compliance-owned; joint authority with one accountable owner | No engine exists; seven save-layer calculators duplicate VAT behavior; tax ledger-to-GL boundary is proven. | Product Owner + Chief Accounting Architect | Before Delivery Plan Phase 4; scope decision needed before any Tax Engine design | Rule drift, incomplete filing capability, repeated changes | **Yes** for Tax Engine implementation and Compliance M5+ |
+| **PAD-001 — DECIDED 2026-08-03** | The Tax Engine is Accounting-owned and is exactly one calculator. | Eleven routines each held their own copy of the Philippine tax rules, and only one of them handled VAT-inclusive pricing. | **Selected:** `fn_calculate_tax(context) → SETOF tax_component`, hidden behind the document-save layer; it calculates and returns components, it never posts and never persists. VAT (both price bases) and withholding by ATC (EWT/FWT) are in scope; **percentage tax is explicitly out** until a document calls it. | Migration `20260803000001`; guard `117` (31 assertions on a self-provisioned company); `090` re-scoped to assert one calculator and zero in the posting layer, its output assertions unchanged. | Product Owner + Chief Accounting Architect | Decided during Delivery Plan Phase 4 | Percentage-tax companies still have no calculated PT; filing (Phase 5.8) still unbuilt. | **Resolved** for the calculator. Compliance M5+ still gated on the filing artifacts, not on this. |
 | **PAD-002 — DECIDED 2026-08-02** | PXL supports existing businesses through one governed PHP-only cut-over batch. | Opening GL, AR/AP, inventory and bank positions must reconcile by construction; fixed assets remain outside the current cut-over. | **Selected:** full governed opening-balance workflow with preview/save/post/reverse, one balanced Kernel journal, explicit subledger detail and ordinary AR/AP settlement. | Migration `20260802000002`; UI route; fresh guards 113 and 116 prove cut-over, controls, settlement, reversal and IA-5 dormancy. | Product Owner + CPA Owner | Decided during Delivery Plan Phase 3 | Hosted/real-company/browser/UAT proof remains required before pilot. | **Resolved** for implementation; operational evidence still gates pilot readiness. |
 | **PAD-003 — DECIDED 2026-08-02** | Administration & Security is a restricted in-product module backed by the existing engines. | Users, memberships, roles and branch scope require a company-scoped product surface without exposing service credentials. | **Selected:** four restricted screens plus a server-side invite boundary; Permissions/Audit remain engine-owned. | Migration `20260802000004`, four routes, `admin-invite` Edge Function and guard 115; owner protections are database-enforced. | Product Owner + Security Owner | Decided during Delivery Plan Phase 3 | Hosted invite/browser/UAT and operating access review remain required. | **Resolved** for local implementation; no hosted or readiness claim. |
 | **PAD-004** | Which module owns Bank Reconciliation and its adjustment boundary? | The workflow crosses Treasury, Accounting and the sealed posting perimeter. | Banking-owned with Accounting engine controls; Accounting-owned; split with an explicit hand-off | Banking is M3; `bank_recon_items` is a recorded UI-write exception. | Product Owner + CPA Owner | Before any Bank Reconciliation implementation (Delivery Plan Phase 8, v2) | One-sided adjustments or ambiguous responsibility | **Yes** for Bank Reconciliation implementation |

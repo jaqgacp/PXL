@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { normalizePhTin } from '@/lib/philippines'
+import { loadVatCodesAsOf } from '@/lib/vatCodes'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -97,18 +98,18 @@ export default function CustomerReturnsPage() {
 
   useEffect(() => {
     if (!companyId) return
-    Promise.all([
-      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('is_active', true).order('vat_code'),
-      supabase.from('ref_reason_codes').select('id,code,description').in('applies_to', ['credit_memo','both']).order('code'),
-    ]).then(([vatR, rcR]) => {
-      setVatCodes((vatR.data || []).map((v: Record<string, unknown>) => ({
-        id: v.id as string, vat_code: v.vat_code as string, description: v.description as string,
-        vat_classification: v.vat_classification as string,
-        rate: ((v.tax_codes as Record<string, unknown>)?.rate as number) || 0,
-      })))
-      setReasonCodes(rcR.data as ReasonCode[] || [])
-    })
+    supabase.from('ref_reason_codes').select('id,code,description')
+      .in('applies_to', ['credit_memo','both']).order('code')
+      .then(({ data }) => setReasonCodes(data as ReasonCode[] || []))
   }, [companyId])
+
+  // A customer return raises a credit memo, so it carries OUTPUT VAT; this
+  // picker previously offered input-VAT codes too. VAT codes are resolved as of
+  // the credit memo date, not as of today.
+  useEffect(() => {
+    if (!companyId) return
+    loadVatCodesAsOf(companyId, fDate, 'output_vat').then(setVatCodes)
+  }, [companyId, fDate])
 
   const searchDRs = async (q: string) => {
     if (!companyId || q.length < 2) { setDRs([]); return }

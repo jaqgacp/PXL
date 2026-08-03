@@ -2319,3 +2319,63 @@ cannot be reversed after operational journals exist. `inventory_events` remains
 zero.
 
 Together tests `113`–`116` form the Phase 3 focused lane: 4 files / 74 assertions.
+
+---
+
+## Delivery Plan Phase 4 — Tax Engine calculator
+
+Status: **PASSING 2026-08-03.**
+`supabase/tests/117_tax_engine_calculator_test.sql` proves `fn_calculate_tax`,
+the single Philippine tax calculator introduced by PAD-001, across 31 assertions
+on a company it provisions itself. It covers VAT exclusive and inclusive pricing
+(including the residual rule that makes net + VAT reconstitute a quoted price to
+the centavo), zero-rated and exempt classification, an absent VAT code, the
+rounding cases the seven former calculators had to agree on, expanded and final
+withholding resolved by ATC, withholding computed on the VAT-exclusive base, the
+governed effective-date window across a deprecate-and-succeed rate change, and
+four fail-closed refusals of a malformed tax context.
+
+Two structural companions carry the rest of the claim. Test `090` asserts that
+exactly one function in the schema performs tax arithmetic, that no posting
+writer performs any, and — through assertions that did **not** change across the
+migration — that every migrated caller still produces identical stored tax,
+posted GL tax lines, tax-ledger rows and GL reconciliations. Test `100`
+assertion 6 pins Cash Sale to the engine while keeping its CWT validation.
+
+Percentage tax is **not** asserted anywhere, because nothing calculates it and
+no document reaches it. It is recorded in the Product Backlog, not claimed here.
+
+## Delivery Plan Phase 4 — effective-dated VAT resolution
+
+Status: **PASSING 2026-08-03.**
+`supabase/tests/118_vat_effective_date_resolution_test.sql` closes the half of
+Phase 4 the calculator left open. Withholding already resolved the ATC version in
+force on the document date; VAT resolved `WHERE vc.id = <id>` and nothing else, so
+a superseded, deprecated, deactivated or not-yet-effective VAT version still
+computed tax, and a code that could not be resolved silently became `exempt at 0%`.
+
+The file provisions its own VAT and non-VAT companies, performs a governed
+deprecate-and-succeed VAT rate change (12% → 14%) on the real masters, and asserts
+across 25 assertions that: the resolver `fn_resolve_vat_code` is the one place a
+VAT code's validity is decided and both the engine and the trigger backstop ask it;
+the superseded version still computes 12% on a document inside its window while the
+successor computes 14% on a document inside its own; each version is refused
+outside its window with a message naming the date; the engine returns the exact
+tax-code version, rate and classification it resolved; deactivated and deprecated
+codes are refused; a sale cannot use an input-VAT code and a purchase cannot use an
+output-VAT code; a non-VAT company cannot use a VAT-bearing rate but may still use
+a zero-rate code.
+
+Section D asserts the rule is enforced by the **database**, not only by the save
+RPCs: RLS lets a company member write document lines directly, so the line trigger
+refuses a superseded code using the *invoice's* date rather than today, accepts the
+same code on an invoice dated inside its window, and the header trigger re-validates
+every line against the document date. Section E asserts the picker
+`fn_vat_codes_asof` returns exactly what the resolver accepts, so the UI cannot
+offer a code the database will refuse.
+
+Assertion 25 deliberately pins an **open gap**: `companies.tax_registration` is a
+single scalar with no history, so `fn_company_tax_registration_asof` accepts a date
+it cannot yet honour. Every tax-profile read in VAT validation goes through that one
+seam, which is what makes the future fix a one-function change; the fix itself is
+recorded in the Product Backlog.

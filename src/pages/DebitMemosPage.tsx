@@ -6,6 +6,7 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { composePhTin } from '@/lib/philippines'
+import { loadVatCodesAsOf } from '@/lib/vatCodes'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────
@@ -91,29 +92,32 @@ export default function DebitMemosPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
-      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('customers').select('id,registered_name,tin,tin_branch_code')
         .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('vat_codes').select('id,vat_code,vat_classification,tax_codes(rate)')
-        .eq('transaction_type', 'output_vat').eq('is_active', true),
       supabase.from('ref_reason_codes').select('id,code,description')
         .in('applies_to', ['debit_memo', 'both']).eq('is_active', true).order('sort_order'),
       supabase.from('branches').select('id,branch_code,branch_name')
         .eq('company_id', companyId).eq('is_active', true),
       supabase.from('chart_of_accounts').select('id,account_code,account_name')
         .eq('company_id', companyId).eq('is_postable', true).eq('is_active', true).order('account_code'),
-    ]).then(([{ data: company }, { data: cos }, { data: vcs }, { data: rcs }, { data: brs }, { data: coa }]) => {
-      const taxRegistration = company?.tax_registration || 'vat'
+    ]).then(([{ data: cos }, { data: rcs }, { data: brs }, { data: coa }]) => {
       setCustomers(cos as CustomerRef[] || [])
-      setVatCodes((vcs || []).map(v => ({
-        id: v.id, vat_code: v.vat_code, vat_classification: v.vat_classification as VATRef['vat_classification'],
-        rate: (Array.isArray(v.tax_codes) ? v.tax_codes[0]?.rate : (v.tax_codes as { rate?: number } | null)?.rate) ?? 0,
-      })).filter(v => taxRegistration === 'vat' || v.rate === 0))
       setReasonCodes(rcs as ReasonCode[] || [])
       setBranches(brs as Branch[] || [])
       setAccounts(coa as COAAccount[] || [])
     })
   }, [companyId])
+
+  // VAT codes are resolved as of the debit memo date, not as of today.
+  useEffect(() => {
+    if (!companyId) return
+    loadVatCodesAsOf(companyId, fDate, 'output_vat').then(codes =>
+      setVatCodes(codes.map(v => ({
+        id: v.id, vat_code: v.vat_code,
+        vat_classification: v.vat_classification as VATRef['vat_classification'],
+        rate: v.rate,
+      }))))
+  }, [companyId, fDate])
 
   const loadList = useCallback(async () => {
     if (!companyId) return

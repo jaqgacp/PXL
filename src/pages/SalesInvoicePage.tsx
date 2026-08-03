@@ -9,6 +9,7 @@ import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import TaxImpactPanel from '@/components/document/TaxImpactPanel'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { composePhTin, formatPhTinInput, getPhTinBranch, phTinDigits } from '@/lib/philippines'
+import { loadVatCodesAsOf } from '@/lib/vatCodes'
 import {
   TransactionPageHeader,
   TransactionTabsBar,
@@ -870,7 +871,6 @@ export default function SalesInvoicePage() {
         { data: company },
         { data: cos },
         { data: itms },
-        { data: vcs },
         { data: atcs },
         { data: brs },
         { data: deps },
@@ -890,9 +890,6 @@ export default function SalesInvoicePage() {
           supabase.from('items')
             .select('id,item_code,description,uom_id,units_of_measure(uom_code),standard_selling_price,standard_cost,default_sales_vat_id,sales_account_id,item_type,inventory_account_id,cogs_account_id,costing_method')
             .eq('company_id', companyId).eq('is_active', true).order('item_code'),
-          supabase.from('vat_codes')
-            .select('id,vat_code,description,vat_classification,tax_codes(rate)')
-            .eq('transaction_type', 'output_vat').eq('is_active', true),
           supabase.from('atc_codes')
             .select('id,code,description,rate')
             .eq('is_active', true).eq('tax_category', 'ewt').order('code'),
@@ -920,12 +917,6 @@ export default function SalesInvoicePage() {
           : (i.units_of_measure as { uom_code?: string } | null)?.uom_code) ?? '',
       })) as unknown as ItemRef[])
 
-      const companyTaxRegistration = ((company?.tax_registration as TaxRegistration) || 'vat')
-      setVatCodes((vcs || []).map(v => ({
-        id: v.id, vat_code: v.vat_code, description: v.description,
-        vat_classification: v.vat_classification,
-        rate: (Array.isArray(v.tax_codes) ? v.tax_codes[0]?.rate : (v.tax_codes as { rate?: number } | null)?.rate) ?? 0,
-      })).filter(v => companyTaxRegistration === 'vat' || v.rate === 0) as VATRef[])
       setCwtAtcCodes(atcs as ATCCode[] || [])
 
       setBranches(brs as Branch[] || [])
@@ -941,6 +932,18 @@ export default function SalesInvoicePage() {
     }
     load()
   }, [companyId])
+
+  // VAT codes are resolved as of the invoice date, not as of today: a VAT code
+  // is a version with an effective window, and an invoice dated before a rate
+  // change must still see — and keep — the version that governed it.
+  useEffect(() => {
+    if (!companyId) return
+    loadVatCodesAsOf(companyId, fDate, 'output_vat').then(codes =>
+      setVatCodes(codes.map(v => ({
+        id: v.id, vat_code: v.vat_code, description: v.description,
+        vat_classification: v.vat_classification, rate: v.rate,
+      })) as VATRef[]))
+  }, [companyId, fDate])
 
   // Load list
   const loadList = useCallback(async () => {

@@ -4,33 +4,37 @@
 -- decision 2026-07-26)
 --
 -- WHAT THIS CERTIFIES
---   The ownership boundary that already exists between tax calculation, tax
---   account resolution, tax-line posting, and tax-ledger persistence:
---     • tax POLICY + CALCULATION  — owned by the document-save layer today
+--   The ownership boundary between tax calculation, tax account resolution,
+--   tax-line posting, and tax-ledger persistence:
+--     • tax POLICY + CALCULATION  — owned by the Tax Engine, fn_calculate_tax
 --     • tax ACCOUNT RESOLUTION    — owned by the certified COA Resolver
 --     • tax LINE CONSTRUCTION     — owned by the Posting Engine
 --     • tax DETAIL + REVERSAL     — owned by the Tax Ledger layer
 --
--- WHAT THIS EXPLICITLY DOES **NOT** CERTIFY OR CLAIM
---   • No formal Tax Engine exists. This test proves its ABSENCE (assertion 16).
---   • No TaxComponent object, type, or contract exists in the live system, and
---     none is invented here (assertion 49).
---   • Philippine tax function completeness is NOT claimed.
---   • The seven duplicated document-save tax calculators are NOT removed; they
---     are censused as registered technical debt owned by the future Tax Engine
---     program (assertion 8).
---   • `fn_save_cash_sale` still co-locates document tax calculation with
---     posting. It is certified as the single documented exception and a
---     registered Tax Engine migration candidate (assertions 5, 7, 26-27).
+-- UPDATED 2026-08-03 BY DELIVERY PLAN PHASE 4 (PAD-001)
+--   This file previously certified the ENGINE'S ABSENCE and censused eleven
+--   duplicated calculators as registered technical debt. The engine now exists,
+--   so assertions 4-8, 16, 39, 44 and 48-49 were inverted: they assert that
+--   exactly one function in the schema turns a rate into a tax amount, and that
+--   nothing in the posting layer does.
 --
--- This is a certification phase. It ships NO migration and changes NO
--- production behavior; every assertion reads the live catalog or exercises
--- existing writers unchanged.
+--   The numbers did not move. Assertions 17-43, 45 and 46 — every stored tax
+--   fact, every posted GL tax line, every tax-ledger row, both GL
+--   reconciliations, reversal provenance under a changed rate, and the
+--   100.05-at-12% rounding agreement across all five reachable document
+--   calculators — passed UNCHANGED across the migration. That is the Phase 4
+--   "every existing caller produces identical tax output" proof.
+--
+-- WHAT THIS STILL EXPLICITLY DOES NOT CLAIM
+--   • Philippine tax function completeness is NOT claimed.
+--   • Percentage tax is NOT calculated anywhere, by the engine or otherwise.
+--     No document reaches it yet. See the Product Backlog.
+--   • Filing capability is NOT claimed; that is Delivery Plan Phase 5.8.
 -- ══════════════════════════════════════════════════════════════════════════════
 BEGIN;
 CREATE EXTENSION IF NOT EXISTS pgtap;
 
-SELECT plan(49);
+SELECT plan(51);
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- SECTION A — Tax-aware posting-writer census (complete and pinned)
@@ -111,23 +115,44 @@ SELECT is(
 -- arithmetic lands entirely outside the posting layer save for the one
 -- documented co-located writer.
 -- ══════════════════════════════════════════════════════════════════════════════
-SELECT set_eq(
-  $$SELECT proname FROM v_tax_writer
-     WHERE prosrc ~ '\mvat_codes\M' OR prosrc ~ '\mtax_codes\M'$$,
-  $$VALUES ('fn_save_cash_sale')$$,
-  'only the documented co-located writer reads the VAT rate source (vat_codes/tax_codes)'); -- 4
+SELECT is(
+  (SELECT count(*)::int FROM v_tax_writer
+    WHERE prosrc ~ '\mvat_codes\M' OR prosrc ~ '\mtax_codes\M'),
+  0, 'no posting writer reads the VAT rate source (vat_codes/tax_codes) at all');  -- 4
 
-SELECT set_eq(
-  $$SELECT proname FROM v_tax_writer
-     WHERE prosrc ~ 'rate\s*[*/]' OR prosrc ~ '[*/]\s*[A-Za-z_.]*rate'$$,
-  $$VALUES ('fn_save_cash_sale')$$,
-  'no posting writer uses a tax rate in multiplication or division, save the documented exception'); -- 5
+SELECT is(
+  (SELECT count(*)::int FROM v_tax_writer
+    WHERE prosrc ~ 'rate\s*[*/]' OR prosrc ~ '[*/]\s*[A-Za-z_.]*rate'),
+  0, 'no posting writer uses a tax rate in multiplication or division — no exceptions remain'); -- 5
 
--- Schema-wide census of tax-rate arithmetic. Every location is named; none is
--- discovered inside the posting layer beyond the single co-located writer.
+-- Schema-wide census of tax-rate arithmetic. This is the assertion the whole
+-- phase exists for: ONE function in the entire schema turns a rate into a tax
+-- amount. Before PAD-001 this list had eleven entries.
 SELECT set_eq(
   $$SELECT p.proname::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE n.nspname = 'public' AND p.prokind = 'f' AND p.prosrc ~ 'rate\s*/\s*100'$$,
+  $$VALUES ('fn_calculate_tax')$$,
+  'the schema-wide tax-arithmetic census is exactly one function: the Tax Engine'); -- 6
+
+SELECT is(
+  (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.prokind = 'f' AND p.prosrc ~ 'rate\s*/\s*100'
+      AND p.proname IN (SELECT proname FROM v_gl_writer)),
+  0, 'no tax calculator writes the GL — calculation and posting are fully separated'); -- 7
+
+-- The eleven duplicated calculators are gone. Every one of them now asks the
+-- engine; none of them reads a VAT rate.
+SELECT is(
+  (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.prokind = 'f'
+      AND p.prosrc ~ 'vat_codes' AND p.prosrc ~ 'rate\s*/\s*100'
+      AND p.proname <> 'fn_calculate_tax'),
+  0, 'no duplicated document-save VAT calculator survives');                       -- 8
+
+SELECT set_eq(
+  $$SELECT p.proname::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'public' AND p.prokind = 'f'
+       AND p.prosrc ~ '\mfn_calculate_tax\M' AND p.proname <> 'fn_calculate_tax'$$,
   $$VALUES
      ('fn_save_sales_invoice_aud053_core'),
      ('fn_save_vendor_bill_core_20260718'),
@@ -140,30 +165,7 @@ SELECT set_eq(
      ('fn_apply_cash_purchase_line_ewt_profile'),
      ('fn_validate_payment_voucher_line_ewt'),
      ('fn_validate_receipt_line_cwt')$$,
-  'the schema-wide tax-arithmetic census is exactly 11 functions, all named');     -- 6
-
-SELECT set_eq(
-  $$SELECT p.proname::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-     WHERE n.nspname = 'public' AND p.prokind = 'f' AND p.prosrc ~ 'rate\s*/\s*100'
-       AND p.proname IN (SELECT proname FROM v_gl_writer)$$,
-  $$VALUES ('fn_save_cash_sale')$$,
-  'exactly one tax calculator writes the GL: the registered fn_save_cash_sale migration candidate'); -- 7
-
--- The seven duplicated document-save calculators — registered technical debt
--- owned by the future Tax Engine program, NOT removed by this phase.
-SELECT set_eq(
-  $$SELECT p.proname::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-     WHERE n.nspname = 'public' AND p.prokind = 'f'
-       AND p.prosrc ~ 'vat_codes' AND p.prosrc ~ 'rate\s*/\s*100'$$,
-  $$VALUES
-     ('fn_save_sales_invoice_aud053_core'),
-     ('fn_save_vendor_bill_core_20260718'),
-     ('fn_save_cash_purchase_core_20260718'),
-     ('fn_save_credit_memo'),
-     ('fn_save_debit_memo'),
-     ('fn_save_vendor_credit'),
-     ('fn_save_cash_sale')$$,
-  'the seven duplicated document-save VAT calculators are exactly the seven censused'); -- 8
+  'all eleven former calculators now consume the engine, and they are exactly the eleven'); -- 8a
 
 -- ── Tax ACCOUNT resolution is owned by the certified COA Resolver ─────────────
 SELECT is(
@@ -182,18 +184,19 @@ SELECT is(
       AND prosrc !~ 'fn_resolve_posting_account'),
   0, 'every posting writer naming a tax account key resolves it through the certified resolver'); -- 11
 
--- The five ATC-rate readers stamp provenance only: the rate is read and handed
+-- The ATC-rate readers stamp provenance only: the rate is read and handed
 -- straight to the tax-detail row, never multiplied, divided, or compared.
+-- fn_save_cash_sale left this list under PAD-001 — it no longer reads the ATC
+-- master at all, it asks the engine.
 SELECT set_eq(
   $$SELECT proname FROM v_tax_writer WHERE prosrc ~ '\matc_codes\M'$$,
   $$VALUES ('fn_post_vendor_bill'),('fn_post_cash_purchase_source_locked_impl'),
-           ('fn_post_payment_voucher'),('fn_post_receipt'),('fn_post_check_voucher'),
-           ('fn_save_cash_sale')$$,
-  'exactly six posting writers read atc_codes, and five of them read it for provenance only'); -- 12
+           ('fn_post_payment_voucher'),('fn_post_receipt'),('fn_post_check_voucher')$$,
+  'exactly five posting writers read atc_codes, and all five read it for provenance only'); -- 12
 
 SELECT is(
   (SELECT count(*)::int FROM v_tax_writer
-    WHERE prosrc ~ '\matc_codes\M' AND proname <> 'fn_save_cash_sale'
+    WHERE prosrc ~ '\matc_codes\M'
       AND (prosrc ~ 'rate\s*[*/]' OR prosrc ~ '[*/]\s*[A-Za-z_.]*rate'
         OR prosrc ~ 'rate\s*[<>=]' )),
   0, 'no ATC rate read by a posting writer feeds arithmetic or a policy comparison'); -- 13
@@ -217,12 +220,13 @@ SELECT set_eq(
            ('fn_bounce_receipt'),('fn_cancel_payment_voucher'),('fn_cancel_check_voucher')$$,
   'tax-detail reversal has one implementation, consumed by exactly the five correction writers'); -- 15
 
--- ── The absence of a Tax Engine is asserted, not assumed ──────────────────────
-SELECT is(
-  (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public'
-      AND p.proname ~* '(tax_engine|tax_component|compute_tax|calculate_tax|resolve_tax_rate)'),
-  0, 'no Tax Engine, tax-component builder, or central tax calculator exists in the live catalog'); -- 16
+-- ── The Tax Engine exists, and there is exactly one of it ────────────────────
+SELECT set_eq(
+  $$SELECT p.proname::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+     WHERE n.nspname = 'public'
+       AND p.proname ~* '(tax_engine|tax_component|compute_tax|calculate_tax|resolve_tax_rate)'$$,
+  $$VALUES ('fn_calculate_tax')$$,
+  'the live catalog holds exactly one central tax calculator, and it is the Tax Engine'); -- 16
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- Fixture — one VAT + EWT registered company exercising every supported
@@ -771,18 +775,20 @@ SELECT is(
   240.00::numeric, 'the reversal journal debits Output VAT exactly what the original credited'); -- 38
 
 -- ══════════════════════════════════════════════════════════════════════════════
--- SECTION F — Rounding consistency across the implemented tax calculators
+-- SECTION F — Rounding consistency across the reachable document calculators
 --
--- Structural: all seven use the identical per-line ROUND(base * rate / 100, 2).
--- Behavioural: the same 100.05 base at 12% must round to 12.01 in every
--- calculator that a document can reach.
+-- Structural: rounding now has exactly ONE implementation, so consistency is
+-- guaranteed by construction rather than by five copies happening to agree.
+-- Behavioural: the same 100.05 base at 12% must still round to 12.01 in every
+-- calculator that a document can reach. These figures are UNCHANGED from
+-- before PAD-001, which is the point.
 -- ══════════════════════════════════════════════════════════════════════════════
 SELECT is(
   (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname='public' AND p.prokind='f'
       AND p.prosrc ~ 'vat_codes' AND p.prosrc ~ 'rate\s*/\s*100'
       AND p.prosrc !~ 'ROUND\([^;]*rate\s*/\s*100,\s*2\)'),
-  0, 'every document-save VAT calculator rounds to 2 decimals at the line, with one idiom'); -- 39
+  0, 'the one VAT calculator rounds to 2 decimals at the line');                  -- 39
 
 -- Each calculator is invoked exactly once; the saved document id is captured
 -- first, then the persisted VAT is read back from the document it wrote.
@@ -894,15 +900,19 @@ SELECT results_eq(
   $$VALUES ('exclusive'::text, 10000.00::numeric, 1200.00::numeric, 11200.00::numeric)$$,
   'VAT-exclusive: 10,000 net grosses up to 11,200, posted unchanged');             -- 43
 
--- Documented limitation carried into the Tax Engine backlog: inclusive pricing
--- is implemented in exactly one of the seven calculators.
+-- The limitation this line used to record is closed. VAT-inclusive treatment
+-- lived in ONE of seven calculators, so six document types could not price
+-- tax-inclusively at all. It now lives in the engine, which every document
+-- type calls, so the capability is available product-wide from one place.
+-- The census no longer conjoins `vat_codes`: the engine reads the VAT master
+-- through fn_resolve_vat_code, which test 118 pins as the single resolver.
 SELECT set_eq(
   $$SELECT p.proname::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE n.nspname='public' AND p.prokind='f'
-       AND p.prosrc ~ 'vat_codes' AND p.prosrc ~ 'rate\s*/\s*100'
+       AND p.prosrc ~ 'rate\s*/\s*100'
        AND p.prosrc ~* 'inclusive'$$,
-  $$VALUES ('fn_save_sales_invoice_aud053_core')$$,
-  'VAT-inclusive treatment exists in exactly one of the seven calculators (registered debt)'); -- 44
+  $$VALUES ('fn_calculate_tax')$$,
+  'VAT-inclusive treatment lives in the engine, so every document type reaches it'); -- 44
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- SECTION H — Missing or invalid stored tax data still fails closed
@@ -932,10 +942,16 @@ SELECT is(
     WHERE reference_doc_type='SI' AND reference_doc_id=(SELECT id FROM t_ctx WHERE key='si_bad')),
   0, 'the rejected posting left no partial journal behind');                       -- 46
 
+-- Dated inside the WC140@2.00 effective window (Section E capped it at
+-- 2026-02-28). Before PAD-001 this probe was dated 2026-06-02 and still
+-- resolved a rate, because fn_save_cash_sale read the ATC master with no
+-- effective-date filter. It no longer does, so the probe now has to use a date
+-- on which the rate it names is actually in force — which is the fix, not a
+-- weakening: assertion 47a proves the out-of-window case is now refused.
 SELECT throws_like(
   $$SELECT fn_save_cash_sale(
       jsonb_build_object('company_id','0f400000-0000-0000-0000-0000000000b1',
-        'branch_id','0f400000-0000-0000-0000-0000000000b2','date','2026-06-02',
+        'branch_id','0f400000-0000-0000-0000-0000000000b2','date','2026-02-02',
         'customer_id','0f400000-0000-0000-0000-0000000000c1',
         'customer_name_snapshot','P4 Customer Inc',
         'customer_tin_snapshot','395-000-001-00000',
@@ -948,18 +964,38 @@ SELECT throws_like(
   '%does not match ATC rate%',
   'withholding that does not match the governed ATC rate is rejected — fail-closed'); -- 47
 
+-- The deliberate behaviour change PAD-001 shipped. A cash sale dated after
+-- WC140@2.00 was superseded may no longer withhold at that superseded version.
+-- Every other withholding path in PXL already refused this; cash sale did not.
+SELECT throws_like(
+  $$SELECT fn_save_cash_sale(
+      jsonb_build_object('company_id','0f400000-0000-0000-0000-0000000000b1',
+        'branch_id','0f400000-0000-0000-0000-0000000000b2','date','2026-06-02',
+        'customer_id','0f400000-0000-0000-0000-0000000000c1',
+        'customer_name_snapshot','P4 Customer Inc',
+        'customer_tin_snapshot','395-000-001-00000',
+        'bank_account_id','0f400000-0000-0000-0000-0000000000a1',
+        'cwt_atc_id',(SELECT id FROM atc_codes WHERE code='WC140' AND rate=2.00)),
+      jsonb_build_array(jsonb_build_object('description','Superseded ATC','quantity',1,
+        'unit_price',1000,'vat_code_id',(SELECT id FROM vat_codes WHERE vat_code='VAT-12'),
+        'revenue_account_id','0f400000-0000-0000-0000-0000000000a8')),
+      20)$$,
+  '%missing, inactive, or has no positive rate%',
+  'a cash sale can no longer withhold at an ATC version superseded before its date'); -- 47a
+
 -- ══════════════════════════════════════════════════════════════════════════════
--- SECTION I — No Tax Component contract is claimed or invented
+-- SECTION I — The Tax Component contract exists, and the posting layer is
+-- deliberately NOT one of its consumers
 -- ══════════════════════════════════════════════════════════════════════════════
 SELECT is(
   (SELECT count(*)::int FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
-    WHERE n.nspname='public' AND t.typname ~* '(tax_component|taxcomponent)'),
-  0, 'no TaxComponent composite type exists — the frozen contract is not simulated'); -- 48
+    WHERE n.nspname='public' AND t.typname = 'tax_component' AND t.typtype = 'c'),
+  1, 'the tax_component composite contract exists exactly once');                  -- 48
 
 SELECT is(
   (SELECT count(*)::int FROM v_tax_writer
     WHERE prosrc ~* 'tax_component'),
-  0, 'no posting writer consumes a tax-component object; the contract remains deferred to the Tax Engine'); -- 49
+  0, 'no posting writer consumes a tax component — posting still consumes stored facts only'); -- 49
 
 SELECT * FROM finish();
 ROLLBACK;

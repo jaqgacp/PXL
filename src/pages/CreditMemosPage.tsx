@@ -9,6 +9,7 @@ import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { TransactionWorkspace } from '@/components/document/TransactionWorkspace'
 import { SystemMetadataPanel, TransactionEmptyState } from '@/components/document/TransactionPrimitives'
 import { composePhTin } from '@/lib/philippines'
+import { loadVatCodesAsOf } from '@/lib/vatCodes'
 
 // ── Types ─────────────────────────────────────────────────────
 type CMStatus = 'draft' | 'approved' | 'applied' | 'cancelled'
@@ -103,26 +104,30 @@ export default function CreditMemosPage() {
   useEffect(() => {
     if (!companyId) return
     Promise.all([
-      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
       supabase.from('customers').select('id,registered_name,tin,tin_branch_code')
         .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('vat_codes').select('id,vat_code,vat_classification,tax_codes(rate)')
-        .eq('transaction_type', 'output_vat').eq('is_active', true),
       supabase.from('ref_reason_codes').select('id,code,description')
         .in('applies_to', ['credit_memo', 'both']).eq('is_active', true).order('sort_order'),
       supabase.from('branches').select('id,branch_code,branch_name')
         .eq('company_id', companyId).eq('is_active', true),
-    ]).then(([{ data: company }, { data: cos }, { data: vcs }, { data: rcs }, { data: brs }]) => {
-      const taxRegistration = company?.tax_registration || 'vat'
+    ]).then(([{ data: cos }, { data: rcs }, { data: brs }]) => {
       setCustomers(cos as CustomerRef[] || [])
-      setVatCodes((vcs || []).map(v => ({
-        id: v.id, vat_code: v.vat_code, vat_classification: v.vat_classification as VATRef['vat_classification'],
-        rate: (Array.isArray(v.tax_codes) ? v.tax_codes[0]?.rate : (v.tax_codes as { rate?: number } | null)?.rate) ?? 0,
-      })).filter(v => taxRegistration === 'vat' || v.rate === 0))
       setReasonCodes(rcs as ReasonCode[] || [])
       setBranches(brs as Branch[] || [])
     })
   }, [companyId])
+
+  // VAT codes are resolved as of the credit memo date, not as of today, so the
+  // picker offers exactly what the database will accept for this document.
+  useEffect(() => {
+    if (!companyId) return
+    loadVatCodesAsOf(companyId, fDate, 'output_vat').then(codes =>
+      setVatCodes(codes.map(v => ({
+        id: v.id, vat_code: v.vat_code,
+        vat_classification: v.vat_classification as VATRef['vat_classification'],
+        rate: v.rate,
+      }))))
+  }, [companyId, fDate])
 
   const loadList = useCallback(async () => {
     if (!companyId) return

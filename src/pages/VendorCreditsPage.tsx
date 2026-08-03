@@ -6,6 +6,7 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { normalizePhTin } from '@/lib/philippines'
+import { loadVatCodesAsOf } from '@/lib/vatCodes'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 type VCStatus = 'draft' | 'open' | 'applied' | 'cancelled'
@@ -89,18 +90,20 @@ export default function VendorCreditsPage() {
   useEffect(() => {
     if (!companyId) return
     supabase.from('suppliers').select('id,registered_name,tin').eq('company_id', companyId).eq('is_active', true).order('registered_name').then(({ data }) => setSuppliers(data as SupplierRef[] || []))
-    Promise.all([
-      supabase.from('companies').select('tax_registration').eq('id', companyId).single(),
-      supabase.from('vat_codes').select('id,vat_code,description,vat_classification,tax_codes(rate)').eq('transaction_type', 'input_vat').eq('is_active', true),
-    ]).then(([companyRes, vatRes]) => {
-      const taxRegistration = companyRes.data?.tax_registration || 'vat'
-      setVatCodes((vatRes.data || [])
-        .map((v: any) => ({ ...v, rate: v.tax_codes?.rate || 0 }))
-        .filter(v => taxRegistration === 'vat' || v.rate === 0))
-    })
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['expense','cost_of_goods']).eq('is_active', true).order('account_code').then(({ data }) => setExpenseAccounts(data as COARef[] || []))
     supabase.from('vendor_bills').select('id,bill_number,bill_date,total_amount').eq('company_id', companyId).eq('status', 'posted').order('bill_date', { ascending: false }).then(({ data }) => setVendorBills(data as VBRef[] || []))
   }, [companyId])
+
+  // VAT codes are resolved as of the credit date, not as of today.
+  useEffect(() => {
+    if (!companyId) return
+    loadVatCodesAsOf(companyId, editVC?.credit_date, 'input_vat').then(codes =>
+      setVatCodes(codes.map(v => ({
+        id: v.id, vat_code: v.vat_code, description: v.description,
+        vat_classification: v.vat_classification as VATRef['vat_classification'],
+        rate: v.rate,
+      }))))
+  }, [companyId, editVC?.credit_date])
 
   const selectSupplier = (id: string) => {
     const s = suppliers.find(x => x.id === id)

@@ -16679,6 +16679,7 @@ export type Database = {
       }
       fn_validate_company_vat_code: {
         Args: {
+          p_as_of?: string
           p_company_id: string
           p_context?: string
           p_transaction_type: string
@@ -16688,6 +16689,7 @@ export type Database = {
       }
       fn_validate_document_vat_registration: {
         Args: {
+          p_as_of?: string
           p_company_id: string
           p_context: string
           p_document_id: string
@@ -16787,6 +16789,24 @@ export type Database = {
       fn_validate_vendor_bill_vat_registration: {
         Args: { p_bill_id: string }
         Returns: undefined
+      }
+      fn_vat_codes_asof: {
+        Args: {
+          p_as_of?: string
+          p_company_id: string
+          p_transaction_type?: string
+        }
+        Returns: {
+          description: string
+          effective_from: string
+          effective_to: string
+          id: string
+          rate: number
+          tax_code_id: string
+          transaction_type: string
+          vat_classification: string
+          vat_code: string
+        }[]
       }
       fn_vat_code_set_active: {
         Args: { p_id: string; p_is_active: boolean; p_reason?: string }
