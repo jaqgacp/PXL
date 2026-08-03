@@ -76,13 +76,16 @@ SELECT is(
     WHERE n.nspname='public' AND p.proname='fn_save_cash_sale'),
   2, 'Cash Sale still creates exactly the SI and OR journals');                      -- 7
 
+-- Was six: AR, revenue, output VAT, cash, CWT receivable, AR clearing. Cash Sale
+-- now also relieves inventory, so the sales journal gained the COGS debit and the
+-- inventory credit that `fn_post_sales_invoice` has always written.
 SELECT is(
   (SELECT (SELECT count(*)::int
              FROM regexp_matches(
                p.prosrc, 'fn_add_posting_line_push', 'g'))
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public' AND p.proname='fn_save_cash_sale'),
-  6, 'Cash Sale retains its six conditional/loop line sites');                      -- 8
+  8, 'Cash Sale retains its eight conditional/loop line sites');                    -- 8
 
 SELECT ok(
   (SELECT p.prosrc ~ $$'system', 'regular', false, false, false$$

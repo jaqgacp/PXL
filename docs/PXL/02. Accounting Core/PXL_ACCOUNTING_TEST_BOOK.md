@@ -2379,3 +2379,48 @@ single scalar with no history, so `fn_company_tax_registration_asof` accepts a d
 it cannot yet honour. Every tax-profile read in VAT validation goes through that one
 seam, which is what makes the future fix a one-function change; the fix itself is
 recorded in the Product Backlog.
+
+## Delivery Plan Phase 5 item 3 — Cash Sale posting
+
+Status: **PASSING 2026-08-03.**
+`supabase/tests/119_cash_sale_posting_test.sql` proves the outbound entry point Cash
+Sale was missing. Before it, a cash sale of an inventory item credited revenue and
+output VAT and left the stock on the books: no COGS, no inventory relief, no
+`inventory_transactions` row — the one thing Sales Invoice had done since
+PXL-AUD-053.
+
+The file provisions its own retail company and posts one counter sale of **goods and
+services together**, withheld under **two different ATCs**, across 26 assertions. It
+asserts stock falls from 10 to 6 and its value by the 2,400 issued at weighted-average
+cost; that exactly one `inventory_transactions` issue row exists and carries the
+journal it was posted with; that the sold line points back at its own movement and
+keeps the unit cost it was relieved at; that the sales journal debits COGS 2,400 and
+credits inventory 2,400 and balances at 10,240 including the cost lines; and that
+goods and service revenue reach their own accounts.
+
+Withholding is asserted per line and all the way through: each line carries its own
+ATC, base and the rate the Tax Engine resolved on the document date, and the tax
+ledger carries **one `cwt_receivable` row per ATC** — which is what a 2307 and a
+1601-EQ are assembled from, and what a single header ATC could never express. The
+receipt settles the 100.00 total, declares `cwt_source = 'invoice_lines'`, debits CWT
+receivable in full and pays cash net of it.
+
+Section B asserts VAT-**inclusive** counter pricing, which Cash Sale could not do at
+all before (it asked the engine without a price basis): a 1,120 quoted price backs out
+to 1,000 net + 120 VAT, and still relieves its unit. Section C asserts the edges fail
+closed — the document-level ATC convention is unchanged; mixing per-line and
+per-document withholding is refused; selling stock the warehouse does not hold is
+refused; an inventory line with no warehouse is refused rather than sold from nowhere;
+and a line withholding code outside its effective window is refused, because the
+engine still governs the ATC version by document date.
+
+Three structural censuses moved as a consequence and were updated rather than
+worked around: `100` assertion 8 (Cash Sale's posting-line sites went from six to
+eight — the COGS debit and the inventory credit), and `103` assertion 25 (Cash Sale
+legitimately joined the fifteen derived-table writers, using the shared
+`fn_ensure_stock_balance` / `fn_consume_cost_layers` path, not a second costing
+implementation). Test `090`'s ATC-reader census is unchanged: the withholding rate is
+stamped on the line by the engine, so the posting layer never reads the ATC master.
+
+Percentage tax is **not** asserted. A PT-registered company still computes none,
+because the PT liability posting line and the 2551Q artifact do not exist.

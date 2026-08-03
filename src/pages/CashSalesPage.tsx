@@ -36,7 +36,12 @@ type Line = {
   vat_classification: string; vat_rate: number
   net_amount: number; vat_amount: number; total_amount: number
   revenue_account_id: string
+  // Operations and withholding are per line: one counter sale may mix goods
+  // relieved from a warehouse with services, withheld under different ATCs.
+  warehouse_id: string
+  withholding_atc_code_id: string; withholding_rate: number; withholding_amount: number
 }
+type VatBasis = 'exclusive' | 'inclusive'
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
@@ -47,12 +52,31 @@ const newLine = (): Line => ({
   _key: uid(), item_id: '', description: '', quantity: 1, unit_price: 0,
   discount_amount: 0, vat_code_id: '', vat_classification: 'regular', vat_rate: 12,
   net_amount: 0, vat_amount: 0, total_amount: 0, revenue_account_id: '',
+  warehouse_id: '', withholding_atc_code_id: '', withholding_rate: 0, withholding_amount: 0,
 })
 
-function computeLine(l: Line): Line {
-  const net = Math.max(l.quantity * l.unit_price - l.discount_amount, 0)
-  const vat = l.vat_classification === 'regular' ? Math.round(net * l.vat_rate) / 100 : 0
-  return { ...l, net_amount: Math.round(net * 100) / 100, vat_amount: Math.round(vat * 100) / 100, total_amount: Math.round((net + vat) * 100) / 100 }
+// Preview only. The database recomputes every figure through fn_calculate_tax on
+// the document date; nothing here is trusted at save time.
+function computeLine(l: Line, basis: VatBasis): Line {
+  const commercial = Math.round(Math.max(l.quantity * l.unit_price - l.discount_amount, 0) * 100) / 100
+  const regular = l.vat_classification === 'regular' && l.vat_rate > 0
+  let net: number
+  let vat: number
+  if (basis === 'inclusive' && regular) {
+    net = Math.round((commercial / (1 + l.vat_rate / 100)) * 100) / 100
+    vat = Math.round((commercial - net) * 100) / 100
+  } else {
+    net = commercial
+    vat = regular ? Math.round(net * l.vat_rate) / 100 : 0
+  }
+  const wht = l.withholding_atc_code_id ? Math.round(net * l.withholding_rate) / 100 : 0
+  return {
+    ...l,
+    net_amount: net,
+    vat_amount: Math.round(vat * 100) / 100,
+    total_amount: Math.round((net + vat) * 100) / 100,
+    withholding_amount: Math.round(wht * 100) / 100,
+  }
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -77,6 +101,8 @@ export default function CashSalesPage() {
   const [fCustomerAddr, setFCustomerAddr] = useState('')
   const [fPaymentMode, setFPaymentMode] = useState('')
   const [fBankAccount, setFBankAccount] = useState('')
+  const [fVatBasis, setFVatBasis] = useState<VatBasis>('exclusive')
+  const [fWarehouse, setFWarehouse] = useState('')
   const [fCWT, setFCWT] = useState(0)
   const [fCwtAtc, setFCwtAtc] = useState('')
   const [atcCodes, setAtcCodes] = useState<{ id: string; code: string; description: string; rate: number }[]>([])
@@ -91,6 +117,7 @@ export default function CashSalesPage() {
   const [bankAccounts, setBankAccounts] = useState<COAAccount[]>([])
   const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([])
   const [items, setItems] = useState<Item[]>([])
+  const [warehouses, setWarehouses] = useState<{ id: string; warehouse_code: string; warehouse_name: string }[]>([])
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -133,13 +160,15 @@ export default function CashSalesPage() {
       supabase.from('ref_payment_modes').select('id,name').eq('is_active', true).order('sort_order'),
       supabase.from('items').select('id,item_code,item_name:description,unit_price:standard_selling_price,vat_code_id:default_sales_vat_id').eq('company_id', companyId).eq('is_active', true).order('description'),
       supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code'),
-    ]).then(([custR, accR, bankR, pmR, itemR, atcR]) => {
+      supabase.from('warehouses').select('id,warehouse_code,warehouse_name').eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
+    ]).then(([custR, accR, bankR, pmR, itemR, atcR, whR]) => {
       setCustomers(custR.data as Customer[] || [])
       setAccounts(accR.data as COAAccount[] || [])
       setBankAccounts(bankR.data as COAAccount[] || [])
       setPaymentModes(pmR.data as PaymentMode[] || [])
       setItems(itemR.data as Item[] || [])
       setAtcCodes(atcR.data as { id: string; code: string; description: string; rate: number }[] || [])
+      setWarehouses(whR.data as { id: string; warehouse_code: string; warehouse_name: string }[] || [])
     })
   }, [companyId])
 
@@ -164,6 +193,10 @@ export default function CashSalesPage() {
         merged.vat_classification = vc?.vat_classification || 'exempt'
         merged.vat_rate = vc?.rate || 0
       }
+      if (patch.withholding_atc_code_id !== undefined) {
+        const atc = atcCodes.find(a => a.id === patch.withholding_atc_code_id)
+        merged.withholding_rate = atc?.rate || 0
+      }
       if (patch.item_id) {
         const it = items.find(i => i.id === patch.item_id)
         if (it) {
@@ -177,15 +210,26 @@ export default function CashSalesPage() {
           }
         }
       }
-      return computeLine(merged)
+      return computeLine(merged, fVatBasis)
     }))
   }
+
+  // Re-price every line when the document's VAT price basis changes: the same
+  // quoted number means a different net once the tax is inside it.
+  useEffect(() => {
+    setLines(prev => prev.map(l => computeLine(l, fVatBasis)))
+  }, [fVatBasis])
 
   const totals = {
     net: lines.reduce((s, l) => s + l.net_amount, 0),
     vat: lines.reduce((s, l) => s + l.vat_amount, 0),
     total: lines.reduce((s, l) => s + l.total_amount, 0),
+    lineWht: lines.reduce((s, l) => s + l.withholding_amount, 0),
   }
+  // Withholding is either itemised on the lines or declared once for the
+  // document — never both. The database refuses the mixture; the form reflects it.
+  const lineWithholding = lines.some(l => l.withholding_atc_code_id)
+  const effectiveCwt = lineWithholding ? totals.lineWht : fCWT
   const siRequiredConfig = useMemo<ConfigField[]>(
     () => totals.vat > 0.005 ? [...SI_REQUIRED_CONFIG_BASE, 'vat_payable_account_id'] : SI_REQUIRED_CONFIG_BASE,
     [totals.vat]
@@ -193,9 +237,9 @@ export default function CashSalesPage() {
   const orRequiredConfig = useMemo<ConfigField[]>(() => {
     const fields = [...OR_REQUIRED_CONFIG_BASE]
     if (!fBankAccount) fields.push('default_cash_account_id')
-    if (fCWT > 0.005) fields.push('ewt_withheld_account_id')
+    if (effectiveCwt > 0.005) fields.push('ewt_withheld_account_id')
     return fields
-  }, [fBankAccount, fCWT])
+  }, [fBankAccount, effectiveCwt])
   const siReadiness = useTransactionReadiness({
     companyId,
     branchId: fBranch || branchId,
@@ -221,13 +265,13 @@ export default function CashSalesPage() {
       accountId: fBankAccount || null,
       configKey: fBankAccount ? undefined : 'default_cash_account_id',
       description: 'Cash or bank received',
-      debit: Math.max(totals.total - fCWT, 0),
+      debit: Math.max(totals.total - effectiveCwt, 0),
       credit: 0,
     },
-    ...(fCWT > 0.005 ? [{
+    ...(effectiveCwt > 0.005 ? [{
       configKey: 'ewt_withheld_account_id' as const,
       description: 'CWT receivable',
-      debit: fCWT,
+      debit: effectiveCwt,
       credit: 0,
     }] : []),
     ...lines
@@ -244,7 +288,7 @@ export default function CashSalesPage() {
       debit: 0,
       credit: totals.vat,
     }] : []),
-  ], [fBankAccount, fCWT, lines, totals.total, totals.vat])
+  ], [fBankAccount, effectiveCwt, lines, totals.total, totals.vat])
 
   const save = async () => {
     if (setupBlocked) {
@@ -260,16 +304,21 @@ export default function CashSalesPage() {
       customer_tin_snapshot: fCustomerTIN, customer_address_snapshot: fCustomerAddr,
       date: fDate, payment_mode_id: fPaymentMode || '',
       bank_account_id: fBankAccount || '', reference: fReference, memo: fMemo,
-      cwt_atc_id: fCwtAtc || '',
+      vat_price_basis: fVatBasis, warehouse_id: fWarehouse || '',
+      cwt_atc_id: lineWithholding ? '' : (fCwtAtc || ''),
     }
-    if (fCWT > 0 && !fCwtAtc) { setError('Select the CWT ATC code when a CWT amount is entered.'); setSaving(false); return }
+    if (!lineWithholding && fCWT > 0 && !fCwtAtc) {
+      setError('Select the CWT ATC code when a document-level CWT amount is entered.'); setSaving(false); return
+    }
     const linesPayload = lines.filter(l => l.description.trim()).map(l => ({
       item_id: l.item_id, description: l.description, quantity: l.quantity,
       unit_price: l.unit_price, discount_amount: l.discount_amount,
       vat_code_id: l.vat_code_id, revenue_account_id: l.revenue_account_id,
+      warehouse_id: l.warehouse_id, withholding_atc_code_id: l.withholding_atc_code_id,
     }))
     const { data, error: rpcErr } = await supabase.rpc('fn_save_cash_sale', {
-      p_header: header, p_lines: linesPayload, p_cwt_amount: fCWT,
+      p_header: header, p_lines: linesPayload,
+      p_cwt_amount: lineWithholding ? 0 : fCWT,
     })
     if (rpcErr) { setError(rpcErr.message); setSaving(false); return }
     const result = data as { si_number: string; receipt_number: string }
@@ -374,8 +423,8 @@ export default function CashSalesPage() {
   return (
     <LegacyTransactionWorkspace title="Cash Sale" family="sales" pattern="A" posting
       status="draft" identity={fCustomerName}
-      financialFacts={[{ label: 'Total Amount', value: fmt(totals.total) }, { label: 'Net Sales', value: fmt(totals.net) }, { label: 'Output VAT', value: fmt(totals.vat) }, { label: 'Expected CWT', value: fmt(fCWT) }]}
-      taxFacts={[{ label: 'Output VAT', value: fmt(totals.vat), hint: 'Calculated from selected VAT codes' }, { label: 'CWT', value: fmt(fCWT), hint: fCwtAtc || 'No ATC selected' }]}
+      financialFacts={[{ label: 'Total Amount', value: fmt(totals.total) }, { label: 'Net Sales', value: fmt(totals.net) }, { label: 'Output VAT', value: fmt(totals.vat) }, { label: 'Expected CWT', value: fmt(effectiveCwt) }]}
+      taxFacts={[{ label: 'Output VAT', value: fmt(totals.vat), hint: 'Calculated from selected VAT codes' }, { label: 'CWT', value: fmt(effectiveCwt), hint: lineWithholding ? 'Withheld per line' : (fCwtAtc || 'No ATC selected') }]}
       contextFacts={[{ label: 'Customer', value: fCustomerName || 'Not selected' }, { label: 'Transaction Date', value: fDate }, { label: 'Payment Mode', value: paymentModes.find(mode => mode.id === fPaymentMode)?.name || 'Not selected' }, { label: 'Reference', value: fReference || 'Not assigned' }]}
       actions={[
         { key: 'cancel', label: 'Cancel', onClick: () => setMode('list') },
@@ -390,12 +439,18 @@ export default function CashSalesPage() {
         { key: 'tin', label: 'TIN', card: 1, span: 2, content: <input value={fCustomerTIN} onChange={e => setFCustomerTIN(formatPhTinInput(e.target.value))} className={`${inp} pxl-input`} placeholder="000-000-000-00000" /> },
         { key: 'payment-mode', label: 'Payment Mode', card: 2, content: <select value={fPaymentMode} onChange={e => setFPaymentMode(e.target.value)} className={`${inp} pxl-input`}><option value="">Select…</option>{paymentModes.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}</select> },
         { key: 'account', label: 'Cash / Bank Account', card: 2, content: <select value={fBankAccount} onChange={e => setFBankAccount(e.target.value)} className={`${inp} pxl-input`}><option value="">Use GL default</option>{bankAccounts.map(a => <option key={a.id} value={a.id}>{a.account_code} — {a.account_name}</option>)}</select> },
-        { key: 'cwt', label: 'CWT Amount', card: 2, content: <input type="number" value={fCWT} onChange={e => setFCWT(Number(e.target.value))} min="0" step="0.01" className={`${inp} pxl-input`} /> },
-        { key: 'atc', label: 'CWT ATC Code', card: 2, content: <select value={fCwtAtc} onChange={e => setFCwtAtc(e.target.value)} disabled={fCWT <= 0} className={`${inp} pxl-input`}><option value="">Select ATC…</option>{atcCodes.map(a => <option key={a.id} value={a.id}>{a.code} ({a.rate}%)</option>)}</select> },
+        { key: 'vat-basis', label: 'VAT Price Basis', card: 0, content: <select value={fVatBasis} onChange={e => setFVatBasis(e.target.value as VatBasis)} className={`${inp} pxl-input`}><option value="exclusive">VAT Exclusive</option><option value="inclusive">VAT Inclusive</option></select> },
+        { key: 'warehouse', label: 'Default Warehouse', card: 0, content: <select value={fWarehouse} onChange={e => setFWarehouse(e.target.value)} className={`${inp} pxl-input`}><option value="">Set per line</option>{warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}</select> },
+        { key: 'cwt', label: 'CWT Amount', card: 2, content: lineWithholding
+            ? <div className="pxl-readonly-field">{fmt(totals.lineWht)} — from line withholding codes</div>
+            : <input type="number" value={fCWT} onChange={e => setFCWT(Number(e.target.value))} min="0" step="0.01" className={`${inp} pxl-input`} /> },
+        { key: 'atc', label: 'CWT ATC Code', card: 2, content: lineWithholding
+            ? <div className="pxl-readonly-field">Itemised per line</div>
+            : <select value={fCwtAtc} onChange={e => setFCwtAtc(e.target.value)} disabled={fCWT <= 0} className={`${inp} pxl-input`}><option value="">Select ATC…</option>{atcCodes.map(a => <option key={a.id} value={a.id}>{a.code} ({a.rate}%)</option>)}</select> },
       ]}
       tabContent={{
         validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}<SetupReadinessBanner readiness={readiness} /></div>,
-        financial: <div className="ml-auto w-full max-w-sm space-y-2 text-sm"><div className="flex justify-between"><span>Net Amount</span><span className="font-mono">{fmt(totals.net)}</span></div><div className="flex justify-between"><span>Output VAT</span><span className="font-mono">{fmt(totals.vat)}</span></div>{fCWT > 0 && <div className="flex justify-between"><span>CWT</span><span className="font-mono">({fmt(fCWT)})</span></div>}<div className="flex justify-between border-t border-[var(--pxl-border-strong)] pt-2 font-bold"><span>Total Amount</span><span className="font-mono">{fmt(totals.total)}</span></div></div>,
+        financial: <div className="ml-auto w-full max-w-sm space-y-2 text-sm"><div className="flex justify-between"><span>Net Amount</span><span className="font-mono">{fmt(totals.net)}</span></div><div className="flex justify-between"><span>Output VAT</span><span className="font-mono">{fmt(totals.vat)}</span></div>{effectiveCwt > 0 && <div className="flex justify-between"><span>CWT</span><span className="font-mono">({fmt(effectiveCwt)})</span></div>}<div className="flex justify-between border-t border-[var(--pxl-border-strong)] pt-2 font-bold"><span>Total Amount</span><span className="font-mono">{fmt(totals.total)}</span></div></div>,
         gl: <GLImpactPanel companyId={companyId} sourceDocType="SI" sourceDocId={null} previewRows={glPreviewRows} title="Combined GL Impact (Cash Sale + Receipt)" />,
       }}
       onBack={() => setMode('list')} backLabel="Cash Sales">
@@ -411,10 +466,13 @@ export default function CashSalesPage() {
                   <th className={`${th} text-right`} style={{ width: 70 }}>Qty</th>
                   <th className={`${th} text-right`} style={{ width: 100 }}>Unit Price</th>
                   <th className={`${th} text-right`} style={{ width: 80 }}>Discount</th>
-                  <th className={th} style={{ minWidth: 120 }}>VAT</th>
+                  <th className={th} style={{ minWidth: 120 }}>Business Tax</th>
+                  <th className={th} style={{ minWidth: 120 }}>Withholding Tax</th>
+                  <th className={th} style={{ minWidth: 130 }}>Warehouse</th>
                   <th className={th} style={{ minWidth: 150 }}>Revenue Acct</th>
                   <th className={`${th} text-right`} style={{ width: 90 }}>Net</th>
                   <th className={`${th} text-right`} style={{ width: 80 }}>VAT Amt</th>
+                  <th className={`${th} text-right`} style={{ width: 80 }}>WHT Amt</th>
                   <th className={`${th} text-right`} style={{ width: 90 }}>Total</th>
                   <th className={th} style={{ width: 32 }} />
                 </tr>
@@ -456,6 +514,20 @@ export default function CashSalesPage() {
                       </select>
                     </td>
                     <td className={td}>
+                      <select value={l.withholding_atc_code_id} onChange={e => updateLine(l._key, { withholding_atc_code_id: e.target.value })}
+                        className="border border-gray-200 rounded px-1.5 py-1 text-xs w-full">
+                        <option value="">—</option>
+                        {atcCodes.map(a => <option key={a.id} value={a.id}>{a.code} ({a.rate}%)</option>)}
+                      </select>
+                    </td>
+                    <td className={td}>
+                      <select value={l.warehouse_id} onChange={e => updateLine(l._key, { warehouse_id: e.target.value })}
+                        className="border border-gray-200 rounded px-1.5 py-1 text-xs w-full">
+                        <option value="">{fWarehouse ? 'Document default' : '—'}</option>
+                        {warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code}</option>)}
+                      </select>
+                    </td>
+                    <td className={td}>
                       <select value={l.revenue_account_id} onChange={e => updateLine(l._key, { revenue_account_id: e.target.value })}
                         className="border border-gray-200 rounded px-1.5 py-1 text-xs w-full">
                         <option value="">—</option>
@@ -464,6 +536,7 @@ export default function CashSalesPage() {
                     </td>
                     <td className={`${td} text-right font-mono text-xs tabular-nums text-gray-700`}>{fmt(l.net_amount)}</td>
                     <td className={`${td} text-right font-mono text-xs tabular-nums text-blue-700`}>{l.vat_amount ? fmt(l.vat_amount) : '—'}</td>
+                    <td className={`${td} text-right font-mono text-xs tabular-nums text-amber-700`}>{l.withholding_amount ? fmt(l.withholding_amount) : '—'}</td>
                     <td className={`${td} text-right font-mono text-xs tabular-nums font-semibold text-gray-900`}>{fmt(l.total_amount)}</td>
                     <td className={td}>
                       <button onClick={() => setLines(p => p.filter(x => x._key !== l._key))} disabled={lines.length === 1}

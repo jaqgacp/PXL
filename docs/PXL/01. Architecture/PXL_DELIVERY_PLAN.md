@@ -261,11 +261,28 @@ are right is a return that changes after submission.
    canonical ledger as COGS debits equalling inventory credits. The earlier
    claim that sales-side COGS did not exist was wrong; inventory could not
    reconcile at ₱0.00 in trading companies if it were true.
-   What is actually missing: **Cash Sales has no posting function at all**
-   (`fn_save_cash_sale` exists, `fn_post_cash_sale` does not), Customer Return
-   has no COGS path, and Delivery Receipt does not relieve inventory — relief
-   happens at invoice, so goods shipped and not yet invoiced sit in stock at
-   full cost with no unbilled-delivery account.
+   ✅ **Cash Sale closed 2026-08-03** — migration
+   `20260803000003_cash_sale_posting.sql`, test `119` (26 assertions,
+   self-provisioned company). `fn_save_cash_sale` had posted revenue, output VAT
+   and the receipt while never touching inventory. It now relieves stock and
+   posts COGS through the *same* `fn_ensure_stock_balance` /
+   `fn_consume_cost_layers` path as `fn_post_sales_invoice` — no second costing
+   implementation exists — and writes the `inventory_transactions` issue row the
+   line points back at. The framing "Cash Sales has no posting function" meant
+   the missing capability, not a missing function name: Cash Sale still posts
+   inside its save act, which is what a counter sale is.
+
+   Two line-model gaps were closed with it because the document is wrong without
+   them: **Business Tax and Withholding Tax are now both per line**, so one sale
+   can mix goods withheld under one ATC with services withheld under another and
+   the tax ledger carries one `cwt_receivable` row per ATC; and **VAT-inclusive
+   pricing works**, because the line asks the engine with the document's
+   `vat_price_basis` instead of assuming exclusive. Lines also carry warehouse,
+   department, cost center, salesperson and account overrides.
+
+   Still missing here: Customer Return has no COGS path, and Delivery Receipt
+   does not relieve inventory — relief happens at invoice, so goods shipped and
+   not yet invoiced sit in stock at full cost with no unbilled-delivery account.
 4. Evidence the remaining **critical reconciliations (currently 1 of 9)**. VAT and
    withholding already reconcile at zero variance — nearly free.
 5. **Document Conversion**, minimally: carry quantities forward, prevent double

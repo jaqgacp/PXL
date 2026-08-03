@@ -16763,9 +16763,11 @@ export type Database = {
           p_atc_code_id: string
           p_company_id: string
           p_cwt_amount: number
+          p_cwt_source?: string
           p_cwt_tax_base?: number
           p_cwt_variance_reason?: string
           p_document_date?: string
+          p_invoice_id?: string
           p_payment_amount: number
         }
         Returns: undefined

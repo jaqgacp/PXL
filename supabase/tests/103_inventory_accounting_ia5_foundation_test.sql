@@ -384,6 +384,10 @@ SELECT set_eq(
          '(insert[[:space:]]+into|update|delete[[:space:]]+from)'
          '[[:space:]]+(public[.])?'
          '(stock_balances|inventory_cost_layers|inventory_transactions)'$$,
+-- `fn_save_cash_sale` joined this census on 2026-08-03: Cash Sale now relieves
+-- stock and writes its issue transaction, which is the outbound entry point it
+-- was missing. It uses the same fn_ensure_stock_balance / fn_consume_cost_layers
+-- path as every other writer here — no second costing implementation exists.
   $$VALUES ('fn_add_cost_layer'),
            ('fn_consume_cost_layers'),
            ('fn_ensure_stock_balance'),
@@ -395,10 +399,11 @@ SELECT set_eq(
            ('fn_post_stock_transfer_source_locked_impl'),
            ('fn_receive_inventory'),
            ('fn_reverse_opening_balance'),
+           ('fn_save_cash_sale'),
            ('fn_update_wac'),
            ('fn_void_sales_invoice'),
            ('fn_void_sales_invoice_aud053_core')$$,
-  'the legacy-active derived-table writer census is exactly the fourteen named functions'); -- 25
+  'the legacy-active derived-table writer census is exactly the fifteen named functions'); -- 25
 
 SELECT is(
   (SELECT count(*)::int
