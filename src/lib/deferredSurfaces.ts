@@ -43,13 +43,18 @@ export const DEFERRED_ROUTES: readonly string[] = [
   'inc-tax-nolco',
   'inc-tax-osd',
 
-  // Statutory working papers and returns — the review surfaces they would be
-  // built on already work and reconcile; only the filing artifacts are missing.
-  'ewt-working-papers',
+  // Statutory working papers and returns.
+  //
+  // The VAT, EWT, 1601EQ and PT working papers left this list on 2026-08-04
+  // (Backlog 8f): they are no longer scaffolds but faces of the governed filing
+  // artifact, generated from the posted tax ledger.
+  //
+  // The FWT and 1601FQ surfaces stay, and stay hand-keyed, because **FWT is not
+  // a tax kind**: it never reaches the tax ledger, so no filing artifact can be
+  // generated for it. They are retired only when Backlog 22 gives FWT a governed
+  // pipeline — removing them first would delete functionality with no
+  // replacement.
   'pt-summary-register',
-  'pt-working-papers',
-  'vat-working-papers',
-  'wt-1601eq-working-papers',
   'wt-1601fq-return',
   'wt-1601fq-working-papers',
   'wt-2306-certificates',

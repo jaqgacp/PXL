@@ -56,7 +56,6 @@ const hd  = 'text-xs font-semibold text-gray-400 uppercase tracking-widest pb-2 
 
 const fmtQuarter = (y: number, q: number) => `Q${q} ${y}`
 const fmtNum = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
-const quarterMonths = (q: number) => [(q - 1) * 3 + 1, (q - 1) * 3 + 2, (q - 1) * 3 + 3]
 
 function StatusBadge({ status }: { status: Status }) {
   const cls: Record<Status, string> = { draft: 'bg-gray-100 text-gray-600', final: 'bg-blue-50 text-blue-700', filed: 'bg-green-50 text-green-700' }
@@ -103,43 +102,34 @@ export default function PTReturnPage() {
 
   const openView = (r: ReturnRow) => { openEdit(r); setMode('view') }
 
-  // Pull posted SI lines classified exempt/zero-rated for the selected quarter and recompute
+  // The return is computed from the posted percentage-tax ledger, in the
+  // database, by `fn_generate_pt_return`. It used to be summed here in the
+  // browser from VAT-*exempt* sales lines, which is wrong twice over: VAT
+  // exemption is not the percentage-tax base, and a figure computed on the
+  // client is not a figure computed from the books. The RPC also writes the
+  // 2551Q working paper that stands behind the number.
   const handleGenerate = async () => {
     if (!companyId) return
     setGenerating(true)
-    const months = quarterMonths(form.period_quarter)
-    const startDate = `${form.period_year}-${String(months[0]).padStart(2, '0')}-01`
-    const lastMonth = months[2]
-    const endDate = new Date(form.period_year, lastMonth, 0).toISOString().split('T')[0]
-
-    const { data } = await supabase
-      .from('sales_invoice_lines')
-      .select(`net_amount, vat_code_id, vat_codes!inner(vat_classification), sales_invoices!inner(date, status, company_id)`)
-      .eq('sales_invoices.company_id', companyId)
-      .eq('sales_invoices.status', 'posted')
-      .gte('sales_invoices.date', startDate)
-      .lte('sales_invoices.date', endDate)
-      .in('vat_codes.vat_classification', ['exempt', 'zero_rated'])
-
-    let exempt = 0, zeroRated = 0
-    for (const r of (data || []) as Record<string, unknown>[]) {
-      const vc = r.vat_codes as Record<string, unknown>
-      const amt = Number(r.net_amount)
-      if (vc.vat_classification === 'exempt') exempt += amt
-      else zeroRated += amt
-    }
-    const taxableBase = exempt + zeroRated
-    const ptDue = taxableBase * (form.pt_rate / 100)
-
+    const { data, error } = await supabase.rpc('fn_generate_pt_return', {
+      p_company_id: companyId,
+      p_year: form.period_year,
+      p_quarter: form.period_quarter,
+    })
+    setGenerating(false)
+    if (error) { alert('Cannot generate the return.\nReason: ' + error.message); return }
+    const r = data as { pt_due: number; taxable_base: number; pt_rate: number; pt_still_due: number; working_paper_lines: number }
     setForm(f => ({
       ...f,
-      gross_sales_exempt: exempt,
-      gross_sales_zero_rated: zeroRated,
-      taxable_base: taxableBase,
-      pt_due: ptDue,
-      pt_still_due: ptDue - f.pt_paid_prior_quarters,
+      gross_sales_exempt: 0,
+      gross_sales_zero_rated: 0,
+      taxable_base: Number(r.taxable_base),
+      pt_rate: Number(r.pt_rate),
+      pt_due: Number(r.pt_due),
+      pt_still_due: Number(r.pt_still_due),
     }))
-    setGenerating(false)
+    await load()
+    alert(`Generated from the posted percentage tax ledger.\nTaxable base: ${fmtNum(Number(r.taxable_base))}\nTax due: ${fmtNum(Number(r.pt_due))}\nWorking paper lines: ${r.working_paper_lines}`)
   }
 
   const handleSave = async () => {
@@ -148,7 +138,7 @@ export default function PTReturnPage() {
     const payload = {
       company_id: companyId,
       period_year: form.period_year, period_quarter: form.period_quarter,
-      gross_sales_exempt: form.gross_sales_exempt, gross_sales_zero_rated: form.gross_sales_zero_rated,
+      gross_sales_exempt: 0, gross_sales_zero_rated: 0,
       taxable_base: form.taxable_base, pt_rate: form.pt_rate, pt_due: form.pt_due,
       pt_paid_prior_quarters: form.pt_paid_prior_quarters, pt_still_due: form.pt_due - form.pt_paid_prior_quarters,
       status: form.status, filed_date: form.filed_date || null, reference_no: form.reference_no || null, remarks: form.remarks || null,
@@ -187,7 +177,7 @@ export default function PTReturnPage() {
               </>
             ) : (
               <>
-                <button onClick={handleGenerate} disabled={generating} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50">{generating ? 'Generating...' : '⚡ Generate from Sales'}</button>
+                <button onClick={handleGenerate} disabled={generating} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50">{generating ? 'Generating...' : '⚡ Generate from posted ledger'}</button>
                 <button onClick={() => setMode('list')} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Cancel</button>
                 <button onClick={handleSave} disabled={saving} className="bg-gray-900 text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{saving ? 'Saving...' : editId ? 'Update' : 'Save'}</button>
               </>
@@ -230,30 +220,25 @@ export default function PTReturnPage() {
         <div className={sec}>
           <h2 className={hd}>Return Computation (BIR Form 2551Q)</h2>
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className={lbl}>Gross Sales — Exempt</label>
-              {isView ? <div className={ro}>{fmtNum(form.gross_sales_exempt)}</div> :
-                <input type="number" step="0.01" value={form.gross_sales_exempt} onChange={e => set('gross_sales_exempt', Number(e.target.value))} className={inp} />}
+            <div className="col-span-2 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded px-3 py-2">
+              The taxable base is the gross sales your posted documents charged percentage tax on.
+              VAT-exempt and zero-rated sales are a VAT classification, not the percentage-tax base,
+              so they are not part of this computation.
             </div>
-            <div>
-              <label className={lbl}>Gross Sales — Zero-Rated</label>
-              {isView ? <div className={ro}>{fmtNum(form.gross_sales_zero_rated)}</div> :
-                <input type="number" step="0.01" value={form.gross_sales_zero_rated} onChange={e => set('gross_sales_zero_rated', Number(e.target.value))} className={inp} />}
-            </div>
+            {/* Base, rate and tax due come from the posted ledger and are not
+                typed: a return may not be marked final or filed on a figure the
+                ledger does not support, and the database refuses it. */}
             <div>
               <label className={lbl}>Taxable Base</label>
-              {isView ? <div className={ro}>{fmtNum(form.taxable_base)}</div> :
-                <input type="number" step="0.01" value={form.taxable_base} onChange={e => set('taxable_base', Number(e.target.value))} className={inp} />}
+              <div className={ro}>{fmtNum(form.taxable_base)}</div>
             </div>
             <div>
               <label className={lbl}>PT Rate (%)</label>
-              {isView ? <div className={ro}>{form.pt_rate}%</div> :
-                <input type="number" step="0.01" value={form.pt_rate} onChange={e => set('pt_rate', Number(e.target.value))} className={inp} />}
+              <div className={ro}>{form.pt_rate}%</div>
             </div>
             <div>
               <label className={lbl}>PT Due</label>
-              {isView ? <div className={ro}>{fmtNum(form.pt_due)}</div> :
-                <input type="number" step="0.01" value={form.pt_due} onChange={e => set('pt_due', Number(e.target.value))} className={inp} />}
+              <div className={ro}>{fmtNum(form.pt_due)}</div>
             </div>
             <div>
               <label className={lbl}>Less: Paid — Prior Quarters</label>

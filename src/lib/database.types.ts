@@ -5434,6 +5434,90 @@ export type Database = {
           },
         ]
       }
+      filing_artifacts: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          filed_date: string | null
+          form_code: string
+          generated_at: string
+          id: string
+          net_tax_payable: number | null
+          period_from: string
+          period_number: number
+          period_to: string
+          period_year: number
+          reference_no: string | null
+          remarks: string | null
+          status: string
+          summary: Json
+          total_tax_amount: number
+          total_tax_base: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          filed_date?: string | null
+          form_code: string
+          generated_at?: string
+          id?: string
+          net_tax_payable?: number | null
+          period_from: string
+          period_number: number
+          period_to: string
+          period_year: number
+          reference_no?: string | null
+          remarks?: string | null
+          status?: string
+          summary?: Json
+          total_tax_amount?: number
+          total_tax_base?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          filed_date?: string | null
+          form_code?: string
+          generated_at?: string
+          id?: string
+          net_tax_payable?: number | null
+          period_from?: string
+          period_number?: number
+          period_to?: string
+          period_year?: number
+          reference_no?: string | null
+          remarks?: string | null
+          status?: string
+          summary?: Json
+          total_tax_amount?: number
+          total_tax_base?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "filing_artifacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "filing_artifacts_form_code_fkey"
+            columns: ["form_code"]
+            isOneToOne: false
+            referencedRelation: "ref_filing_artifact"
+            referencedColumns: ["form_code"]
+          },
+        ]
+      }
       fiscal_close_runs: {
         Row: {
           action: string
@@ -15483,6 +15567,27 @@ export type Database = {
         }
         Returns: string
       }
+      fn_business_tax_codes_asof: {
+        Args: {
+          p_as_of?: string
+          p_company_id: string
+          p_transaction_type?: string
+        }
+        Returns: {
+          atc_code: string
+          classification: string
+          code: string
+          description: string
+          effective_from: string
+          effective_to: string
+          form_type: string
+          id: string
+          rate: number
+          tax_code_id: string
+          tax_family: string
+          transaction_type: string
+        }[]
+      }
       fn_can_access_company_branch: {
         Args: { p_branch_id?: string; p_company_id: string }
         Returns: boolean
@@ -15779,6 +15884,95 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_filing_artifact_export: {
+        Args: {
+          p_company_id: string
+          p_form_code: string
+          p_format?: string
+          p_period: number
+          p_year: number
+        }
+        Returns: {
+          content: string
+          line_number: number
+        }[]
+      }
+      fn_filing_reconciliation: {
+        Args: {
+          p_company_id: string
+          p_form_code: string
+          p_period: number
+          p_year: number
+        }
+        Returns: {
+          gl_account_code: string
+          gl_account_id: string
+          gl_account_name: string
+          gl_amount: number
+          is_reconciled: boolean
+          ledger_tax_amount: number
+          ledger_tax_base: number
+          tax_kind: string
+          variance: number
+        }[]
+      }
+      fn_add_filing_reconciling_item: {
+        Args: {
+          p_amount: number
+          p_company_id: string
+          p_form_code: string
+          p_period: number
+          p_reason: string
+          p_reference: string
+          p_remarks: string
+          p_year: number
+        }
+        Returns: string
+      }
+      fn_delete_filing_reconciling_item: {
+        Args: { p_item_id: string }
+        Returns: undefined
+      }
+      fn_filing_reconciling_items: {
+        Args: {
+          p_company_id: string
+          p_form_code: string
+          p_period: number
+          p_year: number
+        }
+        Returns: {
+          amount: number
+          created_at: string
+          created_by: string
+          id: string
+          line_number: number
+          reason: string
+          reference: string
+          remarks: string
+        }[]
+      }
+      fn_filing_working_paper: {
+        Args: {
+          p_company_id: string
+          p_form_code: string
+          p_period: number
+          p_year: number
+        }
+        Returns: {
+          atc_code: string
+          classification: string
+          counterparty_id: string
+          counterparty_name: string
+          counterparty_tin: string
+          document_count: number
+          tax_amount: number
+          tax_base: number
+          tax_code: string
+          tax_kind: string
+          tax_rate: number
+          vat_code: string
+        }[]
+      }
       fn_finalize_journal_entry: {
         Args: { p_je_id: string }
         Returns: undefined
@@ -15861,9 +16055,36 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_generate_filing_artifact: {
+        Args: {
+          p_company_id: string
+          p_form_code: string
+          p_period: number
+          p_year: number
+        }
+        Returns: Json
+      }
+      fn_generate_ewt_return: {
+        Args: { p_company_id: string; p_quarter: number; p_year: number }
+        Returns: Json
+      }
+      fn_generate_pt_return: {
+        Args: { p_company_id: string; p_quarter: number; p_year: number }
+        Returns: Json
+      }
       fn_generate_tax_calendar: {
         Args: { p_company_id: string; p_fiscal_year: number }
         Returns: undefined
+      }
+      fn_generate_vat_return: {
+        Args: {
+          p_company_id: string
+          p_input_vat_carried_over?: number
+          p_quarter: number
+          p_vat_paid_prior_months?: number
+          p_year: number
+        }
+        Returns: Json
       }
       fn_get_accounting_trace: {
         Args: {
@@ -16741,6 +16962,16 @@ export type Database = {
           p_file_name: string
         }
         Returns: Json
+      }
+      fn_snapshot_filing_artifact_export: {
+        Args: {
+          p_company_id: string
+          p_form_code: string
+          p_format?: string
+          p_period: number
+          p_year: number
+        }
+        Returns: string
       }
       fn_snapshot_cas_export: {
         Args: {

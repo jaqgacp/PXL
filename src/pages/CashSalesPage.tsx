@@ -8,6 +8,7 @@ import { GLImpactPanel, type GLImpactRow } from '@/components/GLImpactPanel'
 import { ReportTraceLink } from '@/components/AccountingTraceLink'
 import { formatPhTinInput, normalizePhTin } from '@/lib/philippines'
 import { loadVatCodesAsOf } from '@/lib/vatCodes'
+import { loadPercentageTaxCodesAsOf, type BusinessTaxCodeOption } from '@/lib/businessTaxCodes'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -40,6 +41,9 @@ type Line = {
   // relieved from a warehouse with services, withheld under different ATCs.
   warehouse_id: string
   withholding_atc_code_id: string; withholding_rate: number; withholding_amount: number
+  // Percentage tax is the seller's own Section 116 business tax. It is per line
+  // like every other tax, and it never enters what the customer pays.
+  percentage_tax_code_id: string; percentage_tax_rate: number; percentage_tax_amount: number
 }
 type VatBasis = 'exclusive' | 'inclusive'
 
@@ -53,6 +57,7 @@ const newLine = (): Line => ({
   discount_amount: 0, vat_code_id: '', vat_classification: 'regular', vat_rate: 12,
   net_amount: 0, vat_amount: 0, total_amount: 0, revenue_account_id: '',
   warehouse_id: '', withholding_atc_code_id: '', withholding_rate: 0, withholding_amount: 0,
+  percentage_tax_code_id: '', percentage_tax_rate: 0, percentage_tax_amount: 0,
 })
 
 // Preview only. The database recomputes every figure through fn_calculate_tax on
@@ -70,12 +75,16 @@ function computeLine(l: Line, basis: VatBasis): Line {
     vat = regular ? Math.round(net * l.vat_rate) / 100 : 0
   }
   const wht = l.withholding_atc_code_id ? Math.round(net * l.withholding_rate) / 100 : 0
+  // Percentage tax rides on the same net, and deliberately not on the total:
+  // the seller owes it, the customer never sees it.
+  const pt = l.percentage_tax_code_id ? Math.round(net * l.percentage_tax_rate) / 100 : 0
   return {
     ...l,
     net_amount: net,
     vat_amount: Math.round(vat * 100) / 100,
     total_amount: Math.round((net + vat) * 100) / 100,
     withholding_amount: Math.round(wht * 100) / 100,
+    percentage_tax_amount: Math.round(pt * 100) / 100,
   }
 }
 
@@ -113,6 +122,7 @@ export default function CashSalesPage() {
   // Reference data
   const [customers, setCustomers] = useState<Customer[]>([])
   const [vatCodes, setVatCodes] = useState<VATCode[]>([])
+  const [ptCodes, setPtCodes] = useState<BusinessTaxCodeOption[]>([])
   const [accounts, setAccounts] = useState<COAAccount[]>([])
   const [bankAccounts, setBankAccounts] = useState<COAAccount[]>([])
   const [paymentModes, setPaymentModes] = useState<PaymentMode[]>([])
@@ -178,6 +188,13 @@ export default function CashSalesPage() {
     loadVatCodesAsOf(companyId, fDate, 'output_vat').then(setVatCodes)
   }, [companyId, fDate])
 
+  // Percentage-tax codes come back empty for every VAT-registered company, and
+  // the column that shows them stays hidden. Same picker, same document date.
+  useEffect(() => {
+    if (!companyId) return
+    loadPercentageTaxCodesAsOf(companyId, fDate).then(setPtCodes)
+  }, [companyId, fDate])
+
   const selectCustomer = (cid: string) => {
     setFCustomer(cid)
     const c = customers.find(x => x.id === cid)
@@ -196,6 +213,10 @@ export default function CashSalesPage() {
       if (patch.withholding_atc_code_id !== undefined) {
         const atc = atcCodes.find(a => a.id === patch.withholding_atc_code_id)
         merged.withholding_rate = atc?.rate || 0
+      }
+      if (patch.percentage_tax_code_id !== undefined) {
+        const pt = ptCodes.find(p => p.id === patch.percentage_tax_code_id)
+        merged.percentage_tax_rate = pt?.rate || 0
       }
       if (patch.item_id) {
         const it = items.find(i => i.id === patch.item_id)
@@ -225,6 +246,7 @@ export default function CashSalesPage() {
     vat: lines.reduce((s, l) => s + l.vat_amount, 0),
     total: lines.reduce((s, l) => s + l.total_amount, 0),
     lineWht: lines.reduce((s, l) => s + l.withholding_amount, 0),
+    percentageTax: lines.reduce((s, l) => s + l.percentage_tax_amount, 0),
   }
   // Withholding is either itemised on the lines or declared once for the
   // document — never both. The database refuses the mixture; the form reflects it.
@@ -315,6 +337,7 @@ export default function CashSalesPage() {
       unit_price: l.unit_price, discount_amount: l.discount_amount,
       vat_code_id: l.vat_code_id, revenue_account_id: l.revenue_account_id,
       warehouse_id: l.warehouse_id, withholding_atc_code_id: l.withholding_atc_code_id,
+      percentage_tax_code_id: l.percentage_tax_code_id,
     }))
     const { data, error: rpcErr } = await supabase.rpc('fn_save_cash_sale', {
       p_header: header, p_lines: linesPayload,
@@ -424,7 +447,7 @@ export default function CashSalesPage() {
     <LegacyTransactionWorkspace title="Cash Sale" family="sales" pattern="A" posting
       status="draft" identity={fCustomerName}
       financialFacts={[{ label: 'Total Amount', value: fmt(totals.total) }, { label: 'Net Sales', value: fmt(totals.net) }, { label: 'Output VAT', value: fmt(totals.vat) }, { label: 'Expected CWT', value: fmt(effectiveCwt) }]}
-      taxFacts={[{ label: 'Output VAT', value: fmt(totals.vat), hint: 'Calculated from selected VAT codes' }, { label: 'CWT', value: fmt(effectiveCwt), hint: lineWithholding ? 'Withheld per line' : (fCwtAtc || 'No ATC selected') }]}
+      taxFacts={[{ label: 'Output VAT', value: fmt(totals.vat), hint: 'Calculated from selected VAT codes' }, ...(ptCodes.length > 0 ? [{ label: 'Percentage Tax', value: fmt(totals.percentageTax), hint: 'Section 116 business tax owed by the seller; not charged to the customer' }] : []), { label: 'CWT', value: fmt(effectiveCwt), hint: lineWithholding ? 'Withheld per line' : (fCwtAtc || 'No ATC selected') }]}
       contextFacts={[{ label: 'Customer', value: fCustomerName || 'Not selected' }, { label: 'Transaction Date', value: fDate }, { label: 'Payment Mode', value: paymentModes.find(mode => mode.id === fPaymentMode)?.name || 'Not selected' }, { label: 'Reference', value: fReference || 'Not assigned' }]}
       actions={[
         { key: 'cancel', label: 'Cancel', onClick: () => setMode('list') },
@@ -450,7 +473,7 @@ export default function CashSalesPage() {
       ]}
       tabContent={{
         validation: <div className="space-y-2">{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}<SetupReadinessBanner readiness={readiness} /></div>,
-        financial: <div className="ml-auto w-full max-w-sm space-y-2 text-sm"><div className="flex justify-between"><span>Net Amount</span><span className="font-mono">{fmt(totals.net)}</span></div><div className="flex justify-between"><span>Output VAT</span><span className="font-mono">{fmt(totals.vat)}</span></div>{effectiveCwt > 0 && <div className="flex justify-between"><span>CWT</span><span className="font-mono">({fmt(effectiveCwt)})</span></div>}<div className="flex justify-between border-t border-[var(--pxl-border-strong)] pt-2 font-bold"><span>Total Amount</span><span className="font-mono">{fmt(totals.total)}</span></div></div>,
+        financial: <div className="ml-auto w-full max-w-sm space-y-2 text-sm"><div className="flex justify-between"><span>Net Amount</span><span className="font-mono">{fmt(totals.net)}</span></div><div className="flex justify-between"><span>Output VAT</span><span className="font-mono">{fmt(totals.vat)}</span></div>{totals.percentageTax > 0 && <div className="flex justify-between text-[var(--pxl-text-muted)]"><span>Percentage tax owed (not billed)</span><span className="font-mono">{fmt(totals.percentageTax)}</span></div>}{effectiveCwt > 0 && <div className="flex justify-between"><span>CWT</span><span className="font-mono">({fmt(effectiveCwt)})</span></div>}<div className="flex justify-between border-t border-[var(--pxl-border-strong)] pt-2 font-bold"><span>Total Amount</span><span className="font-mono">{fmt(totals.total)}</span></div></div>,
         gl: <GLImpactPanel companyId={companyId} sourceDocType="SI" sourceDocId={null} previewRows={glPreviewRows} title="Combined GL Impact (Cash Sale + Receipt)" />,
       }}
       onBack={() => setMode('list')} backLabel="Cash Sales">
@@ -467,11 +490,13 @@ export default function CashSalesPage() {
                   <th className={`${th} text-right`} style={{ width: 100 }}>Unit Price</th>
                   <th className={`${th} text-right`} style={{ width: 80 }}>Discount</th>
                   <th className={th} style={{ minWidth: 120 }}>Business Tax</th>
+                  {ptCodes.length > 0 && <th className={th} style={{ minWidth: 130 }}>Percentage Tax</th>}
                   <th className={th} style={{ minWidth: 120 }}>Withholding Tax</th>
                   <th className={th} style={{ minWidth: 130 }}>Warehouse</th>
                   <th className={th} style={{ minWidth: 150 }}>Revenue Acct</th>
                   <th className={`${th} text-right`} style={{ width: 90 }}>Net</th>
                   <th className={`${th} text-right`} style={{ width: 80 }}>VAT Amt</th>
+                  {ptCodes.length > 0 && <th className={`${th} text-right`} style={{ width: 80 }}>PT Amt</th>}
                   <th className={`${th} text-right`} style={{ width: 80 }}>WHT Amt</th>
                   <th className={`${th} text-right`} style={{ width: 90 }}>Total</th>
                   <th className={th} style={{ width: 32 }} />
@@ -513,6 +538,15 @@ export default function CashSalesPage() {
                         {vatCodes.map(v => <option key={v.id} value={v.id}>{v.vat_code}</option>)}
                       </select>
                     </td>
+                    {ptCodes.length > 0 && (
+                      <td className={td}>
+                        <select value={l.percentage_tax_code_id} onChange={e => updateLine(l._key, { percentage_tax_code_id: e.target.value })}
+                          className="border border-gray-200 rounded px-1.5 py-1 text-xs w-full">
+                          <option value="">—</option>
+                          {ptCodes.map(p => <option key={p.id} value={p.id}>{p.code} ({p.rate}%)</option>)}
+                        </select>
+                      </td>
+                    )}
                     <td className={td}>
                       <select value={l.withholding_atc_code_id} onChange={e => updateLine(l._key, { withholding_atc_code_id: e.target.value })}
                         className="border border-gray-200 rounded px-1.5 py-1 text-xs w-full">
@@ -536,6 +570,9 @@ export default function CashSalesPage() {
                     </td>
                     <td className={`${td} text-right font-mono text-xs tabular-nums text-gray-700`}>{fmt(l.net_amount)}</td>
                     <td className={`${td} text-right font-mono text-xs tabular-nums text-blue-700`}>{l.vat_amount ? fmt(l.vat_amount) : '—'}</td>
+                    {ptCodes.length > 0 && (
+                      <td className={`${td} text-right font-mono text-xs tabular-nums text-purple-700`}>{l.percentage_tax_amount ? fmt(l.percentage_tax_amount) : '—'}</td>
+                    )}
                     <td className={`${td} text-right font-mono text-xs tabular-nums text-amber-700`}>{l.withholding_amount ? fmt(l.withholding_amount) : '—'}</td>
                     <td className={`${td} text-right font-mono text-xs tabular-nums font-semibold text-gray-900`}>{fmt(l.total_amount)}</td>
                     <td className={td}>

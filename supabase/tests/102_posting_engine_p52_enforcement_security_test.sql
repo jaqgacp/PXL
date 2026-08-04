@@ -177,26 +177,81 @@ SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
 -- its five-argument form is dropped so the new re-presentation argument cannot
 -- make an existing five-argument call ambiguous. Assertion 10 stays at 87 —
 -- reporting reads the ledger and never writes it.
-SELECT is((SELECT count(*)::int FROM p52_app_functions), 460,
-  'the complete application-owned public function census contains 460 functions');    -- 12
+--
+-- Percentage tax (Backlog 8) adds thirteen, 460 -> 473. Twelve are SECURITY
+-- DEFINER (394 -> 406): the business-tax resolver and its picker, the
+-- percentage-tax registration seam, the code-usage predicate, the one
+-- percentage-tax ledger writer, the ledger-to-GL reconciliation, the 2551Q
+-- computation and its generator, and four trigger bodies (version rules, history
+-- guard, the sales-line business-tax backstop and the return reconciliation
+-- gate). The thirteenth, fn_percentage_tax_return_period, is an IMMUTABLE
+-- quarter-bounds helper that reads only its arguments. Nine become
+-- client-executable (323 -> 332); the four trigger bodies reach no role at all.
+-- **anon stays exactly at 197** and service_role at 318: nothing here is
+-- reachable without a session. Assertion 10 stays at 87 — percentage tax reaches
+-- the ledger through the same six sanctioned kernels as everything else, and
+-- fn_add_percentage_tax_detail writes the tax ledger, never the General Ledger.
+-- BIR filing artifacts (Delivery Plan Phase 5.8) add seven, 473 -> 480: the one
+-- tax-ledger-to-GL reconciliation, the filing period-bounds helper, the one
+-- working-paper reader, the per-artifact reconciliation face, the artifact
+-- guard, the one artifact generator and the 2550Q projection. Six are SECURITY
+-- DEFINER (406 -> 412) because they read governed company data across RLS; the
+-- seventh, fn_filing_period_bounds, is an IMMUTABLE helper that reads only its
+-- arguments. Six become client-executable (332 -> 338); fn_guard_filing_artifact
+-- is a trigger body and reaches no role at all. **anon stays exactly at 197** —
+-- no filing surface is reachable without a session. Assertion 10 stays at 87:
+-- filing *reads* the tax ledger and the General Ledger and writes neither. The
+-- six existing per-form faces (VAT, withholding and percentage-tax
+-- reconciliation, the 2551Q and 1601EQ computations, the PT generator) were
+-- REPLACED by delegations rather than added, so they do not move any count.
+-- Filing Artifact Export (Backlog 8d) adds two, 480 -> 482: the one exporter and
+-- its evidence snapshot. Both are SECURITY DEFINER (412 -> 414) because they read
+-- governed company data across RLS, and both reach `authenticated` (338 -> 340).
+-- **anon stays exactly at 197.** Assertion 10 stays at 87: an export is a
+-- consumer of the filing artifact and writes no ledger — it writes only a
+-- `report_snapshots` evidence row.
+-- Backlog 8e (i)/(iii) adds exactly one, 482 -> 483: `fn_generate_ewt_return`,
+-- the 1601EQ projection. It is SECURITY DEFINER (414 -> 415) and reaches
+-- `authenticated` (340 -> 341). Registering the QAP added **no function at all**
+-- — it is seed rows — and `fn_filing_artifact_export`,
+-- `fn_require_wht_export_profile` and `fn_qap_2307_reconciliation` were REPLACED
+-- in place, so they move no count. **anon stays exactly at 197.**
+-- Backlog 8f stage 1 adds four, 483 -> 487: the reconciling-item writer, its
+-- delete, its reader and the line guard. All four are SECURITY DEFINER
+-- (415 -> 419); three reach `authenticated` (341 -> 344) and the **guard reaches
+-- no role at all**, exactly as `fn_guard_filing_artifact` does — a trigger body
+-- is not a client surface. `fn_guard_filing_artifact`, `fn_generate_filing_artifact`
+-- and `fn_filing_artifact_export` were REPLACED in place and move no count.
+-- **anon stays exactly at 197.** Assertion 10 stays at 87: a reconciling item
+-- explains a difference and writes no ledger.
+--
+-- Backlog 8f stage 2 REMOVES one, 487 -> 486: `fn_snapshot_wht_export`, retired
+-- with the legacy SAWT/QAP export path once both screens consumed the filing
+-- artifact instead. It was SECURITY DEFINER (419 -> 418) and reached
+-- `authenticated` (344 -> 343) and `service_role` (318 -> 317). It also reached
+-- **`anon`**, so retiring it moved the one number this file has otherwise held
+-- fixed since it was written: **197 -> 196**. A legacy compliance export was
+-- callable without a session; the governed one never has been.
+SELECT is((SELECT count(*)::int FROM p52_app_functions), 486,
+  'the complete application-owned public function census contains 486 functions');    -- 12
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 394,
-  'the complete application-owned SECURITY DEFINER census contains 394 functions');   -- 13
+SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 418,
+  'the complete application-owned SECURITY DEFINER census contains 418 functions');   -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('authenticated', oid, 'EXECUTE')),
-  323, 'authenticated EXECUTE coverage is completely counted');                       -- 14
+  343, 'authenticated EXECUTE coverage is completely counted');                       -- 14
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('anon', oid, 'EXECUTE')),
-  197, 'anon EXECUTE coverage is completely counted');                                -- 15
+  196, 'anon EXECUTE coverage is completely counted');                                -- 15
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('service_role', oid, 'EXECUTE')),
-  318, 'service_role EXECUTE coverage is completely counted');                        -- 16
+  317, 'service_role EXECUTE coverage is completely counted');                        -- 16
 
 SELECT is(
   (SELECT count(*)::int

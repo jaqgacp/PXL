@@ -162,7 +162,9 @@ JOIN atc_codes AS atc
  AND atc.is_active
  AND atc.deprecated_at IS NULL
 WHERE company.trade_name IN ('DEMO-SP-NONVAT', 'DEMO-OPC-NONVAT')
-ON CONFLICT (company_id, pt_code) DO UPDATE
+-- Percentage-tax codes are effective-dated versions of one company code, so the
+-- business key is the code AND the start of its window.
+ON CONFLICT (company_id, pt_code, effective_from) DO UPDATE
 SET tax_code_id = EXCLUDED.tax_code_id,
     description = EXCLUDED.description,
     atc_id = EXCLUDED.atc_id,

@@ -70,8 +70,8 @@ SELECT '12100000-0000-0000-0000-0000000000c1', '12100000-0000-0000-0000-00000000
 FROM generate_series(1, 12) AS m;
 
 -- The chart of accounts and its statement presentation are provisioned together.
-SELECT is(fn_seed_company_coa('12100000-0000-0000-0000-0000000000c1'), 43,
-  'the standard chart of accounts seeds 43 accounts');                              -- 1
+SELECT is(fn_seed_company_coa('12100000-0000-0000-0000-0000000000c1'), 44,
+  'the standard chart of accounts seeds 44 accounts');                              -- 1
 
 -- Seeding the chart maps it: a company can never end up with accounts it cannot
 -- present. Re-running the mapper therefore has nothing left to do, which is also

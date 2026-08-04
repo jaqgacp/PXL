@@ -104,11 +104,7 @@ BEGIN
     SELECT unnest(ARRAY[
       'companies',
       'tax_codes',
-      'compliance_vat_working_papers_lines',
-      'compliance_pt_working_papers_lines',
-      'compliance_ewt_working_papers_lines',
       'compliance_fwt_working_papers_lines',
-      'compliance_1601eq_working_papers_lines',
       'compliance_1601fq_working_papers_lines',
       'warehouse_zones'
     ])
@@ -121,24 +117,10 @@ BEGIN
 
   -- Indirect child tables without company_id that reference company-owned
   -- headers. Delete these before the generic company_id dependency pass.
-  DELETE FROM public.compliance_vat_working_papers_lines l
-  USING public.compliance_vat_working_papers_headers h
-  WHERE l.header_id = h.id AND h.company_id IN (SELECT id FROM pxl_demo_reset_company_ids);
-
-  DELETE FROM public.compliance_pt_working_papers_lines l
-  USING public.compliance_pt_working_papers_headers h
-  WHERE l.header_id = h.id AND h.company_id IN (SELECT id FROM pxl_demo_reset_company_ids);
-
-  DELETE FROM public.compliance_ewt_working_papers_lines l
-  USING public.compliance_ewt_working_papers_headers h
-  WHERE l.header_id = h.id AND h.company_id IN (SELECT id FROM pxl_demo_reset_company_ids);
-
+  -- The VAT, PT, EWT and 1601EQ working papers were retired by Backlog 8f; the
+  -- FWT pair remains until Backlog 22 gives FWT a governed pipeline.
   DELETE FROM public.compliance_fwt_working_papers_lines l
   USING public.compliance_fwt_working_papers_headers h
-  WHERE l.header_id = h.id AND h.company_id IN (SELECT id FROM pxl_demo_reset_company_ids);
-
-  DELETE FROM public.compliance_1601eq_working_papers_lines l
-  USING public.compliance_1601eq_working_papers_headers h
   WHERE l.header_id = h.id AND h.company_id IN (SELECT id FROM pxl_demo_reset_company_ids);
 
   DELETE FROM public.compliance_1601fq_working_papers_lines l

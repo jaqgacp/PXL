@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { downloadFilingArtifactExport } from '@/lib/filingExport'
 import VATReconciliationPanel from '@/components/VATReconciliationPanel'
 
 type Status = 'draft' | 'final' | 'filed'
@@ -46,7 +47,6 @@ const hd  = 'text-xs font-semibold text-gray-400 uppercase tracking-widest pb-2 
 
 const fmtNum = (n: number) => new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n)
 const fmtQuarter = (y: number, q: number) => `Q${q} ${y}`
-const quarterMonths = (q: number) => [(q - 1) * 3 + 1, (q - 1) * 3 + 2, (q - 1) * 3 + 3]
 
 function StatusBadge({ status }: { status: Status }) {
   const cls: Record<Status, string> = { draft: 'bg-gray-100 text-gray-600', final: 'bg-blue-50 text-blue-700', filed: 'bg-green-50 text-green-700' }
@@ -62,6 +62,7 @@ export default function VATReturn2550QPage() {
   const [form, setForm] = useState<FormData>({ ...EMPTY_FORM })
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [taxRegistration, setTaxRegistration] = useState<TaxRegistration>('vat')
   const isVatRegistered = taxRegistration === 'vat'
 
@@ -93,6 +94,15 @@ export default function VATReturn2550QPage() {
   const openEdit = (r: ReturnRow) => { setForm({ ...r, filed_date: r.filed_date || '', reference_no: r.reference_no || '', remarks: '' }); setEditId(r.id); setMode('edit') }
   const openView = (r: ReturnRow) => { openEdit(r); setMode('view') }
 
+  // The return is computed from the posted tax ledger, in the database, by
+  // `fn_generate_vat_return`. It used to be summed here in the browser from two
+  // review views, and a figure computed on the client is not a figure computed
+  // from the books. The RPC generates the 2550Q filing artifact and its working
+  // paper, then projects both into the `vat_returns` row this screen reads.
+  //
+  // Input VAT carried over and VAT already paid are the only figures the
+  // accountant states; they are passed to the RPC rather than netted here, so
+  // the net payable still has exactly one author.
   const handleGenerate = async () => {
     if (!companyId) return
     if (!isVatRegistered) {
@@ -100,67 +110,88 @@ export default function VATReturn2550QPage() {
       return
     }
     setGenerating(true)
-    const months = quarterMonths(form.period_quarter)
-    const startDate = `${form.period_year}-${String(months[0]).padStart(2, '0')}-01`
-    const endDate = new Date(form.period_year, months[2], 0).toISOString().split('T')[0]
+    const { data, error } = await supabase.rpc('fn_generate_vat_return', {
+      p_company_id: companyId,
+      p_year: form.period_year,
+      p_quarter: form.period_quarter,
+      p_input_vat_carried_over: form.input_vat_carried_over,
+      p_vat_paid_prior_months: form.vat_paid_prior_months,
+    })
+    setGenerating(false)
+    if (error) { alert('Cannot generate VAT Return.\nReason: ' + error.message); return }
 
-    const [{ data: outData }, { data: inData }, { data: monthlyReturns }] = await Promise.all([
-      supabase.from('vw_output_vat_review').select('*').eq('company_id', companyId).gte('invoice_date', startDate).lte('invoice_date', endDate),
-      supabase.from('vw_input_vat_review').select('*').eq('company_id', companyId).gte('invoice_date', startDate).lte('invoice_date', endDate),
-      supabase.from('vat_returns').select('period_month,net_vat_payable').eq('company_id', companyId).eq('return_type', '2550M')
-        .eq('period_year', form.period_year).in('period_month', months),
-    ])
-
-    const outRows = (outData || []) as { taxable_base: number; zero_rated_sales: number; exempt_sales: number; output_vat: number }[]
-    const inRows = (inData || []) as { taxable_base: number; input_vat: number }[]
-
-    const outputTaxable = outRows.reduce((s, r) => s + r.taxable_base, 0)
-    const zeroRated = outRows.reduce((s, r) => s + r.zero_rated_sales, 0)
-    const exempt = outRows.reduce((s, r) => s + r.exempt_sales, 0)
-    const outputVat = outRows.reduce((s, r) => s + r.output_vat, 0)
-    const inputTaxable = inRows.reduce((s, r) => s + r.taxable_base, 0)
-    const inputVat = inRows.reduce((s, r) => s + r.input_vat, 0)
-
-    // Monthly payments made in the first two months of the quarter (2550M filings)
-    const paidPriorMonths = ((monthlyReturns || []) as { period_month: number; net_vat_payable: number }[])
-      .filter(r => r.period_month !== months[2])
-      .reduce((s, r) => s + Math.max(Number(r.net_vat_payable), 0), 0)
-
-    const totalAvailableInputVat = inputVat + form.input_vat_carried_over
-    const netPayable = outputVat - totalAvailableInputVat
-    const stillDue = netPayable - paidPriorMonths
+    const r = data as {
+      vat_return_id: string
+      output_taxable_sales: number; output_vat: number
+      zero_rated_sales: number; exempt_sales: number
+      input_taxable_purchases: number; input_vat: number
+      input_vat_carried_over: number; total_available_input_vat: number
+      net_vat_payable: number; vat_paid_prior_months: number; vat_still_due: number
+      line_count: number; is_reconciled: boolean
+    }
 
     setForm(f => ({
-      ...f, output_taxable_sales: outputTaxable, output_vat: outputVat, zero_rated_sales: zeroRated, exempt_sales: exempt,
-      input_taxable_purchases: inputTaxable, input_vat: inputVat, total_available_input_vat: totalAvailableInputVat,
-      net_vat_payable: netPayable, vat_paid_prior_months: paidPriorMonths, vat_still_due: stillDue,
+      ...f,
+      output_taxable_sales: Number(r.output_taxable_sales),
+      output_vat: Number(r.output_vat),
+      zero_rated_sales: Number(r.zero_rated_sales),
+      exempt_sales: Number(r.exempt_sales),
+      input_taxable_purchases: Number(r.input_taxable_purchases),
+      input_vat: Number(r.input_vat),
+      input_vat_carried_over: Number(r.input_vat_carried_over),
+      total_available_input_vat: Number(r.total_available_input_vat),
+      net_vat_payable: Number(r.net_vat_payable),
+      vat_paid_prior_months: Number(r.vat_paid_prior_months),
+      vat_still_due: Number(r.vat_still_due),
     }))
-    setGenerating(false)
+    // The RPC owns the row; from here the screen is editing it, not creating one.
+    setEditId(r.vat_return_id)
+    setMode('edit')
+    await load()
+    alert(
+      `Generated from the posted VAT ledger.\n` +
+      `Output VAT: ${fmtNum(Number(r.output_vat))}\n` +
+      `Input VAT: ${fmtNum(Number(r.input_vat))}\n` +
+      `Net VAT payable: ${fmtNum(Number(r.net_vat_payable))}\n` +
+      `Working paper lines: ${r.line_count}` +
+      (r.is_reconciled ? '' : '\n\nWARNING: the VAT ledger does not tie to the General Ledger for this quarter. This return cannot be marked final until it does.')
+    )
   }
 
+  // Saving records what the accountant decides — the filing status and its
+  // reference. The tax figures are never written from here: they belong to the
+  // posted ledger, and the database refuses a return that disagrees with it.
   const handleSave = async () => {
     if (!companyId) { alert('Cannot save.\nReason: Select a company first.'); return }
     if (!isVatRegistered) { alert('Cannot save VAT Return.\nReason: 2550Q is only available for VAT-registered companies.'); return }
-    setSaving(true)
-    const payload = {
-      company_id: companyId, return_type: '2550Q',
-      period_year: form.period_year, period_month: null, period_quarter: form.period_quarter,
-      output_taxable_sales: form.output_taxable_sales, output_vat: form.output_vat,
-      zero_rated_sales: form.zero_rated_sales, exempt_sales: form.exempt_sales,
-      input_taxable_purchases: form.input_taxable_purchases, input_vat: form.input_vat,
-      input_vat_carried_over: form.input_vat_carried_over, total_available_input_vat: form.total_available_input_vat,
-      net_vat_payable: form.net_vat_payable, vat_paid_prior_months: form.vat_paid_prior_months,
-      vat_still_due: form.vat_still_due,
-      status: form.status, filed_date: form.filed_date || null, reference_no: form.reference_no || null, remarks: form.remarks || null,
-    }
     if (!editId) {
-      const { error } = await supabase.from('vat_returns').insert([payload])
-      if (error) { alert('Cannot save VAT Return.\nReason: ' + (error.code === '23505' ? `A 2550Q return for ${fmtQuarter(form.period_year, form.period_quarter)} already exists.` : error.message)); setSaving(false); return }
-    } else {
-      const { error } = await supabase.from('vat_returns').update(payload).eq('id', editId)
-      if (error) { alert('Cannot update VAT Return.\nReason: ' + error.message); setSaving(false); return }
+      alert('Cannot save VAT Return.\nReason: Generate the return from the posted ledger first — its figures are computed, not typed.')
+      return
     }
-    setSaving(false); load(); setMode('list')
+    setSaving(true)
+    const { error } = await supabase.from('vat_returns').update({
+      status: form.status,
+      filed_date: form.filed_date || null,
+      reference_no: form.reference_no || null,
+      remarks: form.remarks || null,
+    }).eq('id', editId)
+    setSaving(false)
+    if (error) { alert('Cannot update VAT Return.\nReason: ' + error.message); return }
+    load(); setMode('list')
+  }
+
+  // The download is a consumer of the filing artifact: the RPC evidences the
+  // exact bytes into report_snapshots and this hands back that same content.
+  // Nothing about the return is assembled here.
+  const handleExport = async () => {
+    if (!companyId || !editId) return
+    setExporting(true)
+    const result = await downloadFilingArtifactExport({
+      companyId, formCode: '2550Q', year: form.period_year, period: form.period_quarter,
+    })
+    setExporting(false)
+    if (!result.ok) { alert('Cannot export the return.\nReason: ' + result.message); return }
+    alert(`Exported ${result.rows} working-paper line${result.rows === 1 ? '' : 's'} for ${fmtQuarter(form.period_year, form.period_quarter)}.`)
   }
 
   const isView = mode === 'view'
@@ -183,12 +214,13 @@ export default function VATReturn2550QPage() {
             {isView ? (
               <>
                 <button onClick={() => setMode('edit')} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Edit</button>
+                <button onClick={handleExport} disabled={exporting || form.status === 'draft'} title={form.status === 'draft' ? 'Mark the return final before exporting it' : 'Download the filing artifact'} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">{exporting ? 'Exporting...' : '↓ Export CSV'}</button>
                 <button onClick={() => window.print()} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Print</button>
                 <button onClick={() => setMode('list')} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Close</button>
               </>
             ) : (
               <>
-                <button onClick={handleGenerate} disabled={generating || !isVatRegistered} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50">{generating ? 'Generating...' : 'Generate'}</button>
+                <button onClick={handleGenerate} disabled={generating || !isVatRegistered} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50">{generating ? 'Generating...' : '⚡ Generate from posted ledger'}</button>
                 <button onClick={() => setMode('list')} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Cancel</button>
                 <button onClick={handleSave} disabled={saving || !isVatRegistered} className="bg-gray-900 text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{saving ? 'Saving...' : editId ? 'Update' : 'Save'}</button>
               </>
@@ -205,23 +237,31 @@ export default function VATReturn2550QPage() {
           </div>
         </div>
 
+        {/* Every figure below the two stated ones is read from the posted VAT
+            ledger by the RPC. None of them is typed, and none is recomputed
+            here: a return the ledger does not support cannot be marked final. */}
         <div className={sec}>
           <h2 className={hd}>Sales / Output VAT (Quarter Total)</h2>
+          <div className="col-span-2 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded px-3 py-2">
+            Computed from the posted VAT ledger. Press Generate after changing the
+            quarter, or after restating the two figures below.
+          </div>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className={lbl}>Taxable Sales</label>{isView ? <div className={ro}>{fmtNum(form.output_taxable_sales)}</div> : <input type="number" step="0.01" value={form.output_taxable_sales} onChange={e => set('output_taxable_sales', Number(e.target.value))} className={inp} />}</div>
-            <div><label className={lbl}>Output VAT</label>{isView ? <div className={ro}>{fmtNum(form.output_vat)}</div> : <input type="number" step="0.01" value={form.output_vat} onChange={e => set('output_vat', Number(e.target.value))} className={inp} />}</div>
-            <div><label className={lbl}>Zero-Rated Sales</label>{isView ? <div className={ro}>{fmtNum(form.zero_rated_sales)}</div> : <input type="number" step="0.01" value={form.zero_rated_sales} onChange={e => set('zero_rated_sales', Number(e.target.value))} className={inp} />}</div>
-            <div><label className={lbl}>Exempt Sales</label>{isView ? <div className={ro}>{fmtNum(form.exempt_sales)}</div> : <input type="number" step="0.01" value={form.exempt_sales} onChange={e => set('exempt_sales', Number(e.target.value))} className={inp} />}</div>
+            <div><label className={lbl}>Taxable Sales</label><div className={ro}>{fmtNum(form.output_taxable_sales)}</div></div>
+            <div><label className={lbl}>Output VAT</label><div className={ro}>{fmtNum(form.output_vat)}</div></div>
+            <div><label className={lbl}>Zero-Rated Sales</label><div className={ro}>{fmtNum(form.zero_rated_sales)}</div></div>
+            <div><label className={lbl}>Exempt Sales</label><div className={ro}>{fmtNum(form.exempt_sales)}</div></div>
           </div>
         </div>
 
         <div className={sec}>
           <h2 className={hd}>Purchases / Input VAT (Quarter Total)</h2>
           <div className="grid grid-cols-2 gap-4">
-            <div><label className={lbl}>Taxable Purchases</label>{isView ? <div className={ro}>{fmtNum(form.input_taxable_purchases)}</div> : <input type="number" step="0.01" value={form.input_taxable_purchases} onChange={e => set('input_taxable_purchases', Number(e.target.value))} className={inp} />}</div>
-            <div><label className={lbl}>Input VAT</label>{isView ? <div className={ro}>{fmtNum(form.input_vat)}</div> : <input type="number" step="0.01" value={form.input_vat} onChange={e => set('input_vat', Number(e.target.value))} className={inp} />}</div>
-            <div><label className={lbl}>Input VAT Carried Over</label>{isView ? <div className={ro}>{fmtNum(form.input_vat_carried_over)}</div> : <input type="number" step="0.01" value={form.input_vat_carried_over} onChange={e => set('input_vat_carried_over', Number(e.target.value))} className={inp} />}</div>
-            <div><label className={lbl}>Total Available Input VAT</label>{isView ? <div className={ro}>{fmtNum(form.total_available_input_vat)}</div> : <input type="number" step="0.01" value={form.total_available_input_vat} onChange={e => set('total_available_input_vat', Number(e.target.value))} className={inp} />}</div>
+            <div><label className={lbl}>Taxable Purchases</label><div className={ro}>{fmtNum(form.input_taxable_purchases)}</div></div>
+            <div><label className={lbl}>Input VAT</label><div className={ro}>{fmtNum(form.input_vat)}</div></div>
+            {/* Stated, not derived: the prior quarter's excess credit. */}
+            <div><label className={lbl}>Input VAT Carried Over <span className="text-gray-400 font-normal">— stated</span></label>{isView ? <div className={ro}>{fmtNum(form.input_vat_carried_over)}</div> : <input type="number" step="0.01" min="0" value={form.input_vat_carried_over} onChange={e => set('input_vat_carried_over', Number(e.target.value))} className={inp} />}</div>
+            <div><label className={lbl}>Total Available Input VAT</label><div className={ro}>{fmtNum(form.total_available_input_vat)}</div></div>
           </div>
         </div>
 
@@ -229,8 +269,9 @@ export default function VATReturn2550QPage() {
           <h2 className={hd}>Net VAT Payable</h2>
           <div className="grid grid-cols-3 gap-4">
             <div><label className={lbl}>Net VAT Payable (Quarter)</label><div className="text-xl font-bold font-mono tabular-nums text-gray-900">{fmtNum(form.net_vat_payable)}</div></div>
-            <div><label className={lbl}>Less: Paid — First 2 Months (2550M)</label>{isView ? <div className={ro}>{fmtNum(form.vat_paid_prior_months)}</div> : <input type="number" step="0.01" value={form.vat_paid_prior_months} onChange={e => set('vat_paid_prior_months', Number(e.target.value))} className={inp} />}</div>
-            <div><label className={lbl}>VAT Still Due</label><div className="text-xl font-bold font-mono tabular-nums text-gray-900">{fmtNum(form.net_vat_payable - form.vat_paid_prior_months)}</div></div>
+            {/* Stated, not derived: VAT already remitted for this quarter. */}
+            <div><label className={lbl}>Less: VAT Already Paid <span className="text-gray-400 font-normal">— stated</span></label>{isView ? <div className={ro}>{fmtNum(form.vat_paid_prior_months)}</div> : <input type="number" step="0.01" min="0" value={form.vat_paid_prior_months} onChange={e => set('vat_paid_prior_months', Number(e.target.value))} className={inp} />}</div>
+            <div><label className={lbl}>VAT Still Due</label><div className="text-xl font-bold font-mono tabular-nums text-gray-900">{fmtNum(form.vat_still_due)}</div></div>
           </div>
         </div>
 

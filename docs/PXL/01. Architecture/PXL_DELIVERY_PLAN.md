@@ -41,14 +41,40 @@ These are settled. Do not reopen them without a Product Architecture Amendment.
 
 | Decision | Ruling |
 |---|---|
-| **Banking & Treasury** | **v2.** Keep only Check Voucher (the Cash Disbursements Book needs it). Petty cash, bank reconciliation, transfers → v2. |
-| **Fixed Assets** | **v2**, except a minimal straight-line depreciation run if the pilot client holds assets. |
-| **Income Tax** | **v2.** Ten screens, none has ever held a row. |
+| **Banking & Treasury** | **v2, and the highest-priority future capability.** Keep only Check Voucher in v1 (the Cash Disbursements Book needs it). Petty cash, bank reconciliation, transfers → v2. |
+| **Fixed Assets** | **v2, second priority after Banking & Treasury**, except a minimal straight-line depreciation run if the pilot client holds assets. |
 | **Accounting Schedules** | **v2.** Amortisation and revenue recognition. |
 | **IA-5 / ECC chronology** | **Frozen.** Dormant, no consumers. Inventory reconciles without it. Do not resume without a real costing-replay requirement. |
 | **Multi-currency** | **Deferred.** PHP only. |
-| **Payroll** | **Separate future product.** Never counted in PXL progress. |
 | **Deferred surfaces** | Marked **Not built** in the navigation via `src/lib/deferredSurfaces.ts`. |
+
+### Excluded from v1, from the pilot, and from production readiness
+
+**Owner ruling, 2026-08-04.** The capabilities below are **future optional
+products or future extensions**. They are *not* current PXL product scope, *not*
+pilot scope, and **not production-readiness requirements**. None of them is a
+production blocker, and no readiness statement anywhere in PXL may be held open
+on their account. A pilot client that needs one of them is a reason to schedule
+that capability deliberately — not a reason to call PXL unready.
+
+| Excluded capability | Classification |
+|---|---|
+| **Final Withholding Tax**, including 1601FQ and 2306 | Future extension. FWT has no tax kind, so it never reaches the tax ledger; its two legacy working-paper screens are the single documented exception to the governed compliance architecture and are retired only if and when FWT is built (Backlog 22). |
+| **Payroll** | Separate future product. Never counted in PXL progress. |
+| **Form 2316** | Future extension; belongs with Payroll. |
+| **Quarterly and Annual Income Tax** | Future extension. Ten screens, none has ever held a row. |
+| **MCIT / RCIT** | Future extension. |
+| **NOLCO** | Future extension. |
+| **OSD** | Future extension. |
+| **Fringe Benefits Tax** | Future extension. |
+| **Transfer Pricing** | Future extension. |
+| **Consolidation Tax** | Future extension. |
+| **Specialized-industry tax features** | Future extension. |
+
+**Priority ordering for future work.** Banking & Treasury, then Fixed Assets,
+rank **above every item in the exclusion table**. Neither is started, and this
+ordering authorises no implementation — it records the sequence for when future
+work is scheduled.
 
 ---
 
@@ -184,15 +210,10 @@ still resolves — and still keeps — the version that governed it. Test `118`,
 
 **Still open in this phase:**
 
-- **Percentage tax is calculated nowhere** — not by the engine, and not by
-  anything before it. A non-VAT, PT-registered company's sales compute no
-  percentage tax at all, so the PT review surfaces have no source. Adding a PT
-  branch to the engine without a document calling it would be foundation with
-  no consumer, which this repository has already paid for once. The whole chain
-  ships together or not at all: Sales Invoice or Cash Sale → PT computation →
-  PT tax detail/ledger → PT liability posting → PT reconciliation → 2551Q
-  working paper and return. It needs a posting change (a PT liability line), so
-  it belongs with the Phase 5 flows. Recorded in the Product Backlog, item 8.
+- ~~**Percentage tax is calculated nowhere**~~ **CLOSED 2026-08-04 in Phase 5**,
+  where it belonged: it needed a posting change and a document that calls it.
+  Migration `20260804000001_percentage_tax.sql`, test `124`. The whole chain
+  shipped together as this bullet required — see Phase 5 item 7a.
 - **The company tax profile is not effective-dated.**
   `companies.tax_registration` is one scalar with no history, so VAT validation
   resolves a document's profile from today's registration. Every tax-profile
@@ -219,8 +240,8 @@ still resolves — and still keeps — the version that governed it. Test `118`,
 > changed phase.
 
 1. ✅ `fn_calculate_tax(context) → SETOF tax_component` — one authority for VAT
-   (inclusive and exclusive) and withholding by ATC (EWT and FWT share the
-   mechanism). **Percentage tax is not implemented — see above.**
+   (inclusive and exclusive), withholding by ATC (EWT and FWT share the
+   mechanism) and, since 2026-08-04, **percentage tax**.
 2. ✅ Migrate the **eleven** routines that computed tax independently. The seven
    save routines (`fn_save_cash_purchase_core_20260718`, `fn_save_cash_sale`,
    `fn_save_credit_memo`, `fn_save_debit_memo`,
@@ -236,9 +257,9 @@ still resolves — and still keeps — the version that governed it. Test `118`,
 
 **Done when:** there is one place to change a BIR rate, and every existing caller
 produces identical tax output through it. **Met for VAT and withholding on
-2026-08-03.** Filing capability is **not** claimed here — that is Phase 5.8, and
-percentage tax calculation moves to the Phase 5 flows because it needs a posting
-change and a document that calls it.
+2026-08-03, and for percentage tax on 2026-08-04** (in Phase 5, because it needed
+a posting change and a document that calls it). Filing capability is **not**
+claimed here — that is Phase 5.8.
 
 ---
 
@@ -307,8 +328,9 @@ are right is a return that changes after submission.
    unlinked invoice for delivered goods would relieve the stock twice, so that
    is deliberately the only supported path until Document Conversion (item 5)
    generalises it.
-4. Evidence the remaining **critical reconciliations (currently 1 of 9)**. VAT and
-   withholding already reconcile at zero variance — nearly free.
+4. Evidence the remaining **critical reconciliations (currently 2 of 9)**. VAT and
+   withholding already reconcile at zero variance — nearly free. Percentage tax
+   was evidenced with item 7a.
 5. **Document Conversion**, minimally: carry quantities forward, prevent double
    conversion. This is what makes quote → invoice real.
 6. Surface the accounting trace in the menu (complete, currently unreachable).
@@ -424,17 +446,187 @@ are right is a return that changes after submission.
    company-authored narrative, statement-line-to-note cross-references, a
    signature block, and consolidation. Recorded in the Product Backlog as items
    18i and 18f.
-8. **BIR filing artifacts.** *Moved here from Phase 4 on 2026-08-02: a return is
+7a. ✅ **Percentage tax — DONE 2026-08-04.** Migration
+   `20260804000001_percentage_tax.sql`, test `124` (37 assertions,
+   self-provisioned company), plus a committed three-sale run across two
+   quarters. The last unblocked accounting gap, and the one that decided whether
+   a non-VAT pilot client could operate at all: percentage tax was computed
+   **nowhere**, and the PT Return screen summed VAT-*exempt* sales lines in the
+   browser — VAT exemption is not the percentage-tax base, and a return computed
+   on the client is not computed from the books.
+
+   The whole chain shipped at once, as the item required: a per-line
+   percentage-tax code → a `percentage_tax` component from `fn_calculate_tax` →
+   DR `PERCENTAGE_TAX_EXPENSE` / CR `PERCENTAGE_TAX_PAYABLE` on **both** Sales
+   Invoice and Cash Sale → one tax-ledger row per code, stamped with the
+   tax-code version, its rate and the 2551Q ATC →
+   `fn_percentage_tax_gl_reconciliation` at **0.00** variance → working paper →
+   2551Q, which cannot be marked final or filed while it disagrees with the
+   ledger.
+
+   There is **one business-tax route, not a parallel one**:
+   `fn_business_tax_codes_asof` is the single picker and
+   `fn_resolve_business_tax_code` the single validator for both families, and
+   the VAT half is delegated verbatim to `fn_resolve_vat_code`. Percentage tax
+   is the **seller's** tax on its gross sales, so it never enters the
+   receivable. `percentage_tax_codes` gained the version machinery `vat_codes`
+   has, so a statutory rate change — Section 116 fell to 1% under CREATE and
+   returned to 3% — is a succession, never an edit.
+
+   Repaired with it: `fn_seed_company_percentage_tax_codes` labelled a code 3%
+   while pointing it at the **12%** tax code, and attached a **withholding** ATC
+   where no percentage-tax ATC existed. Nothing had ever posted from those rows.
+
+   **Still open:** recognition is on the document rather than on collections for
+   services, a credit memo does not reverse the tax, and nothing compels a
+   PT-registered company to select its code. Product Backlog item 8b.
+8. ◐ **BIR filing artifacts — ENGINE DONE 2026-08-04.** Migration
+   `20260804000002_bir_filing_artifacts.sql`, test `125` (42 assertions,
+   self-provisioned company). *Moved here from Phase 4 on 2026-08-02: a return is
    generated from posted, closed data, so this depends on items 1–7 above and
-   cannot precede them.* All twelve `compliance_*` working-paper tables are
-   empty, as are `bir_forms`, `form_2306_issuances`, `form_2307_issuances`,
-   `form_2307_tracking`, `vat_returns`, `withholding_remittances` and
-   `tax_credits_schedule`. **Nothing has ever been filed from PXL.** A
-   VAT-registered pilot client cannot operate without at least: VAT return
-   working papers, EWT working papers, Form 2307 issuance, and the SLS/SLP
-   exports. Includes **Check Voucher**, the one Banking document kept in v1
-   because the Cash Disbursements Book needs it — previously named in the scope
-   decisions but never assigned to a phase.
+   cannot precede them.*
+
+   The path is now one path, and there is only one of it:
+
+   > posted transactions → Tax Engine → tax ledger → working paper → filing artifact
+
+   **What was there before.** Three near-identical reconciliation functions —
+   `fn_vat_gl_reconciliation`, `fn_wht_gl_reconciliation` and
+   `fn_percentage_tax_gl_reconciliation` — differing only in which tax kinds they
+   read, which control account they compared against, whether the `WHTREM`
+   remittance journal was excluded and whether `reversed` journals counted. Four
+   differences, three copies, and every future tax would have been a fourth. On
+   top of that, **three more computations in JavaScript**: the 2550Q screen summed
+   two review views with `reduce`, and so did the SLSP export and the SAWT
+   alphalist. A figure computed on the client is not a figure computed from the
+   books, and three clients drift three ways.
+
+   **What replaced it.** `ref_tax_ledger_control` states, per tax kind, the
+   governed account key, the normal balance, which journal statuses count and
+   which reference document types are excluded — those four differences are now
+   *configuration*. `fn_tax_ledger_gl_reconciliation` is **the** reconciliation;
+   the three existing functions became one-line delegations that kept their
+   signatures, their column shapes and their exact semantics, so no caller and no
+   existing test changed. `ref_filing_artifact` + `ref_filing_artifact_kind`
+   register what an artifact *is*: period basis, the tax kinds it consumes, the
+   sign each kind carries in its net, and the dimensions it groups by.
+   `fn_filing_working_paper` is **the** reader — one query, no dynamic SQL, in
+   which the artifact's declared dimensions decide which grouping keys survive,
+   so a summary return and a per-counterparty alphalist are the same code path
+   with different configuration. `fn_generate_filing_artifact` persists a
+   `filing_artifacts` header and its lines, and refuses to let one leave draft
+   while it disagrees with the ledger it claims to summarise. **Registering the
+   next form is a seed row, not a function.**
+
+   **Registered in this increment:** 2550Q, 2551Q, 1601EQ, SLSP and SAWT; QAP was
+   added on 2026-08-04 as the seed row this design promised it would be.
+
+   Percentage tax, which had shipped hours earlier with its own generator, was
+   **re-pointed at this engine rather than left beside it** — a second pipeline is
+   exactly what this phase exists to prevent, including one of its own making.
+   The 2550Q and 2551Q screens now display rather than compute:
+   `fn_generate_vat_return` and `fn_generate_pt_return` project the artifact into
+   the `vat_returns` and `pt_returns` rows those screens already read. On the
+   2550Q the accountant states only two figures — input VAT carried over and VAT
+   already paid — and states them *to the RPC*, so the net payable still has
+   exactly one author. The VAT classification split the form needs (taxable,
+   zero-rated, exempt) survives because an exempt or zero-rated line reaches the
+   tax ledger with a base and a zero tax.
+
+   ✅ **Filing Artifact Export — DONE 2026-08-04.** Migration
+   `20260804000003_filing_artifact_export.sql`, test `126` (24 assertions,
+   self-provisioned company), Backlog item 8d. The chain had ended one link short
+   of usable: every figure tied to the General Ledger at 0.00 and there was still
+   **no way to get a return out of PXL** to key into eFPS.
+
+   The export is **another consumer of the artifact, not another computation
+   engine**, and the test asserts exactly that: the exporter reads no
+   transaction, tax-ledger row or review view, and **aggregates nothing** — no
+   `SUM`, no `AVG` — because the artifact already stated every number. An export
+   that re-sums is an export that can disagree. `ref_filing_export_column` holds
+   each form's layout as configuration, and its `source_field` CHECK constraint
+   makes a non-conforming layout **unwritable** rather than merely discouraged.
+   One function serves every form and both formats, reusing the existing
+   `fn_export_*` primitives; a second format costs seed rows, not a second
+   exporter. The evidence row points at the artifact by its **own id**, and the
+   downloaded bytes are read back from that row, so the file an accountant keys
+   into eFPS is provably the file PXL recorded producing.
+
+   ✅ **The 1601EQ and the QAP joined the layer — DONE 2026-08-04.** Migration
+   `20260804000004_ewt_qap_filing_artifacts.sql`, test `127` (34 assertions,
+   self-provisioned company), Backlog item 8e (i) and (iii).
+
+   Two surfaces computed correctly and **recorded nothing**. The 1601EQ screen
+   computed through the governed engine and then wrote `ewt_returns` by typed
+   insert, so a return could be marked filed with no artifact behind it — no
+   working paper, nothing to export. The QAP was aggregated in JavaScript from a
+   review view that drops reversal counter-rows, so a voided withholding left the
+   alphalist and the return it attaches to disagreeing, invisibly.
+
+   `fn_generate_ewt_return` is the **third instance of the projection shape and
+   added no engine**. Registering the QAP cost **a seed row and its tax kind**,
+   which is the claim the registry has been making about itself since it shipped.
+   Because the QAP and the 1601EQ now read the same ledger through the same
+   reader, the alphalist adds up to the return **by construction** rather than by
+   coincidence. Building it corrected a design error of its own: `remitted_prior`
+   was drafted as a stated figure like the 2550Q's, but PXL-AUD-041 had already
+   made it derived, so the projection reads `fn_compute_ewt_remitted_prior` and
+   the screen's editable field is gone — the 1601EQ now carries **no stated figure
+   at all**. The orphan `fn_qap_2307_reconciliation` was **resolved, not retired**:
+   it reads the artifact working paper and is surfaced on the QAP screen. The
+   withholding-agent gate was extended to key on what a snapshot *is* rather than
+   on which table produced it, so migrating the screen did not walk around it.
+
+   ✅ **The second compliance architecture is retired — DONE 2026-08-04.**
+   Migrations `20260804000005` and `…06`, tests `128` (30 assertions), `129` (22)
+   and `tests/compliance_architecture.test.ts`, Backlog item 8f stages 1–2.
+
+   Twelve legacy `compliance_*` working-paper tables and six hand-keyed screens
+   were the second architecture this phase exists to prevent — an accountant
+   could key a schedule **no ledger backed**. The capability audit found their
+   "Generate" button was a stub that said so in its own words, so their only real
+   capability was the manual line itself. That capability was migrated first, as
+   the governed **Reconciling Item**: manual, audited, frozen once the artifact
+   leaves draft, excluded from every total **structurally** — its amount lives in
+   a column no computation reads — and visible as a note in CSV but never in a
+   DAT file the Bureau ingests. Only then were the eight VAT/EWT/1601EQ/PT tables
+   dropped, the last legacy writer removed from `fn_generate_pt_return`, the four
+   screens replaced by **one** governed working-paper surface, and
+   `fn_snapshot_wht_export` retired — which revealed that the legacy export had
+   been executable by **`anon`**, moving a census number that had been fixed since
+   test `102` was written.
+
+   Two things were found and fixed that were not on anyone's list: the filing
+   artifact had **no role gate** on final/filed while every other compliance
+   record has had one since 2026-07-01, and the governed working paper needed an
+   accounting-trace drill-down so the per-document detail of the retired screens
+   survives the move to grouped schedules.
+
+   The verification is **executable**, not prose: test `129` asserts that no
+   function reads a retired working paper, that exactly one function writes a
+   filing artifact, and that every export snapshot of a registered form is keyed
+   to the artifact; the TypeScript half asserts no routed screen reaches a
+   retired table.
+
+   **FWT is the single documented exception.** `compliance_fwt_*` and
+   `compliance_1601fq_*` and their two screens remain, hand-keyed, because FWT is
+   not a tax kind: it never reaches the tax ledger, so no artifact can be
+   generated for it. Retiring them would delete functionality with no governed
+   equivalent. Backlog 22 must give FWT the same pipeline as VAT, PT and EWT
+   rather than a special case, and assertion `129`.9 fails the moment it does, so
+   this cannot be forgotten.
+
+   **Why this item is ◐ and not ✅. Nothing has ever been filed from PXL, and
+   that has not changed.** A `filed` status here records the accountant's own
+   submission; PXL does not transmit to the Bureau. The other eleven
+   `compliance_*` working-paper tables remain empty, `form_2306_issuances` and
+   `form_2307_tracking` are untouched, and the SLSP *screen* still aggregates its
+   sales side in the browser — the artifact is registered and tested, but the
+   screen is monthly while the attachment is quarterly and its evidence snapshot
+   is keyed by month. 1601FQ, 2550M, 1604-E and the Books of Accounts exports are
+   not registered. All recorded as Product Backlog items 8c and 8e (ii).
+   **Check Voucher** — the one Banking document kept in v1 because the Cash
+   Disbursements Book needs it — is still unassigned to a phase.
 
 Each flow proven by a **fresh-data end-to-end test in the style of `112`**, never
 against the demo seed.
@@ -543,9 +735,9 @@ recoverable, which is the difference between a setback and a catastrophe.
 | 1 | ~~Receiving adds stock with no journal~~ | — | ✅ closed |
 | 2 | ~~No schedule, no offsite path~~ Both built and proven; a durable destination and escrowed passphrase remain owner actions | Every module's production readiness | 2 |
 | 3 | ~~No opening balances~~ Local capability complete; real cut-over proof open | Pilot onboarding acceptance | ✅ local / 3 |
-| 4 | ~~No Tax Engine calculator~~ **CLOSED 2026-08-03 (PAD-001).** One calculator, eleven callers migrated. Percentage tax still calculated nowhere | Percentage-tax companies only | ✅ / 5 |
+| 4 | ~~No Tax Engine calculator~~ **CLOSED 2026-08-03 (PAD-001).** One calculator, eleven callers migrated; **percentage tax closed 2026-08-04** (test `124`) | — | ✅ |
 | 5 | ~~No financial statement presentation~~ **CLOSED 2026-08-03.** All four statements produced from governed configuration (test `121`), the accounting cycle closes into retained earnings (test `122`), and the statements carry a comparative period and basic notes (test `123`). **Successor risk: the notes are not signature-ready** — no company narrative, note templates, line-to-note cross-references or signature block | A pilot accountant signing a statement | ✅ / Backlog 18i |
-| 6 | No filing artifacts — nothing has ever been filed | Statutory filing; a VAT-registered pilot client | 5.8 |
+| 6 | No filing artifacts — nothing has ever been filed. The 2551Q and its working paper are now generated from the posted ledger (2026-08-04); no return has been filed and the other eleven working papers stay empty | Statutory filing; a VAT-registered pilot client | 5.8 |
 
 ---
 

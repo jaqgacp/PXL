@@ -173,14 +173,18 @@ SELECT is(
    WHERE table_name='percentage_tax_codes' AND record_id='55555555-5555-5555-5555-555555555663'),
   '11111111-1111-1111-1111-111111111661'::uuid, 'percentage_tax_codes insert captures the acting user');
 
-UPDATE percentage_tax_codes SET rate=5
+-- The rate is not editable in place: it is a projection of the governed tax
+-- code version, and a rate change is a succession (Backlog 8). The audit
+-- coverage this file exists for is proven on a field that may legitimately
+-- change.
+UPDATE percentage_tax_codes SET description='3% Percentage Tax (Section 116)'
 WHERE id='55555555-5555-5555-5555-555555555663';
 SELECT results_eq(
-  $q$SELECT action, old_data->>'rate', new_data->>'rate'
+  $q$SELECT action, old_data->>'description', new_data->>'description'
      FROM sys_audit_logs
      WHERE table_name='percentage_tax_codes' AND record_id='55555555-5555-5555-5555-555555555663'
        AND action='UPDATE'$q$,
-  $$VALUES ('UPDATE'::text, '3.00'::text, '5.00'::text)$$,
+  $$VALUES ('UPDATE'::text, '3% Percentage Tax'::text, '3% Percentage Tax (Section 116)'::text)$$,
   'percentage_tax_codes update captures before and after values');
 
 DELETE FROM percentage_tax_codes WHERE id='55555555-5555-5555-5555-555555555663';

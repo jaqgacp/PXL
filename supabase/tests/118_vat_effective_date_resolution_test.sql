@@ -93,10 +93,17 @@ SELECT ok(
     WHERE n.nspname = 'public' AND p.proname = 'fn_calculate_tax'),
   'the engine no longer reads the VAT master directly');                           -- 1
 
+-- The engine asks the business-tax route, and that route asks the VAT resolver:
+-- percentage tax (Backlog 8) added a second family, not a second rule set, so
+-- the chain from engine to VAT authority must remain unbroken.
 SELECT ok(
-  (SELECT p.prosrc ~ '\mfn_resolve_vat_code\M'
-     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = 'fn_calculate_tax'),
+  (SELECT e.prosrc ~ '\mfn_resolve_business_tax_code\M'
+     FROM pg_proc e JOIN pg_namespace n ON n.oid = e.pronamespace
+    WHERE n.nspname = 'public' AND e.proname = 'fn_calculate_tax')
+  AND
+  (SELECT b.prosrc ~ '\mfn_resolve_vat_code\M'
+     FROM pg_proc b JOIN pg_namespace n ON n.oid = b.pronamespace
+    WHERE n.nspname = 'public' AND b.proname = 'fn_resolve_business_tax_code'),
   'the engine resolves VAT through the one resolver');                             -- 2
 
 -- The company-tax-profile rule exists in exactly one place. Before this work it

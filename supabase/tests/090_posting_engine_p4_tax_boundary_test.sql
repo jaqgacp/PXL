@@ -212,11 +212,12 @@ SELECT set_eq(
   $$SELECT p.proname::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE n.nspname = 'public' AND p.prokind = 'f'
        AND p.prosrc ~ 'INSERT INTO\s+tax_detail_entries'$$,
-  $$VALUES ('fn_add_tax_detail'),('fn_rebuild_document_vat_details'),
+  $$VALUES ('fn_add_tax_detail'),('fn_add_percentage_tax_detail'),
+           ('fn_rebuild_document_vat_details'),
            ('fn_post_check_voucher'),('fn_post_cash_purchase_source_locked_impl'),
            ('fn_post_credit_memo_vat_lump_impl'),('fn_post_debit_memo_vat_lump_impl'),
            ('fn_post_vendor_credit_vat_lump_impl'),('fn_save_cash_sale')$$,
-  'the tax-ledger writer census is exactly the eight censused functions');          -- 14
+  'the tax-ledger writer census is exactly the nine censused functions');           -- 14
 
 SELECT set_eq(
   $$SELECT p.proname::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace

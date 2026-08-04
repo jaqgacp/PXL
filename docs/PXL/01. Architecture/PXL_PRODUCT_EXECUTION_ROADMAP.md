@@ -143,10 +143,17 @@ in which work should happen.
 ## 9.2.4 UI ahead of backend
 
 Banking & Treasury, Fixed Assets, Accounting Schedules, returns/corrective
-documents, statutory working papers/return generators, Income Tax, attachment
-artifacts and several CAS export surfaces present as routes or pages while their
-governed backing tables remain empty. A route/page is therefore evidence of
-surface coverage only.
+documents, attachment artifacts and several CAS export surfaces present as routes
+or pages while their governed backing tables remain empty. A route/page is
+therefore evidence of surface coverage only.
+
+The statutory working papers and return generators are **no longer** in this
+category: since 2026-08-04 the VAT, EWT/1601EQ and percentage-tax working papers
+are generated from the posted tax ledger through the Filing Artifact framework,
+and the four hand-keyed screens were deleted. The two FWT working-paper screens
+remain hand-keyed and are the single documented exception. Income Tax is a
+**future product extension**, not a surface gap — see the Delivery Plan's
+exclusion table.
 
 ## 9.2.5 Backend ahead of UI
 
@@ -189,7 +196,7 @@ excellent transaction and one material empty lifecycle remains M4 or below.
 | Banking & Treasury | **M3** | Only `bank_accounts` holds data. `check_vouchers`, `fund_transfers`, `bank_reconciliations`, `petty_cash_vouchers`, `bank_adjustments` are **all empty**; their posting functions have never produced a journal. |
 | Fixed Assets | **M3** | **All six tables empty**; five routes deferred; depreciation policy has no master. |
 | Accounting | **M4** | 51 journals / 144 lines; trial balance out-of-balance **₱0.00 in all five companies**; 60 fiscal periods; all four statements produced from governed configuration, with comparatives and basic notes, since 2026-08-03; period close, year-end close and retained-earnings roll-forward all commit and are governed. Held at M4 by consumer-wide reconciliation proof — the close has never been operated over real books. |
-| Compliance | **M4** | VAT/EWT reconcile to GL; 248 calendar events; 218 CAS issuances. Held at M4 by the absent Tax Engine and by **all twelve `compliance_*` working-paper tables, `bir_forms`, `form_2306/2307_*`, `vat_returns` and `withholding_remittances` being empty**. |
+| Compliance | **M5** | VAT, percentage tax and withholding all reconcile to the GL at 0.00 through **one** reconciliation. The Tax Engine shipped 2026-08-03; the Filing Artifact framework, its export and the 1601EQ/QAP/SAWT migration shipped 2026-08-04, and the legacy VAT/EWT/1601EQ/PT working-paper architecture was retired with them — `vat_returns`, `pt_returns` and `ewt_returns` are now projections of the artifact, not typed records. Held below M6 by the fact that **nothing has ever been filed with the Bureau**, by the SLSP screen's monthly-versus-quarterly evidence model (Backlog 8c / 8e ii), and by hosted operation being absent. FWT is **out of product scope** and is not counted here. |
 | Reports | **M4** | 23 views plus the statement reporting entry point read posted data; comparatives, statement-line drill-down and basic notes shipped 2026-08-03. Held at M4 by **1 of 9** critical reconciliations evidenced, and by a signature-ready note set (Backlog 18i). |
 | Administration & Security | **M4** | PAD-003 selected restricted in-product administration; four guarded screens exist locally, while hosted invite/browser/UAT and operating evidence remain open. |
 | Dashboard *(not a module)* | **M4** | Live readiness/deadline monitoring works; KPI grid, range, roll-up, export and owner are incomplete. |

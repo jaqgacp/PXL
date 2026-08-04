@@ -499,32 +499,22 @@ Notes:
 - `vw_output_vat_review` and `vw_input_vat_review` now aggregate from `tax_detail_entries`; the 2550M/2550Q pages already consume those views, so their generated figures inherit the same ledger-backed source.
 - First execution of `fn_save_cash_sale` exposed PXL-AUD-028 (phantom columns, zero totals from UI payloads, AR over-application, missing ATC); the function now recomputes amounts server-side like `fn_save_sales_invoice`, and `CashSalesPage` collects the CWT ATC.
 
-## WHT-EXPORT-SNAP-001 - SAWT/QAP Export Snapshots and WHT/GL Reconciliation
+## WHT-EXPORT-SNAP-001 — RETIRED 2026-08-04 with Backlog 8f
 
-Status: Executed Passing (updated 2026-07-13) in `supabase/tests/016_wht_export_snapshots_test.sql` (19 assertions).
+Status: **Retired.** The test file `016_wht_export_snapshots_test.sql` was
+deleted when its subject was: `fn_snapshot_wht_export` and `wht_export_periods`
+were removed by migration `20260804000006`. The SAWT and QAP screens export
+through `fn_snapshot_filing_artifact_export`, which is keyed to the artifact's
+own id rather than to a synthesised export-period key, so the legacy path had no
+consumer left but this file.
 
-Related findings: PXL-DA-009, PXL-DA-015 (report provenance, fourth slice).
-
-Scenario (VAT company; WC140 2% and WC010 10% ATCs; Q1 2026 books: OR with CWT, PV EWT, and a same-supplier second PV under a different ATC):
-
-| Step | Action | Expected Behavior |
-| ---- | ------ | ----------------- |
-| 1 | Reconcile Q1 withholding | `fn_wht_gl_reconciliation`: `cwt_receivable` 224.00 = CWT Receivable GL movement, `ewt_payable` 100.00 = EWT Payable GL movement, variance 0 for both. |
-| 2 | Read the SAWT source view | `vw_cwt_summary_ar` is ledger-backed (`tax_kind = 'cwt_receivable'`, reversed pairs excluded) and exposes the gross income payment (11,200.00 = payment + CWT), not the net collection. |
-| 3 | Export SAWT for Q1 | `fn_snapshot_wht_export` creates an `exported` v1 snapshot: period 2026-01-01..2026-03-31, 64-character SHA-256 source hash, frozen per-customer income payments and CWT withheld. |
-| 4 | Export QAP for Q1 | Separate `exported` v1 snapshot with frozen detail rows from `vw_ewt_summary_ap`; payee summary rows use supplier + ATC + nature + rate granularity. |
-| 5 | Re-export QAP for the same quarter | v2 on the same deterministic logical source id — export history is versioned, never overwritten. |
-| 6 | Add a second PV for the same supplier using WC010 | QAP snapshot keeps two payee rows: WC010 10,000.00 / 1,000.00 and WC140 5,000.00 / 100.00, instead of collapsing the supplier into one mixed-ATC row. |
-| 7 | Generate Form 2307 for the quarter | Issuance lines use the same supplier + ATC grouping as QAP; the QAP snapshot includes `form2307_reconciliation` rows with zero variance and `is_reconciled = true`. |
-| 8 | Attempt direct snapshot writes as `authenticated` | Direct INSERT rejected (42501); UPDATE/DELETE policies filter every row, so the snapshot survives untouched. |
-| 9 | Request an unknown report type or quarter 5 | Rejected with explicit errors. |
-| 10 | Post a manual JE crediting EWT Payable without tax detail | QAP export is blocked (`does not reconcile to GL account`); SAWT export still succeeds because its own control account (CWT Receivable) still reconciles. |
-
-Notes:
-
-- SAWT previously aggregated `receipt_lines` through `sales_invoices` in the browser, so cash-sale CWT rows never reached the alphalist and income payments were net of CWT; the page now reads `vw_cwt_summary_ar`, and both SAWT/QAP downloads are generated from the immutable snapshot payload returned by `fn_snapshot_wht_export`.
-- QAP snapshots include `form2307_reconciliation`, produced by `fn_qap_2307_reconciliation`, so auditors can compare active non-superseded 2307 issuance lines to QAP rows at supplier + ATC + nature + rate granularity.
-- Same remittance caveat as VAT-RECON-001: legitimate 0619-E/1601EQ remittance JEs on the withholding control accounts surface as variance until a controlled remittance flow exists.
+Two of its claims were **not** about that subject and were migrated rather than
+dropped, into `129_compliance_architecture_verification_test.sql`: report
+snapshots are append-only to an ordinary user (129.13), and an export is refused
+while the control account no longer reconciles (129.14) — asserted there against
+a *final* artifact whose account mapping has since moved, which is the
+misconfiguration the guarantee exists for. Snapshot versioning and hashing are
+covered by `126` (assertions 21, 23). Nothing this file proved is now unproven.
 
 ## CAS-EXPORT-SNAP-001 - CAS DAT Export Snapshots and Server-Attested Export Log
 
@@ -2668,3 +2658,428 @@ periods.
 Not claimed: this is not a complete PFRS or PFRS for SMEs disclosure set, and the
 notes say so in their own text. Note templates, per-note narrative editing,
 signature blocks and consolidation remain outstanding (Backlog 18i).
+
+## Delivery Plan Phase 5 (Backlog 8) — Percentage tax, the whole chain
+
+Status: **PASSING 2026-08-04.**
+`supabase/tests/124_percentage_tax_chain_test.sql` (37 assertions, self-provisioned
+company) closes the last unblocked accounting gap: a non-VAT Section 116 taxpayer
+now computes, posts, reconciles and files its business tax.
+
+**What was missing.** Percentage tax was calculated nowhere in PXL and never had
+been. A company could be configured as non-VAT and percentage-tax registered, be
+given `percentage_tax_codes`, sell all year — and produce no component, no journal
+line, no tax-ledger row, no working paper and no 2551Q. The PT Return screen
+filled the void by summing VAT-**exempt** sales lines in the browser, which is
+wrong twice over: VAT exemption is not the percentage-tax base, and a return
+computed on the client is not a return computed from the books.
+
+**Two master-data defects were repaired with it.**
+`fn_seed_company_percentage_tax_codes` seeded a row labelled "3% general" whose
+`tax_code_id` pointed at **PT12-OUT (12%)**, because it took the first `pt` tax
+code by code and 'PT12-OUT' sorts before 'PT3-OUT'; and where a company had no
+percentage-tax ATC it attached **any** ATC — a withholding one — so the 2551Q line
+would have carried an EWT code. Nothing had ever posted from those rows, so the
+repair restates no book.
+
+Section A proves the route. There is one business-tax picker and one resolver, not
+a parallel stack: `fn_business_tax_codes_asof` offers the Section 116 code to a
+non-VAT, percentage-tax-registered company (1), never to a VAT-registered one (2),
+and never on a purchase line (3) — percentage tax is the seller's own tax, not a
+component of what a supplier charges. A VAT company is refused the code outright
+(4) and a code cannot be borrowed from another company (6). A Section 116 line is
+legitimately VAT-**exempt** and percentage-taxable at the same time, so one call
+answers for both families (5). The engine charges 3% of gross sales and leaves net
+and gross untouched (7): the customer is not charged this tax.
+
+Section B is the counter sale — 20,000 of services and 4,000 of goods. The
+customer is billed 24,000 with no VAT and the shop owes 720 (8); every line stamps
+the base, the resolved rate and its amount (9); the journal balances with the tax
+in it (10); the tax is expensed (11) and owed (12); **the receivable is still the
+24,000 the customer owes** (13); and the goods still leave stock (14) — percentage
+tax changed nothing else. The ledger row carries the tax-code version, its rate,
+the 2551Q ATC (15) and the company code version it came from (16), and it ties to
+the payable control account at **0.00 variance** (17).
+
+Section C repeats the act on a credit Sales Invoice through approve-and-post
+(18–20), and both documents together still reconcile at 0.00 (21).
+
+Section D is the filing artifact. The quarterly computation groups by ATC, which
+is how a 2551Q is filed (22); generating the return reports 1,020.00 due (23) and
+stores the ledger figures with the VAT-shaped legacy columns at zero (24); the
+working paper schedules both documents behind the one number (25) and adds up to
+it (26). A return may not be filed on a figure the ledger does not support (27),
+may be marked final when it agrees (28), and is never silently rewritten
+underneath the accountant afterwards (29).
+
+Section F is the void. The tax is recognised on the document, so a document
+that is voided must take its tax back out: the September invoice recognises
+800.00 at the successor rate (35), voiding it counter-posts the ledger to nil and
+the counter-row **keeps the company code version it reverses** (36), and the
+quarter still ties to the General Ledger, at nil (37). `fn_reverse_tax_detail_entries`
+already reversed every tax kind generically; it now stamps
+`percentage_tax_code_id` on the counter-row, which it could not do before because
+the column did not exist when it was written.
+
+Section E is the statutory rate change. Section 116 fell to 1% under CREATE and
+returned to 3%, so the rate is a **succession, not an edit**: a successor cannot
+start while the version it replaces is still open (30), the version that computed
+a filed quarter can never be edited (31), and the superseded version is refused on
+a date it no longer covers (32). A May sale is taxed at 1% (33) and Q2 files on
+its own quarter, leaving the filed Q1 alone (34).
+
+**Committed evidence, separate from this file.** Three counter sales across two
+quarters on a self-provisioned company, with real COMMITs: ledger rows of 450.00,
+750.00 and 1,200.00 on bases of 15,000, 25,000 and 40,000; ledger-to-GL variance
+**0.00** against account 2240 for the year; trial balance out-of-balance **0.00**;
+Q1 filed at 1,200.00 on a base of 40,000 with a two-line working paper, Q2 draft at
+1,200.00.
+
+Not claimed: recognition is on the sales document (accrual on gross sales), not on
+collections for services; a credit memo does not yet reverse percentage tax; and
+nothing compels a percentage-tax-registered company to put its code on a line —
+all three are recorded in the Product Backlog.
+
+## Delivery Plan Phase 5.8 — BIR filing artifacts, on one governed path
+
+Status: **PASSING 2026-08-04.**
+`supabase/tests/125_bir_filing_artifacts_test.sql` (42 assertions, self-provisioned
+company) proves that every registered filing artifact is produced by the same
+three functions from the same posted ledger:
+
+> posted transactions → Tax Engine → tax ledger → working paper → filing artifact
+
+**What was there before.** Three near-identical reconciliation functions and three
+more computations in JavaScript. `fn_vat_gl_reconciliation`,
+`fn_wht_gl_reconciliation` and `fn_percentage_tax_gl_reconciliation` had
+effectively the same body, differing only in which tax kinds they read, which
+control account they compared against, that withholding excludes the `WHTREM`
+remittance journal, and that VAT counts `reversed` journals while withholding does
+not — four differences, three copies, and every future tax would have been a
+fourth. Meanwhile the 2550Q screen computed the quarterly VAT return in the
+browser by summing two review views with `reduce`, and so did the SLSP export and
+the SAWT alphalist.
+
+Section A proves that registering a form is configuration rather than code. The
+registry names exactly the five artifacts this increment registers (1); a return
+states which way each tax kind moves its net, so input VAT is a credit against
+output VAT rather than a second liability (2); the `WHTREM` exclusion and the
+journal statuses that used to separate two functions are now rows in
+`ref_tax_ledger_control` (3); an unregistered form is refused rather than guessed
+at (4); and one function turns a filing period into dates (5).
+
+Section B posts the three documents everything else is read from — a 100,000
+invoice to an ordinary buyer, a 50,000 counter sale to a withholding agent who
+withholds 500, and a 25,000 supplier bill on which the company withholds 500 —
+leaving exactly four kinds of tax in the ledger (6).
+
+Section C is the consolidation. The VAT face returns exactly what the one
+reconciliation returns (7), and so does the withholding face (8) — same rows, same
+columns, same semantics, no second implementation. Every tax kind ties to its
+control account at **zero variance** (9), and a reconciliation over no tax kind is
+refused rather than silently empty (10).
+
+Section D is the 2550Q generated from the books rather than the browser. It nets
+18,000 output VAT against 3,000 input VAT to 15,000 payable (11); its working
+paper carries the VAT-code split behind each figure (12); the per-kind summary is
+stored on the artifact rather than as per-form columns, which is what lets one
+table serve every form (13); and the working paper adds up to the return it stands
+behind (14).
+
+Section E runs four more artifacts through the same engine with no new code. The
+1601EQ reports the 500.00 withheld from the supplier (15), grouped by ATC, which is
+how the alphalist is filed (16). The SLSP lists three counterparties (17) because
+the same reader groups by counterparty when the artifact says to (18), and a
+listing owes nothing so it reports no payable (19). The SAWT lists the tax withheld
+**from** this company per payor and ATC (20). A VAT company files an empty 2551Q
+rather than an error: it owes none (21).
+
+Section F proves percentage tax joins this engine rather than sitting beside it.
+`fn_generate_pt_return` generates through the one generator (22), the 2551Q
+computation reads the one working paper (23), **no per-form function reads the tax
+ledger itself any more** (24), and the 1601EQ face still answers exactly as its
+screen expects (25).
+
+Section F2 is the 2550Q leaving the browser. The return projects into
+`vat_returns` straight from the artifact (26), generated through the one generator
+(27), reading neither of the review views the browser used to sum (28). Input VAT
+carried over and VAT already paid are the accountant's to state, so they are
+stated **to the RPC** and netted in the database (29), survive a regeneration that
+does not restate them (30), and a negative is refused rather than quietly netted
+(31). A quarter carrying all three VAT treatments on one invoice puts zero-rated
+and exempt sales in their own columns, taxed at nil (32), because the working
+paper carries the classification behind every figure (33) — an exempt or
+zero-rated line reaches the tax ledger with a base and a zero tax. A projected
+return satisfies the guard that ties it to the tax ledger (34) and is never
+regenerated underneath the accountant once final (35).
+
+Section G is the artifact as evidence. A return may not be filed on a figure the
+ledger does not support (36), may be marked final when it agrees (37), and is
+never silently regenerated afterwards (38). Filing records the reference and the
+date (39); a filed return is immutable, so a correction is an amended return (40);
+and a filed return cannot be deleted (41). The claim the whole file exists for:
+**five artifacts for one quarter, all from one ledger through one engine** (42).
+
+Not claimed: **nothing has ever been filed with the Bureau.** A `filed` status
+records the accountant's own submission; PXL does not transmit. The SLSP *screen*
+still aggregates its sales side in the browser — the artifact is registered and
+tested, but the screen is monthly while the attachment is quarterly and its
+evidence snapshot is keyed by month. 1601FQ, 2550M, QAP, 1604-E and the Books of
+Accounts exports are not registered, and the other eleven `compliance_*`
+working-paper tables remain empty. All recorded as Product Backlog item 8c.
+
+## Backlog 8d — Filing Artifact Export
+
+Status: **PASSING 2026-08-04.**
+`supabase/tests/126_filing_artifact_export_test.sql` (24 assertions,
+self-provisioned company) closes the last link in the compliance chain and
+proves the rule that closes the architecture:
+
+> The Filing Artifact is the system of record for compliance outputs. Every UI,
+> export, snapshot, API and integration **consumes** it, and none may rebuild a
+> compliance report from transactions, tax ledgers or a browser.
+
+**What was missing.** An accountant could generate a fully reconciled 2550Q,
+2551Q, 1601EQ, SLSP or SAWT — every figure tied to the General Ledger at 0.00 —
+and had **no way to get it out of PXL** to key into eFPS or eBIRForms. The three
+existing snapshot functions predate the artifact layer and read **source views**,
+so they could not serve: using them would have rebuilt the return a second time
+from a second source.
+
+Section A proves a form's export layout is configuration. Every registered
+artifact has a registered layout (1); a layout is an ordered list of artifact
+fields and how each renders (2). The assertion that matters most is (3): the
+`source_field` CHECK constraint names no transaction, journal, invoice, receipt
+or review-view source, so a **non-conforming layout is unwritable**. The rule is
+enforced by the schema rather than by review.
+
+Section B posts a counter sale to a withholding agent — 50,000 net, 6,000 output
+VAT, 500 CWT withheld — and generates the quarter's 2550Q and SAWT (4).
+
+Section C is refusal. A draft artifact cannot be exported (5), because an export
+is evidence of a figure the accountant has settled and a draft is still moving.
+An unsupported format is refused rather than guessed at (6); a format the form
+has no layout for is refused rather than silently empty (7); and a period with no
+artifact says so rather than exporting nothing (8).
+
+Section D is CSV. Row 0 is the header the registry declares, in its declared
+order (9); the detail row carries the artifact line with decimals rendered
+through the shared `fn_export_decimal` (10); and the file is one header plus one
+row per artifact line (11).
+
+Section E is DAT. It carries no header row (12) and its TIN is normalised through
+`fn_export_dat_tin` (13). Assertion (14) is the point of the design: the **same
+artifact line** renders as CSV and as DAT from **one layout table**, so a second
+format costs seed rows rather than a second exporter.
+
+Section F is the claim the file exists for. `fn_filing_artifact_export` reads no
+transaction, tax-ledger or review source (15); it reads the filing artifact and
+its lines, and that is its only source (16); and it **aggregates no figure at
+all** (17) — no `SUM`, no `AVG` — because the artifact already stated every
+number. An export that re-sums is an export that can disagree.
+
+Section G is the governed evidence. The snapshot records what was exported and
+from which table (18) and points at the artifact **by its own id** rather than a
+synthesised key (19) — the older exports had to synthesise one because they had
+no artifact to point at. The evidence holds exactly the bytes that were exported
+(20), hashed for tamper evidence through the same `extensions.digest` primitive
+every other snapshot uses (21), and carries the artifact totals it was taken from
+(22). Re-exporting versions up rather than superseding (23). Finally: **every
+compliance export this company produced came from a filing artifact** (24).
+
+Not claimed: nothing has been filed with the Bureau. True binary `.xlsx` is not
+generated — CSV opens in Excel, which is what these attachments require. When
+this file was written only the 2550Q screen was wired to this path; the SAWT and
+QAP screens were migrated onto it by Backlog 8e (test `127`), and the SLSP screen
+remains on the legacy snapshot pending item 8c.
+
+## Backlog 8e (i) and (iii) — the 1601EQ and the QAP on the artifact layer
+
+Status: **PASSING 2026-08-04.**
+`supabase/tests/127_ewt_qap_filing_artifacts_test.sql` (34 assertions,
+self-provisioned company) covers two surfaces that computed correctly and
+**recorded nothing**.
+
+**What was wrong.** The 1601EQ screen computed through the governed engine and
+then wrote `ewt_returns` by typed INSERT from the browser, so a return could be
+marked filed with **no filing artifact behind it** — no working paper, nothing to
+export, nothing for the export layer to consume. The QAP was aggregated in
+JavaScript from `vw_ewt_summary_ap` and registered nowhere, so the alphalist
+attached to the 1601EQ could not be shown to agree with it, or with the General
+Ledger. The view drops reversal counter-rows, so a voided withholding left the
+two disagreeing invisibly.
+
+Section A proves registering the QAP cost configuration: it is a quarterly
+listing grouped per payee and ATC (1), reading the same tax kind as the 1601EQ
+and owing nothing itself (2), with both export layouts as seed rows (3). The
+`source_field` CHECK still admits no transaction or tax-ledger source (4) after
+gaining `atc_description` — the governed ATC description an alphalist must name.
+
+Section B posts three vendor bills: two rents from one supplier under WC160 and
+one professional fee under WC010, leaving 60,000 of income payments and 2,800
+withheld in the ledger (5).
+
+Section C is the 1601EQ. Generating the return generates the artifact the screen
+never used to leave (6) and projects it into the `ewt_returns` row the screen
+reads (7); the working paper adds up to the return it stands behind (8) and is
+grouped by ATC with its document counts (9). Assertions (10) and (11) are the
+correction this increment made to its own design: `remitted_prior` is **not** the
+accountant's to state. PXL-AUD-041 had already made it a derived figure, so the
+projection reads `fn_compute_ewt_remitted_prior`, and a remittance typed into the
+return instead is refused rather than filed. Regenerating a draft restates it
+from the same ledger and moves nothing (12). The 1601EQ is generated through the
+one generator (13) and reads no ledger, journal or review source of its own (14).
+
+Section D is the alphalist: one row per payee and ATC from the one working paper
+(15); it **adds up to the 1601EQ it is attached to** (16), which is the invariant
+the browser version could not offer; it owes nothing (17); and it ties to the EWT
+Payable control account at zero variance (18).
+
+Section E is the export. A draft alphalist does not leave the system (19); an
+alphalist that agrees with the ledger may be marked final (20); row 0 is the
+declared header (21); a payee row names the nature of payment from the governed
+ATC rather than a guess (22); the same line renders as a DAT alphalist from the
+same layout table (23). The exporter still reads no transaction, tax-ledger or
+review source (24) and still aggregates no figure at all (25) — the ATC
+description is resolved by an ordered scalar subquery precisely so that remains
+literally true. The evidence row is keyed to the artifact's own id (26, 27).
+
+Section F is the gate that migrating a screen would have walked around: a company
+that is not EWT-registered cannot export a QAP (28), and that rule now keys on
+what the snapshot **is** rather than on which table produced it.
+
+Section G resolves an orphan. `fn_qap_2307_reconciliation` was called from
+nowhere in `src/` and read a source view; it now reads the artifact working paper
+(29). With no certificate issued, every alphalist row is unsupported and says so
+(30); once the 2307 certificates are issued, every row agrees with them (31).
+
+Section H: a projected 1601EQ satisfies the gate that ties it to the tax ledger
+(32), and once final it is never regenerated underneath the accountant (33). The
+file closes on its claim: the return and the alphalist attached to it are both
+artifacts of one ledger (34).
+
+Not claimed: nothing has been filed with the Bureau. The SLSP screen is not
+covered — it is monthly while its artifact is quarterly (Backlog 8e ii, blocked
+on 8c) — and the legacy `compliance_*` working papers and `fn_snapshot_wht_export`
+are retired under Backlog 8f, after their governed replacements exist.
+
+## Backlog 8f stage 1 — the governed Reconciling Item and the artifact role gate
+
+Status: **PASSING 2026-08-04.**
+`supabase/tests/128_filing_reconciling_items_test.sql` (30 assertions,
+self-provisioned company) proves the capability parity that has to exist
+**before** any legacy compliance surface is retired.
+
+**Why it exists.** 8f's objective is eliminating the second compliance
+architecture, not deleting six screens, and the owner's rule is that no
+functionality is removed merely to satisfy the architecture. The capability audit
+found the six legacy `compliance_*` working-paper screens are the same screen six
+times, and their "Generate" button is a stub that says so itself — *"Manual entry
+only — GL-backed generation requires the General Ledger module"*. Their one real
+capability is keying a line no ledger backs. That capability is now governed.
+
+Section A proves it exists only through the governed path: the line table carries
+read policies only, so a working-paper line cannot be written from a browser (1);
+an item without its full record is refused (2); one cannot be recorded against a
+working paper that does not exist (3); and a recorded item carries reason,
+reference, amount and remarks (4), the user and timestamp that recorded it (5),
+and an audit row through the same trigger every governed table uses (6).
+
+Section B is the claim the design turns on, and its assertions deliberately **do
+not filter by line kind**. The artifact total is what the ledger said before the
+note and after it (7); every line in the working paper still sums to that total
+(8) and so does its base (9); the ledger still ties to the General Ledger at zero
+variance (10); the working-paper reader returns the ledger only (11); and no
+journal entry was created (12). The exclusion is structural rather than
+remembered: a reconciling item's amount lives in `reconciling_amount`, which no
+computation reads, and a CHECK forces its tax figures to zero — so it may not
+acquire a tax figure (13) nor become a generated one by changing kind (14). The
+same claim is made a second way in Section G: the one reconciliation cannot see
+the column at all (29), and **no function in PXL outside the four that own it
+reads it** (30).
+
+Section C: regenerating the artifact leaves the accountant's note in place (15)
+and restates the ledger side exactly once (16). An explanation of a difference
+survives the restatement of the figures it explains, which is the point of it.
+
+Section D is the control regression found while scoping 8f. Every projection of
+an artifact — `vat_returns`, `pt_returns`, `ewt_returns` — and all twelve legacy
+working papers restrict final/filed to owner/admin; `filing_artifacts` restricted
+nothing. An ordinary member now cannot declare a return final (17), though they
+may still read the working paper they work on (18) and record a reconciling item
+on it (19) — preparing evidence is not approving it. A draft note can be
+withdrawn (20); a generated figure cannot be deleted through the note path (21).
+
+Section E: an owner may declare the same return final (22), after which no note
+may be added (23) or withdrawn (24). The working paper settles with the return.
+
+Section F is visibility. The CSV export is one header, one generated row and one
+note (25), and the note travels with the figures it explains, marked as what it
+is (26). A **DAT alphalist carries no note** (27) — the Bureau ingests that file
+and a note row corrupts it, so "visible on the export" is answered with "not
+there" in exactly one place, deliberately. The evidence snapshot holds exactly
+the bytes that were exported, note included (28).
+
+Not claimed: nothing has been filed with the Bureau, and no legacy screen or
+table has been retired yet — that is 8f stage 2. The FWT and 1601FQ families
+remain, blocked by Backlog 22.
+
+## Backlog 8f stage 2 — the second compliance architecture is retired
+
+Status: **PASSING 2026-08-04.**
+`supabase/tests/129_compliance_architecture_verification_test.sql` (22
+assertions, self-provisioned company) **is the verification report**, and
+`tests/compliance_architecture.test.ts` (6 tests) is its screen half. The owner
+asked for a report showing that one compliance architecture remains and that no
+routed screen, RPC or export bypasses the governed pipeline; prose goes stale the
+moment someone adds a function, so the claim is asserted on every run instead.
+
+The claim, stated as it must be stated:
+
+> The governed compliance architecture is complete for every implemented
+> compliance family. FWT remains the single documented exception because no
+> governed FWT pipeline exists yet.
+
+**What was retired** (migration `20260804000006`, after — never before — its
+replacement was reachable): the legacy PT working-paper write inside
+`fn_generate_pt_return`, which was the last function writing any legacy table;
+the eight VAT, EWT, 1601EQ and PT working-paper tables; and
+`fn_snapshot_wht_export` with `wht_export_periods`. Four routed screens were
+replaced first by `FilingWorkingPapersPage`, one governed surface serving all
+four forms.
+
+Section A verifies the first sentence. The eight tables are gone (1), and so is
+the synthesised export key (2) and the legacy export function (3). **No function
+anywhere in PXL still reads or writes a retired working paper** (4). The only
+working-paper tables left are the four FWT ones (5). No export snapshot of a
+registered form is keyed to anything but the artifact (6); no filing or export
+function reads a review view (7); and **exactly one function writes a filing
+artifact** (8).
+
+Section B verifies the second sentence, and verifies its *reason* rather than
+asserting a promise: FWT is not a governed tax kind (9), the tax ledger will not
+accept an FWT row so no artifact can exist for it (10), and no FWT form is
+registered — the exception is a gap, not a second engine (11). Assertion 9 is
+deliberately fragile in the useful direction: when Backlog 22 gives FWT a tax
+kind, it fails, and this file must be revisited rather than forgotten.
+
+Section C carries the two claims inherited from retired test `016` (see above),
+plus the refusal of an impossible filing period (15).
+
+Section D walks one posted sale through the whole pipeline on one company: the
+working paper reads 12,000 of output VAT from the ledger (16), the artifact
+states the same 12,000 (17), it ties to the General Ledger at zero variance (18),
+the return projection carries it without recomputing it (19), and the exported
+bytes carry the same figure (20). No reconciling item was needed to make any of
+it tie (21). Assertion 22 is the file's whole purpose in one statement.
+
+The screen half asserts what pgTAP cannot see: no page reads a retired table or
+calls the retired export; the four routes render the one governed surface and the
+four legacy pages are deleted rather than merely unrouted; **only the two FWT
+pages remain hand-keyed**; the governed surface reads no review view and
+aggregates no compliance figure in the browser; and every compliance export
+surface consumes `downloadFilingArtifactExport`.
+
+Not claimed: nothing has been filed with the Bureau. The FWT and 1601FQ screens
+and their four tables remain, hand-keyed, until Backlog 22 gives FWT the same
+pipeline as VAT, PT and EWT — not a special case.

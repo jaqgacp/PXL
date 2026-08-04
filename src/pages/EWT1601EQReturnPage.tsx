@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { downloadFilingArtifactExport } from '@/lib/filingExport'
 
 type Status = 'draft' | 'final' | 'filed'
 
@@ -44,6 +45,7 @@ export default function EWT1601EQReturnPage() {
   const [form, setForm] = useState<FormData>({ ...EMPTY_FORM })
   const [saving, setSaving] = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const load = async () => {
     if (!companyId) return
@@ -61,38 +63,87 @@ export default function EWT1601EQReturnPage() {
   const openEdit = (r: ReturnRow) => { setForm({ ...r, filed_date: r.filed_date || '', reference_no: r.reference_no || '', remarks: '' }); setEditId(r.id); setMode('edit') }
   const openView = (r: ReturnRow) => { openEdit(r); setMode('view') }
 
+  // The return is generated in the database by `fn_generate_ewt_return`: it
+  // produces the 1601EQ filing artifact and its per-ATC working paper from the
+  // posted tax ledger, then projects both into the `ewt_returns` row this screen
+  // reads. The screen used to compute here and write the row by typed insert, so
+  // a 1601EQ could be marked filed with no artifact behind it and nothing to
+  // export.
+  //
+  // Nothing on this return is stated. What was already remitted comes from the
+  // posted 0619-E remittances, which is the only figure the database will accept
+  // when the return is marked final, so it is read from there rather than typed
+  // here and rejected later.
   const handleGenerate = async () => {
     if (!companyId) return
     setGenerating(true)
-    const { data, error } = await supabase.rpc('fn_compute_ewt_return', {
+    const { data, error } = await supabase.rpc('fn_generate_ewt_return', {
       p_company_id: companyId, p_year: form.period_year, p_quarter: form.period_quarter,
     })
-    if (error) { alert('Cannot generate.\nReason: ' + error.message); setGenerating(false); return }
-    const row = (Array.isArray(data) ? data[0] : data) as { total_tax_base: number; total_ewt_withheld: number } | undefined
-    const taxBase = Number(row?.total_tax_base ?? 0)
-    const withheld = Number(row?.total_ewt_withheld ?? 0)
-
-    setForm(f => ({ ...f, total_tax_base: taxBase, total_ewt_withheld: withheld, still_due: withheld - f.remitted_prior }))
     setGenerating(false)
+    if (error) { alert('Cannot generate the 1601EQ.\nReason: ' + error.message); return }
+
+    const r = data as {
+      ewt_return_id: string
+      total_tax_base: number; total_ewt_withheld: number
+      remitted_prior: number; still_due: number
+      line_count: number; is_reconciled: boolean
+    }
+
+    setForm(f => ({
+      ...f,
+      total_tax_base: Number(r.total_tax_base),
+      total_ewt_withheld: Number(r.total_ewt_withheld),
+      remitted_prior: Number(r.remitted_prior),
+      still_due: Number(r.still_due),
+    }))
+    // The RPC owns the row; from here the screen is editing it, not creating one.
+    setEditId(r.ewt_return_id)
+    setMode('edit')
+    await load()
+    alert(
+      `Generated from the posted withholding ledger.\n` +
+      `Tax base: ${fmtNum(Number(r.total_tax_base))}\n` +
+      `EWT withheld: ${fmtNum(Number(r.total_ewt_withheld))}\n` +
+      `Still due: ${fmtNum(Number(r.still_due))}\n` +
+      `Working paper lines: ${r.line_count}` +
+      (r.is_reconciled ? '' : '\n\nWARNING: the withholding ledger does not tie to the General Ledger for this quarter. This return cannot be marked final until it does.')
+    )
   }
 
+  // Saving records what the accountant decides — the filing status and its
+  // reference. The tax figures are never written from here: they belong to the
+  // posted ledger, and the database refuses a return that disagrees with it.
   const handleSave = async () => {
     if (!companyId) { alert('Cannot save.\nReason: Select a company first.'); return }
-    setSaving(true)
-    const payload = {
-      company_id: companyId, period_year: form.period_year, period_quarter: form.period_quarter,
-      total_tax_base: form.total_tax_base, total_ewt_withheld: form.total_ewt_withheld,
-      remitted_prior: form.remitted_prior, still_due: form.total_ewt_withheld - form.remitted_prior,
-      status: form.status, filed_date: form.filed_date || null, reference_no: form.reference_no || null, remarks: form.remarks || null,
-    }
     if (!editId) {
-      const { error } = await supabase.from('ewt_returns').insert([payload])
-      if (error) { alert('Cannot save.\nReason: ' + (error.code === '23505' ? `A 1601EQ return for ${fmtQuarter(form.period_year, form.period_quarter)} already exists.` : error.message)); setSaving(false); return }
-    } else {
-      const { error } = await supabase.from('ewt_returns').update(payload).eq('id', editId)
-      if (error) { alert('Cannot update.\nReason: ' + error.message); setSaving(false); return }
+      alert('Cannot save the 1601EQ.\nReason: Generate the return from the posted ledger first — its figures are computed, not typed.')
+      return
     }
-    setSaving(false); load(); setMode('list')
+    setSaving(true)
+    const { error } = await supabase.from('ewt_returns').update({
+      status: form.status,
+      filed_date: form.filed_date || null,
+      reference_no: form.reference_no || null,
+      remarks: form.remarks || null,
+    }).eq('id', editId)
+    setSaving(false)
+    if (error) { alert('Cannot update the 1601EQ.\nReason: ' + error.message); return }
+    load(); setMode('list')
+  }
+
+  // The download is a consumer of the filing artifact: the RPC evidences the
+  // exact bytes into report_snapshots and this hands back that same content.
+  // Nothing about the return is assembled here.
+  const handleExport = async () => {
+    if (!companyId || !editId) return
+    setExporting(true)
+    const result = await downloadFilingArtifactExport({
+      companyId, formCode: '1601EQ', year: form.period_year, period: form.period_quarter,
+    })
+    setExporting(false)
+    if (!result.ok) { alert('Cannot export the return.\nReason: ' + result.message); return }
+    alert(`Exported ${result.rows} working-paper line${result.rows === 1 ? '' : 's'} for ${fmtQuarter(form.period_year, form.period_quarter)}.`)
   }
 
   const isView = mode === 'view'
@@ -111,12 +162,13 @@ export default function EWT1601EQReturnPage() {
             {isView ? (
               <>
                 <button onClick={() => setMode('edit')} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Edit</button>
+                <button onClick={handleExport} disabled={exporting || form.status === 'draft'} title={form.status === 'draft' ? 'Mark the return final before exporting it' : 'Download the filing artifact'} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">{exporting ? 'Exporting...' : '↓ Export CSV'}</button>
                 <button onClick={() => window.print()} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Print</button>
                 <button onClick={() => setMode('list')} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Close</button>
               </>
             ) : (
               <>
-                <button onClick={handleGenerate} disabled={generating} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50">{generating ? 'Generating...' : '⚡ Generate'}</button>
+                <button onClick={handleGenerate} disabled={generating} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-50">{generating ? 'Generating...' : '⚡ Generate from posted ledger'}</button>
                 <button onClick={() => setMode('list')} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Cancel</button>
                 <button onClick={handleSave} disabled={saving} className="bg-gray-900 text-white px-5 py-2 rounded-md text-sm font-medium hover:bg-gray-800 disabled:opacity-50">{saving ? 'Saving...' : editId ? 'Update' : 'Save'}</button>
               </>
@@ -133,15 +185,25 @@ export default function EWT1601EQReturnPage() {
           </div>
         </div>
 
+        {/* Every figure below the one stated remittance is read from the posted
+            withholding ledger by the RPC. None of them is typed, and none is
+            recomputed here: a return the ledger does not support cannot be
+            marked final. */}
         <div className={sec}>
           <h2 className={hd}>Return Computation</h2>
+          <div className="col-span-2 text-xs text-gray-500 bg-gray-50 border border-gray-100 rounded px-3 py-2">
+            Computed from the posted withholding ledger. Press Generate after
+            changing the quarter, or after posting a 0619-E remittance.
+          </div>
           <div className="grid grid-cols-2 gap-4">
             <div><label className={lbl}>Total Tax Base</label><div className={ro}>{fmtNum(form.total_tax_base)}</div></div>
             <div><label className={lbl}>Total EWT Withheld</label><div className={ro}>{fmtNum(form.total_ewt_withheld)}</div></div>
-            <div><label className={lbl}>Less: Remitted Prior (0619-E)</label>{isView ? <div className={ro}>{fmtNum(form.remitted_prior)}</div> : <input type="number" step="0.01" value={form.remitted_prior} onChange={e => set('remitted_prior', Number(e.target.value))} className={inp} />}</div>
-            <div className="col-span-2 pt-2 border-t border-gray-100"><label className={lbl}>Still Due</label><div className="text-2xl font-bold font-mono tabular-nums text-gray-900">{fmtNum(form.total_ewt_withheld - form.remitted_prior)}</div></div>
+            {/* Derived, not stated: the posted 0619-E remittances for months 1
+                and 2 of the quarter. */}
+            <div><label className={lbl}>Less: Remitted Prior (0619-E) <span className="text-gray-400 font-normal">— from posted remittances</span></label><div className={ro}>{fmtNum(form.remitted_prior)}</div></div>
+            <div className="col-span-2 pt-2 border-t border-gray-100"><label className={lbl}>Still Due</label><div className="text-2xl font-bold font-mono tabular-nums text-gray-900">{fmtNum(form.still_due)}</div></div>
           </div>
-          {!isView && <p className="text-xs text-gray-400">Tax base and EWT withheld are computed from the tax ledger — click ⚡ Generate to refresh them. A return can only be marked Final or Filed when these figures match the ledger and the ledger reconciles to the EWT Payable GL account for the quarter.</p>}
+          {!isView && <p className="text-xs text-gray-400">A return can only be marked Final or Filed when its figures match the tax ledger, the ledger reconciles to the EWT Payable GL account for the quarter, and what it nets off matches the 0619-E remittances actually posted.</p>}
         </div>
 
         <div className={sec}>

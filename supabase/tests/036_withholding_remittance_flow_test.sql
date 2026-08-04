@@ -180,8 +180,14 @@ SELECT is(
   'EWT Payable still reconciles after the controlled remittance (WHTREM excluded)');
 
 -- ── 5. QAP export for the quarter now succeeds (was hard-blocked before) ────────
+-- Re-pointed by Backlog 8f: the legacy withholding snapshot is retired and the
+-- QAP is a filing artifact. "Not blocked" is now the governed precondition for
+-- exporting one — it reconciles to the GL and can therefore be declared final.
+SELECT fn_generate_filing_artifact('22222222-2222-2222-2222-2222222222a1', 'QAP', 2026, 1);
 SELECT lives_ok(
-  $$SELECT fn_snapshot_wht_export('22222222-2222-2222-2222-2222222222a1', 'QAP', 2026, 1)$$,
+  $$UPDATE filing_artifacts SET status = 'final'
+     WHERE company_id = '22222222-2222-2222-2222-2222222222a1'
+       AND form_code = 'QAP' AND period_year = 2026 AND period_number = 1$$,
   'QAP export succeeds for a quarter with a mid-quarter remittance');
 
 -- ── 6. remitted_prior is derived from the controlled remittance ─────────────────

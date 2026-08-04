@@ -40,7 +40,6 @@ const DeliveryReceiptsPage    = lazy(() => import('@/pages/DeliveryReceiptsPage'
 const ARAgingPage             = lazy(() => import('@/pages/ARAgingPage'))
 const SalesTaxReviewPage      = lazy(() => import('@/pages/SalesTaxReviewPage'))
 const SalesRegistersPage      = lazy(() => import('@/pages/SalesRegistersPage'))
-const EWTWorkingPapersPage    = lazy(() => import('@/pages/EWTWorkingPapersPage'))
 const Form2307ReceivedPage    = lazy(() => import('@/pages/Form2307ReceivedPage'))
 const GLPostingConfigPage     = lazy(() => import('@/pages/GLPostingConfigPage'))
 const CashSalesPage           = lazy(() => import('@/pages/CashSalesPage'))
@@ -110,12 +109,10 @@ const InventoryValuationPage            = lazy(() => import('@/pages/InventoryVa
 const WarehouseStockSettingsPage        = lazy(() => import('@/pages/WarehouseStockSettingsPage'))
 const EmployeesPage                     = lazy(() => import('@/pages/EmployeesPage'))
 const PTDashboardPage                   = lazy(() => import('@/pages/PTDashboardPage'))
-const PTWorkingPapersPage               = lazy(() => import('@/pages/PTWorkingPapersPage'))
 const PTReturnPage                      = lazy(() => import('@/pages/PTReturnPage'))
 const PTReconciliationPage              = lazy(() => import('@/pages/PTReconciliationPage'))
 const PTSummaryRegisterPage             = lazy(() => import('@/pages/PTSummaryRegisterPage'))
 const VATDashboardPage                  = lazy(() => import('@/pages/VATDashboardPage'))
-const VATWorkingPapersPage              = lazy(() => import('@/pages/VATWorkingPapersPage'))
 const VATOutputSummaryPage              = lazy(() => import('@/pages/VATOutputSummaryPage'))
 const VATInputSummaryPage               = lazy(() => import('@/pages/VATInputSummaryPage'))
 const VATReconciliationPage             = lazy(() => import('@/pages/VATReconciliationPage'))
@@ -127,11 +124,11 @@ const RELIEFExportPage                  = lazy(() => import('@/pages/RELIEFExpor
 const WTDashboardPage                   = lazy(() => import('@/pages/WTDashboardPage'))
 const EWTReceivableSummaryPage          = lazy(() => import('@/pages/EWTReceivableSummaryPage'))
 const ATCSummaryPage                    = lazy(() => import('@/pages/ATCSummaryPage'))
-const EWT1601EQWorkingPapersPage        = lazy(() => import('@/pages/EWT1601EQWorkingPapersPage'))
 const EWT1601EQReturnPage               = lazy(() => import('@/pages/EWT1601EQReturnPage'))
 const QAPPage                           = lazy(() => import('@/pages/QAPPage'))
 const SAWTPage                          = lazy(() => import('@/pages/SAWTPage'))
 const Form2306Page                      = lazy(() => import('@/pages/Form2306Page'))
+const FilingWorkingPapersPage           = lazy(() => import('@/pages/FilingWorkingPapersPage'))
 const FWTWorkingPapersPage              = lazy(() => import('@/pages/FWTWorkingPapersPage'))
 const FWT1601FQWorkingPapersPage        = lazy(() => import('@/pages/FWT1601FQWorkingPapersPage'))
 const FWT1601FQReturnPage               = lazy(() => import('@/pages/FWT1601FQReturnPage'))
@@ -272,7 +269,7 @@ export default function App() {
             <Route path="/ar-aging" element={<ARAgingPage />} />
             <Route path="/sales-tax-review" element={<SalesTaxReviewPage />} />
             <Route path="/sales-registers" element={<SalesRegistersPage />} />
-            <Route path="/ewt-working-papers" element={<EWTWorkingPapersPage />} />
+            <Route path="/ewt-working-papers" element={<FilingWorkingPapersPage formCode="1601EQ" title="EWT Working Papers" subtitle="Expanded withholding schedule behind the 1601EQ, from the posted tax ledger" />} />
             <Route path="/2307-received-review" element={<Form2307ReceivedPage />} />
             <Route path="/gl-posting-config" element={<GLPostingConfigPage />} />
             <Route path="/cash-sales" element={<CashSalesPage />} />
@@ -342,12 +339,12 @@ export default function App() {
             <Route path="/warehouse-stock-settings" element={<WarehouseStockSettingsPage />} />
             <Route path="/employees" element={<EmployeesPage />} />
             <Route path="/pt-dashboard" element={<PTDashboardPage />} />
-            <Route path="/pt-working-papers" element={<PTWorkingPapersPage />} />
+            <Route path="/pt-working-papers" element={<FilingWorkingPapersPage formCode="2551Q" title="PT Working Papers" subtitle="Percentage tax schedule behind the 2551Q, from the posted tax ledger" />} />
             <Route path="/pt-return-2551q" element={<PTReturnPage />} />
             <Route path="/pt-reconciliation" element={<PTReconciliationPage />} />
             <Route path="/pt-summary-register" element={<PTSummaryRegisterPage />} />
             <Route path="/vat-dashboard" element={<VATDashboardPage />} />
-            <Route path="/vat-working-papers" element={<VATWorkingPapersPage />} />
+            <Route path="/vat-working-papers" element={<FilingWorkingPapersPage formCode="2550Q" title="VAT Working Papers" subtitle="VAT schedule behind the 2550Q, from the posted tax ledger" />} />
             <Route path="/vat-output-summary" element={<VATOutputSummaryPage />} />
             <Route path="/vat-input-summary" element={<VATInputSummaryPage />} />
             <Route path="/vat-reconciliation" element={<VATReconciliationPage />} />
@@ -359,7 +356,7 @@ export default function App() {
             <Route path="/wt-dashboard" element={<WTDashboardPage />} />
             <Route path="/wt-ewt-receivable-summary" element={<EWTReceivableSummaryPage />} />
             <Route path="/wt-atc-summary" element={<ATCSummaryPage />} />
-            <Route path="/wt-1601eq-working-papers" element={<EWT1601EQWorkingPapersPage />} />
+            <Route path="/wt-1601eq-working-papers" element={<FilingWorkingPapersPage formCode="1601EQ" title="1601EQ Working Papers" subtitle="The same governed 1601EQ schedule reached from the withholding menu" />} />
             <Route path="/wt-1601eq-return" element={<EWT1601EQReturnPage />} />
             <Route path="/wt-qap" element={<QAPPage />} />
             <Route path="/wt-sawt" element={<SAWTPage />} />

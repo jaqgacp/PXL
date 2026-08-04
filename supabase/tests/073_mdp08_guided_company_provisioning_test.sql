@@ -226,8 +226,8 @@ SELECT results_eq(
 SELECT is(
   (SELECT count(*)::INTEGER FROM chart_of_accounts
    WHERE company_id = (SELECT id FROM companies WHERE company_code = 'GUIDED01')),
-  43,
-  'the complete Philippine Standard COA is provisioned (43 incl. GRNI 2015 and GDNI 1310)');
+  44,
+  'the complete Philippine Standard COA is provisioned (44 incl. GRNI 2015, GDNI 1310 and Percentage Tax Payable 2240)');
 
 SELECT is(
   (SELECT parent.account_code

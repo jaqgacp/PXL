@@ -335,7 +335,7 @@ The matrix below uses compact cells. Report any missing production-critical valu
 | Quotation | Non-binding customer price quote; triggered by sales quote creation. | Draft -> sent -> accepted/rejected -> expired/cancelled. Approval optional by policy. | No GL posting. | None. | None. | Price list and item defaults only; no GL accounts posted. | No tax ledger; may preview VAT for quote only. | No inventory or costing unless future reservation policy is enabled. | Customer, items/services, UOM, price list, tax display policy. | Quotation number; audit created/sent/accepted/cancelled; related to SO/SI if converted. | Cancel/expire only; no reversal/void because non-posting. Lock after accepted/converted. | Sales pipeline/register; tests for conversion trace and no JE. Exception: future commitment/reservation policy must be separately documented. |
 | Sales Order | Customer order commitment; triggered by accepted quote or direct order. | Draft -> approved -> fulfilled/partially fulfilled -> closed/cancelled. Approval required by policy. | No GL posting by default. | None. | None. | Item/customer/price defaults; no GL posting unless future commitment accounting enabled. | Tax preview only; no tax ledger. | May reserve inventory if reservation policy enabled; no COGS by default. | Customer, items, warehouse, price list, delivery terms, credit policy. | SO number; audit approval/close/cancel; related to quotation, DR, SI. | Cancel before fulfillment; close after fulfillment; lock converted quantities. | Sales orders, open orders, inventory availability; tests for no JE and source chain. |
 | Delivery Receipt | Evidence of goods delivery; triggered by shipment/delivery. | Draft -> confirmed/delivered -> invoiced/closed/cancelled. Approval optional. | Posting depends on inventory/COGS policy; default architecture must define whether DR or SI recognizes COGS. | If DR posts inventory issue: COGS or deferred COGS. | Inventory or inventory clearing. | Item group/item inventory and COGS accounts; warehouse rules. | No VAT tax ledger unless jurisdiction requires delivery-based tax; normally SI handles VAT. | Inventory quantity reduction; costing layer consumption if configured. | Customer, SO, item, warehouse, costing method, branch. | DR number; audit delivered/cancelled; related to SO and SI. | Reverse inventory issue if cancelled before invoicing; lock once invoiced unless controlled return. | Inventory movements, COGS, sales fulfillment; tests for costing and source trace. Exception: service DR has no inventory. |
-| Sales Invoice | Recognizes receivable and revenue; triggered by billing customer. | Draft -> approved -> posted -> paid/partially paid -> voided/reversed. Approval required where workflow configured. | Post approved SI. | Accounts Receivable. | Revenue, Output VAT, other sales tax/liability accounts. | AR from company/customer; revenue from item group/item/document type; VAT from tax profile/code. | Output VAT; Percentage Tax if non-VAT/PT policy; expected CWT metadata only until receipt. | AR subledger; no inventory unless SI is configured to consume stock/COGS. FX gain/loss on settlement if foreign currency. | Customer, item/service, branch, currency, tax profile, VAT code, revenue accounts, terms, number series, open period. | SI number; audit approved/posted/voided; related to quote/SO/DR/OR/CM/JE. | Void posts exact reversal and tax counter-rows; posted lines locked; cancel only before posting. | Sales register, AR aging, GL, VAT output, SLSP/SLS, financial statements. Tests: balanced JE, VAT ledger, locked period, cross-company, void reversal. |
+| Sales Invoice | Recognizes receivable and revenue; triggered by billing customer. | Draft -> approved -> posted -> paid/partially paid -> voided/reversed. Approval required where workflow configured. | Post approved SI. | Accounts Receivable; Percentage Tax Expense when a line carries a percentage-tax code. | Revenue, Output VAT, other sales tax/liability accounts; Percentage Tax Payable. | AR from company/customer; revenue from item group/item/document type; VAT from tax profile/code; percentage tax expense/payable from `PERCENTAGE_TAX_EXPENSE` / `PERCENTAGE_TAX_PAYABLE`. | Output VAT; **Percentage Tax on the line's gross sales for a non-VAT Section 116 taxpayer, borne by the seller and never added to the customer's total**; expected CWT metadata only until receipt. | AR subledger; no inventory unless SI is configured to consume stock/COGS. FX gain/loss on settlement if foreign currency. | Customer, item/service, branch, currency, tax profile, VAT code, revenue accounts, terms, number series, open period. | SI number; audit approved/posted/voided; related to quote/SO/DR/OR/CM/JE. | Void posts exact reversal and tax counter-rows; posted lines locked; cancel only before posting. | Sales register, AR aging, GL, VAT output, SLSP/SLS, financial statements. Tests: balanced JE, VAT ledger, locked period, cross-company, void reversal. |
 | Official Receipt | Records customer collection; triggered by payment receipt. | Draft -> posted -> bounced/cancelled/voided. Approval optional by policy. | Post OR. | Cash/bank; CWT receivable if withheld. | Accounts Receivable for SI applications; customer advances liability for customer-advance lines. | Cash/bank from payment method/bank; AR/customer-advance clearing from company/customer; CWT from tax profile. | CWT receivable when customer withholds, including customer advances; tax base from configured policy. No output VAT unless cash-basis tax policy exists. | Cash ledger; AR settlement for SI applications; customer-advance liability for unapplied advances; FX gain/loss if foreign currency. | Customer, open SI or explicit customer-advance line, bank/payment method, CWT profile/ATC, open period, OR number, customer advances account when used. | OR number; audit posted/bounced/cancelled; related to SI/CM/JE/2307 received. | Bounce/cancel posts exact reversal and tax counter-row; lock posted application lines. | Collections, AR aging for SI applications, cash receipts book, SAWT/CWT reports. Tests: line-sum total authority, CWT base/rate, over-apply including CM, customer-advance CWT. |
 | Credit Memo | Reduces customer receivable/revenue; triggered by return, allowance, discount, or correction. | Draft -> approved -> posted -> applied/closed -> voided. Approval required by policy. | Post approved CM. | Sales returns/allowances or revenue reversal; Output VAT reversal. | Accounts Receivable. | Return/revenue accounts from item/document type; VAT from tax profile; AR from customer/company. | Output VAT counter/reduction; CWT impact only through application/settlement policy. | AR subledger reduction; inventory return impact only if linked to returned goods and configured. | Customer, source SI optional/required by policy, items, VAT codes, reason code. | CM number; audit posted/applied/voided; related to SI/OR/JE. | Void reverses CM and tax rows; application reversal restores open balance. Lock after posting except controlled application. | Credit memo register, AR aging, VAT output adjustment. Tests: applied CM affects aging/over-apply guards. |
 | Debit Memo | Increases customer receivable; triggered by additional billing, charge, or correction. | Draft -> approved -> posted -> paid/closed -> voided. Approval required by policy. | Post approved DM. | Accounts Receivable. | Revenue/other income, Output VAT if taxable. | AR from customer/company; income account from item/document type; VAT from tax profile. | Output VAT if taxable; Percentage Tax if applicable. | AR subledger increase; no inventory by default. | Customer, reason/type, tax profile, income account, number series, open period. | DM number; audit posted/voided; related to SI/OR/JE. | Void posts exact reversal and tax counter-row; cancel only before posting. | Debit memo register, AR aging, VAT output. Tests: balanced JE, tax rows, void reversal. |
@@ -362,19 +362,196 @@ The matrix below uses compact cells. Report any missing production-critical valu
 | Tax Adjustments | Adjust tax ledger/reporting amounts; triggered by approved tax correction. | Draft -> approved -> posted/filed -> reversed/superseded. Approval required. | Post tax adjustment. | Tax receivable/payable/expense or adjustment account. | Tax payable/receivable/clearing or offset account. | Tax profile, tax code/ATC, adjustment reason, tax account mapping. | Directly affects VAT/PT/EWT/CWT/FWT ledger by governed rule. | No inventory/FA unless adjustment references source. | Tax period, source report/document, reason, approval, open or allowed adjustment period. | Tax adjustment number; audit approved/posted/superseded; related to return/snapshot. | Reverse/supersede, not direct mutation; lock filed period unless approved amendment. | Tax returns, reconciliation, audit package. Tests: filed-period control, snapshot trace. |
 | Year-end Closing | Close income statement to retained earnings; triggered by period/year close. | Draft close run -> reviewed -> posted -> locked/reversed by admin policy. Approval required. | Post closing entries. | Revenue accounts or income summary depending method; net loss to retained earnings. | Expense accounts or income summary; net income to retained earnings. | Closing configuration, retained earnings account, income summary account. | Tax reports must already be finalized/snapshotted where required; no new operational tax detail. | Locks fiscal year; updates post-closing TB. FX translation/rounding accounts if configured. | Fiscal year, all periods closed, balanced TB, FS mappings, retained earnings account. | Closing run number; audit reviewed/posted/reversed; related to TB/FS. | Reverse only by controlled reopen policy; lock closed periods/year. | Trial balance, FS, retained earnings, audit support. Tests: adjusted/post-closing TB, income statement zeroing, retained earnings rollforward. |
 
+### Percentage tax (Section 116) — DELIVERED 2026-08-04, migration `20260804000001`
+
+- **What it is.** Percentage tax is the business tax of a **non-VAT** taxpayer on
+  its gross sales or receipts. It is the seller's own tax: it is not charged to
+  the customer, not added to the invoice total, and never priced inside the line.
+- **Where the code lives.** Per line, on `sales_invoice_lines.percentage_tax_code_id`,
+  selected from `fn_business_tax_codes_asof` — the one business-tax picker, which
+  offers percentage-tax codes only to a non-VAT, percentage-tax-registered company
+  and only on a sales document. `fn_resolve_business_tax_code` is the only place
+  either family's validity is decided; it delegates the VAT half verbatim to
+  `fn_resolve_vat_code`.
+- **The rate.** `tax_codes` is the governed rate holder and the company code is an
+  effective-dated version of it. A statutory rate change closes the current
+  version and starts a successor; it never edits a row that has been used.
+- **The posting.** DR `PERCENTAGE_TAX_EXPENSE` / CR `PERCENTAGE_TAX_PAYABLE`, equal
+  and opposite, inside the sales journal, on both Sales Invoice and Cash Sale.
+  Receivable, revenue and cash are unaffected.
+- **Recognition basis.** On the sales document (accrual on gross sales). Section
+  116 measures services on collections; Cash Sale collects at the same instant, so
+  the two agree there, and the receipts basis for a credit invoice is recorded in
+  the Product Backlog rather than assumed here.
+- **The ledger and the return.** One `tax_detail_entries` row per code per
+  document, stamped with the tax-code version, its rate and the 2551Q ATC;
+  `fn_percentage_tax_gl_reconciliation` ties it to the payable control account;
+  `fn_generate_pt_return` builds the 2551Q and its working paper from that ledger
+  and a return may not be marked final or filed while it disagrees with it.
+- **Not covered.** Credit-memo reversal of percentage tax, and any rule compelling
+  a percentage-tax-registered company to put its code on every line.
+
+### The compliance capability pipeline — STANDARD, owner decision 2026-08-04
+
+Every compliance capability, current and future, is built and measured against
+one pipeline. Each stage **consumes** the one before it:
+
+> Tax Engine → Tax Ledger → Reconciliation → Working Paper → Filing Artifact →
+> Export → Filed Record
+
+- **The Filing Artifact is the system of record for compliance outputs.** Any UI,
+  export, snapshot, API or integration — present or future — **consumes the
+  Filing Artifact**. None may rebuild a compliance report from transactions, from
+  the tax ledger, or in the browser. A compliance figure has one origin, and
+  every surface that shows it is downstream of that origin. **Known
+  non-conforming surfaces**, recorded rather than tolerated, and now down to two:
+  the **SLSP screen** (Backlog 8c/8e ii — monthly against a quarterly attachment)
+  and the **FWT/1601FQ working papers**, which cannot conform while FWT is not a
+  tax kind (Backlog 22). `fn_snapshot_wht_export` and the eight VAT/EWT/1601EQ/PT
+  legacy working-paper tables were **retired** on 2026-08-04 (Backlog 8f,
+  migration `20260804000006`) after their governed replacements were reachable;
+  `fn_snapshot_vat_export` and `fn_snapshot_books_export` remain, read source
+  views, and are covered by items 8c and 19. The governed state is asserted, not
+  asserted-in-prose: test `129` and `tests/compliance_architecture.test.ts`.
+- **Exactly one authoritative implementation per stage, per compliance area.**
+  For every area (VAT, percentage tax, EWT, FWT, SAWT, SLSP, QAP, Books) each of
+  the seven stages has **one** implementation and no more. **Parallel
+  implementations are not allowed** — not a second calculator, not a second
+  reconciliation, not a second working-paper store, not a per-form exporter, not
+  a hand-keyed surface beside a generated one. Where a stage legitimately needs
+  several faces (the VAT, withholding and percentage-tax reconciliations, say),
+  they are **delegations to the one implementation** and compute nothing
+  themselves.
+- **No feature bypasses a stage**, and no stage may acquire a second engine —
+  no filing-specific calculator, no export-side recomputation, no browser
+  aggregation. The browser presents governed results; it is never a second
+  accounting engine.
+- **Replacing an implementation is ordered, never reversed.** Migrate the
+  consumers onto the governed implementation first, verify no dependency remains,
+  and only then retire the legacy objects. A legacy object is never dropped
+  before its replacement is reachable, and a superseded store is **retired, not
+  populated**.
+- **No orphans.** An object that no governed consumer reaches is either
+  integrated into this pipeline or retired. Dead code is not kept indefinitely.
+- **Registering a form is configuration.** A new return or listing is a seed row
+  in `ref_filing_artifact` (+ its tax kinds) and consumes the existing posting,
+  tax-ledger and reconciliation framework. Form-specific rules belong in
+  metadata, configuration and effective-dated masters, **not hardcoded branches**.
+- **A reconciling item explains a difference and never creates one** (owner
+  decision, 2026-08-04; migration `20260804000005`, test `128`). An accountant
+  may record a manual, typed item against a **draft** filing artifact stating a
+  reason, reference, amount, remarks, user and timestamp, fully audited. It is
+  excluded from tax calculation, from working-paper totals, from filing-artifact
+  totals and from GL reconciliation; it never creates a journal entry and never
+  changes a computed amount; it appears on the working paper and in the CSV
+  export **as a note**, never in a DAT alphalist the Bureau ingests; and it is
+  frozen once the artifact leaves draft. The exclusions are **structural**: its
+  amount lives in `reconciling_amount`, a column no computation reads, and a
+  CHECK forces its tax figures to zero — so a total written without knowledge of
+  reconciling items is still correct in their presence. This is one working paper
+  with two kinds of line, **not a second working-paper store**.
+- **Declaring a compliance record final or filed requires owner/admin.** True of
+  `vat_returns`, `pt_returns`, `ewt_returns` and the legacy working papers since
+  2026-07-01, and of `filing_artifacts` since 2026-08-04 — it had been the one
+  compliance record with no role gate, which made the governed pipeline weaker
+  than the architecture it replaces.
+- **Filing Artifact ≠ Filed Record.** A *Filing Artifact* is what PXL generates
+  from the books. A *Filed Record* is the accountant's declaration that it was
+  submitted. **PXL never assumes successful BIR submission** and will not do so
+  unless an e-submission integration is deliberately built.
+- A capability's status is reported as its position along this pipeline, so
+  "partial" always names which stage is missing.
+
+### BIR filing artifacts — ENGINE DELIVERED 2026-08-04, migration `20260804000002`
+
+- **The one path.** posted transactions → Tax Engine → tax ledger → working paper
+  → filing artifact. No form has its own query, and no filing figure is computed
+  in a browser.
+- **What a tax kind is.** `ref_tax_ledger_control` states, per tax kind, the
+  governed account key that controls it, its normal balance, which journal
+  statuses count toward it and which reference document types are excluded. Those
+  four facts used to be the only differences between three reconciliation
+  functions; they are now configuration.
+- **The one reconciliation.** `fn_tax_ledger_gl_reconciliation(company, kinds[],
+  from, to)` ties any tax kind to its control account. `fn_vat_gl_reconciliation`,
+  `fn_wht_gl_reconciliation` and `fn_percentage_tax_gl_reconciliation` are
+  delegations that keep their signatures and semantics and compute nothing.
+- **What an artifact is.** `ref_filing_artifact` + `ref_filing_artifact_kind`
+  register a form's period basis, the tax kinds it consumes, the sign each kind
+  carries in its net (+1 owed, −1 credit, 0 for a listing) and the dimensions it
+  groups by. **Registering the next form is a seed row, not a function.**
+- **The one reader.** `fn_filing_working_paper(company, form, year, period)` reads
+  the posted tax ledger and groups by exactly the dimensions the artifact
+  declares; a dimension the form does not group by is collapsed. That is what
+  lets one query serve a summary return and a per-counterparty alphalist alike.
+- **The artifact.** `fn_generate_filing_artifact` writes a `filing_artifacts`
+  header and its lines. An artifact may not leave draft while it disagrees with
+  the ledger it claims to summarise, may not be regenerated once final or filed,
+  is immutable once filed, and cannot be deleted unless it is a draft.
+- **Registered:** 2550Q, 2551Q, 1601EQ, SLSP, SAWT, and QAP (2026-08-04,
+  migration `20260804000004`) — a seed row plus its tax kind, no function change.
+- **Stated, not derived.** On the 2550Q, input VAT carried over from the prior
+  quarter and VAT already paid within the quarter are the accountant's figures.
+  They are passed to `fn_generate_vat_return` and netted there, so the net payable
+  still has exactly one author. **A figure that a governed source already
+  determines is never stated.** The 1601EQ has none: `remitted_prior` is derived
+  from the posted 0619-E remittances through `fn_compute_ewt_remitted_prior`,
+  because PXL-AUD-041 already made that the only figure the gate will accept.
+- **Projections — DELIVERED.** `vat_returns` (2550Q), `pt_returns` (2551Q) and
+  `ewt_returns` (1601EQ, 2026-08-04, `fn_generate_ewt_return`) are projections of
+  the artifact for the screens that read them; the screens write only status,
+  filing date and reference. A return is **generated, never typed**.
+- **Alphalists tie to the return they attach to.** The QAP and the 1601EQ read the
+  same ledger population through the same reader, so the alphalist adds up to the
+  return by construction. `fn_qap_2307_reconciliation` compares that alphalist to
+  the Form 2307 certificates actually issued, per payee and ATC, and consumes the
+  artifact working paper rather than a source view.
+- **Export — DELIVERED 2026-08-04**, migration `20260804000003`, Backlog 8d.
+  `ref_filing_export_column` holds each form's layout as configuration, and its
+  `source_field` CHECK admits no transaction or tax-ledger source, so a
+  non-conforming layout is **unwritable**. `fn_filing_artifact_export` serves
+  every form in CSV and DAT through the existing `fn_export_*` primitives and
+  aggregates nothing. `fn_snapshot_filing_artifact_export` writes the evidence
+  row keyed to the artifact's **own id**, and the download is read back from that
+  row. A draft artifact, or one whose ledger no longer ties to the GL, is refused.
+- **The working paper is one surface.** `FilingWorkingPapersPage` serves the
+  2550Q, 1601EQ and 2551Q schedules from `fn_filing_working_paper`; the four
+  hand-keyed screens it replaced were deleted on 2026-08-04. A governed working
+  paper groups by the dimensions its form is filed on and states a document
+  count, and the documents behind any line stay reachable through the accounting
+  trace — which is how the per-document detail of the retired screens survives.
+- **Not covered.** Nothing is transmitted to the Bureau; a `filed` status records
+  the accountant's own submission. 1601FQ, 2550M and 1604-E are unregistered. The
+  SLSP screen still bypasses the artifact layer and its export button still calls
+  the legacy source-view snapshot (8c, 8e ii); every other compliance screen is
+  wired to the governed export. The four remaining legacy
+  `compliance_fwt_*` and `compliance_1601fq_*` working-paper tables are the
+  **single documented exception**: two routed screens still write them by hand
+  because **FWT has no tax kind**, so it never reaches the tax ledger and no
+  artifact can be generated for it. They are retired by Backlog 22, which must
+  give FWT the same pipeline as VAT, PT and EWT rather than a special case.
+
 ## 10. Known architecture gaps
 
-These gaps must be resolved before `PXL Accounting Core Ready`:
+These gaps must be resolved before `PXL Accounting Core Ready`.
+
+**Scope note, owner ruling 2026-08-04.** This list covers Philippine SME
+accounting and compliance only. Final Withholding Tax (1601FQ / 2306), Payroll,
+Form 2316, quarterly and annual Income Tax, MCIT / RCIT, NOLCO, OSD, Fringe
+Benefits Tax, Transfer Pricing, Consolidation Tax and specialized-industry tax
+features are **future product extensions**: they are not gaps against this
+milestone and must not be read as production blockers. The ranked future
+priorities after the current compliance work are Banking & Treasury, then Fixed
+Assets.
 
 - Account Determination Engine is not fully implemented.
 - Tax Engine is not yet a unified configuration-driven evaluator.
-- ATC effective dating/versioning is DONE (session 77, `20260713000002`): validators/callers resolve the ATC window by document date and one official code carries effective-dated versions (`fn_atc_version_asof`). Tax-code (VAT/PT) effective-dated versioning is still open.
+- ATC effective dating/versioning is DONE (session 77, `20260713000002`): validators/callers resolve the ATC window by document date and one official code carries effective-dated versions (`fn_atc_version_asof`). VAT effective-dated resolution is DONE (2026-08-03, `20260803000002`) and percentage-tax code versioning is DONE (2026-08-04, `20260804000001`).
 - Withholding profiles are incomplete.
 - Settlement total authority for OR/PV must move fully server-side.
 - Financial statement and year-end close rules are incomplete.
 - CAS/BIR evidence package is in place for the current export surfaces: exact exported bytes, CRLF DAT artifacts, source/GL-reconciled books exports, and audit-package snapshots.
 - Semantic transaction event log is incomplete.
-- Payroll is not implemented.
 - Assemblies are not implemented.
 
 ## 11. Test expectations

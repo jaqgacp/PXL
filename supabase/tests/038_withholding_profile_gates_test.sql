@@ -219,9 +219,17 @@ SELECT throws_like(
   '%not EWT-registered%',
   '1601EQ/EWT return rows are blocked when the active profile is not EWT registered');
 
+-- Re-pointed by Backlog 8f: the gate now keys on what the snapshot IS
+-- (a filing artifact export of a QAP) rather than on which legacy table
+-- produced it, so migrating the screen could not walk around it.
+SELECT fn_generate_filing_artifact('22222222-2222-2222-2222-222222222238', 'QAP', 2026, 1);
+UPDATE filing_artifacts SET status = 'final'
+ WHERE company_id = '22222222-2222-2222-2222-222222222238'
+   AND form_code = 'QAP' AND period_year = 2026 AND period_number = 1;
+
 SELECT throws_like(
-  $$SELECT fn_snapshot_wht_export('22222222-2222-2222-2222-222222222238',
-      'QAP', 2026, 1)$$,
+  $$SELECT fn_snapshot_filing_artifact_export(
+      '22222222-2222-2222-2222-222222222238', 'QAP', 2026, 1, 'csv')$$,
   '%not EWT-registered%',
   'QAP export snapshots are blocked when the active profile is not EWT registered');
 
