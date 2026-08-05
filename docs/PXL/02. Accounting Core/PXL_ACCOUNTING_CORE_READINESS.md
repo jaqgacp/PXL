@@ -2,7 +2,7 @@
 
 **Status:** Active Operational Gate
 **Authority:** Tier 3 Operational Support; Tier 1 accounting rules and the central findings register prevail
-**Last Verified:** 2026-07-22 roadmap/state reconciliation
+**Last Verified:** 2026-08-04 product-scope and status reconciliation
 **Applies To:** Sequencing work before broader transaction/report/UX rollout
 **Read When:** Deciding whether a proposed implementation can proceed
 **Do Not Read For:** Current finding counts or detailed remediation; use `AI/AI_STATE.md` and the referenced central finding
@@ -21,14 +21,18 @@ Authorities:
 
 ## Current Gate
 
-Do not clear **PXL Accounting Core Ready** while an active Critical or High finding affects security, posting, accounting, tax, CAS evidence, deterministic regression, source completeness, or product coverage. The central active index currently includes:
+Do not clear **PXL Accounting Core Ready** merely because the findings programme
+is complete. The central register currently has no active remediation row, but
+no source-to-statements-to-tax workflow meets the Product Definition of Done,
+recovery has not operated over real data, hosted parity is absent after the
+recorded boundary and no browser lane exists. Current counts and the selected
+next task live only in `AI/AI_STATE.md`.
 
-- external secret rotation (`PXL-AUD-055`);
-- deterministic regression lanes (`PXL-AUD-061`);
-- Sales Invoice source-backed completeness (`PXL-AUD-053`); and
-- unexercised workflow/table coverage (`PXL-AUD-059`).
-
-This list is a routing summary only. Do not manually infer counts or status from it; use the central register.
+**Product boundary (PAD-015):** FWT/1601FQ/2306, Payroll/2316, quarterly and
+annual Income Tax, MCIT/RCIT, NOLCO, OSD, Fringe Benefits Tax, Transfer Pricing,
+Consolidation Tax and specialized-industry tax features are excluded future
+extensions. They are not conditions of this gate. After current compliance
+work, Banking & Treasury and then Fixed Assets are the product priorities.
 
 ## Work Sequence
 
@@ -43,7 +47,7 @@ Unless an active Critical finding requires immediate escalation, work in this or
 7. Save, approval, posting, tax, GL, inventory, relationship, report, and export validation.
 8. Report rollout, dashboards, portals, and automation.
 
-The consolidated Transaction Workspace UI is implemented, but visual conformance is not proof of business completeness. Sales Invoice is not an architecture reference and remains incompletely source-qualified while `PXL-AUD-053` is active.
+The consolidated Transaction Workspace UI is implemented, but visual conformance is not proof of business completeness. Sales Invoice is not an architecture reference; its bounded source qualification is complete, while broader workflow Product-DoD evidence remains open.
 
 ## Allowed Work While the Gate Is Active
 
@@ -89,10 +93,11 @@ The gate may be reassessed only when all conditions hold:
 ## Current Known Boundaries
 
 - The five-company hosted canonical dataset exercises a meaningful accounting slice, not the entire ERP.
-- Banking operations/reconciliation, fixed assets, returns, approvals, schedules, statutory generators, and CAS artifacts remain incomplete or unexercised in canonical coverage.
-- Project, Location, and Functional Entity masters now exist (MDP-09), but Sales Invoice storage/selectors/propagation/report coverage for them remains open under `PXL-AUD-053`.
+- Banking operations/reconciliation and fixed assets have not started; broader returns, approvals and schedules remain incomplete or unexercised in canonical coverage.
+- Six current-scope statutory artifacts use the Filing Artifact path, but the SLSP screen still bypasses it and no filing has been performed with the Bureau.
+- Project, Location, and Functional Entity masters exist; broader transaction UX and workflow qualification remain separate from their governed storage and posting controls.
 - The current Company Setup Checklist measures ten core-accounting prerequisites, not full operational readiness (`PXL-AUD-067`).
-- Login accessibility remains active but follows the higher-risk security/accounting/CAS work (`PXL-AUD-060`).
+- Frontend validation is source-contract and build coverage only; no browser lane exists.
 
 ## Documentation Maintenance
 

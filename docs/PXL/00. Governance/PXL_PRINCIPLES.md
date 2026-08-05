@@ -6,9 +6,17 @@
 **Applies To:** Governance
 **Read When:** Resolving cross-domain product, accounting, compliance, or engineering principles
 **Do Not Read For:** Routine implementation when a narrower domain authority exists
-**Last Reviewed:** 2026-07-18 documentation cleanup
+**Last Reviewed:** 2026-08-04 product-scope alignment
 
-As the definitive master reference for the PXL ERP architecture, this document serves as the absolute, unbreakable constitution for all human developers, UI/UX designers, and AI models contributing to the system. PXL ERP is a strictly BIR-compliant, multi-tenant, accounting-first enterprise application built on React and Supabase. 
+As the definitive master reference for the PXL ERP architecture, this document serves as the absolute, unbreakable constitution for all human developers, UI/UX designers, and AI models contributing to the system. PXL ERP is a strictly BIR-compliant, multi-tenant, accounting-first enterprise application built on React and Supabase.
+
+**Current product boundary (PAD-015, 2026-08-04):** PXL is Philippine SME
+accounting and compliance. Final Withholding Tax (1601FQ/2306), Payroll, Form
+2316, quarterly and annual Income Tax, MCIT/RCIT, NOLCO, OSD, Fringe Benefits
+Tax, Transfer Pricing, Consolidation Tax and specialized-industry tax features
+are future extensions, never pilot or production-readiness blockers. After the
+current compliance work, Banking & Treasury and then Fixed Assets are the ranked
+future priorities.
 
 Any code, schema, or UI design that violates the 27 principles below shall be classified as technical debt and immediately rejected.
 
@@ -20,9 +28,9 @@ Any code, schema, or UI design that violates the 27 principles below shall be cl
 **HOW:** The Supabase database architecture enforces Automated Account Determination. When a user selects an Item on an invoice, the UI never asks them to select a GL account. Instead, the backend automatically fetches the `revenue_account_id` or `expense_account_id` mapped to the Item Master Data. The backend script then validates that `Total Debits = Total Credits` before allowing any record to persist in the `journal_entries` and `journal_entry_lines` tables.
 
 ## 2. Philippine Compliance First
-**WHAT:** The system provides native, built-in structural support for Philippine taxation and reporting rules (VAT, EWT, FWT, Form 2307, Form 2306, SLSP, and CAS Books of Accounts) without requiring third-party plugins or external workarounds.
+**WHAT:** The current product provides native, built-in structural support for Philippine taxation and reporting rules in scope for Philippine SMEs: VAT, percentage tax, EWT/CWT, Form 2307, SLSP, SAWT/QAP, and CAS Books of Accounts. Excluded future extensions do not affect readiness.
 **WHY:** Generic international ERPs fail in the Philippines because local taxation is uniquely complex (e.g., withholding taxes at source, specific VAT relief for PEZA). An ERP without native compliance is useless to a Philippine enterprise.
-**HOW:** The compliance logic is embedded directly into the transactional schemas. The `tax_applicability_matrix` dictates visibility of reports (e.g., 2550Q, 1702Q). Transaction tables contain specific foreign keys for `ewt_code_id` and `atc_code` to calculate withholdings precisely. The `form_2307_registry` operates as a centralized clearinghouse bound by composite unique constraints to ensure no tax certificate is ever duplicated or missed.
+**HOW:** Compliance follows one locked path: Posted Transactions → Tax Engine → Tax Ledger → Reconciliation → Working Paper → Filing Artifact → Export → Filed Record. The Filing Artifact is the single system of record for compliance outputs; screens and exports consume it and never recompute from source transactions or in the browser. Effective-dated tax and ATC configuration drives the governed calculations.
 
 ## 3. Configuration over Customization
 **WHAT:** The system must adapt to varying business processes through metadata toggles and settings rather than hardcoded logic or bespoke code branches. 

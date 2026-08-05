@@ -1,27 +1,28 @@
 # PXL AI State
 
-**Current Date:** 2026-08-04
+**Current Date:** 2026-08-05
 **Current Branch:** `main`
-**Working Tree:** **Percentage tax (Backlog 8)**, the **BIR filing artifact
-engine (Phase 5.8)**, the **1601EQ/QAP migration onto it (8e i, iii)** and **8f
-stage 1** are complete locally with executed fresh, canonical, regression,
-frontend, build and lint evidence. A non-VAT Section 116 taxpayer runs the whole
-chain: line code → component → liability posting → tax ledger → GL reconciliation
-at 0.00 → working paper → **2551Q**. Every registered artifact — 2550Q, 2551Q,
-1601EQ, SLSP, SAWT, **QAP** — comes from **one** generator over **one** working
-paper and **one** reconciliation, and is **exported** by one consumer of it (8d).
-Four screens reach generate → final → export; only SLSP bypasses it. **Nothing
-has been filed with the Bureau.**
+**Working Tree:** **Clean, synchronized with `origin/main`.** Percentage tax
+(Backlog 8), the **BIR filing artifact engine** (Phase 5.8), its **export** (8d),
+the **1601EQ/QAP migration** onto it (8e i, iii) and **8f** are complete locally
+with executed fresh, canonical, regression, frontend, build and lint evidence. A
+non-VAT Section 116 taxpayer runs the chain: line code → component →
+liability posting → tax ledger → GL reconciliation at 0.00 → working paper →
+**2551Q**. Every registered artifact — 2550Q, 2551Q, 1601EQ, SLSP, SAWT, **QAP**
+— comes from **one** generator over **one** working paper and **one**
+reconciliation, and is **exported** by one consumer. Four screens reach
+generate → final → export; only SLSP bypasses it. **Nothing has been filed with
+the Bureau.**
 **Product Phase:** Pilot Execution Plan; IA-5/ECC **frozen**.
 **Environment:** Local Supabase on a fresh schema. No hosted operation was
 performed.
 **Product Readiness:** **Internal QA/demo only. Not pilot-ready.**
 **PXL is not production-ready.**
-**Scope (owner, 2026-08-04):** Philippine SME accounting and compliance. FWT
-(1601FQ/2306), Payroll, 2316, Income Tax, MCIT/RCIT, NOLCO, OSD, FBT, Transfer
-Pricing, Consolidation and specialized-industry features are **future extensions,
-never production blockers**. Future priority: Banking & Treasury, then Fixed
-Assets; neither started.
+**Scope (owner, 2026-08-04; PAD-015):** Philippine SME accounting and compliance.
+FWT (1601FQ/2306), Payroll, 2316, Income Tax, MCIT/RCIT, NOLCO, OSD, FBT,
+Transfer Pricing, Consolidation and specialized-industry features are **future
+extensions, never production blockers**. Future priority: Banking & Treasury,
+then Fixed Assets; neither started.
 
 ## Canonical Authority and Startup
 
@@ -79,8 +80,8 @@ certifies no module or engine and confers no readiness.
    the GL and refuse to leave draft while they disagree with it; `filed` records
    the accountant's own submission and PXL transmits nothing. The **SLSP screen**
    still bypasses the layer, monthly against a quarterly attachment (8c, 8e ii).
-   Two hand-keyed FWT screens remain — the single documented exception, and
-   **out of product scope**, so not a blocker (22). Percentage tax is recognised on the document, not on collections; a
+   Two hand-keyed FWT prototype screens remain outside the current product; they
+   carry no architecture, pilot or readiness weight (22). Percentage tax is recognised on the document, not on collections; a
    credit memo does not reverse it; nothing compels a PT-registered company to
    select its code (8b). No governed UI for tax-code succession (10) or statement
    re-presentation (18f); the tax profile is not effective-dated (11); close
@@ -161,24 +162,23 @@ backed only by future-deferred tables.
 **PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE; the rest is owner action** (PAD-007).
 
 **Phase 5 items 3, 7 and 8 and Backlog 8, 8d, 8e (i)/(iii), 8f, 18d and 18e are
-complete; nothing has been filed with the Bureau.** **Verification (test `129`):
-the governed compliance architecture is complete for every implemented compliance
-family; FWT is the single documented exception because no governed FWT pipeline
-exists yet.** Next build task, owner's choice of: **Backlog 22** (give FWT a tax
-kind, then retire the last four legacy tables and two screens — `129`.9 fails the
-moment FWT becomes a kind, which is the intended forcing function), **8c/8e (ii)**
-(the SLSP screen's monthly-versus-quarterly evidence model), or **8b** (percentage
-tax on collections).
+complete for current product scope; nothing has been filed with the Bureau.**
+**Verification (test `129`): the governed compliance architecture is complete
+for every implemented compliance family.** FWT/1601FQ is a future extension,
+not an architecture gap. **Recommended next implementation only: Backlog 8c / 8e
+(ii)** — move the SLSP screen and its monthly evidence snapshot onto the
+quarterly Filing Artifact without adding a second computation path.
 
-**Compliance standard (owner, 2026-08-04):** Tax Engine → Tax Ledger →
-Reconciliation → Working Paper → Filing Artifact → Export → Filed Record. **The
+**Compliance standard (owner, 2026-08-04):** Posted Transactions → Tax Engine →
+Tax Ledger → Reconciliation → Working Paper → Filing Artifact → Export → Filed Record. **The
 Filing Artifact is the system of record**; one authoritative implementation per
 stage, extra faces are delegations, replacement is ordered, no orphans, and
 functionality is never removed merely to satisfy the architecture. Full rule,
 including the Reconciling Item, in the Rules Matrix.
 
-Remaining Backlog: 8b, 8c, 8e (ii), 8f, 10, 11, 18, 18b, 18c, 18f, 18g, 18h, 18i,
-19, 22.
+Remaining current-product Backlog: 8b, 8c, 8e (ii), 10, 11, 18, 18b, 18c, 18f,
+18g, 18h, 18i, 19. After current compliance work: Banking & Treasury, then Fixed
+Assets. Excluded extensions, including item 22, carry no readiness weight.
 
 Re-run `npm run deploy:rehearse` after adding migrations (Runbook §2a);
 **owner approval required**. No open findings remain; do not resume IA-5.
@@ -188,5 +188,5 @@ Re-run `npm run deploy:rehearse` after adding migrations (Runbook §2a);
 No Posting/Kernel change; no production inventory source activation; no IA-6;
 preserve IA-5 dormancy; a non-zero `inventory_events` count is a governance stop;
 no hosted operation without approval; no product-scope change without a Product
-Architecture Amendment. WP-5…WP-9 unauthorised. No governance document in a
-commit containing no application or SQL change.
+Architecture Amendment. WP-5…WP-9 unauthorised. Governance-only commits require
+an explicit owner-directed finalization or Product Architecture Amendment.

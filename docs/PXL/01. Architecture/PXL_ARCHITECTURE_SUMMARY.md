@@ -2,7 +2,7 @@
 
 **Status:** Active Architecture Reference
 **Authority:** Tier 1 Governing
-**Last Verified:** 2026-07-17
+**Last Verified:** 2026-08-04
 **Applies To:** Current platform architecture and technology boundaries
 **Read When:** The active task requires cross-cutting architecture context
 **Do Not Read For:** Routine finding work already mapped by `AI/AI_STATE.md`
@@ -11,7 +11,18 @@ Concise, stable architecture reference for PXL. Read this instead of scanning th
 
 ## What PXL Is
 
-PXL is an accounting-first, Philippine-compliance-first ERP for multi-company use. Every operational document (sales, purchasing, inventory, banking, fixed assets) resolves into balanced double-entry journal entries in the General Ledger, and compliance outputs (VAT, percentage tax, EWT/FWT, Form 2307/2306, SAWT/QAP, SLSP/RELIEF, income tax, BIR books, CAS) are generated from posted data. Correctness, auditability, and BIR compliance override speed and novelty.
+PXL is an accounting-first ERP for multi-company Philippine SMEs. Every supported
+operational document resolves into balanced double-entry journal entries in the
+General Ledger, and current-scope compliance outputs—VAT, percentage tax,
+EWT/CWT, Form 2307, SAWT/QAP, SLSP/RELIEF, BIR books and CAS evidence—derive
+from posted data.
+
+PAD-015 excludes FWT (1601FQ/2306), Payroll, Form 2316, quarterly and annual
+Income Tax, MCIT/RCIT, NOLCO, OSD, Fringe Benefits Tax, Transfer Pricing,
+Consolidation Tax and specialized-industry tax features from the current
+product, pilot and production-readiness boundary. They are future extensions,
+never blockers or required delivery items. After current compliance work,
+Banking & Treasury and then Fixed Assets are the ranked future priorities.
 
 ## Stack
 
@@ -47,7 +58,15 @@ public/_headers        — production HTTP security headers (CSP)
 
 ## Data Flow
 
-Source document (e.g. sales invoice) → save RPC (server-side VAT/EWT computation) → approval → posting RPC → balanced JE → GL / Trial Balance / Financial Statements, subsidiary ledgers (AR/AP/inventory/assets), and tax ledgers → compliance working papers, returns, certificates, and BIR books — all read from posted data, never parallel bookkeeping.
+Operational flow: Source Document → governed save/approval/posting RPCs → balanced
+Journal Entry → General Ledger / subsidiary ledgers → Trial Balance → Financial
+Statements.
+
+Compliance flow is locked: **Posted Transactions → Tax Engine → Tax Ledger →
+Reconciliation → Working Paper → Filing Artifact → Export → Filed Record.** The
+Filing Artifact is the single system of record for compliance outputs. Screens,
+exports and integrations consume it; they never recompute a filing from source
+transactions, the tax ledger or browser state.
 
 ## Where Behavior Is Defined
 

@@ -86,7 +86,7 @@ The distinction that matters:
 
 | Retired — a human writes a document saying it is correct | Kept — the machine proves it on every run |
 | --- | --- |
-| Brutal Audit report | pgTAP regression, 111 files / 2,620 assertions |
+| Brutal Audit report | pgTAP regression, 128 files / 3,079 assertions |
 | Evidence Gate report | Reconciliation guard tests (e.g. `111`) |
 | Authorisation Gate | Kernel totality guard — a ledger write outside the doorway is impossible |
 | Certification Mission | Coverage governance guard (`075`) |
@@ -117,7 +117,8 @@ and each is enforced by code rather than by review:
 3. **Tenant isolation.** Row-level security on every base table, default deny.
    One company cannot see another's books at the data layer.
 4. **Everything reconciles.** Each subledger ties to its control account, proven
-   by a guard test that runs in the regression lane. Currently 1 of 9 evidenced.
+   by a guard test that runs in the regression lane. Currently 3 of 9 evidenced,
+   all at 0.00.
 5. **Correct Philippine tax.** VAT, percentage tax and withholding reconcile to
    the General Ledger at zero variance, from the same posted data the financial
    statements use.
@@ -179,8 +180,9 @@ workflow works" is not "it reconciles".
 1. **Status lives in one place.** `AI/AI_STATE.md`. A second copy always drifts
    and becomes a trap. Two former root status files reported inventory as
    unreconciled after it was fixed; both were deleted.
-2. **No governance document in a commit with no application or SQL change.** If
-   the only artifact is prose, the session produced nothing.
+2. **No governance-only commit during ordinary engineering.** A prose-only
+   commit is allowed only for an explicit owner-directed repository finalization
+   or Product Architecture Amendment, and it must change no runtime behavior.
 3. **A defect that is known is a defect that is filed.** For weeks the register
    read "0 open defects" while the worst accounting defect in the product went
    unrecorded because nobody classified it as a finding. If it is broken, file it.

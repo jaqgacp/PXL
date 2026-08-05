@@ -5,7 +5,7 @@
 **Owner / Domain:** Product
 **Read When:** Asking "what is the whole plan?", "what phase are we in?", or "what do I build next?"
 **Do Not Read For:** Current status (`AI/AI_STATE.md`), what PXL is (Product Architecture), or how we work (`00. Governance/PXL_HOW_WE_WORK.md`)
-**Date:** 2026-08-02
+**Date:** 2026-08-04
 
 > **This document is the only place in PXL that numbers phases.** It owns the
 > delivery sequence, the phase numbers, the target timeline and the pilot
@@ -59,7 +59,7 @@ that capability deliberately — not a reason to call PXL unready.
 
 | Excluded capability | Classification |
 |---|---|
-| **Final Withholding Tax**, including 1601FQ and 2306 | Future extension. FWT has no tax kind, so it never reaches the tax ledger; its two legacy working-paper screens are the single documented exception to the governed compliance architecture and are retired only if and when FWT is built (Backlog 22). |
+| **Final Withholding Tax**, including 1601FQ and 2306 | 🔮 Future extension. Its prototype screens/tables do not participate in current-product conformity, delivery or readiness. |
 | **Payroll** | Separate future product. Never counted in PXL progress. |
 | **Form 2316** | Future extension; belongs with Payroll. |
 | **Quarterly and Annual Income Tax** | Future extension. Ten screens, none has ever held a row. |
@@ -488,7 +488,7 @@ are right is a return that changes after submission.
 
    The path is now one path, and there is only one of it:
 
-   > posted transactions → Tax Engine → tax ledger → working paper → filing artifact
+   > Posted Transactions → Tax Engine → Tax Ledger → Reconciliation → Working Paper → Filing Artifact → Export → Filed Record
 
    **What was there before.** Three near-identical reconciliation functions —
    `fn_vat_gl_reconciliation`, `fn_wht_gl_reconciliation` and
@@ -608,23 +608,17 @@ are right is a return that changes after submission.
    to the artifact; the TypeScript half asserts no routed screen reaches a
    retired table.
 
-   **FWT is the single documented exception.** `compliance_fwt_*` and
-   `compliance_1601fq_*` and their two screens remain, hand-keyed, because FWT is
-   not a tax kind: it never reaches the tax ledger, so no artifact can be
-   generated for it. Retiring them would delete functionality with no governed
-   equivalent. Backlog 22 must give FWT the same pipeline as VAT, PT and EWT
-   rather than a special case, and assertion `129`.9 fails the moment it does, so
-   this cannot be forgotten.
+   **Current-scope boundary.** The governed architecture is complete for every
+   implemented compliance family. The four FWT/1601FQ prototype tables and two
+   screens are a 🔮 future extension; they are not an exception, gap or readiness
+   dependency for the current product.
 
-   **Why this item is ◐ and not ✅. Nothing has ever been filed from PXL, and
-   that has not changed.** A `filed` status here records the accountant's own
-   submission; PXL does not transmit to the Bureau. The other eleven
-   `compliance_*` working-paper tables remain empty, `form_2306_issuances` and
-   `form_2307_tracking` are untouched, and the SLSP *screen* still aggregates its
-   sales side in the browser — the artifact is registered and tested, but the
-   screen is monthly while the attachment is quarterly and its evidence snapshot
-   is keyed by month. 1601FQ, 2550M, 1604-E and the Books of Accounts exports are
-   not registered. All recorded as Product Backlog items 8c and 8e (ii).
+   **Why this item remains ◐. Nothing has ever been filed from PXL.** A `filed`
+   status records the accountant's own submission; PXL does not transmit to the
+   Bureau. The remaining in-scope architecture migration is the SLSP screen: its
+   artifact is registered and tested, but the screen and evidence snapshot remain
+   monthly/browser-based while the attachment is quarterly. This is Product
+   Backlog 8c / 8e (ii).
    **Check Voucher** — the one Banking document kept in v1 because the Cash
    Disbursements Book needs it — is still unassigned to a phase.
 
@@ -657,7 +651,7 @@ data and reconciled to the General Ledger at zero variance.
    never deployed) and exercise branch scoping — `user_company_branch_scopes` has
    never held a row, so per-branch restriction is unproven in practice.
 7. Retire or finish the remaining **Not built** surfaces so the pilot menu is
-   honest: 30 deferred routes and 17 navigation labels with no page (PAD-012).
+   honest: 26 deferred routes and 17 navigation labels with no page (PAD-012).
 
 **Done when:** a stranger can use it without you sitting beside them.
 
@@ -678,9 +672,10 @@ financial statements.
 
 ### Phase 8 — v2 · after the pilot survives a quarter
 
-Banking & Treasury · full Fixed Assets lifecycle · Income Tax · Accounting
-Schedules · CAS accreditation · multi-currency · IA-5 resumption only if costing
-replay becomes a real complaint.
+Banking & Treasury · full Fixed Assets lifecycle · Accounting Schedules · CAS
+accreditation · multi-currency · IA-5 resumption only if costing replay becomes a
+real complaint. Excluded future extensions do not enter this delivery phase
+without a Product Architecture Amendment.
 
 ---
 
@@ -696,7 +691,7 @@ presentation, the BIR filing artifacts, and proving approval routing.
 | Phase 2 — operational safety | days, not weeks (owner action only) | **High** — engineering is complete and proven |
 | Phase 3 — onboardable | built locally; hosted/UAT proof outstanding | **Medium** |
 | Phase 4 — Tax Engine (calculator only) | ✅ done 2026-08-03, incl. effective-dated VAT | — — the estimate was 4–6 weeks; the callers turned out to be enumerable and the outputs already pinned by test `090`, so the migration was mechanical once the census was believed over the prose. VAT effective-date resolution followed the same day: the version machinery already existed and only the resolution path had to be routed through it |
-| Phase 5 — flows, then statements, then filing | 3–4 weeks for the flows; **statements and filing not estimated** | **Low** — see below |
+| Phase 5 — flows, then statements, then filing | statements ✅ 2026-08-03; filing engine and export ✅ 2026-08-04; **the two canonical flows remain the open item** | **Low** — see below |
 | Phase 6 — pilot hardening | 3–4 weeks | **Low** — no browser lane exists yet to calibrate against |
 | **To pilot** | **previously ~4 months; now unestimated — see below** | — |
 | Phase 7 — pilot | one quarter parallel run | **High** — fixed by calendar |
@@ -710,17 +705,23 @@ none of them has a defensible estimate from repository evidence:
   mapping exercise and a reporting build, and it took one migration and one test.
   What it revealed instead is the item below it: statements without a period
   close are correct for one year and wrong for the second.
-- **Filing artifacts (Phase 5.8).** Twelve working-paper tables, four form
-  tables and the return tables are empty. Nothing in the repository indicates how
-  much of the generation logic exists behind those empty tables, so any duration
-  would be invention.
+- ~~**Filing artifacts (Phase 5.8).**~~ **Engine and export closed 2026-08-04.**
+  Six artifacts use one generator, working paper, reconciliation and exporter;
+  the remaining in-scope work is the SLSP screen/evidence migration and real
+  operational filing proof.
 - **Approval routing (Phase 6.5).** An engine that has never executed once
   carries unknown defect risk. The first run finds what review cannot.
 
-Stating "~4 months" while those three are open would repeat the mistake this plan
-was written to stop. **The next honest estimate becomes possible once Phase 5.7
-and Phase 5.8 are scoped against the code.** That scoping can run in parallel
-with Phase 4, which is itself estimable and unblocked.
+**Two of the three closed on 2026-08-03 and 2026-08-04**, and both took a single
+migration and a single fresh-data test — far less than the withheld estimate
+implied. Approval routing remains genuinely unestimated because an engine that
+has never executed carries unknown defect risk.
+
+The remaining distance to pilot is therefore the two canonical flows meeting the
+Pilot Bar (0 of 2 today), the SLSP screen migration, approval routing's first
+run, and the operational items that are owner actions rather than engineering:
+a hosted deploy, a durable backup destination and an escrowed passphrase. **No
+excluded future extension (PAD-015) sits on this path.**
 
 What has *not* changed: Phases 1–3 are done or nearly done, and the ordering
 below is unaffected. Deliberately front-loaded — after Phase 2 the product is
@@ -737,7 +738,7 @@ recoverable, which is the difference between a setback and a catastrophe.
 | 3 | ~~No opening balances~~ Local capability complete; real cut-over proof open | Pilot onboarding acceptance | ✅ local / 3 |
 | 4 | ~~No Tax Engine calculator~~ **CLOSED 2026-08-03 (PAD-001).** One calculator, eleven callers migrated; **percentage tax closed 2026-08-04** (test `124`) | — | ✅ |
 | 5 | ~~No financial statement presentation~~ **CLOSED 2026-08-03.** All four statements produced from governed configuration (test `121`), the accounting cycle closes into retained earnings (test `122`), and the statements carry a comparative period and basic notes (test `123`). **Successor risk: the notes are not signature-ready** — no company narrative, note templates, line-to-note cross-references or signature block | A pilot accountant signing a statement | ✅ / Backlog 18i |
-| 6 | No filing artifacts — nothing has ever been filed. The 2551Q and its working paper are now generated from the posted ledger (2026-08-04); no return has been filed and the other eleven working papers stay empty | Statutory filing; a VAT-registered pilot client | 5.8 |
+| 6 | ~~No filing artifacts~~ **ENGINE CLOSED 2026-08-04.** Six registered artifacts generate and export through the locked pipeline at 0.00 reconciliation variance. Open: SLSP screen/evidence migration and a real accountant-operated filing; PXL itself transmits nothing. | Pilot filing evidence | 5.8 / 6 |
 
 ---
 
@@ -745,11 +746,15 @@ recoverable, which is the difference between a setback and a catastrophe.
 
 Three honest measures. All others mislead.
 
-| Measure | 2026-08-03 | Pilot target |
+| Measure | 2026-08-04 | Pilot target |
 |---|---:|---:|
 | Exercised posting entry points | **15 of 24** | 18 of 24 |
-| Critical reconciliations evidenced | 1 of 9 | 9 of 9 |
+| Critical reconciliations evidenced | **3 of 9** | 9 of 9 |
 | Canonical flows meeting the Pilot Bar | 0 of 2 | 2 of 2 |
+
+The reconciliation row moved from 1 to 3 on 2026-08-04: inventory to its control
+account (`111`, `120`), percentage tax to the GL (`124`), and VAT and withholding
+through the one filing reconciliation (`125`, `127`). All three measure 0.00.
 
 Re-measured 2026-08-02 (the first row previously read "11 of 22" and was wrong on
 both numbers) and again on 2026-08-03, when Cash Sale and Delivery Receipt

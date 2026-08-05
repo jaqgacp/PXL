@@ -2,12 +2,19 @@
 
 **Status:** Active domain index
 **Authority:** Tier 2 Domain Navigation; Tier 1 accounting, transaction, security, and findings authorities prevail
-**Last Reviewed:** 2026-07-18
-**Applies To:** BIR configuration, VAT, EWT/CWT/FWT, percentage tax, income tax, books, forms, reports, CAS, tax identity, and tax setup
+**Last Reviewed:** 2026-08-04 product-scope alignment
+**Applies To:** Current-scope BIR configuration, VAT, EWT/CWT, percentage tax, books, forms, reports, CAS, tax identity, and tax setup; excluded future-extension references are clearly marked
 **Read When:** The active task is specifically BIR, tax, statutory reporting, CAS, or compliance configuration
 **Do Not Read For:** Unrelated application, inventory, authentication, or transaction UI work
 
 This folder contains BIR/compliance blueprints and tax setup specifications. A blueprint is not proof that its route, database generator, filing logic, export, RLS, or canonical data is complete. Implementation status comes from executed evidence, the transaction/accounting authorities, and the central findings register.
+
+**Current scope (PAD-015):** FWT/1601FQ/2306 and quarterly/annual Income Tax,
+including MCIT/RCIT, NOLCO and OSD, are excluded future extensions. They are not
+architecture gaps, delivery requirements or readiness blockers. Current
+compliance follows one locked path: Posted Transactions → Tax Engine → Tax Ledger
+→ Reconciliation → Working Paper → Filing Artifact → Export → Filed Record. The
+Filing Artifact is the system of record.
 
 ## Fast Routing
 
@@ -17,7 +24,7 @@ This folder contains BIR/compliance blueprints and tax setup specifications. A b
 - **CAS and books:** start with `06. Audit & CAS/10. CAS Audit Report.md`; add the exact BIR book specification needed. For PXL-AUD-066, go directly to the central finding and test 027 rather than reading the whole CAS folder.
 - **TIN behavior:** read `docs/PXL/10. Compliance/PXL_PHILIPPINE_TIN_STANDARD.md`.
 - **Forms and reports:** open only the exact form/report blueprint named by the task. Do not preload dashboards, adjacent returns, or exports.
-- **Income tax:** the documents are planned/reference specifications with unproven canonical generators. Do not treat them as implemented or production-ready.
+- **FWT and Income tax:** 🔮 excluded future-extension references only. Do not route current-product work to them without a Product Architecture Amendment.
 
 ## Current Groups
 
@@ -26,10 +33,10 @@ This folder contains BIR/compliance blueprints and tax setup specifications. A b
 | `00. Tax Setup/` | BIR form configuration, tax codes, VAT/EWT/FWT/PT codes, ATC codes, tax calendar | Current setup specifications; verify against implementation |
 | `01. Percentage Tax/` | PT dashboard, working papers, 2551Q, reconciliation, register | Mixed current/planned blueprints |
 | `02. VAT/` | VAT dashboard, working papers, summaries, returns, SLS/SLP, SLSP, RELIEF | Current compliance blueprints; generator evidence varies |
-| `03. Withholding Tax/` | EWT/CWT/FWT working papers, returns, QAP/SAWT, 2307/2306 certificates | Current/planned withholding blueprints |
-| `04. Income Tax/` | Taxable income, reconciliation, OSD, NOLCO, credits, 1701/1702 forms | Planned/unverified |
+| `03. Withholding Tax/` | EWT/CWT working papers, returns, QAP/SAWT and 2307; FWT/2306 references remain in the folder | Current EWT/CWT blueprints; 🔮 FWT/2306 excluded |
+| `04. Income Tax/` | Taxable income, reconciliation, OSD, NOLCO, credits, 1701/1702 forms | 🔮 Excluded future-extension references |
 | `05. BIR Books/` | Statutory books and subsidiary ledgers | Current blueprints; exact evidence varies |
-| `06. Audit & CAS/` | CAS dashboard, audit logs, DAT generation, audit package, export history | Current CAS/audit blueprints; PXL-AUD-066 still active |
+| `06. Audit & CAS/` | CAS dashboard, audit logs, DAT generation, audit package, export history | Current CAS/audit blueprints; verify operational evidence separately |
 | `Form 2307 Management.md` | 2307 lifecycle | Current implementation specification |
 | `Tax Applicability Matrix.md` | Tax applicability routing | Current domain rule, subordinate to Tier 1 rules |
 | `docs/PXL/10. Compliance/PXL_PHILIPPINE_TIN_STANDARD.md` | TIN format, storage, validation, display | Current tax identity standard |

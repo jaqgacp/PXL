@@ -2,7 +2,7 @@
 
 **Status:** Active authoritative coverage-governance register
 **Authority:** Tier 2 governance artifact for PXL-AUD-059 coverage governance; accounting, tax, transaction, security, and findings sources prevail on product rules
-**Last Verified:** 2026-08-03 deterministic local canonical lane after Backlog 18d/18e (210 public base tables; 95 expected-populated, 115 explicitly deferred/empty). Canonical bank-transfer vouchers exercise verified supplier payee accounts; the six opening-balance tables remain workflow-deferred and are proved on fresh company data by guards 113 and 116.
+**Last Verified:** 2026-08-04 deterministic local canonical lane after the Filing Artifact and Backlog 8f migrations (208 public base tables; 99 expected-populated, 109 explicitly deferred/empty). Canonical bank-transfer vouchers exercise verified supplier payee accounts; the six opening-balance tables remain workflow-deferred and are proved on fresh company data by guards 113 and 116.
 **Applies To:** Every `public` base table; canonical/local validation coverage boundaries and product-readiness claims
 **Read When:** Adding a table or workflow, classifying coverage, or reconciling readiness against PXL-AUD-059
 **Do Not Read For:** Product accounting/tax rules (see the governing standards) or hosted credentials
@@ -30,22 +30,24 @@ Row counts below are the deterministic **canonical baseline** (fresh migration r
 | Class | Tables | Governance |
 | --- | ---: | --- |
 | `canonical-populated` | 69 | Expected non-empty; exercised by canonical regression |
-| `reference-populated` | 26 | Expected non-empty; migration/reference seeded |
-| `workflow-deferred` | 27 | Explicitly deferred; supported workflow not yet exercised by canonical |
-| `future-deferred` | 61 | Explicitly deferred; module not implemented end-to-end |
+| `reference-populated` | 30 | Expected non-empty; migration/reference seeded |
+| `workflow-deferred` | 30 | Explicitly deferred; supported workflow not yet exercised by canonical |
+| `future-deferred` | 52 | Explicitly deferred; module not implemented end-to-end |
 | `reference-empty` | 6 | Intentionally empty reference/config |
 | `control-empty` | 1 | Healthy control state is empty; any row requires investigation |
 | `dormant-foundation` | 20 | Implemented but inactive; population is prohibited during IA-5 |
-| **Total** | **210** | 95 expected-populated / 115 explicitly deferred or empty |
+| **Total** | **208** | 99 expected-populated / 109 explicitly deferred or empty |
 
 These figures are the guard's own registry, not a separate tally: re-derive them
 from `supabase/tests/075_table_coverage_governance_test.sql`, which is the
-machine-checked source and fails on any table this table forgets. The 2026-08-03
+    machine-checked source and fails on any table this table forgets. The 2026-08-04
 movement was `fs_structure` and `account_fs_map` promoted from `workflow-deferred`
 to `canonical-populated` (Phase 5.7) and `fiscal_close_runs` added as
-`workflow-deferred` (Backlog 18d).
+  `workflow-deferred` (Backlog 18d). The Filing Artifact work then added four
+  reference-populated and two workflow-deferred tables, while Backlog 8f removed
+  eight current-product legacy working-paper tables and `wht_export_periods`.
 
-All 210 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
+All 208 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
 
 The COA Engine (Phase A, 2026-07-24) added four base tables: `ref_mapping_key` (reference-populated), `account_mapping` (canonical-populated, config-synced bindings), and the FS-registry framework `fs_structure` and `account_fs_map`. **Both FS tables became canonical-populated on 2026-08-03** (Delivery Plan Phase 5.7): seeding a chart of accounts now provisions its statement presentation with it, and the canonical demo seed — which builds its chart by direct insert — maps its companies explicitly. They are no longer workflow-deferred, and the coverage guard was reclassified rather than silenced.
 
@@ -276,21 +278,27 @@ current workflows do not activate them.
 | `vat_codes` | `reference-populated` | 6 | Migration / reference seed | on (1) | ✓ | Maintain migration/reference seed; guard 075 keeps it non-empty. |
 | `percentage_tax_codes` | `canonical-populated` | 2 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `atc_codes` | `reference-populated` | 18 | Migration / reference seed | on (1) | ✓ | Maintain migration/reference seed; guard 075 keeps it non-empty. |
+| `ref_tax_ledger_control` | `reference-populated` | 5 | Filing Artifact reference seed | on (1) | 125–129 | One control mapping per governed tax kind; configuration for the single reconciliation. |
+| `ref_filing_artifact` | `reference-populated` | 6 | Filing Artifact reference seed | on (1) | 125–129 | Registered current-scope artifacts; a new form is configuration, not a function. |
+| `ref_filing_artifact_kind` | `reference-populated` | 8 | Filing Artifact reference seed | on (1) | 125–129 | Maps each artifact to the tax kinds it consumes. |
+| `ref_filing_export_column` | `reference-populated` | 48 | Filing Artifact export seed | on (1) | 126–129 | Export layout consumes only artifact fields. |
 | `tax_detail_entries` | `canonical-populated` | 24 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `tax_calendar_events` | `canonical-populated` | 248 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `compliance_profiles` | `canonical-populated` | 5 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 
 ### Tax — Returns & Certificates
 
-**Owner:** Compliance / Tax · **Primary surface:** /compliance/* (statutory generators, not implemented)
+**Owner:** Compliance / Tax · **Primary surface:** /compliance/* (Filing Artifact generators implemented; canonical seed intentionally creates no filing)
 
 | Table | Class | Canonical rows | Population mechanism | RLS (policies) | Test | Next action |
 | --- | --- | ---: | --- | --- | --- | --- |
-| `ewt_returns` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | ✓ | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `fwt_returns` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `pt_returns` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `vat_returns` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | ✓ | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `form_2306_issuances` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
+| `ewt_returns` | `future-deferred` | 0 | Implemented artifact projection; canonical filing intentionally absent | on (3) | ✓ | Guard-class reclassification to `workflow-deferred` is recorded in Backlog 23; do not infer filing operation from an empty canonical table. |
+| `fwt_returns` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | Carries no current-product conformity or readiness weight. |
+| `pt_returns` | `future-deferred` | 0 | Implemented artifact projection; canonical filing intentionally absent | on (3) | ✓ | Guard-class reclassification to `workflow-deferred` is recorded in Backlog 23. |
+| `vat_returns` | `future-deferred` | 0 | Implemented artifact projection; canonical filing intentionally absent | on (3) | ✓ | Guard-class reclassification to `workflow-deferred` is recorded in Backlog 23. |
+| `filing_artifacts` | `workflow-deferred` | 0 | Supported generator; canonical seed never files | on (2) | 125–129 | Exercise only in self-provisioned filing tests; empty canonical state carries no implementation inference. |
+| `filing_artifact_lines` | `workflow-deferred` | 0 | Supported generator; canonical seed never files | on (1) | 125–129 | Child evidence for Filing Artifacts; populated only by the governed generator. |
+| `form_2306_issuances` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | Carries no current-product conformity or readiness weight. |
 | `form_2307_issuances` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | ✓ | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
 | `form_2307_issuance_lines` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | ✓ | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
 | `form_2307_tracking` | `future-deferred` | 0 | Future module (unimplemented) | on (4) | ✓ | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
@@ -298,35 +306,27 @@ current workflows do not activate them.
 
 ### Tax — Compliance Working Papers
 
-**Owner:** Compliance / Tax · **Primary surface:** /compliance/working-papers (prep workflow, not implemented)
+**Owner:** Compliance / Tax · **Primary surface:** /compliance/working-papers (current-product workflow implemented on Filing Artifact lines)
 
 | Table | Class | Canonical rows | Population mechanism | RLS (policies) | Test | Next action |
 | --- | --- | ---: | --- | --- | --- | --- |
-| `compliance_1601eq_working_papers_headers` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_1601eq_working_papers_lines` | `future-deferred` | 0 | Future module (unimplemented) | on (4) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_1601fq_working_papers_headers` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_1601fq_working_papers_lines` | `future-deferred` | 0 | Future module (unimplemented) | on (4) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_ewt_working_papers_headers` | `future-deferred` | 0 | Future module (unimplemented) | on (4) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_ewt_working_papers_lines` | `future-deferred` | 0 | Future module (unimplemented) | on (4) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_fwt_working_papers_headers` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_fwt_working_papers_lines` | `future-deferred` | 0 | Future module (unimplemented) | on (4) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_pt_working_papers_headers` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_pt_working_papers_lines` | `future-deferred` | 0 | Future module (unimplemented) | on (4) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_vat_working_papers_headers` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `compliance_vat_working_papers_lines` | `future-deferred` | 0 | Future module (unimplemented) | on (4) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
+| `compliance_1601fq_working_papers_headers` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | Prototype only; no current-product conformity or readiness weight. |
+| `compliance_1601fq_working_papers_lines` | `future-deferred` | 0 | 🔮 Excluded future extension | on (4) | 075 only | Prototype only; no current-product conformity or readiness weight. |
+| `compliance_fwt_working_papers_headers` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | Prototype only; no current-product conformity or readiness weight. |
+| `compliance_fwt_working_papers_lines` | `future-deferred` | 0 | 🔮 Excluded future extension | on (4) | 075 only | Prototype only; no current-product conformity or readiness weight. |
 
-### Income Tax
+### 🔮 Income Tax — excluded future extension
 
-**Owner:** Compliance / Tax · **Primary surface:** /compliance/income-tax (not implemented)
+**Owner:** Future extension · **Primary surface:** none in current product
 
 | Table | Class | Canonical rows | Population mechanism | RLS (policies) | Test | Next action |
 | --- | --- | ---: | --- | --- | --- | --- |
-| `book_tax_reconciliation` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `income_tax_computations` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `itr_filings` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `mcit_computations` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `nolco_schedule` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
-| `tax_credits_schedule` | `future-deferred` | 0 | Future module (unimplemented) | on (3) | 075 only | Deferred module — implement the workflow before certification; do not cite as implemented from schema presence. |
+| `book_tax_reconciliation` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | No current-product readiness weight. |
+| `income_tax_computations` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | No current-product readiness weight. |
+| `itr_filings` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | No current-product readiness weight. |
+| `mcit_computations` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | No current-product readiness weight. |
+| `nolco_schedule` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | No current-product readiness weight. |
+| `tax_credits_schedule` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | No current-product readiness weight. |
 
 ### CAS Numbering & Export Artifacts
 
@@ -418,8 +418,8 @@ The following modules are explicitly deferred. Route presence or schema presence
 - **Fixed Assets** — asset register, depreciation, disposal, impairment, transfer. Not implemented in canonical activity.
 - **Schedules & Revenue Recognition** — amortization, recurring journals, revenue recognition. Future workflow.
 - **Returns & Corrective Documents** — debit memos, supplier debit memos, purchase returns, goods issues. Credit/vendor-credit paths are used instead; these remain unexercised.
-- **Statutory Tax Returns, Certificates & Working Papers** — VAT/EWT/FWT/PT returns, 2306/2307 issuances, and all compliance working papers. Tax **detail** is exercised; statutory **generators** are not.
-- **Income Tax** — ITR, MCIT, NOLCO, book-tax reconciliation, tax-credit schedules. Unsupported in canonical activity.
+- **Current-scope Filing Artifacts** — VAT/EWT/PT artifacts and working papers are implemented but intentionally absent from canonical seed data; tests `124`–`129` self-provision and exercise them. Form 2307 tables remain unexercised by the canonical seed.
+- **🔮 FWT/2306 and Income Tax** — excluded future extensions. Empty tables carry no current-product readiness weight.
 - **CAS Export Artifacts** — attachment register and export log/artifacts generate only from an explicit export workflow.
 - **BIR Global Configuration** — `bir_forms`/`bir_form_mappings` governed by maintainer RPCs under PXL-AUD-063; empty in canonical by design.
 - **Approval Execution** — workflow definitions exist; no approval rule is configured, so `approval_requests`/`approval_instances` stay empty (PXL-AUD-053/MDP-14 govern the foundation).

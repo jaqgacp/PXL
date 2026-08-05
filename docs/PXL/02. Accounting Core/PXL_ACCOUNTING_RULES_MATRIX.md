@@ -396,25 +396,25 @@ The matrix below uses compact cells. Report any missing production-critical valu
 Every compliance capability, current and future, is built and measured against
 one pipeline. Each stage **consumes** the one before it:
 
-> Tax Engine → Tax Ledger → Reconciliation → Working Paper → Filing Artifact →
-> Export → Filed Record
+> Posted Transactions → Tax Engine → Tax Ledger → Reconciliation → Working Paper
+> → Filing Artifact → Export → Filed Record
 
 - **The Filing Artifact is the system of record for compliance outputs.** Any UI,
   export, snapshot, API or integration — present or future — **consumes the
   Filing Artifact**. None may rebuild a compliance report from transactions, from
   the tax ledger, or in the browser. A compliance figure has one origin, and
-  every surface that shows it is downstream of that origin. **Known
-  non-conforming surfaces**, recorded rather than tolerated, and now down to two:
-  the **SLSP screen** (Backlog 8c/8e ii — monthly against a quarterly attachment)
-  and the **FWT/1601FQ working papers**, which cannot conform while FWT is not a
-  tax kind (Backlog 22). `fn_snapshot_wht_export` and the eight VAT/EWT/1601EQ/PT
+  every surface that shows it is downstream of that origin. The **only known
+  current-product non-conforming surface** is the **SLSP screen** (Backlog 8c/8e
+  ii — monthly against a quarterly attachment). FWT/1601FQ is an excluded future
+  extension and carries no current conformity or readiness weight.
+  `fn_snapshot_wht_export` and the eight VAT/EWT/1601EQ/PT
   legacy working-paper tables were **retired** on 2026-08-04 (Backlog 8f,
   migration `20260804000006`) after their governed replacements were reachable;
   `fn_snapshot_vat_export` and `fn_snapshot_books_export` remain, read source
   views, and are covered by items 8c and 19. The governed state is asserted, not
   asserted-in-prose: test `129` and `tests/compliance_architecture.test.ts`.
 - **Exactly one authoritative implementation per stage, per compliance area.**
-  For every area (VAT, percentage tax, EWT, FWT, SAWT, SLSP, QAP, Books) each of
+  For every current area (VAT, percentage tax, EWT/CWT, SAWT, SLSP, QAP, Books) each of
   the seven stages has **one** implementation and no more. **Parallel
   implementations are not allowed** — not a second calculator, not a second
   reconciliation, not a second working-paper store, not a per-form exporter, not
@@ -464,9 +464,9 @@ one pipeline. Each stage **consumes** the one before it:
 
 ### BIR filing artifacts — ENGINE DELIVERED 2026-08-04, migration `20260804000002`
 
-- **The one path.** posted transactions → Tax Engine → tax ledger → working paper
-  → filing artifact. No form has its own query, and no filing figure is computed
-  in a browser.
+- **The one path.** Posted Transactions → Tax Engine → Tax Ledger →
+  Reconciliation → Working Paper → Filing Artifact → Export → Filed Record. No
+  form has its own query, and no filing figure is computed in a browser.
 - **What a tax kind is.** `ref_tax_ledger_control` states, per tax kind, the
   governed account key that controls it, its normal balance, which journal
   statuses count toward it and which reference document types are excluded. Those
@@ -521,15 +521,12 @@ one pipeline. Each stage **consumes** the one before it:
   count, and the documents behind any line stay reachable through the accounting
   trace — which is how the per-document detail of the retired screens survives.
 - **Not covered.** Nothing is transmitted to the Bureau; a `filed` status records
-  the accountant's own submission. 1601FQ, 2550M and 1604-E are unregistered. The
+  the accountant's own submission. The
   SLSP screen still bypasses the artifact layer and its export button still calls
   the legacy source-view snapshot (8c, 8e ii); every other compliance screen is
-  wired to the governed export. The four remaining legacy
-  `compliance_fwt_*` and `compliance_1601fq_*` working-paper tables are the
-  **single documented exception**: two routed screens still write them by hand
-  because **FWT has no tax kind**, so it never reaches the tax ledger and no
-  artifact can be generated for it. They are retired by Backlog 22, which must
-  give FWT the same pipeline as VAT, PT and EWT rather than a special case.
+  wired to the governed export. The four remaining FWT/1601FQ prototype tables
+  and two screens are a 🔮 excluded future extension; they do not participate in
+  the current product architecture or its readiness assessment.
 
 ## 10. Known architecture gaps
 

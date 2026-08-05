@@ -1702,19 +1702,19 @@ Scenario: inventory the five preview functions; prove the migrated core resolves
 
 Status: Executed Passing (2026-07-26) in `supabase/tests/090_posting_engine_p4_tax_boundary_test.sql`, 49 assertions, run in every regression and canonical lane. **No migration ships with this phase** — P4 was re-scoped by the architecture board from "introduce the TaxComponent shape" to a formal certification of the ownership boundary that already exists, so production behavior is unchanged by construction. Full regression passed **90 files / 1,930 assertions** on a clean `supabase db reset --local --no-seed` replay; the canonical lane passed **18 files / 424 assertions**. Governing contract: `docs/PXL/02. Accounting Core/PXL_POSTING_ENGINE_SPEC.md` §2.2, §5.3, and the new §5.3.1 (Amendment A2).
 
-**What this does NOT certify.** No formal Tax Engine exists, and this test proves its absence rather than assuming it. No `TaxComponent` object, composite type, or contract exists in the live system and none is invented here. Philippine tax function completeness is **not** claimed. The seven duplicated document-save tax calculators are **not** removed — they are censused as registered technical debt owned by the future Tax Engine program. `fn_save_cash_sale` still co-locates document tax calculation with posting and remains a registered Tax Engine migration candidate.
+**Historical boundary at execution; superseded by PAD-001.** When P4 ran, no formal Tax Engine or `TaxComponent` contract existed, and the test correctly proved that contemporary boundary. PAD-001 subsequently delivered `fn_calculate_tax`, migrated all eleven tax-calculation/validation consumers and separated Cash Sale calculation from posting. Test `090` remains a Posting Engine non-computation guard; it must not be read as a current claim that the Tax Engine is absent. Tax Engine certification remains separate and outstanding.
 
 **Census (live `pg_proc`, authoritative over prose).** **20** tax-aware posting writers reach the General Ledger and reference VAT/EWT/CWT/withholding/tax. This corrects the investigation's count of 19: `fn_cancel_check_voucher` reverses the Check Voucher journal through `fn_bt_reverse_je` rather than `fn_reverse_posted_journal_entry` and was missed by a predicate keyed only on the latter. It computes no tax and reverses tax detail through the same certified function as the other four correction writers, so the correction enlarges the census without changing any conclusion. The remaining **30** GL writers are provably not tax-aware after P5.1 removed one unused legacy line helper, so the partition remains complete.
 
 **Non-computation proof.** Of the 20, **zero** read `company_accounting_config` for an account; **19** contain no tax arithmetic and read no VAT rate source; **six** read `atc_codes`, and in five of them the rate is copied straight into `tax_detail_entries.tax_rate` as provenance — it never feeds a multiplication, division, or policy comparison. The precise certified claim is therefore *the posting layer records the rate that applied; it does not select one.* Schema-wide, tax-rate arithmetic exists in exactly **11** functions — 7 document-save VAT calculators, 2 EWT-profile appliers, 2 stored-amount validators — of which exactly one writes the GL: `fn_save_cash_sale`, whose calculation belongs to its document-save half. The detectors are proven non-vacuous: the same predicates fire on `fn_save_cash_sale` and stay silent on the pure-consumption writers.
 
-**Ownership matrix certified.** Tax policy and calculation: document-save layer today, governed Tax Engine in future. Tax account resolution: the certified COA Resolver, over exactly the four keys `VAT_OUTPUT`/`VAT_INPUT`/`EWT_PAYABLE`/`EWT_WITHHELD`, every one reached through `fn_resolve_posting_account`. Tax-line construction, ordering, roles, dimensions: the Posting Engine. Tax-detail persistence and reversal: the Tax Ledger layer — 8 writer functions, and exactly one reversal implementation (`fn_reverse_tax_detail_entries`) consumed by the five correction writers.
+**Ownership matrix at execution.** Tax policy and calculation then lived in the document-save layer; PAD-001 has since moved that ownership to the governed Tax Engine. Tax account resolution remains with the certified COA Resolver, tax-line construction remains with the Posting Engine, and tax-detail persistence/reversal remains with the Tax Ledger. This historical P4 evidence certifies none of the later Tax Engine implementation.
 
 **Reversal provenance, proven non-vacuously.** The certified reversal copies the original ATC version, rate, taxable base, tax/VAT code, income nature, and linkage, negating only base and amount. Non-vacuity is engineered rather than asserted: the fixture closes the original `WC140` ATC version and opens a governed successor at a **different** rate (5.00 vs 2.00) effective on the reversal date, so a reversal that recomputed at the current rate would produce 250.00. The certified reversal reproduces the original 100.00 at the original 2.00 rate, and the original ledger row is left untouched.
 
 **Rounding.** All seven calculators share one idiom — `ROUND(base * rate / 100, 2)` per line. Behaviourally, the same 100.05 base at 12% rounds to 12.01 in every reachable document calculator (Sales Invoice, Vendor Bill, Cash Purchase, Credit Memo, Vendor Credit), with no calculator disagreeing. **Documented limitation:** VAT-inclusive treatment is implemented in exactly one of the seven (Sales Invoice), and the test pins that fact so the Tax Engine program inherits it explicitly.
 
-Scenario: census the tax-aware posting writers and prove the partition complete; prove structurally that the posting layer selects no rate and performs no tax arithmetic; prove COA ownership of tax accounts and Tax Ledger ownership of tax detail; prove the absence of a Tax Engine; then execute every supported tax-bearing canonical transaction and compare the stored tax fact, the posted GL tax line, and the tax-ledger entry as one triple; prove zero-variance reconciliation; prove reversal provenance against a changed current rate; prove rounding consistency; prove inclusive and exclusive behaviour unchanged; prove fail-closed on invalid stored tax.
+Scenario at P4 execution: census the tax-aware posting writers and prove the partition complete; prove structurally that the posting layer selects no rate and performs no tax arithmetic; prove COA ownership of tax accounts and Tax Ledger ownership of tax detail; prove the then-current absence of a Tax Engine; execute every supported tax-bearing canonical transaction and compare the stored tax fact, posted GL tax line and tax-ledger entry; prove zero-variance reconciliation, reversal provenance, rounding consistency and fail-closed invalid-tax behavior. Later Tax Engine evidence is recorded under tests `117`–`129`.
 
 | Step | Action | Expected Behavior |
 | ---- | ------ | ----------------- |
@@ -2747,7 +2747,8 @@ Status: **PASSING 2026-08-04.**
 company) proves that every registered filing artifact is produced by the same
 three functions from the same posted ledger:
 
-> posted transactions → Tax Engine → tax ledger → working paper → filing artifact
+> Posted Transactions → Tax Engine → Tax Ledger → Reconciliation → Working Paper
+> → Filing Artifact → Export → Filed Record
 
 **What was there before.** Three near-identical reconciliation functions and three
 more computations in JavaScript. `fn_vat_gl_reconciliation`,
@@ -3020,9 +3021,9 @@ and a note row corrupts it, so "visible on the export" is answered with "not
 there" in exactly one place, deliberately. The evidence snapshot holds exactly
 the bytes that were exported, note included (28).
 
-Not claimed: nothing has been filed with the Bureau, and no legacy screen or
-table has been retired yet — that is 8f stage 2. The FWT and 1601FQ families
-remain, blocked by Backlog 22.
+At this evidence point no legacy screen or table had yet been retired; stage 2
+below supersedes that state. FWT/1601FQ was later classified as an excluded
+future extension and carries no current-product readiness weight.
 
 ## Backlog 8f stage 2 — the second compliance architecture is retired
 
@@ -3037,8 +3038,8 @@ moment someone adds a function, so the claim is asserted on every run instead.
 The claim, stated as it must be stated:
 
 > The governed compliance architecture is complete for every implemented
-> compliance family. FWT remains the single documented exception because no
-> governed FWT pipeline exists yet.
+> current-product compliance family. FWT/1601FQ is an excluded future extension,
+> not an architecture exception or readiness gap.
 
 **What was retired** (migration `20260804000006`, after — never before — its
 replacement was reachable): the legacy PT working-paper write inside
@@ -3056,12 +3057,11 @@ registered form is keyed to anything but the artifact (6); no filing or export
 function reads a review view (7); and **exactly one function writes a filing
 artifact** (8).
 
-Section B verifies the second sentence, and verifies its *reason* rather than
-asserting a promise: FWT is not a governed tax kind (9), the tax ledger will not
-accept an FWT row so no artifact can exist for it (10), and no FWT form is
-registered — the exception is a gap, not a second engine (11). Assertion 9 is
-deliberately fragile in the useful direction: when Backlog 22 gives FWT a tax
-kind, it fails, and this file must be revisited rather than forgotten.
+Section B verifies the second sentence as a scope-boundary fact: FWT is not a
+governed tax kind (9), the tax ledger will not accept an FWT row (10), and no FWT
+form is registered (11). These assertions prove that the prototype does not
+silently enter the current architecture. Any future Product Architecture
+Amendment that adds FWT must deliberately revise this evidence.
 
 Section C carries the two claims inherited from retired test `016` (see above),
 plus the refusal of an impossible filing period (15).
@@ -3080,6 +3080,6 @@ pages remain hand-keyed**; the governed surface reads no review view and
 aggregates no compliance figure in the browser; and every compliance export
 surface consumes `downloadFilingArtifactExport`.
 
-Not claimed: nothing has been filed with the Bureau. The FWT and 1601FQ screens
-and their four tables remain, hand-keyed, until Backlog 22 gives FWT the same
-pipeline as VAT, PT and EWT — not a special case.
+Not claimed: nothing has been filed with the Bureau. The FWT/1601FQ screens and
+four tables are excluded future-extension prototypes; they do not participate in
+the current product architecture, delivery plan or readiness assessment.

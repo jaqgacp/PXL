@@ -6,28 +6,32 @@
 **Applies To:** Compliance
 **Read When:** Exact BIR/compliance task routed by README.md
 **Do Not Read For:** Unrelated startup, UI, inventory, or Sales Invoice work
-**Last Reviewed:** 2026-07-18 documentation cleanup
+**Last Reviewed:** 2026-08-04 product-scope alignment
 
 ## Module Overview
-The Tax Applicability Matrix is the brain of the PXL ERP compliance engine. Updated to strictly adhere to the Philippine **EOPT Act (RA 11976)**, **CREATE Law**, and **TRAIN Law**, this configuration module dictates exactly which tax reports and UI elements are generated based on the company's specific taxpayer profile. By establishing strict rules on Entity Type, VAT Registration, Deduction Methods, and Withholding Agent status, the system dynamically hides irrelevant tax forms—preventing compliance errors and dramatically simplifying the user experience.
+For the current product, tax applicability governs VAT versus percentage tax and
+EWT/CWT obligations. FWT and quarterly/annual Income Tax—including MCIT/RCIT,
+NOLCO and OSD—are 🔮 excluded future extensions under PAD-015. Their retained
+fields below are future-reference material, not current setup requirements,
+delivery items or readiness blockers.
 
 ## Dashboard UI
 Accessed primarily during initial company setup or when the BIR updates a taxpayer's Certificate of Registration (COR / BIR Form 2303).
 
 ### The Action Bar
 * **Update Compliance Profile:** Locks in the configuration and triggers the frontend logic to conditionally render the correct BIR forms in the `10. Compliance` module.
-* **View Form Visibility Map:** A read-only modal summarizing exactly which reports (e.g., 2550Q, 1702Q, SLSP) are currently active based on the toggles.
+* **View Form Visibility Map:** A read-only modal summarizing which current-scope reports (e.g., 2550Q, 2551Q, SLSP) are active based on the profile.
 
 ---
 
 ## Data Fields
 
-### Section 1: Entity & Income Tax Configuration
+### 🔮 Section 1: Future Income Tax Configuration — excluded
 | Field Name | Description | UI Component | Required? |
 | :--- | :--- | :--- | :--- |
-| Entity Type | Sole Proprietorship (triggers 1701 series) vs. Corporation/Partnership/OPC (triggers 1702 series). | Dropdown Menu | Yes |
-| Income Tax Regime | Regular Corporate Income Tax (RCIT - triggers standard forms) vs. Special/Preferential (PEZA/BOI - triggers 1702-EX/MX). | Dropdown Menu | Yes |
-| Deduction Method | OSD (Optional Standard Deduction) vs. Itemized. Dictates the requirement to attach detailed Financial Statements and SAWT to the ITR. | Dropdown Menu | Yes |
+| Entity Type | Future Income Tax routing reference only. | Dropdown Menu | No — excluded |
+| Income Tax Regime | Future RCIT/preferential routing reference only. | Dropdown Menu | No — excluded |
+| Deduction Method | Future OSD/itemized routing reference only. | Dropdown Menu | No — excluded |
 
 ### Section 2: Business Tax Configuration (EOPT Compliant)
 | Field Name | Description | UI Component | Required? |
@@ -50,7 +54,9 @@ Accessed primarily during initial company setup or when the BIR updates a taxpay
 **Critical Database Rule:** A composite unique constraint must be enforced on `(company_id)` to ensure this table functions as a strict singleton settings record per company profile.
 
 ### Table: `tax_applicability_matrix`
-This table stores the boolean/enum rules that frontend components will read to conditionally render the Compliance dashboards.
+This retained schema proposal mixes current-scope business-tax/withholding fields
+with excluded future Income Tax fields. It is not current implementation proof;
+future-only columns carry no PXL readiness weight.
 
 | Column Name | Data Type | Rules | What it stores |
 | :--- | :--- | :--- | :--- |
