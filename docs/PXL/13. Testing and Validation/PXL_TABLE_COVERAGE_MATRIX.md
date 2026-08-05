@@ -122,6 +122,10 @@ current workflows do not activate them.
 | `fiscal_years` | `canonical-populated` | 5 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `fiscal_periods` | `canonical-populated` | 60 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `fiscal_close_runs` | `workflow-deferred` | 0 | Close engine only (`fn_close_accounting_period` / `fn_close_fiscal_year` and their reopens); the canonical seed deliberately leaves its books open | on (4) | ✓ (`122`) | Keep deferred: a canonical demo whose periods are closed cannot demonstrate posting. Promote only if the seed grows a closed prior year. |
+| `ref_mapping_key` | `reference-populated` | 14 | Migration / reference seed | on (1) | ✓ (`121`) | Governed account-role keys (`AR_TRADE`, `INVENTORY_CONTROL`, `SALES_DELIVERY_CLEARING`, …). Maintain reference seed; guard 075 keeps it non-empty. |
+| `account_mapping` | `canonical-populated` | 55 | Company COA seeding | on (1) | ✓ (`121`) | Resolves a governed key to a company account. Maintain canonical coverage; guard 075 keeps it non-empty. |
+| `fs_structure` | `canonical-populated` | 130 | Company COA seeding | on (1) | ✓ (`121`, `123`) | Financial-statement line structure per company; re-mapping re-presents the statements with no code change. |
+| `account_fs_map` | `canonical-populated` | 430 | Company COA seeding | on (1) | ✓ (`121`, `123`) | Maps each account to its statement line. Seeding a chart provisions its presentation with it. |
 
 ### Sales / Accounts Receivable
 
@@ -294,7 +298,7 @@ current workflows do not activate them.
 | --- | --- | ---: | --- | --- | --- | --- |
 | `ewt_returns` | `future-deferred` | 0 | Implemented artifact projection; canonical filing intentionally absent | on (3) | ✓ | Guard-class reclassification to `workflow-deferred` is recorded in Backlog 23; do not infer filing operation from an empty canonical table. |
 | `fwt_returns` | `future-deferred` | 0 | 🔮 Excluded future extension | on (3) | 075 only | Carries no current-product conformity or readiness weight. |
-| `pt_returns` | `future-deferred` | 0 | Implemented artifact projection; canonical filing intentionally absent | on (3) | ✓ | Guard-class reclassification to `workflow-deferred` is recorded in Backlog 23. |
+| `pt_returns` | `workflow-deferred` | 0 | Implemented artifact projection; canonical filing intentionally absent | on (3) | ✓ | **Already reclassified in guard `075`** — this row read `future-deferred` until 2026-08-05 and disagreed with the guard. Backlog 23 now covers `vat_returns` and `ewt_returns` only. |
 | `vat_returns` | `future-deferred` | 0 | Implemented artifact projection; canonical filing intentionally absent | on (3) | ✓ | Guard-class reclassification to `workflow-deferred` is recorded in Backlog 23. |
 | `filing_artifacts` | `workflow-deferred` | 0 | Supported generator; canonical seed never files | on (2) | 125–129 | Exercise only in self-provisioned filing tests; empty canonical state carries no implementation inference. |
 | `filing_artifact_lines` | `workflow-deferred` | 0 | Supported generator; canonical seed never files | on (1) | 125–129 | Child evidence for Filing Artifacts; populated only by the governed generator. |

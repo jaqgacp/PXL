@@ -11,8 +11,8 @@ liability posting → tax ledger → GL reconciliation at 0.00 → working paper
 **2551Q**. Every registered artifact — 2550Q, 2551Q, 1601EQ, SLSP, SAWT, **QAP**
 — comes from **one** generator over **one** working paper and **one**
 reconciliation, and is **exported** by one consumer. Four screens reach
-generate → final → export; only SLSP bypasses it. **Nothing has been filed with
-the Bureau.**
+generate → final → export; **2551Q** generates but has no export control (24);
+SLSP bypasses the layer. **Nothing has been filed with the Bureau.**
 **Product Phase:** Pilot Execution Plan; IA-5/ECC **frozen**.
 **Environment:** Local Supabase on a fresh schema. No hosted operation was
 performed.
@@ -134,8 +134,8 @@ engine.
 Hosted project `bskjkogijpbhukjkagfj` is at `20260716000005`; **68 local
 migrations pending**, no destructive DDL. The deploy is **rehearsed, not
 performed, and deliberately deferred** — nothing consumes it and CI deploys
-nothing. Credentials absent by design (PXL-AUD-055). Thirty-three routes are
-backed only by future-deferred tables.
+nothing. Credentials absent by design (PXL-AUD-055). Deferred-route labelling is
+governed by `deferredSurfaces.ts` (PAD-012).
 
 ## Last Verified Commands
 
@@ -170,15 +170,15 @@ not an architecture gap. **Recommended next implementation only: Backlog 8c / 8e
 quarterly Filing Artifact without adding a second computation path.
 
 **Compliance standard (owner, 2026-08-04):** Posted Transactions → Tax Engine →
-Tax Ledger → Reconciliation → Working Paper → Filing Artifact → Export → Filed Record. **The
-Filing Artifact is the system of record**; one authoritative implementation per
+Tax Ledger → Reconciliation → Working Paper → Filing Artifact → Export → Filed
+Record. **The Filing Artifact is the system of record**; one implementation per
 stage, extra faces are delegations, replacement is ordered, no orphans, and
-functionality is never removed merely to satisfy the architecture. Full rule,
-including the Reconciling Item, in the Rules Matrix.
+functionality is never removed to satisfy the architecture. Full rule in the
+Rules Matrix.
 
 Remaining current-product Backlog: 8b, 8c, 8e (ii), 10, 11, 18, 18b, 18c, 18f,
-18g, 18h, 18i, 19. After current compliance work: Banking & Treasury, then Fixed
-Assets. Excluded extensions, including item 22, carry no readiness weight.
+18g, 18h, 18i, 19, 23, 24. Then Banking & Treasury, then Fixed Assets. Excluded
+extensions, including 22, carry no readiness weight.
 
 Re-run `npm run deploy:rehearse` after adding migrations (Runbook §2a);
 **owner approval required**. No open findings remain; do not resume IA-5.

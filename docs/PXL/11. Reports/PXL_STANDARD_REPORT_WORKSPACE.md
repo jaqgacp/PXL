@@ -847,6 +847,29 @@ Rules:
 
 Only add report-specific tabs, fields, or controls when the accounting purpose requires them.
 
+### 26.1 Compliance reports consume the Filing Artifact (added 2026-08-05)
+
+**Binding rule, and it overrides rule 3 above for any compliance output.** A
+report, export, snapshot, API or integration that presents a BIR figure must
+**consume the Filing Artifact**. It may not recompute that figure from source
+transactions, from the tax ledger, from a source view, or in the browser.
+
+The locked compliance path is:
+
+> Posted Transactions → Tax Engine → Tax Ledger → Reconciliation → Working Paper
+> → Filing Artifact → Export → Filed Record
+
+There is **exactly one authoritative implementation per stage**. A compliance
+report is a *face* of the Filing Artifact and computes nothing of its own; where
+several faces are needed they delegate and aggregate nothing. "Define
+authoritative source data" for such a report therefore has one permitted answer:
+the Filing Artifact and its lines.
+
+A report that would need its own query over `tax_detail_entries`, over document
+tables, or over a `vw_*` source view is **not scoped as written** — it is scoped
+as a face of the artifact. Adopting this standard must never become the occasion
+to build a second computation path.
+
 ## 27. Developer guidelines
 
 ### Naming conventions
@@ -994,6 +1017,28 @@ Until a report is audited against this standard, use explicit values such as `As
 > Workspace, which is what this matrix tracks. The remaining columns are
 > unaudited against that standard and still read `TBD` by design.
 
+> **Scope note, 2026-08-05 (PAD-015).** This matrix is an *inventory of routed
+> pages*, not a delivery commitment. Two clarifications, because the `Required`
+> cells have been misread as both:
+>
+> 1. **`Required` describes what this standard demands of a report when it is
+>    adopted** — not that the report is a required deliverable. Every row reads
+>    `Not started` under `Standard Workspace Adoption`, which remains accurate.
+> 2. **Rows for capabilities excluded by PAD-015 carry no delivery requirement
+>    at all** and are retained only as route inventory: 🔮 2306 Certificates, FWT
+>    Working Papers, 1601FQ Working Papers, 1601FQ Return, FWT Summary, and every
+>    Income Tax row (Dashboard, Computation, Book-to-Tax, OSD, NOLCO, Credits,
+>    1701Q, 1701, 1702Q, 1702RT, MCIT). These are future extensions. They are not
+>    pilot scope, not production-readiness requirements, and must never be cited
+>    as pending report work.
+>
+> Separately, several compliance rows still read `Not started` / `TBD` for
+> *source data* although their surfaces are now governed: the VAT, percentage-tax
+> and EWT/1601EQ working papers, the 2550Q, 2551Q and 1601EQ returns, and QAP and
+> SAWT are generated from the posted ledger through the Filing Artifact. What
+> remains `Not started` for them is **Standard Report Workspace adoption**, which
+> is what this column measures. When they are adopted, §26.1 governs: they
+> consume the artifact and recompute nothing.
 
 This matrix inventories current routed report pages and the work required to adopt the PXL Standard Report Workspace. `Assessment pending` means the route exists, but the page has not yet been certified against this standard.
 

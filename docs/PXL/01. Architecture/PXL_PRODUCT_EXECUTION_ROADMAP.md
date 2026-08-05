@@ -649,8 +649,9 @@ hosted parity and browser evidence.
   any route.
 - **Owns:** Setup, Master Data · Accounting Kernel, Permissions/RLS, Audit &
   Immutability, Number Series, Dimensions.
-- **Evidence:** 210 of 210 tables RLS-enabled with 523 policies and **zero tables
-  without a policy**; 110 tables carry guard/immutability triggers; kernel origin
+- **Evidence:** 208 of 208 tables RLS-enabled with 501 policies and **zero tables
+  without a policy** (re-measured 2026-08-05; the invariant, not the count, is
+  what was certified); 110 tables carry guard/immutability triggers; kernel origin
   triggers on both ledger tables, and enforcement **survives a restore into a
   fresh database**; 264 number series; 215 accounts; trial balance ₱0.00 in all
   five companies.
