@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
+import { downloadFilingArtifactExport } from '@/lib/filingExport'
 
 type Status = 'draft' | 'final' | 'filed'
 
@@ -72,6 +73,7 @@ export default function PTReturnPage() {
   const [form, setForm]       = useState<FormData>({ ...EMPTY_FORM })
   const [saving, setSaving]   = useState(false)
   const [generating, setGenerating] = useState(false)
+  const [exporting, setExporting]   = useState(false)
 
   const load = async () => {
     if (!companyId) return
@@ -132,6 +134,24 @@ export default function PTReturnPage() {
     alert(`Generated from the posted percentage tax ledger.\nTaxable base: ${fmtNum(Number(r.taxable_base))}\nTax due: ${fmtNum(Number(r.pt_due))}\nWorking paper lines: ${r.working_paper_lines}`)
   }
 
+  // The download is a consumer of the filing artifact: `fn_generate_pt_return`
+  // already created the 2551Q artifact through `fn_generate_filing_artifact`,
+  // its CSV/DAT layout is seeded in `ref_filing_export_column`, and one exporter
+  // serves every registered form. So this is a consumer, not a second export
+  // path — nothing about the return is assembled here. Until now the 2551Q was
+  // the one registered form whose screen could generate and finalise a return
+  // and then leave the accountant with no way to get the file out of PXL.
+  const handleExport = async () => {
+    if (!companyId || !editId) return
+    setExporting(true)
+    const result = await downloadFilingArtifactExport({
+      companyId, formCode: '2551Q', year: form.period_year, period: form.period_quarter,
+    })
+    setExporting(false)
+    if (!result.ok) { alert('Cannot export the return.\nReason: ' + result.message); return }
+    alert(`Exported ${result.rows} working-paper line${result.rows === 1 ? '' : 's'} for ${fmtQuarter(form.period_year, form.period_quarter)}.`)
+  }
+
   const handleSave = async () => {
     if (!companyId) { alert('Cannot save.\nReason: Select a company first.'); return }
     setSaving(true)
@@ -172,6 +192,7 @@ export default function PTReturnPage() {
             {isView ? (
               <>
                 <button onClick={() => setMode('edit')} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Edit</button>
+                <button onClick={handleExport} disabled={exporting || form.status === 'draft'} title={form.status === 'draft' ? 'Mark the return final before exporting it' : 'Download the filing artifact'} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50 disabled:opacity-40">{exporting ? 'Exporting...' : '↓ Export CSV'}</button>
                 <button onClick={() => window.print()} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Print</button>
                 <button onClick={() => setMode('list')} className="border border-gray-300 text-gray-700 px-4 py-2 rounded-md text-sm hover:bg-gray-50">Close</button>
               </>

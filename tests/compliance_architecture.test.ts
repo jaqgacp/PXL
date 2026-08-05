@@ -167,3 +167,26 @@ test('every compliance export in the product goes through the artifact export', 
     )
   }
 })
+
+/**
+ * The positive half of the export rule, and the reason it is stated separately.
+ *
+ * The test above only fires on a page that already says `Export` — so a filing
+ * screen with no export button at all passed it silently. That is exactly how
+ * the 2551Q went from Backlog 8d to Backlog 24 unnoticed: an accountant could
+ * generate and finalise a percentage-tax return and had no way to get the file
+ * out of PXL, while every guard stayed green.
+ *
+ * A governed filing surface is not just "does not read the wrong source". It
+ * must also offer the capability a filing surface exists to provide.
+ */
+test('every filing surface exposes the governed export', () => {
+  for (const page of FILING_PAGES) {
+    assert.ok(
+      read(page).includes('downloadFilingArtifactExport'),
+      `${page} is a filing surface with no export. A form that can be generated ` +
+        'and finalised but not exported leaves the accountant with nothing to file; ' +
+        'the exporter and the layout already serve every registered form.',
+    )
+  }
+})

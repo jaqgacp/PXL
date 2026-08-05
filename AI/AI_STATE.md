@@ -10,9 +10,9 @@ Section 116 taxpayer runs the chain: line code → component → liability posti
 tax ledger → GL reconciliation at 0.00 → working paper → **2551Q**. Every
 registered artifact — 2550Q, 2551Q, 1601EQ, SLSP, SAWT, **QAP** — comes from
 **one** generator over **one** working paper and **one** reconciliation, and is
-**exported** by one consumer. **Every current-product compliance surface is now
-on the layer**; five screens reach generate → final → export, and **2551Q** has
-no export control yet (24). **Nothing has been filed with the Bureau.**
+**exported** by one consumer. **Every current-product compliance surface is on
+the layer and every registered form reaches generate → final → export** (24
+closed 2026-08-05). **Nothing has been filed with the Bureau.**
 **Product Phase:** Pilot Execution Plan; IA-5/ECC **frozen**.
 **Environment:** Local Supabase on a fresh schema. No hosted operation was
 performed.
@@ -165,8 +165,9 @@ governed by `deferredSurfaces.ts` (PAD-012).
 for current product scope; nothing has been filed with the Bureau.** **The
 governed compliance architecture is complete for every current-product family**
 (test `129`, `compliance_architecture.test.ts`); FWT/1601FQ is a future
-extension, not an architecture gap. **Next implementation: Backlog 24** — one
-import and one button giving 2551Q the export every other form has.
+extension, not an architecture gap. **Next, owner's choice:** **8b** (percentage
+tax on collections), **18c** (Delivery Receipt cancellation), or **10** (governed
+tax-code maintenance, before the first real BIR rate change).
 
 **Compliance standard (owner, 2026-08-04):** Posted Transactions → Tax Engine →
 Tax Ledger → Reconciliation → Working Paper → Filing Artifact → Export → Filed
@@ -176,7 +177,7 @@ Stage reads source data by design; Filing Stage is bound to the artifact**
 (settled 2026-08-05). Full rule in the Backlog and Rules Matrix.
 
 Remaining current-product Backlog: 8b, 8c, 10, 11, 18, 18b, 18c, 18f, 18g, 18h,
-18i, 19, 23, 24. Then Banking & Treasury, then Fixed Assets. Excluded extensions,
+18i, 19, 23. Then Banking & Treasury, then Fixed Assets. Excluded extensions,
 including 22, carry no readiness weight.
 
 Re-run `npm run deploy:rehearse` after adding migrations (Runbook §2a);
