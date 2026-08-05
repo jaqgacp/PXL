@@ -273,6 +273,38 @@ they do not certify the item and do not replace the M0–M9 maturity ladder in �
 
 **FUTURE ROADMAP**, **OUT OF CURRENT SCOPE**, and **SUPERSEDED** items are
 recorded in §§8 and 10.5 rather than presented as current navigation children.
+🔮 marks a capability excluded by PAD-015: retained in the repository, carrying
+no pilot or production-readiness weight.
+
+### Authority, Owning Module and Face (approved 2026-08-05, PAD-016)
+
+**This tree is navigation. Navigation is not implementation.** A menu entry that
+appears in two modules is one capability reached from two places, never two
+implementations. Three distinct things are named separately so they cannot be
+confused:
+
+| Term | Meaning | Cardinality |
+|---|---|---|
+| **Authority** | The single implementation — the RPC, engine or component that computes the thing | exactly one |
+| **Owning module** | Specification home, product accountability, certification scope | exactly one |
+| **Face** | A navigation entry or delegating surface that reaches an authority it does not own | many |
+
+**Notation.** A node written `→ owner or authority` is a **face**. It carries the
+product-state marker of the surface it reaches, and it is never evidence that the
+owning module's capability was built twice. A face that would need its own query,
+its own calculator or its own aggregation is not a face — it is a second
+implementation, and is refused.
+
+Faces exist at two layers, and both are governed: a **navigation face** (the same
+page reached from another module) and a **delegating function**
+(`fn_vat_gl_reconciliation` is `SELECT * FROM fn_tax_ledger_gl_reconciliation(…)`
+and computes nothing of its own).
+
+**Future priority ordering.** Banking & Treasury is future priority #1 and Fixed
+Assets #2, ahead of every excluded capability (Delivery Plan; PAD-015). Their
+nodes appear below at their true current state — mostly `[U]` — because this tree
+reports what exists, not what is planned. **Check Voucher is the exception: it is
+current v1 scope**, kept because the Cash Disbursements Book needs it.
 
 ```text
 PXL ERP
@@ -455,35 +487,50 @@ PXL ERP
 │       └── Revenue Recognition Run                                  [U]
 │
 ├── Compliance                                                       [P]
+│   │  Two stages of ONE pipeline (approved 2026-08-05). Review reads posted
+│   │  source data by design; Filing is bound to the Filing Artifact. The test:
+│   │  if the figure is keyed onto a BIR form it comes from the artifact; if it
+│   │  exists to find the document with the missing tax code before anything is
+│   │  generated, it reads source data. The **Filing Artifact is the system of
+│   │  record and is not a menu item** — it is the record behind these screens.
 │   ├── Value-Added Tax                                                 [P]
-│   │   ├── VAT Dashboard                                            [W]
-│   │   ├── Output VAT Summary                                       [W]
-│   │   ├── Input VAT Summary                                        [W]
-│   │   ├── SLS · SLP                                                [W]
-│   │   ├── SLSP Export · RELIEF Export                              [W]
-│   │   ├── VAT Working Papers        → governed filing artifact     [W]
-│   │   ├── VAT Reconciliation                                       [P]
-│   │   └── VAT Return 2550M · 2550Q                                 [P]
+│   │   ├── Review stage
+│   │   │   ├── VAT Dashboard                                        [W]
+│   │   │   ├── Output VAT Summary · Input VAT Summary               [W]
+│   │   │   ├── SLS · SLP                                            [W]
+│   │   │   └── RELIEF Export                                        [W]
+│   │   └── Filing stage        → one artifact, working paper, exporter
+│   │       ├── VAT Working Papers                                   [W]
+│   │       ├── VAT Reconciliation                                   [P]
+│   │       ├── VAT Return 2550Q                                     [P]
+│   │       ├── SLSP (quarterly, on the artifact since 2026-08-05)   [W]
+│   │       └── VAT Return 2550M — not a registered artifact          [PL]
 │   ├── Withholding Tax                                                 [P]
-│   │   ├── WT Dashboard                                             [W]
-│   │   ├── EWT Payable Summary                                      [W]
-│   │   ├── EWT Receivable Summary                                   [W]
-│   │   ├── ATC Summary                                              [W]
-│   │   ├── 2307 Certificates Issued · Received                      [P]
-│   │   ├── QAP · SAWT                                               [P]
-│   │   ├── EWT / 1601EQ Working Papers → governed filing artifact   [W]
-│   │   ├── 1601EQ Quarterly Return                                  [P]
-│   │   └── 🔮 Final Withholding Tax                                    [U]
+│   │   ├── Review stage
+│   │   │   ├── WT Dashboard                                         [W]
+│   │   │   ├── EWT Payable · EWT Receivable Summary                 [W]
+│   │   │   ├── ATC Summary                                          [W]
+│   │   │   └── 2307 Certificates Issued · Received                  [P]
+│   │   ├── Filing stage        → one artifact, working paper, exporter
+│   │   │   ├── EWT / 1601EQ Working Papers                          [W]
+│   │   │   ├── 1601EQ Quarterly Return                              [P]
+│   │   │   └── QAP · SAWT                                           [P]
+│   │   └── 🔮 Final Withholding Tax — excluded (PAD-015)               [U]
 │   │       ├── FWT Working Papers                                   [U]
 │   │       ├── 1601FQ Working Papers · Return                       [U]
 │   │       └── 2306 Certificates                                    [U]
 │   ├── Percentage Tax                                                  [P]
-│   │   ├── PT Dashboard                                             [P]
-│   │   ├── PT Review                                                [W]
-│   │   ├── PT Working Papers         → governed filing artifact     [W]
-│   │   ├── PT Quarterly Return 2551Q                                [P]
-│   │   ├── PT Reconciliation                                        [P]
-│   │   └── PT Summary Register                                      [U]
+│   │   ├── Review stage
+│   │   │   ├── PT Dashboard                                         [P]
+│   │   │   ├── PT Review                                            [W]
+│   │   │   └── PT Summary Register                                  [U]
+│   │   └── Filing stage        → one artifact, working paper, exporter
+│   │       ├── PT Working Papers                                    [W]
+│   │       ├── PT Reconciliation                                    [P]
+│   │       └── PT Quarterly Return 2551Q · Export                   [P]
+│   ├── Reconciling Item — governed manual line inside the working
+│   │   paper; audited, frozen once the artifact leaves draft, and
+│   │   excluded from every total structurally                       [W]
 │   ├── 🔮 Income Tax                                                   [U]
 │   │   ├── Income Tax Dashboard                                     [P]
 │   │   ├── Taxable Income Computation                               [U]
@@ -495,15 +542,24 @@ PXL ERP
 │   │   ├── 1702Q · 1702RT (corporate / OPC / partnership)           [U]
 │   │   └── MCIT Computation                                         [U]
 │   ├── BIR Books of Accounts                                           [P]
+│   │   │  Statutory-format books are their own presentation of the GL.
+│   │   │  Where a menu entry links to the operational screen instead, it
+│   │   │  is a face and the BIR-format book is NOT yet built.
 │   │   ├── Books Dashboard                                          [W]
 │   │   ├── General Journal                                          [W]
-│   │   ├── General Ledger Book                                      [W]
 │   │   ├── Cash Receipts Book                                       [W]
 │   │   ├── Cash Disbursements Book                                  [P]
 │   │   ├── Sales Journal · Cash Sales Journal                       [W]
 │   │   ├── Purchase Journal · Cash Purchases Journal                [W]
-│   │   ├── AR · AP · Inventory Subsidiary Ledgers                   [W]
-│   │   └── Fixed Asset Register                                     [U]
+│   │   ├── General Ledger Book       → Accounting · General Ledger  [W]
+│   │   │   └── BIR-format General Ledger book                       [PL]
+│   │   ├── AR Subsidiary Ledger      → Sales · AR Aging             [W]
+│   │   │   └── BIR-format AR subsidiary ledger                      [PL]
+│   │   ├── AP Subsidiary Ledger      → Purchasing · AP Aging        [W]
+│   │   │   └── BIR-format AP subsidiary ledger                      [PL]
+│   │   ├── Inventory Subsidiary Ledger → Inventory · Movements      [W]
+│   │   │   └── BIR-format Inventory book                            [PL]
+│   │   └── Fixed Asset Register      → Fixed Assets                 [U]
 │   └── Audit & CAS                                                     [P]
 │       ├── CAS Dashboard                                            [P]
 │       ├── Transaction Audit Log                                    [W]
@@ -525,8 +581,8 @@ PXL ERP
 │   │   ├── Statement of Changes in Equity                           [W]
 │   │   ├── Comparative Financial Statements                         [W]
 │   │   └── Statement of Cash Flows                                  [P]
-│   ├── Trial Balance                                                   [P]
-│   │   ├── Trial Balance                                            [W]
+│   ├── Trial Balance                 → Accounting · Ledgers            [P]
+│   │   ├── Trial Balance             → Accounting owns the authority [W]
 │   │   └── Adjusted · Post-Closing Trial Balance                    [PL]
 │   ├── Management Reports                                              [P]
 │   │   ├── Branch P&L                                               [W]
@@ -2236,6 +2292,7 @@ unresolved decision; unrelated governed work may continue.
 | **PAD-012** | How should deferred surfaces be presented? | Finished-looking screens sit over data that cannot exist yet. **`DEFERRED_ROUTES` currently holds 26 routes**, down from 30 on 2026-08-04 when the VAT, EWT, 1601EQ and PT working papers became faces of the governed filing artifact. *(An earlier census counted 33 "routes backed only by future-deferred tables" — a different and now superseded measure; the governed count is the list itself.)* | Hide; label Coming Later; feature-gate from coverage authority | **Decided in practice:** routes render but are labelled "Not built" from `src/lib/deferredSurfaces.ts`, whose membership is asserted by `tests/deferred_surfaces.test.ts` against the route table and navigation. 17 nav labels still have no page at all. | Product Owner + UX Owner | Before pilot UX review | Users continue to mistake scaffolds for working features | **Yes** for navigation redesign; no for backend work |
 | **PAD-013** | Are notifications part of current PXL ERP? | Approval routing and deadlines may otherwise require manual polling. | In-app; email/in-app; explicitly external/out of scope | No notification model, integration or test exists. | Product Owner | Before Approval rollout or the Delivery Plan Phase 6 scope freeze | Usability limitation persists | **Yes** for notification implementation only |
 | **PAD-014** | Does Reports remain a convenience index or become cross-domain reports only? | Thirty-one of forty-three labels redirect to module-owned surfaces. | Convenience index with explicit links; cross-domain only; remove domain | Current navigation mixes both silently. | Product Owner + UX Owner | Before Delivery Plan Phase 6 exit | Duplication and ownership ambiguity persist | **Yes** for navigation redesign only |
+| **PAD-016 — DECIDED 2026-08-05** | **The tree in §2 is the canonical product and navigation blueprint, and navigation never implies implementation.** Three terms are separated: **Authority** (the single implementation, exactly one), **Owning module** (specification home and certification scope, exactly one) and **Face** (a navigation entry or delegating function reaching an authority it does not own, many). | A menu was being read as an architecture. 23 page keys are reachable from more than one module — `ar-aging` and `ap-aging` from four each — and each duplicate invited a second implementation. The BIR Books "General Ledger Book" and subsidiary ledgers are links to operational screens, yet read as delivered statutory books. | **Selected**, and recorded in §2: the `→` face notation is formal; Dashboard stays a **cross-product surface, not a business module**; Compliance is drawn as **Review stage** (reads posted source data by design) and **Filing stage** (bound to the Filing Artifact); the **Filing Artifact is a system-of-record object, not a menu item**; Trial Balance is owned by Accounting and linked from Reports; **Auto Reversal stays with the Reversal/Void capability**, not with schedules; **Accrual Run is removed** — `recurring_journal_templates.auto_reverse` plus clearing-account posting already cover the current use cases; **Fixed Assets owns asset data and depreciation policy**, while a future Schedule Run authority would own execution. | §2 legend and tree; the Review/Filing rule and its `FILING_PAGES` guard in `tests/compliance_architecture.test.ts`; Backlog rules. **The Schedule Run architecture is a future design direction only** and authorises no implementation without a real consumer — "depth requires a consumer" (`PXL_HOW_WE_WORK.md` rule 7.4). | Product Owner | Decided during Delivery Plan Phase 5 | Navigation keeps being mistaken for implementation authority; duplicated entries accumulate second implementations. | **Resolved** for the blueprint. **No implementation, route, navigation, delivery-sequence or backlog-priority change is authorised by this amendment.** |
 | **PAD-015 — DECIDED 2026-08-04** | **The product is Philippine SME accounting and compliance**, and eleven named tax capabilities are future extensions rather than current scope. | Readiness statements were being held open on capabilities the product was never scoped to deliver, so "not production-ready" could never be discharged no matter what shipped. A scope boundary that is not written down is re-litigated in every session. | **Selected:** the excluded set is **Final Withholding Tax (1601FQ / 2306), Payroll, Form 2316, Quarterly and Annual Income Tax, MCIT / RCIT, NOLCO, OSD, Fringe Benefits Tax, Transfer Pricing, Consolidation Tax and specialized-industry tax features** — future product extensions only, never production blockers, pending architecture gaps or required delivery items. Ranked future priorities after the current compliance work: **Banking & Treasury, then Fixed Assets**, both ahead of every excluded capability. | §1.4 carries the ruling and the 🔮 marker convention; the Delivery Plan repeats it as a v1/pilot/production exclusion table; Backlog rule 8 forbids listing an excluded capability as a blocker. Backlog 22 (FWT) is reclassified 🔮. The compliance architecture is unaffected and remains locked. | Product Owner | Decided during Delivery Plan Phase 5 | Readiness assessments stay permanently and falsely open; excluded work competes with Banking & Treasury and Fixed Assets for priority. | **Resolved.** No implementation stop. An excluded capability may not be started without a further amendment; the compliance pipeline in §11.3.1 is unchanged. |
 
 ---

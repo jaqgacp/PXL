@@ -403,9 +403,13 @@ one pipeline. Each stage **consumes** the one before it:
   export, snapshot, API or integration — present or future — **consumes the
   Filing Artifact**. None may rebuild a compliance report from transactions, from
   the tax ledger, or in the browser. A compliance figure has one origin, and
-  every surface that shows it is downstream of that origin. The **only known
-  current-product non-conforming surface** is the **SLSP screen** (Backlog 8c/8e
-  ii — monthly against a quarterly attachment). FWT/1601FQ is an excluded future
+  every surface that shows it is downstream of that origin. **As of 2026-08-05
+  every current-product compliance surface conforms**; the SLSP screen, the last
+  exception, moved onto the quarterly artifact with Backlog 8e (ii). The rule
+  binds the **Filing Stage**; **Review Stage** surfaces (SLS, SLP, RELIEF, the
+  VAT/PT reviews and the compliance dashboards) read posted source data by
+  design — the test is whether the figure would be keyed onto a BIR form.
+  FWT/1601FQ is an excluded future
   extension and carries no current conformity or readiness weight.
   `fn_snapshot_wht_export` and the eight VAT/EWT/1601EQ/PT
   legacy working-paper tables were **retired** on 2026-08-04 (Backlog 8f,
@@ -521,10 +525,9 @@ one pipeline. Each stage **consumes** the one before it:
   count, and the documents behind any line stay reachable through the accounting
   trace — which is how the per-document detail of the retired screens survives.
 - **Not covered.** Nothing is transmitted to the Bureau; a `filed` status records
-  the accountant's own submission. The
-  SLSP screen still bypasses the artifact layer and its export button still calls
-  the legacy source-view snapshot (8c, 8e ii); every other compliance screen is
-  wired to the governed export. The four remaining FWT/1601FQ prototype tables
+  the accountant's own submission. Every current-product compliance screen —
+  including the SLSP screen since 2026-08-05 — is wired to the governed export.
+  The four remaining FWT/1601FQ prototype tables
   and two screens are a 🔮 excluded future extension; they do not participate in
   the current product architecture or its readiness assessment.
 

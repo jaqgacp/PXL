@@ -94,7 +94,7 @@ The gate may be reassessed only when all conditions hold:
 
 - The five-company hosted canonical dataset exercises a meaningful accounting slice, not the entire ERP.
 - Banking operations/reconciliation and fixed assets have not started; broader returns, approvals and schedules remain incomplete or unexercised in canonical coverage.
-- Six current-scope statutory artifacts use the Filing Artifact path, but the SLSP screen still bypasses it and no filing has been performed with the Bureau.
+- Six current-scope statutory artifacts use the Filing Artifact path and every current-product compliance surface is on it since 2026-08-05; no filing has been performed with the Bureau.
 - Project, Location, and Functional Entity masters exist; broader transaction UX and workflow qualification remain separate from their governed storage and posting controls.
 - The current Company Setup Checklist measures ten core-accounting prerequisites, not full operational readiness (`PXL-AUD-067`).
 - Frontend validation is source-contract and build coverage only; no browser lane exists.

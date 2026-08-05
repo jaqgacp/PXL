@@ -737,10 +737,10 @@ hosted parity and browser evidence.
   Working Paper → Filing Artifact → Export → Filed Record. The Filing Artifact
   is the system of record; current-product legacy working-paper screens/tables
   were retired.
-- **Blocking the outcome:** the SLSP screen/evidence path remains monthly and
-  browser-aggregated while the registered attachment is quarterly; nothing has
-  ever been filed by an accountant from PXL; hosted and browser/UAT evidence is
-  absent. FWT and Income Tax are excluded future extensions and are not blockers.
+- **Blocking the outcome:** nothing has ever been filed by an accountant from
+  PXL; hosted and browser/UAT evidence is absent. The SLSP screen moved onto the
+  quarterly artifact on 2026-08-05 and is no longer a blocker. FWT and Income Tax
+  are excluded future extensions and are not blockers.
 
 ## 9.7.7 Inventory Accounting · ⏸ FROZEN, NOT SCHEDULED
 
