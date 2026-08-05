@@ -58,13 +58,14 @@ certifies no module or engine and confers no readiness.
 - **Certified work packages:** IA-5 ECC WP-1…WP-4, 4 / 9, **frozen, zero
   consumers.** WP-5…WP-9 and IA-6 stopped.
 - **Visible scaffolds:** **26** deferred routes "Not built"; **17** nav labels
-  with no page. 247 nav → 175 routes, **145** on real data.
+  with no page. **230** nav leaf entries → **175** distinct routes; the "on real
+  data" share needs a re-census (Backlog 25, documentation only).
 
 - **Transaction workspaces:** **37** entries; Sales Invoice the sole
   source-reviewed slice. UI rollout is not completion:
   business qualification remains source-gated.
 
-- **Tests:** 128 pgTAP files / 3,079 assertions plus 66 frontend source tests;
+- **Tests:** 128 pgTAP files / 3,079 assertions plus 69 frontend source tests;
   regression, canonical, build and lint lanes pass.
 - **Backup/restore:** **Mechanised; never operated over anything real.** Weekly
   in CI. Blocker 5.
@@ -78,8 +79,7 @@ certifies no module or engine and confers no readiness.
 3. **Nothing has ever been filed with the Bureau.** Six artifacts — 2550Q,
    2551Q, 1601EQ, SLSP, SAWT, QAP — generate from the posted ledger, reconcile to
    the GL and refuse to leave draft while they disagree with it; `filed` records
-   the accountant's own submission and PXL transmits nothing. The **SLSP screen**
-   still bypasses the layer, monthly against a quarterly attachment (8c, 8e ii).
+   the accountant's own submission and PXL transmits nothing.
    Two hand-keyed FWT prototype screens remain outside the current product; they
    carry no architecture, pilot or readiness weight (22). Percentage tax is recognised on the document, not on collections; a
    credit memo does not reverse it; nothing compels a PT-registered company to
@@ -112,17 +112,17 @@ instance of the projection shape, not a fourth engine**; `remitted_prior` was
 corrected from stated to derived; `fn_qap_2307_reconciliation` was **resolved,
 not retired**.
 
+**2026-08-05:** SLSP (8e ii) and the 2551Q export (24) — **both needed no
+migration**; each was a missing consumer of what already existed.
+
 **8f shipped** (`…05`/`…06`, `128`, `129`, `compliance_architecture.test.ts`) —
-**the second compliance architecture is retired.** Capability first: the legacy
-screens' only real capability, keying a line no ledger backs, became the governed
-**Reconciling Item** — audited, frozen once the artifact leaves draft, a note in
-CSV and never in a DAT, excluded from every total **structurally** (its amount
-sits in a column no computation reads). Then retirement in order: one governed
-surface replaced four screens, the last legacy writer left
-`fn_generate_pt_return`, eight tables were dropped, and `fn_snapshot_wht_export`
-went — revealing it had been **`anon`-executable**. **Two regressions closed:**
-`filing_artifacts` had no owner/admin gate on final/filed, and the grouped
-schedule needed a trace drill-down to keep per-document detail.
+**the second compliance architecture is retired.** Capability first: keying a
+line no ledger backs became the governed **Reconciling Item**, excluded from
+every total **structurally**. Then retirement in order: one surface replaced four
+screens, eight tables were dropped, and `fn_snapshot_wht_export` went — revealing
+it had been **`anon`-executable**. **Two regressions closed:** `filing_artifacts`
+had no owner/admin gate on final/filed, and the grouped schedule needed a trace
+drill-down.
 
 Phase 3 is implemented locally and unchanged (PAD-002, PAD-003). IA-5/ECC is
 **frozen** at zero consumers (`docs/PXL/archive/ia5-ecc-frozen/`). Posting P5.2
@@ -176,9 +176,10 @@ stage, extra faces are delegations, replacement is ordered, no orphans. **Review
 Stage reads source data by design; Filing Stage is bound to the artifact**
 (settled 2026-08-05). Full rule in the Backlog and Rules Matrix.
 
-Remaining current-product Backlog: 8b, 8c, 10, 11, 18, 18b, 18c, 18f, 18g, 18h,
-18i, 19, 23. Then Banking & Treasury, then Fixed Assets. Excluded extensions,
-including 22, carry no readiness weight.
+Material current-product Backlog: 8b, 8c, 10, 11, 18, 18b, 18c, 18f, 18g, 18h,
+18i, 19. **Not the full register** — the Backlog is, and also holds 9, 12, 13, 17
+and the documentation-only 20, 21, 23, 25. Then Banking & Treasury, then Fixed
+Assets. Excluded extensions, including 22, carry no readiness weight.
 
 Re-run `npm run deploy:rehearse` after adding migrations (Runbook §2a);
 **owner approval required**. No open findings remain; do not resume IA-5.

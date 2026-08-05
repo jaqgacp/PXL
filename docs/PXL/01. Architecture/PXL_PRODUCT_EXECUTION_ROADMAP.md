@@ -969,7 +969,7 @@ test counts — rather than maintaining a copy by hand.
 | Module maturity | No module is M8 or M9; no transactional module is M5. Setup/Master are closest to certification. |
 | Certification maturity | Engine certification is meaningful and has found critical defects. Module certification has produced no certified module; work-package throughput must not become the goal. |
 | Documentation quality | Deep and evidence-rich, but historically fragmented and repetitive. This constitution/roadmap/index model should reduce reconstruction work. |
-| Test quality | Strong pgTAP breadth (128 files / 3,079 assertions), negative controls and governance guards, plus 66 frontend source tests. Test presence is sometimes mistaken for workflow maturity; **there is no automated browser lane**, and restore evidence is mechanised but not operated over real books. |
+| Test quality | Strong pgTAP breadth (128 files / 3,079 assertions), negative controls and governance guards, plus 69 frontend source tests. Test presence is sometimes mistaken for workflow maturity; **there is no automated browser lane**, and restore evidence is mechanised but not operated over real books. |
 | UI/runtime alignment | Poor in deferred clusters: 26 deferred routes and 17 page-less labels. Backend/UI adoption gaps also exist. |
 | Security | Locally strong in certified RLS/immutability scope. Hosted parity and operational administration remain unproven. |
 | Auditability | Strong source/journal/audit foundations and persisted Filing Artifacts; attachment lifecycle and operated filing evidence remain absent. |

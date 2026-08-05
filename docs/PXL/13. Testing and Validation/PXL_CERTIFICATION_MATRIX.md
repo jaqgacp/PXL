@@ -36,7 +36,7 @@ The strongest implemented cores (Sales Invoice, Official Receipt, Vendor Bill, P
 | 6 | Banking and Treasury | Not Started | Phase 5 | Module not proven complete |
 | 7 | Fixed Assets | Not Started | Phase 6 | Lifecycle/reconciliation not proven |
 | 8 | Accounting Schedules | Not Started | Phase 6 | Generation, duplicate-run, closed-period behavior unproven |
-| 9 | Philippine Compliance and Tax | Blocked | Phase 7 | VAT, 2551Q, 1601EQ, SLSP, SAWT and QAP artifacts use the governed pipeline; only the SLSP screen still bypasses the Filing Artifact, no filing has been performed, and the module has no completed certification review. Excluded future tax extensions are not blockers. |
+| 9 | Philippine Compliance and Tax | Blocked | Phase 7 | VAT, 2551Q, 1601EQ, SLSP, SAWT and QAP artifacts use the governed pipeline and every current-product compliance surface consumes the Filing Artifact (2026-08-05); no filing has been performed, and the module has no completed certification review. Excluded future tax extensions are not blockers. |
 | 10 | Reports and Financial Statements | In Progress | Phase 8 | Reconciliation and drill-down not certified; report probes only |
 | 11 | Administration and Security | Not Started | Phase 1 | Credential remediation is verified under PXL-AUD-055; the module's own certification review has not been executed. |
 

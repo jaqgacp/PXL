@@ -83,7 +83,7 @@ Mandatory release gates are:
 | Gate | Evidence |
 | --- | --- |
 | Database | Fresh no-seed migration replay. |
-| Tests | 128-file / 3,079-assertion pgTAP regression plus 66 frontend source-contract tests. |
+| Tests | 128-file / 3,079-assertion pgTAP regression plus 69 frontend source-contract tests. |
 | Canonical | Deterministic canonical rebuild plus 30 files / 751 assertions. |
 | Documentation | `docs:check`. |
 | Lint | Zero-exit `oxlint`. |

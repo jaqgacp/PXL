@@ -615,10 +615,13 @@ are right is a return that changes after submission.
 
    **Why this item remains ◐. Nothing has ever been filed from PXL.** A `filed`
    status records the accountant's own submission; PXL does not transmit to the
-   Bureau. The remaining in-scope architecture migration is the SLSP screen: its
-   artifact is registered and tested, but the screen and evidence snapshot remain
-   monthly/browser-based while the attachment is quarterly. This is Product
-   Backlog 8c / 8e (ii).
+   Bureau. The architecture migration itself is complete: the **SLSP screen moved
+   onto the quarterly artifact on 2026-08-05** (Backlog 8e ii) and the 2551Q
+   gained its export control the same day (Backlog 24), so every current-product
+   compliance surface is on the layer and every registered form reaches
+   generate → final → export. What remains for this item is operational, not
+   architectural: a real accountant filing a real quarter. Backlog 8c still
+   carries the VAT carry-forward and exempt/zero-rated purchase split.
    **Check Voucher** — the one Banking document kept in v1 because the Cash
    Disbursements Book needs it — is still unassigned to a phase.
 

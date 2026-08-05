@@ -2959,10 +2959,12 @@ Section H: a projected 1601EQ satisfies the gate that ties it to the tax ledger
 file closes on its claim: the return and the alphalist attached to it are both
 artifacts of one ledger (34).
 
-Not claimed: nothing has been filed with the Bureau. The SLSP screen is not
-covered — it is monthly while its artifact is quarterly (Backlog 8e ii, blocked
-on 8c) — and the legacy `compliance_*` working papers and `fn_snapshot_wht_export`
-are retired under Backlog 8f, after their governed replacements exist.
+Not claimed: nothing has been filed with the Bureau. The SLSP screen is outside
+this test's scope — it was still monthly and browser-aggregated when `127` was
+written, and moved onto the quarterly artifact on 2026-08-05 under Backlog 8e
+(ii), guarded by `tests/compliance_architecture.test.ts` rather than here. The
+legacy `compliance_*` working papers and `fn_snapshot_wht_export` are retired
+under Backlog 8f, after their governed replacements exist.
 
 ## Backlog 8f stage 1 — the governed Reconciling Item and the artifact role gate
 
