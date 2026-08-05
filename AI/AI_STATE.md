@@ -2,17 +2,17 @@
 
 **Current Date:** 2026-08-05
 **Current Branch:** `main`
-**Working Tree:** **Clean, synchronized with `origin/main`.** Percentage tax
-(Backlog 8), the **BIR filing artifact engine** (Phase 5.8), its **export** (8d),
-the **1601EQ/QAP migration** onto it (8e i, iii) and **8f** are complete locally
-with executed fresh, canonical, regression, frontend, build and lint evidence. A
-non-VAT Section 116 taxpayer runs the chain: line code → component →
-liability posting → tax ledger → GL reconciliation at 0.00 → working paper →
-**2551Q**. Every registered artifact — 2550Q, 2551Q, 1601EQ, SLSP, SAWT, **QAP**
-— comes from **one** generator over **one** working paper and **one**
-reconciliation, and is **exported** by one consumer. Four screens reach
-generate → final → export; **2551Q** generates but has no export control (24);
-SLSP bypasses the layer. **Nothing has been filed with the Bureau.**
+**Working Tree:** Percentage tax (Backlog 8), the **filing artifact engine**
+(Phase 5.8), its **export** (8d), the **1601EQ/QAP** migration (8e i, iii),
+**8f** and the **SLSP** migration (8e ii) are complete locally with executed
+fresh, canonical, regression, frontend, build and lint evidence. A non-VAT
+Section 116 taxpayer runs the chain: line code → component → liability posting →
+tax ledger → GL reconciliation at 0.00 → working paper → **2551Q**. Every
+registered artifact — 2550Q, 2551Q, 1601EQ, SLSP, SAWT, **QAP** — comes from
+**one** generator over **one** working paper and **one** reconciliation, and is
+**exported** by one consumer. **Every current-product compliance surface is now
+on the layer**; five screens reach generate → final → export, and **2551Q** has
+no export control yet (24). **Nothing has been filed with the Bureau.**
 **Product Phase:** Pilot Execution Plan; IA-5/ECC **frozen**.
 **Environment:** Local Supabase on a fresh schema. No hosted operation was
 performed.
@@ -161,24 +161,23 @@ governed by `deferredSurfaces.ts` (PAD-012).
 
 **PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE; the rest is owner action** (PAD-007).
 
-**Phase 5 items 3, 7 and 8 and Backlog 8, 8d, 8e (i)/(iii), 8f, 18d and 18e are
-complete for current product scope; nothing has been filed with the Bureau.**
-**Verification (test `129`): the governed compliance architecture is complete
-for every implemented compliance family.** FWT/1601FQ is a future extension,
-not an architecture gap. **Recommended next implementation only: Backlog 8c / 8e
-(ii)** — move the SLSP screen and its monthly evidence snapshot onto the
-quarterly Filing Artifact without adding a second computation path.
+**Phase 5 items 3, 7 and 8 and Backlog 8, 8d, 8e, 8f, 18d and 18e are complete
+for current product scope; nothing has been filed with the Bureau.** **The
+governed compliance architecture is complete for every current-product family**
+(test `129`, `compliance_architecture.test.ts`); FWT/1601FQ is a future
+extension, not an architecture gap. **Next implementation: Backlog 24** — one
+import and one button giving 2551Q the export every other form has.
 
 **Compliance standard (owner, 2026-08-04):** Posted Transactions → Tax Engine →
 Tax Ledger → Reconciliation → Working Paper → Filing Artifact → Export → Filed
 Record. **The Filing Artifact is the system of record**; one implementation per
-stage, extra faces are delegations, replacement is ordered, no orphans, and
-functionality is never removed to satisfy the architecture. Full rule in the
-Rules Matrix.
+stage, extra faces are delegations, replacement is ordered, no orphans. **Review
+Stage reads source data by design; Filing Stage is bound to the artifact**
+(settled 2026-08-05). Full rule in the Backlog and Rules Matrix.
 
-Remaining current-product Backlog: 8b, 8c, 8e (ii), 10, 11, 18, 18b, 18c, 18f,
-18g, 18h, 18i, 19, 23, 24. Then Banking & Treasury, then Fixed Assets. Excluded
-extensions, including 22, carry no readiness weight.
+Remaining current-product Backlog: 8b, 8c, 10, 11, 18, 18b, 18c, 18f, 18g, 18h,
+18i, 19, 23, 24. Then Banking & Treasury, then Fixed Assets. Excluded extensions,
+including 22, carry no readiness weight.
 
 Re-run `npm run deploy:rehearse` after adding migrations (Runbook §2a);
 **owner approval required**. No open findings remain; do not resume IA-5.

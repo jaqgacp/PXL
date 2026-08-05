@@ -102,9 +102,60 @@ test('the governed working paper reaches the filing artifact and nothing else', 
   )
 })
 
+/**
+ * The filing surfaces: every screen whose figures are keyed onto a BIR form.
+ * A review surface (SLS, SLP, RELIEF, the tax dashboards) is deliberately not
+ * here — it reads source data by design, because its job is to find the invoice
+ * with the missing VAT code before anything is generated. The two are different
+ * stages of one pipeline, and only this stage is bound to the artifact.
+ */
+const FILING_PAGES = [
+  'VATReturn2550QPage.tsx',
+  'PTReturnPage.tsx',
+  'EWT1601EQReturnPage.tsx',
+  'SAWTPage.tsx',
+  'QAPPage.tsx',
+  'SLSPExportPage.tsx',
+  'FilingWorkingPapersPage.tsx',
+]
+
+test('no filing surface rebuilds its figures from a source view', () => {
+  for (const page of FILING_PAGES) {
+    const src = read(page)
+    assert.ok(
+      src.includes('fn_filing_working_paper') || src.includes('fn_generate_'),
+      `${page} is a filing surface and must consume the governed generator or working paper`,
+    )
+    assert.ok(
+      !/from\('vw_[a-z_]+'\)/.test(src),
+      `${page} reads a source view. A filing figure comes from the Filing Artifact; ` +
+        'reading a review view here is the second architecture Backlog 8f removed.',
+    )
+    assert.ok(
+      !src.includes('fn_snapshot_vat_export'),
+      `${page} calls the legacy VAT export snapshot. Filing exports go through ` +
+        'downloadFilingArtifactExport, which evidences the artifact bytes.',
+    )
+  }
+})
+
+test('the SLSP attachment is quarterly, like the artifact and the BIR form', () => {
+  const src = read('SLSPExportPage.tsx')
+  assert.match(
+    src,
+    /p_form_code: 'SLSP'/,
+    'the SLSP screen must read the SLSP filing artifact',
+  )
+  assert.ok(
+    !/selMonth|taxable_month/.test(src),
+    'the SLSP screen was monthly while its artifact and the BIR attachment are ' +
+      'quarterly, so the list could disagree with the 2550Q filed beside it (Backlog 8c/8e ii)',
+  )
+})
+
 test('every compliance export in the product goes through the artifact export', () => {
   const compliance = pages.filter((p) =>
-    /(VATReturn|PTReturn|EWT1601EQ|SAWT|QAP|FilingWorkingPapers)/.test(p),
+    /(VATReturn|PTReturn|EWT1601EQ|SAWT|QAP|SLSPExport|FilingWorkingPapers)/.test(p),
   )
   assert.ok(compliance.length >= 6, 'expected the compliance export surfaces to be found')
   for (const page of compliance) {
