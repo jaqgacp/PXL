@@ -2,7 +2,7 @@
 
 **Status:** Active repository navigation map
 **Authority:** Tier 1 Documentation Governance; subject-matter standards retain authority in their own domains
-**Last Reviewed:** 2026-08-02 after the measured product status review
+**Last Reviewed:** 2026-08-07 repository alignment pass (broken references, archive paths, folder rows, unindexed documents)
 **Applies To:** Active, archived, and trash-review documentation
 **Read When:** Locating the authority for a task or reviewing documentation lifecycle
 **Do Not Read For:** Mandatory fresh-session startup; `AI/AI_STATE.md` provides the smaller task map
@@ -89,17 +89,17 @@ second status dashboard is current authority. Do not recreate `AI_PROGRESS.md` o
 
 | Folder | Authority | Contents | Read When |
 | --- | --- | --- | --- |
-| `00. Governance/` | Tier 1/Tier 3 | Principles, product backlog, and the non-normative PG-01 authority map | Cross-domain rules, future-work planning, or resolving a "PG-01" citation |
-| `01. Architecture/` | Tier 1/Tier 2/Tier 3 | Product Constitution, subordinate Product Execution Roadmap, engineering architecture summary, generated schema summary, permissions blueprint, master-data gap register | Product, architecture, roadmap, schema, permission, master-data, or platform task |
+| `00. Governance/` | Tier 1/Tier 3 | Principles, product backlog, how-we-work process authority, backup/recovery and deploy runbooks | Cross-domain rules, future-work planning, or an operational runbook |
+| `01. Architecture/` | Tier 1/Tier 2/Tier 3 | Product Constitution, Delivery Plan, subordinate Product Execution Roadmap, engineering architecture summary, generated schema summary, permissions blueprint | Product, architecture, roadmap, schema, permission, or platform task |
 | `02. Accounting Core/` | Tier 1/Tier 3 | Accounting rules, posting matrix, readiness gate, accounting test book, setup, accounting module blueprints | Posting, GL, period, reconciliation, or accounting validation task |
 | `03. Master Data/` | Tier 2 | Organization setup, customers, suppliers, items, employees, warehouses, payment terms, dimensions | Master-data task only |
 | `04. Transaction Framework/` | Tier 1/Tier 2/Tier 3 | Transaction matrix, field-source matrix, definition schema, draft-state standard, rollout manifest/playbook, document/system controls | Transaction behavior, field source, lifecycle, draft state, numbering, or approval task |
 | `05. Sales/` | Tier 2 | Sales Invoice specs and Sales module blueprints | Sales or Sales Invoice task |
 | `06. Purchasing and AP/` | Tier 2 | Purchasing/AP transaction, payable, tax review, and register blueprints | Purchasing/AP task |
 | `07. Inventory/` | Tier 1/Tier 2 | Frozen Inventory Accounting Architecture plus inventory operations and master blueprints | Inventory task |
-| `08. Banking and Treasury/` | Tier 2 | Petty cash, bank operations, check voucher, treasury blueprints | Banking/treasury task |
-| `09. Fixed Assets/` | Tier 2 | Fixed-asset operations and setup blueprints | Fixed-asset task |
-| `10. Compliance/` | Tier 2 | BIR/compliance README, tax setup, VAT, withholding, income tax, books, CAS, TIN standard | BIR, tax, CAS, statutory reporting, or compliance task |
+| *(`08. Banking and Treasury/` — not present)* | — | Deferred to v2; the blueprints live in `archive/v2-deferred/08. Banking and Treasury/` | Banking/treasury task; read from the archive path |
+| *(`09. Fixed Assets/` — not present)* | — | Deferred to v2; the blueprints live in `archive/v2-deferred/09. Fixed Assets/` | Fixed-asset task; read from the archive path |
+| `10. Compliance/` | Tier 2 | BIR/compliance README, tax setup, percentage tax, VAT, withholding, BIR books, audit/CAS, TIN standard. Income tax and FWT are **not** here — both are PAD-015 excluded scope under `archive/v2-deferred/` | BIR, tax, CAS, statutory reporting, or compliance task |
 | `11. Reports/` | Tier 2/Tier 3 | Report workspace standard, executive dashboard, report catalog | Report workspace or report inventory task |
 | `12. UI and UX/` | Tier 1 | Transaction workspace standard and transaction-content patterns | Transaction UI/layout task |
 | `13. Testing and Validation/` | Tier 1/Tier 3 | Production certification standards (module + engine), product completeness checklist, certification matrix, canonical dataset, and validation routing | Certification, canonical data, or validation task |
@@ -125,29 +125,13 @@ second status dashboard is current authority. Do not recreate `AI_PROGRESS.md` o
 | Product execution sequencing and maturity | [`01. Architecture/PXL_PRODUCT_EXECUTION_ROADMAP.md`](01.%20Architecture/PXL_PRODUCT_EXECUTION_ROADMAP.md); dependency-driven planning authority subordinate to the Product Architecture |
 | Engineering architecture summary | `01. Architecture/PXL_ARCHITECTURE_SUMMARY.md`; executable migrations/schema win over summaries |
 | Schema summary | `01. Architecture/PXL_SCHEMA_SUMMARY.md`; generated snapshot, verify against migrations/database |
-| Master Data gap analysis / Phase 1 blueprint | `01. Architecture/PXL_MASTER_DATA_GAP_REGISTER.md` |
-| Master Data implementation roadmap (packages + execution order) | `13. Testing and Validation/PXL_MASTER_DATA_IMPLEMENTATION_PLAN.md` |
 | Principles | `00. Governance/PXL_PRINCIPLES.md` |
 | Product backlog | `00. Governance/PXL_PRODUCT_BACKLOG.md` |
 | Accounting rules | `02. Accounting Core/PXL_ACCOUNTING_RULES.md` and `02. Accounting Core/PXL_ACCOUNTING_RULES_MATRIX.md` |
 | COA Engine contract (resolver, lifecycle, change policy, FS registry) | `02. Accounting Core/PXL_COA_ENGINE_SPEC.md` |
 | Posting Engine architecture (admission, pipeline, journal model, integration contracts; P5.2 fully enforced, P6 Inventory reconciliation blocked) | `02. Accounting Core/PXL_POSTING_ENGINE_SPEC.md` |
-| Posting Engine Phase P3 spec (dimension push, fiscal-close hardcode removal, preview convergence, manual-JE control; COA Phase C design-only) | `02. Accounting Core/PXL_POSTING_ENGINE_P3_SPEC.md` |
-| Inventory Accounting Architecture (IA-3 frozen; IA-5 landed but dormant with certification suspended; ownership, FIFO/WAC/Specific ID, layers, reconciliation, reporting, canonical requirements, hardening register, roadmap) | `07. Inventory/03. Architecture/`; begin with `PXL_IA3_HARDENING_DECISION_REGISTER.md`, then `PXL_IA5_IMPLEMENTATION_AND_CERTIFICATION_EVIDENCE.md` for current implementation state |
-| Inventory event chronology and costing order authority (frozen dual-chronology decision resolving C-01) | `07. Inventory/03. Architecture/ADR-C01_ECONOMIC_EVENT_CHRONOLOGY_AND_COSTING_ORDER_AUTHORITY.md` |
-| Economic Costing Chronology derivation (ordering tuple, algorithm, total-order proofs, replay, FIFO/WAC/Specific-ID/backdate/correction demonstrations, fail-closed rules) — **owner accepted 2026-07-26, not frozen** | `07. Inventory/03. Architecture/ECC-01_ECONOMIC_COSTING_CHRONOLOGY_DERIVATION_SPEC.md`, with its acceptance gate in `ECC-01_FINAL_ARCHITECTURE_ACCEPTANCE_REPORT.md` |
-| ECC-01 owner acceptance (the single canonical acceptance record: scope, exclusions, freeze determination, retained clarifications) | `07. Inventory/03. Architecture/ECC-01_FORMAL_OWNER_ACCEPTANCE.md` |
-| IA-5 ECC hardening Work Package 1 authorisation (prerequisites, zero-data verification, boundary/dormancy confirmation, authorisation decision) | `07. Inventory/04. Implementation/ECC-01_OWNER_ACCEPTANCE_AND_IA-5_WP1_AUTHORISATION_REPORT.md` |
-| IA-5 ECC hardening Work Package 2 authorisation (WP-1-certified prerequisites A–J, bounded M2 registry-extension scope, original authorisation preserved; EA-001/EA-002 reconciled; implementation and Evidence Gate complete; **WP-2 CERTIFIED 2026-07-30**, certification decision recorded in §12) | `07. Inventory/04. Implementation/IA-5_ECC_HARDENING_WP-2_AUTHORISATION_REPORT.md` |
-| IA-5 WP-2 detailed registry-authority specification (**implemented 2026-07-29; independent Evidence Gate passed; WP-2 CERTIFIED 2026-07-30**; exact six-column contracts, PostgreSQL-safe constraint labels, `IA5_CERTIFICATION` values, persistent-migration versus rolled-back-certification boundary, and T-04 Source/T-06 Transition/T-07 Effect/T-27 Dormancy obligations) | `07. Inventory/04. Implementation/IA-5_WP-2_DETAILED_REGISTRY_AUTHORITY_SPECIFICATION.md` |
-| IA-5 ECC hardening Work Package 2 implementation and prepared evidence (migration M2, tests `105`/`106`, rollback, scope/accounting/security validation; **not itself an Evidence Gate or certification**; records the 2026-07-30 certification outcome) | `07. Inventory/04. Implementation/IA-5_ECC_HARDENING_WP-2_IMPLEMENTATION_AND_EVIDENCE_REPORT.md` |
-| IA-5 ECC hardening Work Package 2 independent Evidence Gate (**passed 2026-07-29; rollback remediation verified and independently mutation-verified; recommendation accepted — WP-2 CERTIFIED 2026-07-30, outcome recorded in §10**) | `07. Inventory/04. Implementation/IA-5_ECC_HARDENING_WP-2_EVIDENCE_GATE_REPORT.md` |
-| IA-5 WP-3 detailed stream and allocator specification (**Engineering Amendments EA-003 + EA-004 + EA-005; WP-3 AUTHORISED and IMPLEMENTED 2026-07-30 (migration `20260730000018`, tests `107`/`108`); Evidence Gate passed and **WP-3 CERTIFIED 2026-07-31**, certification decision recorded in §13**; the controlling contract for **both** M3 objects — EA-003 names and models `inventory_valuation_stream_sequences` with its partial-mutability guard and allocates WP-3's T-22/T-26 evidence; EA-004 raises `inventory_valuation_streams` to the same standard and resolves its dormancy, activation, and full-immutability contract; EA-005 corrects the T-22 fixture so it is constructible without weakening company isolation) | `07. Inventory/04. Implementation/IA-5_WP-3_DETAILED_STREAM_AND_ALLOCATOR_SPECIFICATION.md` |
-| IA-5 WP-4 detailed order-key specification (**Engineering Amendments EA-006 + EA-007; WP-4 AUTHORISED and IMPLEMENTED 2026-07-31; Brutal Audit FAILED on WP4-BA-001/WP4-BA-002; bounded Brutal Fix COMPLETE; Brutal Audit Re-run PASSED; WP-4 CERTIFIED 2026-07-31**; the controlling contract for M4 `inventory_event_order_keys` — exact 31-column SQL contract, surrogate primary key, 24 governed keys/constraints, four indexes, the `resolution_state` supersession lifecycle §15 requires, the partial-mutability guard, the deferral of the event-side 1:1 trigger to M5, rollback, and T-03/T-24 evidence allocation with a verified fixture-constructibility proof; **EA-007 re-grounds the dormancy decision on the certified per-event sidecar precedent after EA-006 mis-derived it from `inventory_events`, which does carry `foundation_state`**) | `07. Inventory/04. Implementation/IA-5_WP-4_DETAILED_ORDER_KEY_SPECIFICATION.md` |
-| IA-5 WP-5 detailed event-admission and component-resolution specification (**Engineering Amendment EA-010 COMPLETE 2026-08-01; WP-5 remains unauthorised and unimplemented**; preserves all earlier rejection/amendment chronology and closes WP5-AGR2-001…004 through initial-resolution-only scope, the complete 139-column persistence map, UTC economic/occurrence-date semantics, and future reset-bounded `WP5-CONC-114`; retains the exact writer/resolver/payload/security, fourteen-component encoding, production-versus-certification, trigger/totality, rollback and evidence contract; subordinate to Product Architecture, ADR-C01, ECC-01 and the programme design; ready only for a separate comprehensive Authorisation Gate re-run) | `07. Inventory/04. Implementation/IA-5_WP-5_DETAILED_EVENT_ADMISSION_AND_COMPONENT_RESOLUTION_SPECIFICATION.md` |
-| "PG-01" reference resolution — which accepted document owns each governance rule PG-01 names (**non-normative**; sources win) | `00. Governance/PG-01_GOVERNANCE_AUTHORITY_MAP.md` |
-| IA-5/IA-6 evidence gate (Outcome C; C-01 Critical; IA-6 unauthorized) | `07. Inventory/03. Architecture/IA5_IA6_FINAL_EVIDENCE_GATE_PLAN.md` and `IA5_IA6_FINAL_EVIDENCE_GATE_REPORT.md` |
-| IA-5 ECC hardening implementation design (current-state map, target data model, migration/work-package sequence, test plan; controlling engineering plan — **Work Packages 1–4 certified; complete AGR2 rejection and EA-010 closure recorded in §§35–36; WP-5 remains unauthorised/unimplemented; WP-5…WP-9 and IA-6 unauthorised; next mission comprehensive WP-5 Authorisation Gate re-run**) | `07. Inventory/04. Implementation/IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md` |
+| Inventory architecture in force (IA-3 frozen: weighted-average valuation decision, costing, reconciliation contract, reporting) | `07. Inventory/03. Architecture/`; `ADR-IAA-001_WEIGHTED_AVERAGE_VALUATION_MODEL.md`, `PXL_INVENTORY_COSTING_SPEC.md`, `PXL_INVENTORY_RECONCILIATION_CONTRACT.md`, `PXL_INVENTORY_REPORTING_SPEC.md`. These govern the shared costing path and the inventory-to-control tie-out in use today |
+| IA-5 / ECC economic-chronology programme (**frozen, zero consumers; historical evidence, not current authority**) | `archive/ia5-ecc-frozen/`; ADR-C01, the ECC-01 derivation spec, the inventory accounting architecture and layer-lifecycle specs, and the WP-2…WP-5 detailed specifications under `04. Implementation/`. Read only for provenance of the frozen programme; do not treat as a current delivery item |
 | Accounting readiness | `02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md` |
 | Accounting tests | `02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md` |
 | End-to-end business process flow, per domain | [`PXL_BUSINESS_PROCESS_BLUEPRINT.md`](PXL_BUSINESS_PROCESS_BLUEPRINT.md); functional authority for how a process runs, subordinate to the Product Architecture for scope and to `AI/AI_STATE.md` for status |
@@ -168,34 +152,42 @@ second status dashboard is current authority. Do not recreate `AI_PROGRESS.md` o
 | Deploying to the hosted project | `00. Governance/PXL_DEPLOY_RUNBOOK.md` |
 | Certification status dashboard | `13. Testing and Validation/PXL_CERTIFICATION_MATRIX.md` |
 | Findings | `PXL_END_TO_END_AUDIT_FINDINGS.md` |
+| Transaction definition schema (structure a transaction definition follows) | `04. Transaction Framework/PXL_TRANSACTION_DEFINITION_SCHEMA.md` |
+| Transaction workspace rollout pointers (operational; **not** UI authority) | `04. Transaction Framework/PXL_TRANSACTION_WORKSPACE_MANIFEST.md` and `PXL_TRANSACTION_WORKSPACE_ROLLOUT_PLAYBOOK.md` |
+| Tax applicability by transaction and registration type | `10. Compliance/Tax Applicability Matrix.md` |
+| Form 2307 lifecycle (issued and received) | `10. Compliance/Form 2307 Management.md` |
+| Purchase Invoice blueprint | `06. Purchasing and AP/01. Purchase Invoice.md` |
+| Executive dashboard blueprint (ownership undecided; not a built surface) | `11. Reports/00. Executive Dashboard.md` |
 
 ## 7. Historical and Trash Review
 
 | Location | Status | Use |
 | --- | --- | --- |
-| `archive/phase-reports/` | Historical snapshots | Phase evidence only; not current status |
-| `archive/ai-operating-system/` | Historical AI operating-system evidence | Provenance for old decisions/rules only |
-| `archive/superseded-ui-standards/` | Superseded pointers | Historical provenance for old UI standards |
-| `archive/superseded-sales-invoice-blueprints/` | Superseded SI blueprints | Historical provenance only |
-| `trash-review/ai-operating-system/` | Obsolete AI files | Human deletion review |
-| `trash-review/generated-reports/` | Generated remediation summaries | Human deletion review |
-| `trash-review/generated-report-blueprints/` | Generated near-duplicate report placeholders | Human deletion review; unique report names preserved in `11. Reports/PXL_REPORT_CATALOG.md` |
-| `trash-review/generated-scripts/` | One-off scratch scripts found in docs | Human deletion review |
-| `trash-review/working-papers/` | Non-authoritative working papers | Human review before formal findings/backlog decisions |
+| `archive/README.md` | Archive orientation | What was archived and why |
+| `archive/ia5-ecc-frozen/` | Historical evidence — frozen programme | Provenance for the IA-5 / ECC economic-chronology work: ADR-C01, the ECC-01 derivation spec, the inventory accounting architecture and layer-lifecycle specs, and the WP-2…WP-5 detailed specifications under `04. Implementation/`. Zero consumers; never current authority |
+| `archive/v2-deferred/08. Banking and Treasury/` | Deferred scope | Petty cash, bank operations and Check Voucher blueprints held for v2 |
+| `archive/v2-deferred/09. Fixed Assets/` | Deferred scope | Fixed-asset operations and setup blueprints held for v2 |
+| `archive/v2-deferred/Accounting Schedules Blueprints/`, plus `archive/v2-deferred/05. Amortization Run.md` and `06. Revenue Recognition Run.md` | Deferred scope | Amortisation and revenue-recognition schedule blueprints |
+| `archive/v2-deferred/FWT/` and `archive/v2-deferred/Income Tax/` | Excluded scope (PAD-015) | Final Withholding Tax and income-tax material; carries no readiness weight |
 
-Archived and trash-review material must not be linked as required reading from active documents except from this index.
+Archived material must not be linked as required reading from active documents
+except from this index.
+
+**`docs/PXL/trash-review/` does not currently exist.** The lifecycle rule below
+still names it as the destination for suspected obsolete or generated material;
+the directory is created when material is first routed there, not before.
+`AI/AGENT_SYSTEM_PROMPT.md` also refers to it under the same rule.
 
 ## 8. Normally Ignore
 
 AI agents should normally ignore:
 
-- `docs/PXL/archive/**`
-- `docs/PXL/trash-review/**`
+- `docs/PXL/archive/**` — including the frozen IA-5 / ECC programme and all
+  v2-deferred and PAD-015-excluded material
+- `docs/PXL/trash-review/**` when it exists
 - all Compliance files unless the task is compliance/BIR/tax/CAS
 - all Sales Invoice files unless the task is Sales Invoice
-- generated report placeholders in trash-review
-- old AI operating-system files
-- historical phase reports
+- module and setup blueprints outside the task's own domain
 
 ## 9. Adding or Changing Documentation
 
