@@ -70,6 +70,7 @@ Authority hierarchy:
 | --- | --- | --- | --- |
 | `PXL_DOCUMENTATION_INDEX.md` | Tier 1 Documentation Governance | Master navigation and lifecycle rules | Locating documentation authority |
 | `PXL_END_TO_END_AUDIT_FINDINGS.md` | Tier 1 Findings Register | Only official defect, audit issue, blocker, and remediation register | Opening a specific finding or reconciling official status |
+| `PXL_BUSINESS_PROCESS_BLUEPRINT.md` | Tier 1 Business Process Reference | How every business process runs end to end, across all domains; functional reference for developers, testers, product owners, implementers, manuals and training | Understanding, testing, specifying or training on a business process end to end |
 
 No module-specific findings register, phase tracker, duplicate backlog, or
 second status dashboard is current authority. Do not recreate `AI_PROGRESS.md` or
@@ -149,6 +150,7 @@ second status dashboard is current authority. Do not recreate `AI_PROGRESS.md` o
 | IA-5 ECC hardening implementation design (current-state map, target data model, migration/work-package sequence, test plan; controlling engineering plan — **Work Packages 1–4 certified; complete AGR2 rejection and EA-010 closure recorded in §§35–36; WP-5 remains unauthorised/unimplemented; WP-5…WP-9 and IA-6 unauthorised; next mission comprehensive WP-5 Authorisation Gate re-run**) | `07. Inventory/04. Implementation/IA-5_ECC_HARDENING_IMPLEMENTATION_DESIGN_AND_CHANGE_PLAN.md` |
 | Accounting readiness | `02. Accounting Core/PXL_ACCOUNTING_CORE_READINESS.md` |
 | Accounting tests | `02. Accounting Core/PXL_ACCOUNTING_TEST_BOOK.md` |
+| End-to-end business process flow, per domain | [`PXL_BUSINESS_PROCESS_BLUEPRINT.md`](PXL_BUSINESS_PROCESS_BLUEPRINT.md); functional authority for how a process runs, subordinate to the Product Architecture for scope and to `AI/AI_STATE.md` for status |
 | Transaction lifecycle and maturity | `04. Transaction Framework/PXL_TRANSACTION_MATRIX.md` |
 | Transaction field-source control | `04. Transaction Framework/PXL_TRANSACTION_FIELD_SOURCE_MATRIX.md` |
 | Transaction draft state | `04. Transaction Framework/PXL_TRANSACTION_DRAFT_STATE_STANDARD.md` |
