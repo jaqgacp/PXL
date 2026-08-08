@@ -6,9 +6,10 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { composePhTin } from '@/lib/philippines'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
+import { SalesDocumentTrace } from '@/components/SalesDocumentTrace'
 
 // ── Types ─────────────────────────────────────────────────────
-type QStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'expired'
+type QStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'expired' | 'cancelled'
 
 type Quotation = {
   id: string; quotation_number: string; quotation_date: string; validity_date: string
@@ -46,7 +47,7 @@ const computeNet = (l: QLine): QLine => ({
 
 
 const QstatusMap: Record<QStatus, string> = {
-  draft: 'draft', pending: 'draft', approved: 'approved', rejected: 'error', expired: 'warning',
+  draft: 'draft', pending: 'draft', approved: 'approved', rejected: 'error', expired: 'warning', cancelled: 'error',
 }
 
 export default function QuotationsPage() {
@@ -167,6 +168,19 @@ export default function QuotationsPage() {
     requireOpenPeriod: false,
   })
   const setupBlocked = readiness.loading || readiness.blockers.length > 0
+
+  const cancelQuotation = async () => {
+    if (!editDoc) return
+    const reason = window.prompt('Reason for cancelling this quotation?')?.trim()
+    if (!reason) return
+    setSaving(true); setError('')
+    const { error: cancelError } = await supabase.rpc('fn_cancel_sales_quotation', {
+      p_quotation_id: editDoc.id, p_reason: reason,
+    })
+    setSaving(false)
+    if (cancelError) { setError(cancelError.message); return }
+    setMode('list')
+  }
 
   const save = async (nextStatus: QStatus) => {
     if (setupBlocked) { setError(readiness.loading ? 'Setup readiness is still being checked.' : readiness.blockers[0]); return }
@@ -294,6 +308,7 @@ export default function QuotationsPage() {
       sourceDocId={editDoc?.id} auditTable="sales_quotations" onBack={() => setMode('list')} backLabel="Quotations"
       actions={[
         { key: 'cancel', label: 'Cancel', onClick: () => setMode('list') },
+        { key: 'cancel-document', label: 'Cancel Quotation', onClick: cancelQuotation, disabled: saving, hidden: mode === 'new' || !['approved','expired'].includes(qStatus), variant: 'danger' },
         { key: 'save', label: saving ? 'Saving…' : qStatus === 'pending' ? 'Return to Draft' : 'Save Draft', onClick: () => save('draft'), disabled: saving, hidden: readOnly || !['draft','pending'].includes(qStatus) },
         { key: 'reject', label: 'Reject', onClick: () => save('rejected'), disabled: saving, hidden: readOnly || qStatus !== 'pending', variant: 'danger' },
         { key: 'submit', label: qStatus === 'pending' ? 'Approve' : 'Submit for Approval', onClick: () => save(qStatus === 'pending' ? 'approved' : 'pending'), disabled: saving, hidden: readOnly || !['draft','pending'].includes(qStatus), variant: 'primary' },
@@ -309,7 +324,10 @@ export default function QuotationsPage() {
         { key: 'reference', label: 'Reference No.', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fRef || '—'}</div> : <input value={fRef} onChange={e => setFRef(e.target.value)} className="pxl-input w-full" /> },
         { key: 'remarks', label: 'Remarks', card: 2, span: 2, content: readOnly ? <div className="pxl-readonly-field">{fRemarks || '—'}</div> : <input value={fRemarks} onChange={e => setFRemarks(e.target.value)} className="pxl-input w-full" /> },
       ]}
-      tabContent={{ validation: <div className="space-y-2">{canEdit && <SetupReadinessBanner readiness={readiness} />}{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}</div> }}>
+      tabContent={{
+        related: <SalesDocumentTrace documentId={editDoc?.id} />,
+        validation: <div className="space-y-2">{canEdit && <SetupReadinessBanner readiness={readiness} />}{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}</div>,
+      }}>
     <div>
       <div className="divide-y divide-gray-200">
         <div className="bg-white">

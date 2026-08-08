@@ -15,6 +15,7 @@ import { GLImpactPanel, type ServerGLImpact, type WithholdingInfo } from '@/comp
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { AuditTrailSection, StatusBadge, AmountCell, DateCell, EmptyState } from '@/components/ui/shared'
 import { composePhTin, getPhTinBranch, normalizePhTin } from '@/lib/philippines'
+import { SalesDocumentTrace } from '@/components/SalesDocumentTrace'
 
 // Stable identity so the readiness effect doesn't re-run each render.
 const SI_REQUIRED_CONFIG: ConfigField[] = ['ar_account_id', 'vat_payable_account_id']
@@ -1290,7 +1291,7 @@ export default function SalesInvoiceDocumentPage() {
     workflow: workflowTab,
     approval: approvalTab,
     audit: auditTab,
-    related: <RelatedDocumentsTab rows={relatedRows} />,
+    related: <div className="space-y-3"><SalesDocumentTrace documentId={si.id} /><RelatedDocumentsTab rows={relatedRows} /></div>,
     party: relatedPartyTab,
     attachments: attachmentsTab,
     activity: timelineTab,

@@ -130,8 +130,8 @@ SELECT set_eq(
 -- journal through fn_reverse_posted_journal_entry and restocks the goods. It is a
 -- correction path, not a second posting path — the reversal is the same one every
 -- other void uses.
-SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 98,
-  'the complete static ledger-capable call graph contains 98 functions');              -- 10
+SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 99,
+  'the complete static ledger-capable call graph contains 99 functions');              -- 10
 
 SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
   'every function in the static ledger-capable call graph is SECURITY DEFINER');       -- 11
@@ -292,16 +292,20 @@ SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
 -- The production costing authority adds a net 18 SECURITY DEFINER functions
 -- and seven ledger-reachable orchestration paths. Private bridge revokes reduce
 -- anon by four; service-only authorities add a net two; authenticated is stable.
-SELECT is((SELECT count(*)::int FROM p52_app_functions), 516,
-  'the complete application-owned public function census contains 516 functions');    -- 12
+-- The Sales Document Conversion Engine adds twelve SECURITY DEFINER functions.
+-- Five governed entry points reach authenticated and service_role, seven helpers
+-- remain private, and the converted-delivery authority adds one ledger-reachable
+-- path. The package grants nothing to anon.
+SELECT is((SELECT count(*)::int FROM p52_app_functions), 528,
+  'the complete application-owned public function census contains 528 functions');    -- 12
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 448,
-  'the complete application-owned SECURITY DEFINER census contains 448 functions');   -- 13
+SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 460,
+  'the complete application-owned SECURITY DEFINER census contains 460 functions');   -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('authenticated', oid, 'EXECUTE')),
-  349, 'authenticated EXECUTE coverage is completely counted');                       -- 14
+  354, 'authenticated EXECUTE coverage is completely counted');                       -- 14
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
@@ -311,7 +315,7 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('service_role', oid, 'EXECUTE')),
-  322, 'service_role EXECUTE coverage is completely counted');                        -- 16
+  327, 'service_role EXECUTE coverage is completely counted');                        -- 16
 
 SELECT is(
   (SELECT count(*)::int

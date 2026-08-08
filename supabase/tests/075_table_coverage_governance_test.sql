@@ -100,6 +100,7 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   ('dashboard_widgets', 'reference-populated'),
   ('debit_memo_lines', 'future-deferred'),
   ('debit_memos', 'future-deferred'),
+  ('document_relationships', 'workflow-deferred'),
   ('delivery_receipt_lines', 'canonical-populated'),
   ('delivery_receipts', 'canonical-populated'),
   ('departments', 'canonical-populated'),

@@ -9,8 +9,10 @@
 guard** (18b safety slice), **Receiving Report cancellation**, and exact
 **PO→RR→VB quantity match** (18k), plus production **Weighted Average, FIFO and
 Specific Identification** costing (18m), are complete locally with fresh,
-focused and committed-lifecycle evidence; the Phase B local checkpoint gate is
-green through regression, canonical, lifecycle, frontend and build proof. A non-VAT Section 116 taxpayer runs the chain: line code
+focused and committed-lifecycle evidence. The **full local Sales Document
+Conversion Engine** (18b) now governs QT→SO→DR/SI quantity, correction, trace
+and exact cost. The Phase C checkpoint gate is green through
+regression, canonical, lifecycle, frontend and build proof. A non-VAT Section 116 taxpayer runs the chain: line code
 → component → liability posting → tax ledger → GL reconciliation at 0.00 →
 working paper → **2551Q**. Every registered artifact — 2550Q, 2551Q, 1601EQ,
 SLSP, SAWT, **QAP** — comes from **one** generator over **one** working paper and
@@ -76,10 +78,11 @@ lanes cover the transaction-boundary claims; finding closure is not certificatio
   source-reviewed slice. UI rollout is not completion:
   business qualification remains source-gated.
 
-- **Tests:** 136 pgTAP files / 3,261 assertions plus 85 frontend source tests;
-  regression, canonical, build and lint lanes pass. **Four committed-step
-  lanes** cover general posting, Delivery Receipt, purchasing and inventory
-  costing lifecycles; pgTAP alone cannot see guards with a `same_txn` escape.
+- **Tests:** 137 pgTAP files / 3,303 assertions plus 93 frontend source tests;
+  regression, canonical, build and lint lanes pass. **Five committed-step
+  lanes** cover general posting, Delivery Receipt, purchasing, inventory
+  costing and Sales conversion lifecycles; pgTAP alone cannot see guards with a
+  `same_txn` escape.
 - **Backup/restore:** **Mechanised; never operated over anything real.** Weekly
   in CI. Blocker 5.
 
@@ -90,8 +93,8 @@ lanes cover the transaction-boundary claims; finding closure is not certificatio
 2. Every current inventory writer delegates to one production costing authority.
    Weighted Average, FIFO and Specific Identification preserve historical cost,
    layer/identity lineage and ordered correction; exact quantity matching is
-   enforced (`134`–`137` plus committed lifecycles). Open: full Document
-   Conversion and purchasing price-variance policy.
+   enforced (`134`–`137` plus committed lifecycles). Sales document conversion
+   is governed and quantity-safe; purchasing price-variance policy remains open.
 3. **Nothing has ever been filed with the Bureau.** Six artifacts — 2550Q,
    2551Q, 1601EQ, SLSP, SAWT, QAP — generate from the posted ledger, reconcile to
    the GL and refuse to leave draft while they disagree with it; `filed` records
@@ -184,6 +187,13 @@ record the reversal and cross-order line-integrity gaps. Price variance is
 deliberately separate (18l). `verify:purchasing-lifecycle` proves 36/36 across
 commits through two receipts, two bills, payment and ordered correction.
 
+**2026-08-08: Sales Document Conversion** (`20260808000007`, `138`,
+`verify:sales-conversion-lifecycle`). One authority governs QT→SO, SO→DR/SI and
+DR→SI with partial/concurrent quantity, correction and trace. Exact cost
+snapshots preserve split-invoice COGS and clearing. The 33-check lifecycle covers
+all three costing methods, concurrency, settlement and 0.00 TB. It is **M5
+locally, not certified, hosted or browser/UAT-proven**.
+
 **2026-08-08: production Inventory Costing** (`20260808000004`–`000006`,
 `135`–`137`). One private authority serves Weighted Average, FIFO and Specific
 Identification; exact allocations/serial-or-lot identity drive cost, reversal,
@@ -206,7 +216,7 @@ engine.
 
 ## Hosted and UX Status
 
-Hosted project `bskjkogijpbhukjkagfj` is at `20260716000005`; **77 local
+Hosted project `bskjkogijpbhukjkagfj` is at `20260716000005`; **78 local
 migrations pending**, no destructive DDL. The deploy is **rehearsed, not
 performed, and deliberately deferred** — nothing consumes it and CI deploys
 nothing. Credentials absent by design (PXL-AUD-055). Deferred-route labelling is
@@ -214,12 +224,13 @@ governed by `deferredSurfaces.ts` (PAD-012).
 
 ## Last Verified Commands
 
-- `npm run test:db:fresh` and `test:db:regression` — **PASS**, 136 files / 3,261
+- `npm run test:db:fresh` and `test:db:regression` — **PASS**, 137 files / 3,303
   assertions; the regression lane resets the schema first, so it is
   order-independent.
 - `npm run test:canonical` — **PASS**, 30 files / 751 assertions.
-- Focused lane — **PASS**, `130`–`137` plus `031`/`120` are 255 assertions;
-  costing `135`–`137` contribute 56; security census owner `102` passes 78/78.
+- Focused conversion lane — **PASS**, `102`, `120` and `138` are 144
+  assertions; conversion test `138` contributes 42 and the security census owner
+  `102` passes 78/78.
 - `npm run verify:delivery-receipt-lifecycle` — **PASS**, five committed
   transactions; post and cancel both succeed across commit boundaries.
 - `npm run verify:posting-lifecycles` — **PASS, 42/42**: Sales Invoice, Cash
@@ -232,13 +243,16 @@ governed by `deferredSurfaces.ts` (PAD-012).
 - `npm run verify:inventory-costing-lifecycle` — **PASS, 28/28**: committed WAC
   600, FIFO 1,280, selected serial 120, exact correction, reconciliation and a
   two-session same-serial race with exactly one winner.
+- `npm run verify:sales-conversion-lifecycle` — **PASS, 33/33**: committed
+  QT→SO→DR→SI→OR, partial/multiple conversion, draft reversal, all three costing
+  methods, a two-session final-unit race, exact COGS/clearing/tax/AR and 0.00 TB.
 - **Committed** fresh-data percentage-tax run (never the demo seed): ledger-to-GL
   variance **0.00**, trial balance **0.00**, Q1 filed with its working paper.
-- `npm run test:frontend` — **PASS**, 85 tests.
+- `npm run test:frontend` — **PASS**, 93 tests.
 - `npm run build`, `npm run lint`, `git diff --check` — **PASS**; one
   pre-existing lint warning in `tests/backup_recovery.test.ts`.
-- `npm run docs:check` — **PASS**; all 136 pgTAP files indexed.
-- `npm run deploy:rehearse` — **PASS**; 77 pending migrations apply to the
+- `npm run docs:check` — **PASS**; all 137 pgTAP files indexed.
+- `npm run deploy:rehearse` — **PASS**; 78 pending migrations apply to the
   deployed-through baseline and match fresh structure; measured schema window
   26 seconds. No hosted operation occurred.
 - `npm run backup:operate` — **PASS** (2026-08-02); replica restored
@@ -256,11 +270,12 @@ are complete for current product scope; nothing has been filed with the Bureau.*
 family** (test `129`, `compliance_architecture.test.ts`); FWT/1601FQ is a future
 extension, not an architecture gap.
 
-After the validated Phase B checkpoint, the authorised next build is the **full
-Document Conversion Engine**: governed Quote → SO → DR → SI carry-forward,
-partial and concurrency-safe remaining quantity, source/target trace, direct
-workflow preservation and integration with all three costing methods. Conversion
-creates lineage; Inventory determines cost; Posting creates accounting.
+The recommended next major package is **Purchasing Price Variance and AP Control
+Closure**: decide Backlog 18l's accounting/approval policy, implement it through
+the existing PO→RR→VB authority and prove AP/GRNI/Inventory/GL closure. It ranks
+ahead of a new module because price-different pilot invoices remain a real risk.
+**Banking & Treasury** is the next net-new capability; hosted/browser proof is
+the leading release-hardening package.
 
 **Compliance standard (owner, 2026-08-04):** Posted Transactions → Tax Engine →
 Tax Ledger → Reconciliation → Working Paper → Filing Artifact → Export → Filed
@@ -269,7 +284,7 @@ stage, extra faces are delegations, replacement is ordered, no orphans. **Review
 Stage reads source data by design; Filing Stage is bound to the artifact**
 (settled 2026-08-05). Full rule in the Backlog and Rules Matrix.
 
-Material current-product Backlog: 8b, 8c, 10b, 11, 18, 18b, 18f, 18g, 18h,
+Material current-product Backlog: 8b, 8c, 10b, 11, 18, 18f, 18g, 18h,
 18i, 18l, 19. **Not the full register** — the Backlog is, and also holds 9, 12, 13, 17
 and the documentation-only 20, 21, 23, 25. Then Banking & Treasury, then Fixed
 Assets. Excluded extensions, including 22, carry no readiness weight.

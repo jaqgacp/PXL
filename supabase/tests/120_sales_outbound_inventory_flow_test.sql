@@ -42,6 +42,7 @@ VALUES ('00000000-0000-0000-0000-000000000000',
         '{"provider":"email","providers":["email"]}', '{}');
 SELECT set_config('request.jwt.claims',
   '{"sub":"12000000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+SELECT set_config('pxl.document_conversion_write', 'on', true);
 
 INSERT INTO companies (id, entity_type, registered_name, line_of_business, tin,
                        tax_registration, accounting_period,
@@ -282,7 +283,10 @@ SELECT is(
       AND tde.tax_kind = 'output_vat'),
   600.00::numeric, 'and the output VAT reaches the tax ledger');                    -- 15
 
--- The same delivery line cannot be billed a second time.
+-- A caller cannot forge a second source-linked invoice outside the governed
+-- conversion authority. Partial/multiple billing and exact quantity admission
+-- are proven by test 138 and the committed conversion lifecycle.
+SELECT set_config('pxl.document_conversion_write', 'off', true);
 SELECT throws_like(
   format($q$SELECT fn_save_sales_invoice(NULL,
     jsonb_build_object(
@@ -301,8 +305,8 @@ SELECT throws_like(
       'source_document_type','DR',
       'source_line_id','12000000-0000-0000-0000-00000000d101')))$q$,
     (SELECT id FROM vat_codes WHERE vat_code = 'VAT-12')),
-  '%uq_sil_delivery_source%',
-  'a delivery line cannot be billed twice');                                        -- 16
+  '%Source-linked Sales Invoice lines must be created by fn_convert_sales_document%',
+  'delivery lineage cannot be created outside the one conversion authority');       -- 16
 
 -- ══════════════════════════════════════════════════════════════════════════════
 -- STEP 3 — The customer returns two units. Stock and cost both come back.

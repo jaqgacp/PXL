@@ -41,6 +41,7 @@
     "verify:posting-lifecycles": "node scripts/verify_posting_lifecycles.mjs",
     "verify:purchasing-lifecycle": "node scripts/verify_purchasing_lifecycle.mjs",
     "verify:inventory-costing-lifecycle": "node scripts/verify_inventory_costing_lifecycle.mjs",
+    "verify:sales-conversion-lifecycle": "node scripts/verify_sales_conversion_lifecycle.mjs",
     "test:transaction-workspace": "node --test --experimental-strip-types tests/transaction_workspace_rollout.test.ts",
     "test:transaction-workspace:routes": "node scripts/validate_transaction_workspace_routes.mjs",
     "test:transaction-workspace:screenshots": "node scripts/capture_transaction_workspace_comparisons.mjs",

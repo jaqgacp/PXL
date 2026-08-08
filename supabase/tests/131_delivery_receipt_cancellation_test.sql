@@ -58,6 +58,7 @@ VALUES ('00000000-0000-0000-0000-000000000000',
         '{"provider":"email","providers":["email"]}', '{}');
 SELECT set_config('request.jwt.claims',
   '{"sub":"13100000-0000-0000-0000-000000000001","role":"authenticated"}', true);
+SELECT set_config('pxl.document_conversion_write', 'on', true);
 
 INSERT INTO companies (id, entity_type, registered_name, line_of_business, tin,
                        tax_registration, accounting_period,

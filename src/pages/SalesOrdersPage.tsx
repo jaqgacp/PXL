@@ -6,6 +6,7 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { composePhTin } from '@/lib/philippines'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
+import { SalesDocumentTrace } from '@/components/SalesDocumentTrace'
 
 // ── Types ─────────────────────────────────────────────────────
 type SOApproval = 'pending' | 'approved' | 'rejected'
@@ -25,6 +26,7 @@ type SOLine = {
   item_id: string; description: string
   quantity: number; fulfilled_quantity: number; uom_id: string
   unit_price: number; discount_amount: number; net_amount: number
+  original_quantity?: number; converted_quantity?: number; remaining_quantity?: number
 }
 
 type CustomerRef = { id: string; registered_name: string; tin: string; tin_branch_code: string }
@@ -41,6 +43,7 @@ const newLine = (idx = 0): SOLine => ({
   _key: crypto.randomUUID(), line_number: idx + 1, quotation_line_id: null,
   item_id: '', description: '', quantity: 1, fulfilled_quantity: 0, uom_id: '',
   unit_price: 0, discount_amount: 0, net_amount: 0,
+  original_quantity: 1, converted_quantity: 0, remaining_quantity: 1,
 })
 const computeNet = (l: SOLine): SOLine => ({
   ...l, net_amount: Math.max(0, l.quantity * l.unit_price - l.discount_amount),
@@ -72,6 +75,7 @@ export default function SalesOrdersPage() {
   const [editDoc, setEditDoc] = useState<SO | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [convertedDocument, setConvertedDocument] = useState(false)
 
   const [fCustomer, setFCustomer] = useState('')
   const [fCustomerName, setFCustomerName] = useState('')
@@ -141,14 +145,26 @@ export default function SalesOrdersPage() {
     setFCustomerName(qt.customer_name_snapshot)
     setFCustomerTIN(qt.customer_tin_snapshot)
     setFCurrency(qt.currency_code)
-    const { data: lns } = await supabase.from('sales_quotation_lines').select('*').eq('quotation_id', qid).order('line_number')
+    const [{ data: lns }, { data: progress, error: progressError }] = await Promise.all([
+      supabase.from('sales_quotation_lines').select('*').eq('quotation_id', qid).order('line_number'),
+      supabase.from('vw_sales_document_conversion_progress').select('*')
+        .eq('source_document_type', 'sales_quotation').eq('source_document_id', qid).order('line_number'),
+    ])
+    if (progressError) { setError(progressError.message); return }
+    const progressByLine = new Map((progress || []).map(row => [row.source_line_id, row]))
     if (lns && lns.length) {
-      setLines(lns.map(l => computeNet({
+      setLines(lns.map(l => {
+        const state = progressByLine.get(l.id)
+        const remaining = Number(state?.remaining_quantity ?? 0)
+        const ratio = Number(l.quantity) > 0 ? remaining / Number(l.quantity) : 0
+        return computeNet({
         _key: crypto.randomUUID(), line_number: l.line_number, quotation_line_id: l.id,
         item_id: l.item_id || '', description: l.description,
-        quantity: Number(l.quantity), fulfilled_quantity: 0, uom_id: l.uom_id || '',
-        unit_price: Number(l.unit_price), discount_amount: Number(l.discount_amount), net_amount: 0,
-      })))
+        quantity: remaining, fulfilled_quantity: 0, uom_id: l.uom_id || '',
+        unit_price: Number(l.unit_price), discount_amount: Number(l.discount_amount) * ratio, net_amount: 0,
+        original_quantity: Number(state?.original_quantity ?? l.quantity),
+        converted_quantity: Number(state?.converted_quantity ?? 0), remaining_quantity: remaining,
+      })}).filter(line => line.quantity > 0))
     }
   }
 
@@ -166,7 +182,7 @@ export default function SalesOrdersPage() {
   const openNew = () => {
     setEditDoc(null); setFCustomer(''); setFCustomerName(''); setFCustomerTIN(''); setFQuotation('')
     setFDate(today()); setFDeliveryDate(''); setFBranch(branchId); setFCurrency('PHP'); setFRef(''); setFRemarks('')
-    setLines([newLine(0)]); setError('')
+    setLines([newLine(0)]); setError(''); setConvertedDocument(false)
     setMode('new')
   }
 
@@ -175,8 +191,14 @@ export default function SalesOrdersPage() {
     setFCustomer(doc.customer_id); setFCustomerName(doc.customer_name_snapshot); setFCustomerTIN(doc.customer_tin_snapshot)
     setFQuotation(doc.quotation_id || ''); setFDate(doc.so_date); setFDeliveryDate(doc.expected_delivery_date || '')
     setFBranch(doc.branch_id); setFCurrency(doc.currency_code); setFRef(doc.reference_number || ''); setFRemarks(doc.remarks || ''); setError('')
-    const { data: lns } = await supabase.from('sales_order_lines').select('*').eq('sales_order_id', doc.id).order('line_number')
-    if (lns && lns.length) setLines(lns.map(l => ({ _key: l.id, id: l.id, line_number: l.line_number, quotation_line_id: l.quotation_line_id, item_id: l.item_id || '', description: l.description, quantity: Number(l.quantity), fulfilled_quantity: Number(l.fulfilled_quantity), uom_id: l.uom_id || '', unit_price: Number(l.unit_price), discount_amount: Number(l.discount_amount), net_amount: Number(l.net_amount) })))
+    const [{ data: lns }, { data: progress }, { count: relationshipCount }] = await Promise.all([
+      supabase.from('sales_order_lines').select('*').eq('sales_order_id', doc.id).order('line_number'),
+      supabase.from('vw_sales_document_conversion_progress').select('*').eq('source_document_type', 'sales_order').eq('source_document_id', doc.id),
+      supabase.from('document_relationships').select('id', { count: 'exact', head: true }).eq('target_document_type', 'sales_order').eq('target_document_id', doc.id),
+    ])
+    const progressByLine = new Map((progress || []).map(row => [row.source_line_id, row]))
+    setConvertedDocument((relationshipCount || 0) > 0)
+    if (lns && lns.length) setLines(lns.map(l => { const state = progressByLine.get(l.id); return ({ _key: l.id, id: l.id, line_number: l.line_number, quotation_line_id: l.quotation_line_id, item_id: l.item_id || '', description: l.description, quantity: Number(l.quantity), fulfilled_quantity: Number(l.fulfilled_quantity), uom_id: l.uom_id || '', unit_price: Number(l.unit_price), discount_amount: Number(l.discount_amount), net_amount: Number(l.net_amount), original_quantity: Number(state?.original_quantity ?? l.quantity), converted_quantity: Number(state?.converted_quantity ?? l.fulfilled_quantity), remaining_quantity: Number(state?.remaining_quantity ?? 0) }) }))
     else setLines([newLine(0)])
     setMode(doc.approval_status === 'pending' ? 'edit' : 'view')
   }
@@ -202,6 +224,45 @@ export default function SalesOrdersPage() {
     setSaving(true); setError('')
     try {
       const isNew = mode === 'new'
+      if (isNew && fQuotation) {
+        const conversionLines = lines.filter(line => line.quotation_line_id && line.quantity > 0)
+          .map(line => ({ source_line_id: line.quotation_line_id, quantity: line.quantity }))
+        if (conversionLines.length === 0) throw new Error('Select at least one remaining quotation quantity.')
+        const { data: convertedId, error: conversionError } = await supabase.rpc('fn_convert_sales_document', {
+          p_source_document_type: 'sales_quotation', p_source_document_id: fQuotation,
+          p_target_document_type: 'sales_order',
+          p_header: { date: fDate, expected_delivery_date: fDeliveryDate || null, reference_number: fRef || null, remarks: fRemarks || null },
+          p_lines: conversionLines,
+        })
+        if (conversionError || !convertedId) throw new Error(conversionError?.message || 'Sales Order conversion failed.')
+        if (nextApproval !== 'pending') {
+          const { error: decisionError } = await supabase.rpc('fn_set_converted_sales_order_decision', {
+            p_sales_order_id: convertedId, p_decision: nextApproval,
+          })
+          if (decisionError) throw decisionError
+        }
+        setSaving(false); setMode('list'); return
+      }
+
+      if (!isNew && convertedDocument && editDoc) {
+        if (nextFulfill === 'cancelled') {
+          const reason = window.prompt('Reason for cancelling this Sales Order?')?.trim()
+          if (!reason) { setSaving(false); return }
+          const { error: cancelError } = await supabase.rpc('fn_cancel_sales_order', {
+            p_sales_order_id: editDoc.id, p_reason: reason,
+          })
+          if (cancelError) throw cancelError
+        } else if (nextApproval !== editDoc.approval_status) {
+          const { error: decisionError } = await supabase.rpc('fn_set_converted_sales_order_decision', {
+            p_sales_order_id: editDoc.id, p_decision: nextApproval,
+          })
+          if (decisionError) throw decisionError
+        } else {
+          throw new Error('Converted Sales Order commercial fields are read-only. Use its lifecycle actions.')
+        }
+        setSaving(false); setMode('list'); return
+      }
+
       let docNum = editDoc?.so_number || ''
       if (isNew) {
         const { data: num, error: ne } = await supabase.rpc('fn_next_document_number', {
@@ -332,30 +393,33 @@ export default function SalesOrdersPage() {
       relatedFacts={[{ label: 'Source Quotation', value: fQuotation || 'Not linked', hint: fQuotation ? 'Converted source' : 'No quotation selected', to: '/quotations' }]}
       sourceDocId={editDoc?.id} auditTable="sales_orders" onBack={() => setMode('list')} backLabel="Sales Orders"
       actions={[
-        { key: 'cancel', label: soApproval === 'approved' ? 'Cancel Order' : 'Cancel', onClick: () => soApproval === 'approved' ? save('approved', 'cancelled') : setMode('list'), disabled: saving, hidden: readOnly || soFulfill === 'cancelled', variant: soApproval === 'approved' ? 'danger' : 'default' },
-        { key: 'save', label: saving ? 'Saving…' : 'Save', onClick: () => save('pending'), disabled: saving, hidden: readOnly || !['new','edit'].includes(mode) || soApproval === 'approved' },
+        { key: 'cancel', label: soApproval === 'approved' ? 'Cancel Order' : 'Cancel', onClick: () => soApproval === 'approved' ? save('approved', 'cancelled') : setMode('list'), disabled: saving, hidden: mode === 'new' || soFulfill === 'cancelled', variant: soApproval === 'approved' ? 'danger' : 'default' },
+        { key: 'save', label: saving ? 'Saving…' : 'Save', onClick: () => save('pending'), disabled: saving, hidden: readOnly || convertedDocument || !['new','edit'].includes(mode) || soApproval === 'approved' },
         { key: 'reject', label: 'Reject', onClick: () => save('rejected'), disabled: saving, hidden: readOnly || soApproval !== 'pending', variant: 'danger' },
         { key: 'approve', label: 'Approve', onClick: () => save('approved'), disabled: saving, hidden: readOnly || soApproval !== 'pending', variant: 'primary' },
       ]}
       headerFields={[
         { key: 'number', label: 'Sales Order Number', card: 0, content: <div className="pxl-readonly-field">{editDoc?.so_number || 'Auto-assigned on save'}</div> },
-        { key: 'date', label: 'Order Date *', card: 0, content: <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} disabled={readOnly} className="pxl-input w-full" /> },
-        { key: 'delivery', label: 'Expected Delivery', card: 0, content: <input type="date" value={fDeliveryDate} onChange={e => setFDeliveryDate(e.target.value)} disabled={readOnly} className="pxl-input w-full" /> },
-        { key: 'branch', label: 'Branch', card: 0, content: readOnly ? <div className="pxl-readonly-field">{branches.find(b => b.id === fBranch)?.branch_name || '—'}</div> : <select value={fBranch} onChange={e => setFBranch(e.target.value)} className="pxl-input w-full"><option value="">Select branch…</option>{branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}</select> },
-        { key: 'customer', label: 'Customer *', card: 1, span: 2, content: readOnly || !!fQuotation ? <div className="pxl-readonly-field">{fCustomerName || '—'}</div> : <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className="pxl-input w-full"><option value="">Select customer…</option>{customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}</select> },
+        { key: 'date', label: 'Order Date *', card: 0, content: <input type="date" value={fDate} onChange={e => setFDate(e.target.value)} disabled={readOnly || convertedDocument} className="pxl-input w-full" /> },
+        { key: 'delivery', label: 'Expected Delivery', card: 0, content: <input type="date" value={fDeliveryDate} onChange={e => setFDeliveryDate(e.target.value)} disabled={readOnly || convertedDocument} className="pxl-input w-full" /> },
+        { key: 'branch', label: 'Branch', card: 0, content: readOnly || convertedDocument ? <div className="pxl-readonly-field">{branches.find(b => b.id === fBranch)?.branch_name || '—'}</div> : <select value={fBranch} onChange={e => setFBranch(e.target.value)} className="pxl-input w-full"><option value="">Select branch…</option>{branches.map(b => <option key={b.id} value={b.id}>{b.branch_code} – {b.branch_name}</option>)}</select> },
+        { key: 'customer', label: 'Customer *', card: 1, span: 2, content: readOnly || convertedDocument || !!fQuotation ? <div className="pxl-readonly-field">{fCustomerName || '—'}</div> : <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className="pxl-input w-full"><option value="">Select customer…</option>{customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}</select> },
         { key: 'tin', label: 'Customer TIN', card: 1, content: <div className="pxl-readonly-field">{fCustomerTIN || '—'}</div> },
-        { key: 'quotation', label: 'Source Quotation', card: 2, content: readOnly ? <div className="pxl-readonly-field">{quotations.find(q => q.id === fQuotation)?.quotation_number || '—'}</div> : <select value={fQuotation} onChange={e => onQuotationChange(e.target.value)} className="pxl-input w-full"><option value="">None (standalone)</option>{quotations.map(q => <option key={q.id} value={q.id}>{q.quotation_number} — {q.customer_name_snapshot}</option>)}</select> },
-        { key: 'currency', label: 'Currency', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fCurrency}</div> : <select value={fCurrency} onChange={e => setFCurrency(e.target.value)} className="pxl-input w-full">{['PHP','USD','EUR','JPY','GBP','AUD','CAD','SGD','CNY'].map(currency => <option key={currency} value={currency}>{currency}</option>)}</select> },
-        { key: 'reference', label: 'Reference No.', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fRef || '—'}</div> : <input value={fRef} onChange={e => setFRef(e.target.value)} className="pxl-input w-full" /> },
-        { key: 'remarks', label: 'Remarks', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fRemarks || '—'}</div> : <input value={fRemarks} onChange={e => setFRemarks(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'quotation', label: 'Source Quotation', card: 2, content: readOnly || convertedDocument ? <div className="pxl-readonly-field">{quotations.find(q => q.id === fQuotation)?.quotation_number || '—'}</div> : <select value={fQuotation} onChange={e => onQuotationChange(e.target.value)} className="pxl-input w-full"><option value="">None (standalone)</option>{quotations.map(q => <option key={q.id} value={q.id}>{q.quotation_number} — {q.customer_name_snapshot}</option>)}</select> },
+        { key: 'currency', label: 'Currency', card: 2, content: readOnly || convertedDocument ? <div className="pxl-readonly-field">{fCurrency}</div> : <select value={fCurrency} onChange={e => setFCurrency(e.target.value)} className="pxl-input w-full">{['PHP','USD','EUR','JPY','GBP','AUD','CAD','SGD','CNY'].map(currency => <option key={currency} value={currency}>{currency}</option>)}</select> },
+        { key: 'reference', label: 'Reference No.', card: 2, content: readOnly || convertedDocument ? <div className="pxl-readonly-field">{fRef || '—'}</div> : <input value={fRef} onChange={e => setFRef(e.target.value)} className="pxl-input w-full" /> },
+        { key: 'remarks', label: 'Remarks', card: 2, content: readOnly || convertedDocument ? <div className="pxl-readonly-field">{fRemarks || '—'}</div> : <input value={fRemarks} onChange={e => setFRemarks(e.target.value)} className="pxl-input w-full" /> },
       ]}
-      tabContent={{ validation: <div className="space-y-2">{canEdit && <SetupReadinessBanner readiness={readiness} />}{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}</div> }}>
+      tabContent={{
+        related: <SalesDocumentTrace documentId={editDoc?.id} />,
+        validation: <div className="space-y-2">{canEdit && <SetupReadinessBanner readiness={readiness} />}{convertedDocument && <div className="pxl-validation-message border border-blue-200 bg-blue-50 text-blue-800">Converted commercial fields are locked. Draft targets reserve quantity immediately; rejection or cancellation reopens it.</div>}{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}</div>,
+      }}>
     <div>
       <div className="divide-y divide-gray-200">
         <div className="bg-white">
           <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Line Items</span>
-            {canEdit && !fQuotation && (
+            {canEdit && !fQuotation && !convertedDocument && (
               <button type="button" onClick={() => setLines(prev => [...prev, newLine(prev.length)])}
                 className="flex items-center gap-1 text-xs text-gray-500 hover:text-gray-900 border border-gray-300 rounded px-2 py-1 hover:bg-gray-50">
                 <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M12 5v14M5 12h14" /></svg>
@@ -370,13 +434,15 @@ export default function SalesOrdersPage() {
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-8">#</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 min-w-[160px]">Item / Service</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 min-w-[200px]">Description</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">Ordered</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">Delivered</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">Original</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">Reserved</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">Remaining</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">This Order</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-16">UOM</th>
                   <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-24">Unit Price</th>
                   <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">Discount</th>
                   <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-24">Net Amount</th>
-                  {canEdit && !fQuotation && <th className="px-2 w-8" />}
+                  {canEdit && !fQuotation && !convertedDocument && <th className="px-2 w-8" />}
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -384,7 +450,7 @@ export default function SalesOrdersPage() {
                   <tr key={l._key} className="hover:bg-gray-50/50">
                     <td className="px-4 py-2.5 text-xs text-gray-400 text-right">{idx + 1}</td>
                     <td className="px-4 py-2.5">
-                      {canEdit && !fQuotation ? (
+                      {canEdit && !fQuotation && !convertedDocument ? (
                         <select value={l.item_id} onChange={e => setLineField(l._key, 'item_id', e.target.value)}
                           className="text-xs border-0 bg-transparent focus:outline-none w-full">
                           <option value="">— Select item —</option>
@@ -393,16 +459,18 @@ export default function SalesOrdersPage() {
                       ) : <span className="text-xs text-gray-600">{items.find(i => i.id === l.item_id)?.item_name || l.description}</span>}
                     </td>
                     <td className="px-4 py-2.5">
-                      {canEdit ? <input value={l.description} onChange={e => setLineField(l._key, 'description', e.target.value)} className="w-full bg-transparent border-0 text-sm py-0 px-0 focus:outline-none" placeholder="Description…" />
+                      {canEdit && !fQuotation && !convertedDocument ? <input value={l.description} onChange={e => setLineField(l._key, 'description', e.target.value)} className="w-full bg-transparent border-0 text-sm py-0 px-0 focus:outline-none" placeholder="Description…" />
                         : <span className="text-xs text-gray-700">{l.description}</span>}
                     </td>
+                    <td className="px-4 py-2.5 text-right text-xs font-mono tabular-nums text-gray-500">{l.original_quantity ?? l.quantity}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-mono tabular-nums text-gray-500">{l.converted_quantity ?? l.fulfilled_quantity}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-mono tabular-nums text-gray-700">{l.remaining_quantity ?? l.quantity}</td>
                     <td className="px-4 py-2.5 text-right">
-                      {canEdit ? <input type="number" value={l.quantity} min={0} step="any" onChange={e => setLineField(l._key, 'quantity', parseFloat(e.target.value) || 0)} className="w-16 text-right bg-transparent border-0 text-sm focus:outline-none" />
+                      {canEdit && !convertedDocument ? <input type="number" value={l.quantity} min={0} max={l.remaining_quantity} step="any" onChange={e => setLineField(l._key, 'quantity', parseFloat(e.target.value) || 0)} className="w-16 text-right bg-transparent border-0 text-sm focus:outline-none" />
                         : <span className="text-xs font-mono tabular-nums">{l.quantity}</span>}
                     </td>
-                    <td className="px-4 py-2.5 text-right text-xs font-mono tabular-nums text-gray-500">{l.fulfilled_quantity}</td>
                     <td className="px-4 py-2.5 text-xs text-gray-500">
-                      {canEdit && !fQuotation ? (
+                      {canEdit && !fQuotation && !convertedDocument ? (
                         <select value={l.uom_id} onChange={e => setLineField(l._key, 'uom_id', e.target.value)}
                           className="text-xs border-0 bg-transparent focus:outline-none w-full">
                           <option value="">—</option>
@@ -411,15 +479,15 @@ export default function SalesOrdersPage() {
                       ) : <span>{uoms.find(u => u.id === l.uom_id)?.uom_code || '—'}</span>}
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      {canEdit ? <input type="number" value={l.unit_price} min={0} step="any" onChange={e => setLineField(l._key, 'unit_price', parseFloat(e.target.value) || 0)} className="w-24 text-right bg-transparent border-0 text-sm focus:outline-none" />
+                      {canEdit && !fQuotation && !convertedDocument ? <input type="number" value={l.unit_price} min={0} step="any" onChange={e => setLineField(l._key, 'unit_price', parseFloat(e.target.value) || 0)} className="w-24 text-right bg-transparent border-0 text-sm focus:outline-none" />
                         : <span className="text-xs font-mono tabular-nums">{fmt(l.unit_price)}</span>}
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      {canEdit ? <input type="number" value={l.discount_amount} min={0} step="any" onChange={e => setLineField(l._key, 'discount_amount', parseFloat(e.target.value) || 0)} className="w-16 text-right bg-transparent border-0 text-sm focus:outline-none" />
+                      {canEdit && !fQuotation && !convertedDocument ? <input type="number" value={l.discount_amount} min={0} step="any" onChange={e => setLineField(l._key, 'discount_amount', parseFloat(e.target.value) || 0)} className="w-16 text-right bg-transparent border-0 text-sm focus:outline-none" />
                         : <span className="text-xs font-mono tabular-nums text-gray-500">{l.discount_amount ? fmt(l.discount_amount) : '—'}</span>}
                     </td>
                     <td className="px-4 py-2.5 text-right font-mono text-xs tabular-nums font-semibold text-gray-900">{fmt(l.net_amount)}</td>
-                    {canEdit && !fQuotation && (
+                    {canEdit && !fQuotation && !convertedDocument && (
                       <td className="px-2 py-2.5">
                         <button type="button" onClick={() => setLines(prev => prev.filter(x => x._key !== l._key))} className="text-gray-300 hover:text-red-500">
                           <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}><path d="M18 6L6 18M6 6l12 12" /></svg>

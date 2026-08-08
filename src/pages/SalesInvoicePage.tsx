@@ -34,6 +34,7 @@ import {
   transactionTableClass,
 } from '@/lib/transactionWorkspace'
 import { InventoryIdentitySelect } from '@/components/InventoryIdentitySelect'
+import { SalesDocumentTrace } from '@/components/SalesDocumentTrace'
 
 // ── Types ─────────────────────────────────────────────────────
 type SIStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
@@ -174,16 +175,6 @@ type OpenSalesOrder = {
   approval_status: string
   fulfillment_status: string
   currency_code: string
-}
-type SalesOrderLineRef = {
-  id: string
-  item_id: string | null
-  description: string
-  quantity: number
-  fulfilled_quantity: number
-  uom_id: string | null
-  unit_price: number
-  discount_amount: number
 }
 type FormMode = 'list' | 'new' | 'edit' | 'view'
 type FormTab = 'lines' | 'financial' | 'gl' | 'tax' | 'validation' | 'workflow' | 'approval' | 'audit' | 'related' | 'party' | 'attachments' | 'activity' | 'notes' | 'system'
@@ -755,6 +746,7 @@ export default function SalesInvoicePage() {
   const [mode, setMode] = useState<FormMode>(routeMode)
   const [activeTab, setActiveTab] = useState<FormTab>('lines')
   const [editSI, setEditSI] = useState<SI | null>(null)
+  const [convertedInvoice, setConvertedInvoice] = useState(false)
   const [draft, setDraft] = useState<SalesInvoiceDraft>(() => blankDraft(branchId))
   const [persistedSignature, setPersistedSignature] = useState('')
   const [saving, setSaving] = useState(false)
@@ -995,6 +987,7 @@ export default function SalesInvoicePage() {
       lines: [blankLineWithCurrentVat()],
     }
     setEditSI(null)
+    setConvertedInvoice(false)
     setDraft(nextDraft)
     setOpenSalesOrders([])
     setSalesOrderPromptDismissed(false)
@@ -1049,12 +1042,13 @@ export default function SalesInvoicePage() {
     setError('')
 
     // Load existing lines
-    const { data: dbLines } = await supabase
-      .from('sales_invoice_lines')
-      .select('*')
-      .eq('sales_invoice_id', si.id)
-      .order('line_number')
+    const [{ data: dbLines }, { count: relationshipCount }] = await Promise.all([
+      supabase.from('sales_invoice_lines').select('*').eq('sales_invoice_id', si.id).order('line_number'),
+      supabase.from('document_relationships').select('id', { count: 'exact', head: true })
+        .eq('target_document_type', 'sales_invoice').eq('target_document_id', si.id),
+    ])
     if (initToken !== draftInitializationTokenRef.current) return
+    setConvertedInvoice((relationshipCount || 0) > 0)
 
     if (dbLines && dbLines.length > 0) {
       const mapped: SILine[] = (dbLines as Array<Record<string, unknown>>).map(l => {
@@ -1248,73 +1242,34 @@ export default function SalesInvoicePage() {
   }
 
   const convertFromSalesOrder = async (so: OpenSalesOrder) => {
-    const { data, error: lineError } = await supabase
-      .from('sales_order_lines')
-      .select('id,item_id,description,quantity,fulfilled_quantity,uom_id,unit_price,discount_amount')
-      .eq('sales_order_id', so.id)
-      .order('line_number')
-    if (lineError) {
-      setError(lineError.message)
-      return
-    }
-    const sourceLines = ((data || []) as SalesOrderLineRef[])
-      .map(line => ({ ...line, quantity: Math.max(0, Number(line.quantity) - Number(line.fulfilled_quantity || 0)) }))
-      .filter(line => line.quantity > 0)
+    setSaving(true); setError('')
+    const { data: progress, error: progressError } = await supabase
+      .from('vw_sales_document_conversion_progress').select('*')
+      .eq('source_document_type', 'sales_order').eq('source_document_id', so.id)
+      .gt('remaining_quantity', 0).order('line_number')
+    if (progressError) { setSaving(false); setError(progressError.message); return }
+    if (!progress?.length) { setSaving(false); setError('No remaining Sales Order quantity is available for conversion.'); return }
 
-    if (sourceLines.length === 0) {
-      setError('No remaining Sales Order lines are available for conversion.')
-      return
+    const requested: { source_line_id: string; quantity: number }[] = []
+    for (const line of progress) {
+      if (!line.source_line_id) continue
+      const remaining = Number(line.remaining_quantity)
+      const entered = window.prompt(`Quantity to invoice for ${line.description} (remaining ${remaining})`, String(remaining))
+      if (entered == null) continue
+      const quantity = Number(entered)
+      if (!Number.isFinite(quantity) || quantity <= 0 || quantity > remaining) {
+        setSaving(false); setError(`Invoice quantity for ${line.description} must be between 0 and ${remaining}.`); return
+      }
+      requested.push({ source_line_id: line.source_line_id, quantity })
     }
-
-    const converted = sourceLines.map(line => {
-      const item = items.find(i => i.id === line.item_id)
-      const itemVat = item ? vatCodes.find(v => v.id === item.default_sales_vat_id) : null
-      const vc = itemVat && allowsVatCode(itemVat) ? itemVat : defaultVatCode()
-      const gross = Number(line.quantity) * Number(line.unit_price)
-      const discountPercent = gross > 0 ? (Number(line.discount_amount || 0) / gross) * 100 : 0
-      return computeLine({
-        _key: crypto.randomUUID(),
-        item_id: line.item_id || '',
-        description: line.description,
-        quantity: Number(line.quantity),
-        uom_id: line.uom_id || item?.uom_id || '',
-        uom_label: item?.uom_label || '',
-        unit_price: Number(line.unit_price),
-        discount_percent: discountPercent,
-        discount_amount: 0,
-        net_amount: 0,
-        vat_code_id: vc?.id || '',
-        vat_classification: vc?.vat_classification || 'exempt',
-        vat_rate: vc?.rate ?? 0,
-        vat_amount: 0,
-        total_amount: 0,
-        revenue_account_id: item?.sales_account_id || '',
-        warehouse_id: item?.item_type === 'inventory_item' ? fWarehouse : '',
-        department_id: fDepartment,
-        cost_center_id: fCostCenter,
-        project_id: fProject,
-        location_id: fLocation,
-        functional_entity_id: fFunctionalEntity,
-        salesperson_id: fSalesperson,
-        inventory_account_id: item?.inventory_account_id || '',
-        cogs_account_id: item?.cogs_account_id || '',
-        unit_cost: 0,
-        inventory_cost: 0,
-        inventory_transaction_id: '',
-        inventory_cost_layer_id: '',
-        lot_number: '',
-        serial_number: '',
-        remarks: '',
-        source_document_type: 'sales_order',
-        source_line_id: line.id,
-      }, fVatPriceBasis)
+    if (requested.length === 0) { setSaving(false); setError('No Sales Order quantity was selected.'); return }
+    const { data: invoiceId, error: conversionError } = await supabase.rpc('fn_convert_sales_document', {
+      p_source_document_type: 'sales_order', p_source_document_id: so.id,
+      p_target_document_type: 'sales_invoice', p_header: { date: fDate }, p_lines: requested,
     })
-
-    setFRef(prev => prev || so.so_number)
-    setLines(converted.length > 0 ? converted : [emptyLine()])
-    setSalesOrderPromptDismissed(true)
-    setActiveTab('lines')
-    setError('')
+    setSaving(false)
+    if (conversionError || !invoiceId) { setError(conversionError?.message || 'Sales Order conversion failed.'); return }
+    navigate(`/sales-invoices/${invoiceId}/edit`)
   }
 
   const getAccountingReadinessErrors = () => {
@@ -1627,8 +1582,8 @@ export default function SalesInvoicePage() {
   const combinedGlDebit = commercialGlDebit + inventoryGlDebit
   const combinedGlCredit = commercialGlCredit + inventoryGlCredit
   const combinedGlDifference = combinedGlDebit - combinedGlCredit
-  const readOnly = mode === 'view'
-  const canEdit = mode === 'edit' || mode === 'new'
+  const readOnly = mode === 'view' || convertedInvoice
+  const canEdit = (mode === 'edit' || mode === 'new') && !convertedInvoice
   const siStatus = editSI?.status || 'draft'
   const currentDraftSignature = useMemo(() => buildSignatureFromDraft(draft), [draft])
   const hasUnsavedChanges = canEdit && currentDraftSignature !== persistedSignature
@@ -1882,7 +1837,24 @@ export default function SalesInvoicePage() {
     { key: 'system', label: 'System' },
   ]
   const formDocumentTabs: DocumentTab[] = formTabs.map(tab => ({ ...tab, content: null }))
+  const advanceConvertedInvoice = async (post: boolean) => {
+    if (!editSI) return
+    setSaving(true); setError('')
+    const { error: approvalError } = await supabase.rpc('fn_approve_sales_invoice', { p_invoice_id: editSI.id })
+    if (approvalError) { setSaving(false); setError(approvalError.message); return }
+    if (post) {
+      const { error: postingError } = await supabase.rpc('fn_post_sales_invoice', { p_invoice_id: editSI.id })
+      if (postingError) { setSaving(false); setError(postingError.message); return }
+    }
+    setSaving(false)
+    navigate('/sales-invoices')
+  }
+
   const formActions: ToolbarAction[] = [
+    ...(convertedInvoice && siStatus === 'draft' ? [
+      { key: 'approve-converted', label: 'Approve', onClick: () => { void advanceConvertedInvoice(false) }, disabled: saving || Boolean(saveDisabledReason) },
+      { key: 'post-converted', label: 'Approve & Post', onClick: () => { void advanceConvertedInvoice(true) }, disabled: saving || Boolean(saveDisabledReason), variant: 'primary' as const },
+    ] : []),
     ...((mode === 'new' || siStatus === 'draft') && !readOnly ? [
       { key: 'save-draft', label: saving ? 'Saving…' : 'Save Draft', onClick: () => { void save('draft') }, disabled: saving || Boolean(saveDisabledReason) },
       { key: 'submit', label: 'Submit', onClick: () => { void save('approved') }, disabled: saving || Boolean(saveDisabledReason) },
@@ -2682,6 +2654,7 @@ export default function SalesInvoicePage() {
         {activeTab === 'validation' && (
           <section className={`${transactionCardClass()} p-3`}>
             {readiness.blockers.length > 0 && <div className="mb-3"><SetupReadinessBanner readiness={readiness} /></div>}
+            {convertedInvoice && <div className="pxl-validation-message mb-3 border border-blue-200 bg-blue-50 text-blue-800">This draft is conversion-owned: commercial and source fields are locked, while approval, posting, void, and receipt settlement remain governed lifecycle actions.</div>}
             {error && <div className="pxl-validation-message mb-3 border border-red-200 bg-red-50 text-red-700" role="alert">{error}</div>}
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
@@ -2775,6 +2748,7 @@ export default function SalesInvoicePage() {
         {activeTab === 'related' && (
           <div className="space-y-3">
           {salesOrderSourcePrompt}
+          <SalesDocumentTrace documentId={editSI?.id} />
           <section className={`${transactionCardClass()} p-3`}>
             <div className={`${transactionSectionTitleClass()} mb-3`}>Related Documents</div>
             <div className="overflow-x-auto rounded border border-gray-200">

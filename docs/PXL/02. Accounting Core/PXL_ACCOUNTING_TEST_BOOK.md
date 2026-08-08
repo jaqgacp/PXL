@@ -6,11 +6,11 @@
 **Applies To:** Accounting, tax, posting, reconciliation, and regression test scenarios
 **Read When:** Adding or changing accounting tests, validating a finding, or reconciling test coverage
 **Do Not Read For:** AI startup or accounting behavior authority without the accounting rules matrix
-**Last Reviewed:** 2026-08-08 after production inventory-costing authority proof; dormant IA-5/ECC remains separate and P5.2 remains authoritative and fully enforced
+**Last Reviewed:** 2026-08-08 after production inventory-costing and Sales Document Conversion proof; dormant IA-5/ECC remains separate and P5.2 remains authoritative and fully enforced
 
 This file records expected accounting/reporting scenarios that must be executed before a finding can be marked `Retested Passed`.
 
-How to execute deterministic scenarios: start the isolated stack with `supabase db start`, run `npm run test:db:local` for a fresh no-seed migration replay plus all **136 files / 3,261 assertions**, and run `npm run test:canonical` for the atomic canonical rebuild plus the canonical/engine verification set (**30 files / 751 assertions**). Run the lanes in that order: test 073 asserts the zero-company bootstrap, so the regression suite must run on a fresh no-seed schema rather than on top of a canonical seed. `npm test` aliases the full pgTAP regression on the current local schema; use `npm run test:db:focused -- supabase/tests/<file>.sql` only as bounded package evidence. The permanent lane order, prerequisites, success/failure rules, hosted read-only boundary, and complete release gates are authoritative in `docs/PXL/13. Testing and Validation/README.md`. `.github/workflows/ci.yml` publishes separate static, fresh-schema/regression, canonical, protected hosted, and summary results; hosted jobs run only for a manually authorized release-candidate dispatch.
+How to execute deterministic scenarios: start the isolated stack with `supabase db start`, run `npm run test:db:local` for a fresh no-seed migration replay plus all **137 files / 3,303 assertions**, and run `npm run test:canonical` for the atomic canonical rebuild plus the canonical/engine verification set (**30 files / 751 assertions**). Run the lanes in that order: test 073 asserts the zero-company bootstrap, so the regression suite must run on a fresh no-seed schema rather than on top of a canonical seed. `npm test` aliases the full pgTAP regression on the current local schema; use `npm run test:db:focused -- supabase/tests/<file>.sql` only as bounded package evidence. The permanent lane order, prerequisites, success/failure rules, hosted read-only boundary, and complete release gates are authoritative in `docs/PXL/13. Testing and Validation/README.md`. `.github/workflows/ci.yml` publishes separate static, fresh-schema/regression, canonical, protected hosted, and summary results; hosted jobs run only for a manually authorized release-candidate dispatch.
 
 Report-page adoption is governed by `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md`. Any report marked production-ready under that standard must have evidence for its accounting purpose, authoritative source data, filters, date basis, posting-state basis, totals, reconciliation target, drilldown/drillback path, export metadata, snapshot requirements where applicable, permissions, known limitations, and performance-sensitive scenarios. Visual conformance alone is not sufficient for accounting, tax, compliance, or reconciliation reports.
 
@@ -2436,8 +2436,8 @@ the sale has not happened; that posting the same delivery twice is a no-op rathe
 than a second relief; that billing the delivery moves **no stock at all** and
 writes no inventory transaction of its own, recognising the 3,000 of COGS by
 clearing the delivery account instead; that the clearing account **nets to zero**
-once the delivery is billed; that a delivery line cannot be billed twice
-(`uq_sil_delivery_source`); and that a return puts two units back at the 600 they
+once the delivery is billed; that the then-current whole-line uniqueness guard
+prevents a second bill; and that a return puts two units back at the 600 they
 were issued at through the shared `fn_receive_inventory` path, reversing 1,200 of
 COGS and 240 of output VAT.
 
@@ -2461,11 +2461,11 @@ graph, function, SECURITY DEFINER and grant censuses each grew by one (`102`);
 and the derived-table writer census is seventeen with the generic-receipt callers
 at four (`103`).
 
-Not claimed here: Quotation/Sales Order conversion (the Document Conversion
-engine is not started). This file links the invoice to the delivery through the
-governed `source_document_type` / `source_line_id` columns, which is what the
-clearing consumption keys on. Financial statement presentation is now covered by
-test `121` below.
+This file predates the completed Sales Document Conversion Engine. Its original
+whole-line DR contract is superseded by test `138`, which preserves the same
+`source_document_type` / `source_line_id` posting bridge while allocating
+quantity and cost across multiple partial invoices. Financial statement
+presentation is covered by test `121` below.
 
 ## Delivery Plan Phase 5.7 — Financial statement presentation
 
@@ -3158,8 +3158,8 @@ path the posting used to take it out.
 The ordering rule is the substance: an invoice that already claims the delivery
 must be voided **first**, because reversing the clearing balance from underneath
 a live invoice would leave it taking a cost that no longer exists. A **draft**
-invoice counts — it already holds the delivered line through
-`uq_sil_delivery_source`. Assertions 6–9 raise a draft invoice, prove the
+invoice counts — it already reserves the delivered line through the governed
+relationship authority. Assertions 6–9 raise a draft invoice, prove the
 cancellation is refused (7), prove the refusal changed nothing (8), then void the
 invoice and proceed. Assertions 10–20 are the correction itself: the goods come
 back (13, 14), the weighted-average cost is undisturbed (15), the restock is its
@@ -3252,8 +3252,8 @@ Status: **PASSING 2026-08-08.**
 `supabase/tests/133_sales_invoice_delivered_stock_guard_test.sql` (18 assertions,
 self-provisioned company).
 
-The full Document Conversion Engine is not delivered. This bounded guard closes
-the unsafe gap while preserving that distinction: both Sales Invoice approval
+This bounded guard was delivered before the full conversion engine and remains
+defence in depth: both Sales Invoice approval
 and posting pass through `fn_validate_sales_invoice_accounting_ready`, which now
 refuses an unlinked stock line when a live delivered Delivery Receipt for the
 same company, customer and item remains available to bill. The private
@@ -3269,10 +3269,9 @@ for never-delivered goods and a service line remain valid. Finally, an invoice
 approved before a later independent delivery is refused at posting, proving the
 authoritative gate is not approval-only.
 
-Not claimed: quotation/order carry-forward, automatic relationship creation,
-quantity allocation, or the full Document Conversion Engine. The guard refuses
-an unsafe invoice; the existing *Bill This Delivery* action remains the one path
-that creates the governed delivery relationship.
+Superseded boundary: migration `20260808000007` and test `138` now provide
+quotation/order carry-forward, automatic relationship creation and quantity
+allocation. Test `133` continues to prove that unsafe direct entry is refused.
 
 ## Purchasing quantity match and Receiving Report cancellation
 
@@ -3382,3 +3381,63 @@ Classification for the intended current transaction lifecycle:
 Not claimed: Inventory module certification, hosted migration, browser/UAT,
 pilot readiness, landed cost, or backdated economic replay. IA-5/ECC remains a
 separate frozen architecture with zero production consumers.
+
+## SALES-DOCUMENT-CONVERSION-001 — quantity lineage, correction and exact cost
+
+Status: **PASSING LOCALLY 2026-08-08.**
+`supabase/tests/138_sales_document_conversion_test.sql` (42 assertions),
+`tests/sales_document_conversion.test.ts` (8 source-contract tests) and
+`scripts/verify_sales_conversion_lifecycle.mjs` (33 checks across separately
+committed steps).
+
+Migration `20260808000007_sales_document_conversion.sql` makes
+`document_relationships` the central quantity-grained lineage authority. Its
+snapshots preserve the original and converted quantities; DR→SI relationships
+also preserve the exact cost allocated to that invoice. The public
+`fn_convert_sales_document` locks the source header and lines, verifies company,
+branch, customer, status and remaining quantity, derives commercial values at
+the server and supports QT→SO, SO→DR, service-only SO→SI and DR→SI. An inventory
+Sales Order must be delivered before it is invoiced. Standalone document entry
+and Cash Sale remain valid.
+
+Draft targets reserve immediately. Reject, cancel and void reverse the active
+relationship and reopen exactly that quantity. The final conversion serializes
+on the source line, so concurrent attempts for one remaining unit admit one
+winner. Converted commercial headers/lines and source-linked invoice lineage are
+not browser-writable. Delivery operational identity may still be updated through
+its governed RPC. The progress view reports original, converted and remaining
+quantity; the trace view follows the chain through Official Receipt settlement.
+
+The pgTAP fixture proves same-company membership, cross-tenant denial,
+partial/multiple quotation targets, reservation/reopening, over-conversion and
+cancel refusals; direct service SO→SI; shared SO quantity across deliveries and
+direct service invoices; immutable converted values; atomic delivery completion;
+partial DR→SI; trace; and ordered invoice/delivery/order/quotation correction.
+The frontend contract proves that each Sales page reads server progress and
+trace and calls the governed conversion/correction RPCs rather than calculating
+remaining quantity in the browser.
+
+The committed lifecycle provisions an isolated company and opening journal,
+receives WAC, FIFO and Specific-ID inventory, then performs QT→SO, three partial
+deliveries, multiple partial invoices, invoice void/replacement and one Official
+Receipt settlement. Two sessions race for the final Sales Order unit: one
+delivery wins and the other is refused; cancelling the winner reopens exactly
+one unit before the final DR→SI→OR completion. It closes with 21 active and two
+reversed relationships, Inventory and layers reconciled, Inventory Control
+₱3,008, exact COGS ₱2,012 (WAC ₱612 + FIFO ₱1,280 + selected identity ₱120), net
+output VAT ₱2,172, AR ₱0, Goods Delivered Not Invoiced ₱0 and trial-balance
+variance ₱0.
+
+Implementation found and fixed three defects. Converted DR and SI voids were
+initially blocked by their own converted-field guards; the shared void
+authorities now enter the narrow internal conversion-write context only for
+converted documents. The legacy whole-line `uq_sil_delivery_source` index made
+partial billing impossible and was replaced by locked quantity authority.
+Finally, existing invoice costing cleared an entire Delivery Receipt line on
+every partial invoice. Immutable relationship cost snapshots plus the private
+cost resolver now allocate each split exactly and give only the final split any
+rounding residual, preventing duplicated COGS and stranded clearing.
+
+Classification: the Document Conversion Engine is **M5 for the local Sales
+workflow, implemented but not certified**. No purchasing conversion, hosted
+deployment, browser UAT, real-company rehearsal or pilot readiness is claimed.

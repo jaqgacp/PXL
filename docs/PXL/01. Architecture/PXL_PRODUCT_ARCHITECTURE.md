@@ -133,8 +133,8 @@ fixed assets · general accounting and period management · Philippine business-
 and withholding compliance and BIR books · financial and management reporting.
 
 **In scope, deliberately not built yet.** Multi-currency and FX revaluation ·
-budgeting · document conversion automation · inventory cost replay under a
-governed economic chronology. Statutory return *generation* **left this list on
+budgeting · inventory cost replay under a governed economic chronology.
+Sales document conversion **left this list on 2026-08-08**. Statutory return *generation* **left this list on
 2026-08-04**: the filing artifact engine exists and six forms — 2550Q, 2551Q,
 1601EQ, SLSP, SAWT, QAP — generate from the posted ledger.
 
@@ -705,8 +705,8 @@ that status.
 | **Dependencies** | Customers · Items · Payment Terms · Number Series · Posting engine · Dimension engine · Approval engine · COA engine · **Tax Engine** (since PAD-001; tax calculation left the save routines on 2026-08-03) |
 | **Maturity** | **M4 — PARTIAL WORKFLOW** |
 | **Certification** | Certification module #3 — **In Progress.** Named blockers: Sales Invoice completeness, and returns/credit reconciliation. |
-| **Implementation** | Sales Invoice is the strongest transaction in PXL: a full draft → approve → post → void → revert lifecycle, all six analytical dimensions reaching the posted journal, saved-source GL preview, immutability after posting, and the only dedicated form/document route pair in the product. Cash Sale, Official Receipt, and Credit Memo have complete posting lifecycles. A warehouse-bearing, source-linked Credit Memo is the Customer Return path and restores the original outbound cost evidence — including FIFO allocations or the same specifically identified unit — rather than today's cost. Against that, **Debit Memo is a finished screen over a table the governance register classifies as an unimplemented future module**, and Quotation → Order → Invoice conversion is not verified because the Document Conversion engine has not been started. |
-| **Roadmap** | Under the certification programme it is Phase 2 and the nearest module-level win; the Roadmap places full module work under the **Customer-to-Cash** outcome (Delivery Plan Phase 5) after cross-cycle proof and Tax architecture. Then close returns and credit reconciliation, then the conversion chain. |
+| **Implementation** | Sales Invoice is the strongest transaction in PXL: a full draft → approve → post → void → revert lifecycle, all six analytical dimensions reaching the posted journal, saved-source GL preview and immutability after posting. Cash Sale, Official Receipt, and Credit Memo have complete posting lifecycles. A warehouse-bearing, source-linked Credit Memo restores the original outbound FIFO/Specific-ID evidence rather than today's cost. One governed conversion authority now carries QT→SO, SO→DR/SI and DR→SI with partial/concurrent quantities, correction reopening and visible trace; exact delivery-cost snapshots preserve COGS and clearing through invoice splits. **Debit Memo remains a finished screen over a table the governance register classifies as an unimplemented future module.** |
+| **Roadmap** | Close the dedicated AR-to-control guard and remaining correction/reporting/source-review Product-DoD evidence. Preserve the locally proven Sales conversion contract; extend the engine to Purchasing only under separately defined relationship semantics. |
 
 ---
 
@@ -750,7 +750,7 @@ that status.
 | **Maturity** | **M4 — PARTIAL WORKFLOW** |
 | **Certification** | Certification module #5 — **In Progress.** |
 | **Implementation** | One private costing authority receives, issues, returns, transfers and reverses inventory; the Posting Engine remains the sole GL authority. Weighted Average preserves historical issue/return cost. FIFO persists exact layer allocations and restores those allocations on reversal. Specific Identification requires a serial or lot identity, validates tenant/item/warehouse/availability at the database, costs the selected identity and restores that same identity. Receipt cancellation refuses live billing or consumed layers, then removes the exact source layer after downstream correction. Goods Issue, Stock Adjustment, Stock Transfer, Physical Count, Receiving Report, Delivery Receipt, direct Sales Invoice, Cash Sale, Cash Purchase, Customer Return/Credit Memo and Purchase Return use the shared authority. Item/default method changes fail closed after stock, movements or layers exist. Tests `135`–`137` and the committed inventory lifecycle prove production entry points, exact COGS/layers/identity, concurrency, correction and valuation reconciliation. Inventory remains **M4 and uncertified**: local proof is not hosted/browser/UAT/module certification, and IA-5/ECC remains frozen at zero consumers. |
-| **Roadmap** | Preserve the three-method production contract and its reconciliation guards; complete full sales document conversion and broader module Product-DoD evidence. Resume IA-5/ECC only under separate owner authority for a demonstrated backdated economic-replay requirement. |
+| **Roadmap** | Preserve the three-method production contract and its reconciliation guards; complete broader module Product-DoD evidence. Resume IA-5/ECC only under separate owner authority for a demonstrated backdated economic-replay requirement. |
 
 ---
 
@@ -886,7 +886,7 @@ or absent workflow is never implied by a route, table, or test.
 | **Dashboard** | Reporting/Reconciliation; all source modules; no posting | **M4 — PARTIAL WORKFLOW** | No owning certification scope / **No** | Ownership and required KPI contract undecided | No transaction origination. Widget grid, roll-up and export are deferred. |
 | **Setup** | Permissions, Audit, Number Series, COA; opening cut-over posts through the Kernel | **M7 — GOVERNED** | Setup & Master Data scope **Blocked** / **No** | Operated backup/offsite and automated browser evidence | User administration belongs to Administration & Security; opening cut-over needs real onboarding/UAT proof. |
 | **Master Data** | Permissions, Audit, Approval, COA | **M7 — GOVERNED** | Setup & Master Data scope **Blocked** / **No** | Same evidence gates; some extension masters have no UI | Payroll processing excluded. Surface contacts/groups/UOM extensions; validate supplier-bank/import browser paths. |
-| **Sales & Receivables** | Number Series, Posting, COA, Dimension, AR, Payment, Approval, Correction, Tax Engine, production Inventory Costing | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Full document conversion and AR-to-control/module Product-DoD proof remain open | Foreign currency unsupported. All outbound entry points use the shared three-method authority; Delivery Receipt correction, linked-invoice no-double-relief and historical-cost Customer Return are proven locally. Period close is implemented. |
+| **Sales & Receivables** | Number Series, Posting, COA, Dimension, AR, Payment, Approval, Correction, Tax Engine, production Inventory Costing, Document Conversion | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | AR-to-control and remaining module-wide Product-DoD proof remain open | Foreign currency unsupported. The full Sales conversion chain is locally proven with partial/concurrent quantities, correction and trace. All outbound entry points use the shared three-method authority; Delivery Receipt correction and historical-cost Customer Return are proven locally. Period close is implemented. |
 | **Purchasing & Payables** | Number Series, Posting, COA, Dimension, AP, Payment, Approval, Correction, Tax Engine | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Price-variance policy, supplier-debit integration and broad Product-DoD proof remain open | Foreign currency unsupported. PO → RR → Bill quantity control and correction are proven; Purchase Return removes the exact receipt cost through Inventory Control. |
 | **Inventory** | Posting, Dimension, Purchasing/Sales, production Inventory Costing; dormant IA-5/ECC is separate | **M4 — PARTIAL WORKFLOW** | In Progress / **No** | Broad module Product-DoD, browser/UAT, hosted parity and certification remain open | Weighted Average, FIFO and Specific Identification are built, reachable, exercised and proven locally for the intended current lifecycle; serial/lot identity, exact allocations/reversals, concurrency and reconciliation are guarded by `135`–`137` plus the committed lifecycle. IA-5/ECC stays frozen at zero consumers. Landed cost remains future. |
 | **Banking & Treasury** | Payment, Posting, Period, Reversal, Reporting | **M3 — UI SKELETON** | Not Started / **No** | Only `bank_accounts` holds data. `check_vouchers`, `fund_transfers`, `bank_reconciliations`, `petty_cash_vouchers`, `bank_adjustments` are **all empty**; posting functions exist but have never produced a journal. PAD-004 unresolved | v2 by Delivery Plan decision, except Check Voucher for the Cash Disbursements Book. No production banking claim. |
@@ -931,7 +931,7 @@ repository on 2026-08-02.
 | 4 | **AP Engine** | Payable position and ageing; visible only through AP surfaces | Purchasing, Accounting, Reports | **M4 PARTIAL WORKFLOW; not Certified** | `vw_ap_aging`, `vw_supplier_ledger`; as-of ageing test `050`; 36 bills / 5 payment vouchers posted | Prove every scenario to AP control and corrections. Not the Purchasing module. |
 | 5 | **Payment and Application Engine** | Applies receipts/payments and tracks residuals; surfaced inside transactions | Sales, Purchasing, Banking, AR/AP | **M4 PARTIAL WORKFLOW; not Certified** | Receipt and Payment Voucher post; vendor-credit application controls tested; settlement authority test `109` | Over-application, unapplied cash, reversal and concurrency proof. Not a Banking module. |
 | 6 | **Tax Engine** | One authoritative PH-tax calculator; hidden | Sales, Purchasing, Compliance, Posting boundary | **M5 IMPLEMENTED; not Certified** | `fn_calculate_tax` is the only function in the schema performing tax arithmetic (test `090` assertion 6, was 11 functions). All **eleven** former calculators migrated. `fn_resolve_vat_code` is the only place a VAT code's validity is decided. Guards `117` (31), `118` (25) and `124` (37) | **PAD-001 decided 2026-08-03.** VAT (both bases, effective-dated since `20260803000002`), **percentage tax** (`20260804000001`, test `124`) and ATC withholding. FWT is 🔮 out of scope (PAD-015) and has no tax kind. The company tax profile is not yet effective-dated (Backlog 11). A calculator is not filing capability; do not confuse it with Tax Setup/Compliance. |
-| 7 | **Document Conversion Engine** | Preserves source chains and remaining quantities; hidden | Sales, Purchasing, Inventory | **M1 ARCHITECTURE; Not Started** | **Zero conversion or copy-forward functions** among 437 | Quote → SO → SI carry-forward absent; nothing prevents double conversion. Not the document lifecycle/workspace framework. |
+| 7 | **Document Conversion Engine** | Preserves source chains and remaining quantities; hidden | Sales, Purchasing, Inventory | **M5 WORKFLOW COMPLETE LOCALLY; not Certified** | `document_relationships`, `fn_convert_sales_document`, two trace/progress views, test `138` and a 33-check committed lifecycle | Full Sales QT→SO→DR/SI chain is governed, partial and concurrency-safe. Purchasing rollout, certification, hosted parity and browser UAT remain open. Not the document lifecycle/workspace framework. |
 | 8 | **Number Series Engine** | Unique, ATP-bounded document numbers; setup surface only | About 25 document types | **M8 CERTIFIED** | 264 series configured, 218 CAS number issuances, 1 governed void event; cert test `079` | Future explicit provisioning beyond SI/CS/OR; engine certification does not certify document workflows. |
 | 9 | **Approval and Workflow Engine** | Governed approval routing and SOD; config/inbox surfaces | Imports now; future transactions | **M4 PARTIAL WORKFLOW; not Certified** | 2 workflows and 2 steps defined; **`approval_requests` = 0 and `approval_instances` = 0 — never executed.** No notification model exists anywhere in the product | Routing cannot notify an approver. PAD-013 undecided. Approval and Workflow are aliases for one engine. |
 | 10 | **Period Lock and Closing Engine** | Posting-period control and close lifecycle; period surfaces | All posting modules, Accounting | **M4 PARTIAL WORKFLOW; not Certified** | 60 fiscal periods across 5 fiscal years; financial-close readiness test `053` | Year-end close and audited reopening unproven. Not the Accounting module. |
@@ -1245,15 +1245,34 @@ a record and there is no file workflow behind it.
 
 ---
 
-## 4.15 Document Conversion Engine · ⬜ **Planned — not started**
+## 4.15 Document Conversion Engine · 🟡 **M5 locally — not Certified**
 
 **Business meaning.** A quotation becomes an order, an order becomes a delivery, a
 delivery becomes an invoice — carrying quantities, prices, and references forward
 without rekeying, and without allowing a document to be converted twice.
 
-**Status.** **Not started.** This is precisely why Quotation, Sales Order, and
-Delivery Receipt are only partially implemented: they can each be created, but the
-chain between them is unverified. The same applies on the purchasing side.
+**Status.** **Implemented locally for the full Sales chain on 2026-08-08.**
+`document_relationships` is the quantity-grained lineage authority. The one
+public converter locks source headers and lines, derives target commercial
+values at the server and supports QT→SO, SO→DR, service-only SO→SI and DR→SI.
+Inventory Sales Orders must be delivered before billing. Draft targets reserve
+quantity immediately; reject/cancel/void reverses the relationship; the final
+quantity is serialized so concurrent attempts admit one winner.
+
+Two security-invoker views expose remaining quantity and the end-to-end trace,
+including SI→Official Receipt settlement. Commercial fields on converted drafts
+are immutable, while Delivery Receipt operational identity remains governable.
+For partial DR billing, the relationship stores an exact cost snapshot under the
+source-line lock; the final invoice absorbs rounding residue, so COGS and Goods
+Delivered Not Invoiced clear exactly across multiple invoices and correction.
+
+**Evidence boundary.** Test `138` passes 42 assertions, eight frontend contract
+tests prove the supported UI calls, and `verify:sales-conversion-lifecycle`
+passes 33 separately committed checks across all three inventory methods,
+partial/multiple conversion, correction, one-winner concurrency, settlement and
+GL/tax/inventory reconciliation. This earns **M5 in the local governed
+environment**, not certification or production readiness. No hosted deployment,
+browser UAT, pilot use or purchasing-conversion rollout is claimed.
 
 ---
 
@@ -1419,7 +1438,7 @@ evidence for one, this document says so rather than inventing it.
 | --- | --- |
 | **Validation Engine** | **Does not exist as an engine.** Validation is real and enforced, but it is distributed: each document-save routine re-implements its own rules, and master-data rules live in a seeded permission and segregation-of-duties model. There is no central validation authority and none is registered. This is the same structural weakness as the seven tax calculators, and it is the reason the eight "Document & Validation" setup screens are permanently disabled — the rules exist but nothing can configure them. |
 | **Notification Engine** | **Does not exist and is not planned.** An exhaustive search of the entire codebase returns **zero** references to notifications, alerts, or messaging of any kind. PXL sends no email, produces no in-app notification, and has no notification data model. Approval routing works without notifying anyone. This should be recorded as a genuine product gap, not treated as an oversight in this document. |
-| **Document Engine** | **Not a registered engine.** Two real things are sometimes called this. The first is the **Document Lifecycle framework** — the draft → approved → posted → voided model plus the standard transaction workspace with its fourteen required tabs — which is infrastructure shared by every module, not an engine. The second is the **Document Conversion Engine** (§4.15), which is registered and not started. |
+| **Document Engine** | **Not a registered engine.** Two real things are sometimes called this. The first is the **Document Lifecycle framework** — the draft → approved → posted → voided model plus the standard transaction workspace with its fourteen required tabs — which is infrastructure shared by every module, not an engine. The second is the **Document Conversion Engine** (§4.15), which is registered and implemented locally for the Sales chain. |
 | **Workflow Engine** | Not separate. It is the same engine as Approval (§4.8). |
 
 ---
@@ -1462,7 +1481,7 @@ becoming a navigation node.
 | AP | Shared Engine | Through ageing/ledger | Purchasing/Accounting surfaces | Purchasing Accounting | Purchasing, Accounting, Reports | M4 | In Progress |
 | Payment and Application | Shared Engine | Through payment documents | Transaction surfaces | Treasury / AR/AP | Sales, Purchasing, Banking | M4 | In Progress |
 | Attachment and Document Traceability | Shared Engine | Trace yes; file flow absent | Trace currently unlisted | Audit / Platform | Transactions, reports | M4 | In Progress |
-| Document Conversion | Shared Engine | No | No | Transaction Framework | Sales, Purchasing, Inventory | M1 | Not Started |
+| Document Conversion | Shared Engine | No | No | Transaction Framework | Sales, Purchasing, Inventory | M5 | Implemented locally for Sales; not Certified |
 | Currency | Shared Engine | Setup label only | Setup surface only | Accounting Architecture | Future transaction modules | M1 | Deferred |
 | Tax | Shared Engine | No | No | **Owner decision required** | Sales, Purchasing, Compliance | M0 | Absent; architecture required |
 | Backup and Recovery | Governance Infrastructure | No | No | Operations (unassigned) | Whole product | M0 | Not Started |
@@ -1511,8 +1530,8 @@ SALES & RECEIVABLES
    → Number Series Engine · Posting Engine · Dimension Engine
    → COA Engine (account determination)
    → Approval Engine (configured but unused for sales)
-   → Document Conversion Engine (NOT STARTED — this is why the quote-to-invoice
-     chain is unproven)
+   → Document Conversion Engine (M5 locally — Sales chain and trace proven;
+     not certified or hosted)
    → Tax calculation (NO ENGINE — performed inside the save routines)
    → AR Engine · Payment & Application Engine
    (depended on by: Compliance VAT/withholding · BIR sales books · Reports)
@@ -1520,7 +1539,7 @@ SALES & RECEIVABLES
 PURCHASING & PAYABLES
    → Suppliers · Items · Payment Terms · Warehouses
    → Number Series · Posting · Dimension · COA Engines
-   → Document Conversion Engine (NOT STARTED)
+   → Document Conversion Engine (Sales authority exists; purchasing rollout not implemented)
    → Tax calculation (NO ENGINE)
    → AP Engine · Payment & Application Engine
    → INVENTORY (receiving increases stock)
@@ -1630,7 +1649,7 @@ of its parts.
 | **Setup** | **M7 — GOVERNED** | Its combined certification review is complete with 14 Pass, 3 Partial, 2 Blocked, 4 N/A and 0 Fail; the remaining blockers are operational/browser evidence, so it is not M8. |
 | **Master Data** | **M7 — GOVERNED** | Same review and evidence boundary as Setup; required masters are substantially exercised, but the combined certification scope remains Blocked. |
 | **Accounting** | **M4 — PARTIAL WORKFLOW** | Journals, ledgers, trial balance and reviews work; schedules, year-end close, consumer-wide posting invariants and module reconciliation remain incomplete. |
-| **Sales & Receivables** | **M4 — PARTIAL WORKFLOW** | Posting and historical-cost Customer Return lifecycles work; full document conversion, source review beyond Sales Invoice, attachments and module-wide reconciliation remain open. |
+| **Sales & Receivables** | **M4 — PARTIAL WORKFLOW** | Posting, historical-cost Customer Return and the full Sales conversion lifecycle work locally; source review beyond Sales Invoice, attachments, AR control and module-wide reconciliation remain open. |
 | **Purchasing & Payables** | **M4 — PARTIAL WORKFLOW** | Receiving, exact quantity matching/correction and Purchase Return work locally; price variance, supplier-debit integration and module-wide proof remain open. |
 | **Inventory** | **M4 — PARTIAL WORKFLOW** | Weighted Average, FIFO and Specific Identification plus real Goods Issue/adjustment/transfer/count entry points reconcile locally. Browser/hosted operation, broad Product-DoD and certification remain open. |
 | **Compliance** | **M4 — PARTIAL WORKFLOW** | Posted-data reviews and books work in part; the Tax Engine now exists, but persisted statutory artifacts are still mainly deferred. |
@@ -1645,11 +1664,11 @@ of its parts.
 | Level | Canonical business modules | Dashboard surface | Certification engines |
 | --- | ---: | ---: | ---: |
 | M0 | 0 | 0 | 2 |
-| M1 | 0 | 0 | 2 |
+| M1 | 0 | 0 | 1 |
 | M2 | 0 | 0 | 1 |
 | M3 | 2 | 0 | 0 |
 | M4 | 7 | 1 | 9 |
-| M5 | 0 | 0 | 0 |
+| M5 | 0 | 0 | 1 |
 | M6 | 0 | 0 | 0 |
 | M7 | 2 | 0 | 1 |
 | M8 | 0 | 0 | 4 |
@@ -1739,12 +1758,13 @@ Purchasing and Accounts Payable · Inventory · Reports and Financial Statements
 **Modules — Not Started (4):** Banking and Treasury · Fixed Assets · Accounting
 Schedules · Administration and Security.
 
-**Engines — In Progress (10):** Inventory Accounting · AR · AP · Payment and
+**Engines — In Progress (11):** Inventory Accounting · AR · AP · Payment and
 Application · Approval and Workflow · Period Lock and Closing · Reversal, Void and
 Correction · Reporting and Reconciliation · Attachment and Traceability · Chart of
-Accounts.
+Accounts · Document Conversion. The last is M5 locally for Sales but remains
+uncertified.
 
-**Engines — Not Started (2):** Document Conversion · Backup and Recovery.
+**Engines — Not Started (1):** Backup and Recovery.
 **Engines — Deferred (1):** Currency.
 
 ## 7.7 Future scopes — authorised and unauthorised
@@ -1927,7 +1947,7 @@ change without rewriting the earlier record.
 | **Split** | Assets parent → Inventory, Banking & Treasury, Fixed Assets | The three domains have separate feature gates, lifecycles, owners and certification phases. |
 | **Merged** | EWT/FWT masters → ATC Codes; Services → Item Catalog; five approval matrices → one Approval and Workflow Engine; duplicate ledgers/registers → shared surfaces | One governed authority is simpler and reduces contradictory configuration. |
 | **SUPERSEDED** | Admission-order “deterministic” Inventory chronology; EWT/FWT code masters; General Ledger Entry transaction name | Executed evidence or a stronger governed design proved the old authority or name inadequate. Historical records remain intact. |
-| **Deferred** | Banking/Fixed Asset workflows, schedules, returns, statutory generators, multi-currency, document conversion, IA-6 costing | Routes or foundations may exist, but end-to-end supported workflows and authority do not. |
+| **Deferred** | Banking/Fixed Asset workflows, schedules, returns, statutory generators, multi-currency, purchasing-side conversion, IA-6 costing | Routes or foundations may exist, but end-to-end supported workflows and authority do not. Sales conversion is implemented locally. |
 | **Removed from canonical product tree** | Assets parent; duplicate menu concepts; Payroll as a current ERP module | The parent and duplicates misstate ownership; Payroll is a future separate product. No historical file is deleted. |
 | **Newly introduced** | Shared-engine layer, sealed Posting doorway and Kernel, certification program, coverage governance, source trace, IA-5/ECC chronology foundation, guided provisioning | The repository developed load-bearing architecture the menu-only blueprint could not express. |
 | **Still owed** | CAS registration authority, depreciation profiles, adjusted/post-closing TB, configurable dashboard, decided rule configuration | The original blueprint identified valid product needs that implementation never completed. Opening balances and supplier bank details moved to current product on 2026-08-02. |
@@ -2085,7 +2105,7 @@ product module 8. That is an evidence boundary, not a second product taxonomy.
 | 13 | Reporting and Reconciliation | In Progress | Only the reports it feeds |
 | 14 | Attachment and Traceability | In Progress | Tracing exists but has **no menu entry** |
 | 15 | Inventory Accounting (IA-5/ECC) | In Progress — **dormant** | **Never** |
-| 16 | Document Conversion | Not Started | No |
+| 16 | Document Conversion | M5 locally for Sales; not Certified | No |
 | 17 | Currency | **Deferred** | Only its currency list |
 | 18 | Backup and Recovery | Not Started | No |
 | 19 | **Tax Engine** | 🟡 **Implemented, not certified** | No |

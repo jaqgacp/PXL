@@ -308,8 +308,9 @@ are right is a return that changes after submission.
    **Goods Delivered Not Invoiced** (`SALES_DELIVERY_CLEARING`, the outbound
    mirror of the `PURCHASE_CLEARING` key receiving already uses); the Sales
    Invoice recognises that cost as COGS and clears it **instead of relieving the
-   stock a second time**, keyed on the line's `source_document_type = 'DR'` link,
-   with a partial unique index making a delivery line impossible to bill twice.
+   stock a second time**, keyed on the line's `source_document_type = 'DR'` link.
+   The later Sales conversion authority replaced the whole-line unique index
+   with locked remaining-quantity allocation, allowing correct partial billing.
    A Customer Return puts the goods back through `fn_receive_inventory` — the
    same inbound path receiving uses — at the cost they were issued at, reversing
    COGS. A credit-memo line with no warehouse remains a price adjustment and
@@ -324,15 +325,22 @@ are right is a return that changes after submission.
    journal's `reference_doc_type` is a foreign key into it) and
    `fn_save_sales_invoice` accepting `DR` as a governed line source. Billing a
    delivery is driven from the Delivery Receipt ("Bill This Delivery"), which
-   creates a draft invoice with the delivery links already in place — an
-   unlinked invoice for delivered goods would relieve the stock twice, so that
-   is deliberately the only supported path until Document Conversion (item 5)
-   generalises it.
+   creates a draft invoice with the delivery links already in place. The
+   completed Document Conversion item now generalises that relationship; the
+   earlier unlinked delivered-stock refusal remains defence in depth.
 4. Evidence the remaining **critical reconciliations (currently 2 of 9)**. VAT and
    withholding already reconcile at zero variance — nearly free. Percentage tax
    was evidenced with item 7a.
-5. **Document Conversion**, minimally: carry quantities forward, prevent double
-   conversion. This is what makes quote → invoice real.
+5. ✅ **Sales Document Conversion — DONE LOCALLY 2026-08-08.** Migration
+   `20260808000007_sales_document_conversion.sql`, test `138`, eight frontend
+   source-contract tests and the 33-check committed lifecycle implement QT→SO,
+   SO→DR/SI and DR→SI with server-derived commercial values, draft reservation,
+   partial and concurrency-safe remaining quantities, ordered reversal and
+   visible source/target trace. Inventory orders must pass through delivery;
+   service orders may invoice directly. Exact DR cost snapshots make partial
+   billing and correction clear Goods Delivered Not Invoiced without cost drift.
+   This is complete locally for Sales, not certified or hosted, and does not
+   claim purchasing conversion.
 6. Surface the accounting trace in the menu (complete, currently unreachable).
 7. ✅ **Financial statement presentation — DONE 2026-08-03.** Migration
    `20260803000005_financial_statement_presentation.sql`, test `121` (25
@@ -694,7 +702,7 @@ presentation, the BIR filing artifacts, and proving approval routing.
 | Phase 2 — operational safety | days, not weeks (owner action only) | **High** — engineering is complete and proven |
 | Phase 3 — onboardable | built locally; hosted/UAT proof outstanding | **Medium** |
 | Phase 4 — Tax Engine (calculator only) | ✅ done 2026-08-03, incl. effective-dated VAT | — — the estimate was 4–6 weeks; the callers turned out to be enumerable and the outputs already pinned by test `090`, so the migration was mechanical once the census was believed over the prose. VAT effective-date resolution followed the same day: the version machinery already existed and only the resolution path had to be routed through it |
-| Phase 5 — flows, then statements, then filing | statements ✅ 2026-08-03; filing engine and export ✅ 2026-08-04; **the two canonical flows remain the open item** | **Low** — see below |
+| Phase 5 — flows, then statements, then filing | statements ✅ 2026-08-03; filing engine/export ✅ 2026-08-04; Sales conversion ✅ locally 2026-08-08; **module Product-DoD and the complete purchasing flow remain open** | **Low** — see below |
 | Phase 6 — pilot hardening | 3–4 weeks | **Low** — no browser lane exists yet to calibrate against |
 | **To pilot** | **previously ~4 months; now unestimated — see below** | — |
 | Phase 7 — pilot | one quarter parallel run | **High** — fixed by calendar |

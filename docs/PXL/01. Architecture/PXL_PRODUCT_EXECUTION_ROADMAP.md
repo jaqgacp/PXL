@@ -68,10 +68,11 @@ production-ready**.
 > credits in all three trading companies. Inventory could not tie out at ₱0.00 if
 > the claim were true. **Every outbound entry point relieves stock as of
 > 2026-08-03** — Cash Sale (test `119`), Delivery Receipt and Customer Return
-> (test `120`) joined Sales Invoice, all through the same costing path. What *is*
-> open on the sales side: document conversion beyond the delivery-to-invoice
-> link. Delivery Receipt cancellation and all three production costing methods
-> are now proven locally by tests `131`, `135`–`137` and committed lifecycles.
+> (test `120`) joined Sales Invoice, all through the same costing path. Governed
+> QT→SO→DR→SI conversion, including partial/concurrent quantity, trace and exact
+> partial-billing cost, is now also complete locally. Delivery Receipt
+> cancellation, all three production costing methods and conversion are proven
+> by tests `131`, `135`–`138` and committed lifecycles.
 
 The visible product is ahead of runtime in **26** deferred routes, **17**
 navigation labels with no page, and whole Banking/Fixed Asset/compliance-generator
@@ -82,9 +83,9 @@ source-reviewed workspace slice: **1 of 37** registry entries.
 
 The dependency-forced order of outcomes is (§9.7):
 
-1. **Customer-to-Cash** — document conversion, an AR-to-control guard and a
-   fresh-data sales end-to-end test; cash-sale and delivery posting closed
-   2026-08-03;
+1. **Customer-to-Cash** — Sales document conversion and its committed fresh-data
+   lifecycle are closed locally; an AR-to-control guard and full Product-DoD
+   source-to-statements-to-tax proof remain;
 2. **Procure-to-Pay** — exact quantity matching and return costing are closed;
    price-variance policy, supplier-debit integration, AP reconciliation and the
    complete source-to-books proof remain;
@@ -199,7 +200,7 @@ excellent transaction and one material empty lifecycle remains M4 or below.
 | --- | --- | --- |
 | Setup | **M7** | Formal combined review executed; 14 Pass, 3 Partial, 2 Blocked, 4 N/A, 0 Fail. Not M8 because backup/restore and browser evidence remain open. |
 | Master Data | **M7** | Same review; major masters exercised and governed; certification scope still Blocked. |
-| Sales & Receivables | **M4** | SI, Cash Sale, Delivery Receipt and Customer Return all move inventory and COGS correctly (tests `054`, `119`, `120`). Held at M4 by: zero general document-conversion functions, no AR-to-control reconciliation guard, and no Quotation→SO→SI fresh-data proof. |
+| Sales & Receivables | **M4** | SI, Cash Sale, Delivery Receipt and Customer Return move inventory/COGS correctly; full Sales conversion is locally proven by `138` and its committed lifecycle. Held at M4 by no dedicated AR-to-control guard, incomplete module-wide correction/reporting proof, and no single source-to-statements-to-tax Product-DoD run. |
 | Purchasing & Payables | **M4** | PO → RR → Bill is proven from first principles; exact receipt/bill quantity admission and ordered RR correction are concurrency-safe. Purchase Return is exercised through exact receipt-layer costing. Held at M4 by price-variance policy, supplier-debit integration and broad Product-DoD proof. |
 | Inventory | **M4** | Inventory ties to control at **₱0.00**; Weighted Average, FIFO and Specific Identification are built, reachable, exercised and proven locally across production writers, exact reversal/return, transfer, identity selection and a concurrent serial race (`135`–`137` plus the committed lifecycle). Held at M4 by broad workflow/browser/hosted/certification evidence, not by a costing-method restriction. |
 | Banking & Treasury | **M3** | Only `bank_accounts` holds data. `check_vouchers`, `fund_transfers`, `bank_reconciliations`, `petty_cash_vouchers`, `bank_adjustments` are **all empty**; their posting functions have never produced a journal. |
@@ -220,7 +221,7 @@ excellent transaction and one material empty lifecycle remains M4 or below.
 | AP | **M4** | As-of engine works; full scenario reconciliation not Certified. |
 | Payment & Application | **M4** | Normal applications work; over-application/unapplied/reversal/concurrency scope incomplete. |
 | Tax | **M5** | Implemented 2026-08-03 (PAD-001). `fn_calculate_tax` is the only tax arithmetic in the schema; all **eleven** former calculators migrated. VAT, percentage tax and EWT/CWT are current scope. Not certified. |
-| Document Conversion | **M1** | **Zero conversion or copy-forward functions** among 437. Implementation not started. |
+| Document Conversion | **M5** | Implemented locally for the full Sales chain by one server-side conversion authority, quantity relationships and trace; test `138` plus the 33-check committed lifecycle prove QT→SO→DR/SI→OR, partial/concurrent allocation and correction. Not certified, hosted or rolled out to Purchasing. |
 | Number Series | **M8** | Certified 2026-07-23. 264 series, 218 CAS issuances. |
 | Approval & Workflow | **M4** | 2 workflows defined; **`approval_requests` = 0, `approval_instances` = 0 — never executed.** No notification model exists anywhere in the product. |
 | Period Lock & Closing | **M4** | Monthly/quarterly close, year-end close, controlled reopening and retained-earnings roll-forward are implemented and guarded; no real-books operation. |
@@ -573,7 +574,7 @@ it — a reference to that document's numbering, not a second scheme.
 | AR Engine | 🟡 Partial | Customer-to-Cash | Phase 5 |
 | AP Engine | 🟡 Partial | Procure-to-Pay | Phase 5 |
 | Payment & Application | 🟡 Partial | Customer-to-Cash and Procure-to-Pay | Phase 5 |
-| Document Conversion | 🔴 Zero functions | **Customer-to-Cash** | Phase 5 |
+| Document Conversion | ✅ **M5 local Sales workflow; not certified** | **Customer-to-Cash** | Phase 5 |
 | Period Lock & Closing | 🟡 Governed period/quarter/year close and reopen shipped 2026-08-03; never operated over real books | Period Close | Phase 5 |
 | Reversal, Void & Correction | 🟡 Partial | Period Close | Phase 5 |
 | Reporting & Reconciliation | 🟡 3 of 9 reconciliations, all at 0.00; comparatives and basic notes shipped 2026-08-03 | Period Close | Phase 5 |
@@ -684,10 +685,13 @@ hosted parity and browser evidence.
   stock into Goods Delivered Not Invoiced and the invoice clears it instead of
   relieving twice; Customer Return puts stock and cost back (test `120`). Both
   are fresh-data proofs, not seed-backed.
-- **Blocking the outcome:** **zero general document-conversion functions** (the
-  delivery-to-invoice link is the only one, and it is deliberately the only
-  supported billing path); no AR-to-control reconciliation guard; and no
-  Quotation → Sales Order → Sales Invoice fresh-data proof.
+- **Closed 2026-08-08:** one Sales conversion authority, remaining-quantity
+  relationships and user-visible trace now govern QT→SO, SO→DR/SI and DR→SI.
+  Test `138` plus the 33-check committed fresh-data lifecycle prove partial and
+  multiple conversion, direct services, required inventory delivery,
+  correction, concurrency and QT→SO→DR→SI→OR accounting/tax closure.
+- **Blocking the outcome:** no dedicated AR-to-control reconciliation guard and
+  no single full source-to-statements-to-tax Product-DoD proof.
 
 ## 9.7.4 Procure-to-Pay · 🟡 IN PROGRESS
 

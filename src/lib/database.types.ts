@@ -5575,6 +5575,100 @@ export type Database = {
           },
         ]
       }
+      document_relationships: {
+        Row: {
+          branch_id: string
+          company_id: string
+          converted_cost: number | null
+          converted_quantity: number
+          created_at: string
+          created_by: string | null
+          id: string
+          relationship_type: string
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+          source_cost_snapshot: number | null
+          source_document_id: string
+          source_document_type: string
+          source_line_id: string
+          source_quantity_snapshot: number
+          status: string
+          target_document_id: string
+          target_document_type: string
+          target_line_id: string
+          updated_at: string
+        }
+        Insert: {
+          branch_id: string
+          company_id: string
+          converted_cost?: number | null
+          converted_quantity: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          relationship_type?: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          source_cost_snapshot?: number | null
+          source_document_id: string
+          source_document_type: string
+          source_line_id: string
+          source_quantity_snapshot: number
+          status?: string
+          target_document_id: string
+          target_document_type: string
+          target_line_id: string
+          updated_at?: string
+        }
+        Update: {
+          branch_id?: string
+          company_id?: string
+          converted_cost?: number | null
+          converted_quantity?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          relationship_type?: string
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          source_cost_snapshot?: number | null
+          source_document_id?: string
+          source_document_type?: string
+          source_line_id?: string
+          source_quantity_snapshot?: number
+          status?: string
+          target_document_id?: string
+          target_document_type?: string
+          target_line_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "document_relationships_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_relationships_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "document_relationships_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
       employees: {
         Row: {
           address_line: string | null
@@ -19989,6 +20083,51 @@ export type Database = {
           },
         ]
       }
+      vw_sales_document_conversion_progress: {
+        Row: {
+          branch_id: string | null
+          company_id: string | null
+          completed_quantity: number | null
+          converted_quantity: number | null
+          description: string | null
+          item_id: string | null
+          line_number: number | null
+          original_quantity: number | null
+          remaining_quantity: number | null
+          source_document_id: string | null
+          source_document_number: string | null
+          source_document_type: string | null
+          source_line_id: string | null
+          source_status: string | null
+          target_document_type: string | null
+        }
+        Relationships: []
+      }
+      vw_sales_document_trace: {
+        Row: {
+          amount: number | null
+          branch_id: string | null
+          company_id: string | null
+          created_at: string | null
+          quantity: number | null
+          relationship_id: string | null
+          relationship_status: string | null
+          relationship_type: string | null
+          reversal_reason: string | null
+          reversed_at: string | null
+          source_document_id: string | null
+          source_document_number: string | null
+          source_document_type: string | null
+          source_line_id: string | null
+          source_status: string | null
+          target_document_id: string | null
+          target_document_number: string | null
+          target_document_type: string | null
+          target_line_id: string | null
+          target_status: string | null
+        }
+        Relationships: []
+      }
       vw_sales_invoice_register: {
         Row: {
           branch_id: string | null
@@ -20939,6 +21078,14 @@ export type Database = {
         Args: { p_schedule_id: string }
         Returns: undefined
       }
+      fn_cancel_sales_order: {
+        Args: { p_reason: string; p_sales_order_id: string }
+        Returns: undefined
+      }
+      fn_cancel_sales_quotation: {
+        Args: { p_quotation_id: string; p_reason: string }
+        Returns: undefined
+      }
       fn_cas_issuance_document_date: {
         Args: { p_source_id: string; p_source_table: string }
         Returns: string
@@ -21109,6 +21256,16 @@ export type Database = {
           qty_consumed: number
           unit_cost: number
         }[]
+      }
+      fn_convert_sales_document: {
+        Args: {
+          p_header: Json
+          p_lines: Json
+          p_source_document_id: string
+          p_source_document_type: string
+          p_target_document_type: string
+        }
+        Returns: string
       }
       fn_create_amortization_schedule: {
         Args: {
@@ -22225,6 +22382,10 @@ export type Database = {
         }
         Returns: string
       }
+      fn_refresh_sales_order_conversion: {
+        Args: { p_sales_order_id: string }
+        Returns: undefined
+      }
       fn_register_fixed_asset: { Args: { p_data: Json }; Returns: string }
       fn_reject_approval_request: {
         Args: {
@@ -22372,6 +22533,10 @@ export type Database = {
         Args: { p_document_type: string; p_lock?: boolean; p_source_id: string }
         Returns: Json
       }
+      fn_resolve_sales_invoice_delivered_cost: {
+        Args: { p_sales_invoice_line_id: string }
+        Returns: number
+      }
       fn_resolve_vat_code: {
         Args: {
           p_as_of?: string
@@ -22389,6 +22554,14 @@ export type Database = {
         }
       }
       fn_return_inventory: { Args: { p_data: Json }; Returns: Json }
+      fn_reverse_document_relationships: {
+        Args: {
+          p_reason: string
+          p_target_document_id: string
+          p_target_document_type: string
+        }
+        Returns: undefined
+      }
       fn_reverse_inventory_issue: {
         Args: {
           p_inventory_transaction_id: string
@@ -22634,6 +22807,10 @@ export type Database = {
       fn_seed_company_uom: { Args: { p_company_id: string }; Returns: number }
       fn_send_supplier_debit_memo: {
         Args: { p_sdm_id: string }
+        Returns: undefined
+      }
+      fn_set_converted_sales_order_decision: {
+        Args: { p_decision: string; p_sales_order_id: string }
         Returns: undefined
       }
       fn_ship_purchase_return: {
@@ -22901,6 +23078,15 @@ export type Database = {
       fn_twa_ewt_atc_asof: {
         Args: { p_document_date?: string; p_line_kind: string }
         Returns: string
+      }
+      fn_update_converted_delivery_details: {
+        Args: {
+          p_dr_id: string
+          p_header: Json
+          p_lines: Json
+          p_status?: string
+        }
+        Returns: undefined
       }
       fn_update_form_2307_issued_status: {
         Args: {

@@ -6,6 +6,7 @@ import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
 import { InventoryIdentitySelect } from '@/components/InventoryIdentitySelect'
+import { SalesDocumentTrace } from '@/components/SalesDocumentTrace'
 
 // ── Types ─────────────────────────────────────────────────────
 type DRStatus = 'draft' | 'in_transit' | 'delivered' | 'cancelled'
@@ -25,6 +26,7 @@ type DRLine = {
   inventory_cost_layer_id: string; lot_number: string; serial_number: string
   // Stock leaves a place. A delivery of an inventory item cannot post without it.
   warehouse_id: string
+  original_quantity?: number; converted_quantity?: number; remaining_quantity?: number
 }
 
 type CustomerRef = { id: string; registered_name: string; address: string | null }
@@ -41,6 +43,7 @@ const newLine = (idx = 0): DRLine => ({
   item_id: '', description: '', quantity: 1, uom_id: '', lot_serial_no: '',
   inventory_cost_layer_id: '', lot_number: '', serial_number: '',
   warehouse_id: '',
+  original_quantity: 1, converted_quantity: 0, remaining_quantity: 1,
 })
 
 
@@ -73,6 +76,7 @@ export default function DeliveryReceiptsPage() {
   const [editDoc, setEditDoc] = useState<DR | null>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [convertedDocument, setConvertedDocument] = useState(false)
 
   const [fCustomer, setFCustomer] = useState('')
   const [fCustomerName, setFCustomerName] = useState('')
@@ -155,15 +159,23 @@ export default function DeliveryReceiptsPage() {
     setFCustomerName(so.customer_name_snapshot)
     const cust = customers.find(c => c.id === so.customer_id)
     if (cust) setFAddress(cust.address || '')
-    const { data: solns } = await supabase.from('sales_order_lines').select('*')
-      .eq('sales_order_id', soId).order('line_number')
+    const [{ data: solns }, { data: progress, error: progressError }] = await Promise.all([
+      supabase.from('sales_order_lines').select('*').eq('sales_order_id', soId).order('line_number'),
+      supabase.from('vw_sales_document_conversion_progress').select('*')
+        .eq('source_document_type', 'sales_order').eq('source_document_id', soId).order('line_number'),
+    ])
+    if (progressError) { setError(progressError.message); return }
+    const progressByLine = new Map((progress || []).map(row => [row.source_line_id, row]))
     if (solns && solns.length) {
-      setLines((solns as SOLineRef[]).map(l => ({
+      setLines((solns as SOLineRef[]).map(l => { const state = progressByLine.get(l.id); return ({
         _key: crypto.randomUUID(), line_number: l.line_number, so_line_id: l.id,
         item_id: l.item_id || '', description: l.description,
-        quantity: Math.max(0, l.quantity - l.fulfilled_quantity),
+        quantity: Number(state?.remaining_quantity ?? 0),
         uom_id: l.uom_id || '', lot_serial_no: '', inventory_cost_layer_id: '', lot_number: '', serial_number: '', warehouse_id: '',
-      })).filter(l => l.quantity > 0))
+        original_quantity: Number(state?.original_quantity ?? l.quantity),
+        converted_quantity: Number(state?.converted_quantity ?? 0),
+        remaining_quantity: Number(state?.remaining_quantity ?? 0),
+      }) }).filter(l => l.quantity > 0))
     }
   }
 
@@ -181,7 +193,7 @@ export default function DeliveryReceiptsPage() {
   const openNew = () => {
     setEditDoc(null); setFCustomer(''); setFCustomerName(''); setFSO('')
     setFDate(today()); setFBranch(branchId); setFShipping('in_house')
-    setFTracking(''); setFDriver(''); setFAddress(''); setLines([newLine(0)]); setError('')
+    setFTracking(''); setFDriver(''); setFAddress(''); setLines([newLine(0)]); setError(''); setConvertedDocument(false)
     setMode('new')
   }
 
@@ -192,8 +204,14 @@ export default function DeliveryReceiptsPage() {
     setFShipping(doc.shipping_method as typeof fShipping)
     setFTracking(doc.tracking_number || ''); setFDriver(doc.driver_name || '')
     setFAddress(doc.delivery_address); setError('')
-    const { data: lns } = await supabase.from('delivery_receipt_lines').select('*').eq('dr_id', doc.id).order('line_number')
-    if (lns && lns.length) setLines(lns.map(l => ({ _key: l.id, id: l.id, line_number: l.line_number, so_line_id: l.so_line_id, item_id: l.item_id || '', description: l.description, quantity: Number(l.quantity), uom_id: l.uom_id || '', lot_serial_no: l.lot_serial_no || '', inventory_cost_layer_id: l.inventory_cost_layer_id || '', lot_number: l.lot_number || '', serial_number: l.serial_number || '', warehouse_id: l.warehouse_id || '' })))
+    const [{ data: lns }, { data: progress }, { count: relationshipCount }] = await Promise.all([
+      supabase.from('delivery_receipt_lines').select('*').eq('dr_id', doc.id).order('line_number'),
+      supabase.from('vw_sales_document_conversion_progress').select('*').eq('source_document_type', 'delivery_receipt').eq('source_document_id', doc.id),
+      supabase.from('document_relationships').select('id', { count: 'exact', head: true }).eq('target_document_type', 'delivery_receipt').eq('target_document_id', doc.id),
+    ])
+    const progressByLine = new Map((progress || []).map(row => [row.source_line_id, row]))
+    setConvertedDocument((relationshipCount || 0) > 0)
+    if (lns && lns.length) setLines(lns.map(l => { const state = progressByLine.get(l.id); return ({ _key: l.id, id: l.id, line_number: l.line_number, so_line_id: l.so_line_id, item_id: l.item_id || '', description: l.description, quantity: Number(l.quantity), uom_id: l.uom_id || '', lot_serial_no: l.lot_serial_no || '', inventory_cost_layer_id: l.inventory_cost_layer_id || '', lot_number: l.lot_number || '', serial_number: l.serial_number || '', warehouse_id: l.warehouse_id || '', original_quantity: Number(state?.original_quantity ?? l.quantity), converted_quantity: Number(state?.converted_quantity ?? 0), remaining_quantity: Number(state?.remaining_quantity ?? l.quantity) }) }))
     else setLines([newLine(0)])
     if (doc.status === 'delivered') void loadBilledLines(doc.id)
     else setBilledLineIds([])
@@ -206,7 +224,7 @@ export default function DeliveryReceiptsPage() {
   // stock a second time. An unlinked invoice for delivered goods would relieve
   // twice, so this is the only supported way to bill a delivery.
   const [billing, setBilling] = useState(false)
-  const [billedLineIds, setBilledLineIds] = useState<string[]>([])
+  const [, setBilledLineIds] = useState<string[]>([])
 
   const loadBilledLines = useCallback(async (drId: string) => {
     const { data: drl } = await supabase.from('delivery_receipt_lines').select('id').eq('dr_id', drId)
@@ -221,36 +239,26 @@ export default function DeliveryReceiptsPage() {
     if (!companyId || !editDoc) return
     setBilling(true); setError('')
     try {
-      const { data: drLines, error: le } = await supabase.from('delivery_receipt_lines')
-        .select('id,line_number,item_id,description,quantity,warehouse_id,so_line:sales_order_lines(unit_price),item:items(default_sales_vat_id,sales_account_id)')
-        .eq('dr_id', editDoc.id).order('line_number')
-      if (le) throw le
-      const unbilled = (drLines || []).filter(l => !billedLineIds.includes(l.id))
-      if (!unbilled.length) throw new Error('Every line on this delivery has already been billed.')
-
-      const payload = unbilled.map(l => ({
-        item_id: l.item_id || '',
-        description: l.description,
-        quantity: Number(l.quantity),
-        unit_price: Number(l.so_line?.unit_price ?? 0),
-        vat_code_id: l.item?.default_sales_vat_id || '',
-        revenue_account_id: l.item?.sales_account_id || '',
-        warehouse_id: l.warehouse_id || '',
-        source_document_type: 'DR',
-        source_line_id: l.id,
-      }))
-      const { data: siId, error: se } = await supabase.rpc('fn_save_sales_invoice', {
-        p_invoice_id: null!,
-        p_header: {
-          company_id: companyId, branch_id: editDoc.branch_id,
-          customer_id: editDoc.customer_id,
-          customer_name_snapshot: editDoc.customer_name_snapshot,
-          customer_address_snapshot: editDoc.delivery_address,
-          date: today(),
-          reference: editDoc.dr_number,
-          memo: `Billing of Delivery Receipt ${editDoc.dr_number}`,
-        },
-        p_lines: payload,
+      const { data: progress, error: progressError } = await supabase
+        .from('vw_sales_document_conversion_progress').select('*')
+        .eq('source_document_type', 'delivery_receipt').eq('source_document_id', editDoc.id)
+        .gt('remaining_quantity', 0).order('line_number')
+      if (progressError) throw progressError
+      if (!progress?.length) throw new Error('Every line on this delivery has already been reserved for billing.')
+      const requested: { source_line_id: string; quantity: number }[] = []
+      for (const line of progress) {
+        if (!line.source_line_id) continue
+        const remaining = Number(line.remaining_quantity)
+        const entered = window.prompt(`Quantity to bill for ${line.description} (remaining ${remaining})`, String(remaining))
+        if (entered == null) continue
+        const quantity = Number(entered)
+        if (!Number.isFinite(quantity) || quantity <= 0 || quantity > remaining) throw new Error(`Billing quantity for ${line.description} must be between 0 and ${remaining}.`)
+        requested.push({ source_line_id: line.source_line_id, quantity })
+      }
+      if (requested.length === 0) throw new Error('No delivery quantity was selected for billing.')
+      const { data: siId, error: se } = await supabase.rpc('fn_convert_sales_document', {
+        p_source_document_type: 'delivery_receipt', p_source_document_id: editDoc.id,
+        p_target_document_type: 'sales_invoice', p_header: { date: today() }, p_lines: requested,
       })
       if (se) throw se
       await loadBilledLines(editDoc.id)
@@ -297,6 +305,47 @@ export default function DeliveryReceiptsPage() {
     setSaving(true); setError('')
     try {
       const isNew = mode === 'new'
+      if (isNew && fSO) {
+        const conversionLines = lines.filter(line => line.so_line_id && line.quantity > 0).map(line => ({
+          source_line_id: line.so_line_id, quantity: line.quantity,
+          warehouse_id: line.warehouse_id || fWarehouse || null,
+          inventory_cost_layer_id: line.inventory_cost_layer_id || null,
+          lot_number: line.lot_number || null, serial_number: line.serial_number || null,
+        }))
+        if (conversionLines.length === 0) throw new Error('Select at least one remaining Sales Order quantity.')
+        const { data: convertedId, error: conversionError } = await supabase.rpc('fn_convert_sales_document', {
+          p_source_document_type: 'sales_order', p_source_document_id: fSO,
+          p_target_document_type: 'delivery_receipt',
+          p_header: { date: fDate, shipping_method: fShipping, tracking_number: fTracking || null, driver_name: fDriver || null, delivery_address: fAddress },
+          p_lines: conversionLines,
+        })
+        if (conversionError || !convertedId) throw new Error(conversionError?.message || 'Delivery Receipt conversion failed.')
+        if (nextStatus !== 'draft') {
+          const { error: updateError } = await supabase.rpc('fn_update_converted_delivery_details', {
+            p_dr_id: convertedId,
+            p_header: { date: fDate, shipping_method: fShipping, tracking_number: fTracking || null, driver_name: fDriver || null, delivery_address: fAddress },
+            p_lines: [], p_status: nextStatus,
+          })
+          if (updateError) throw updateError
+        }
+        setSaving(false); setMode('list'); return
+      }
+
+      if (!isNew && convertedDocument && editDoc) {
+        const { error: updateError } = await supabase.rpc('fn_update_converted_delivery_details', {
+          p_dr_id: editDoc.id,
+          p_header: { date: fDate, shipping_method: fShipping, tracking_number: fTracking || null, driver_name: fDriver || null, delivery_address: fAddress },
+          p_lines: lines.filter(line => line.id).map(line => ({
+            line_id: line.id, warehouse_id: line.warehouse_id || fWarehouse || null,
+            inventory_cost_layer_id: line.inventory_cost_layer_id || null,
+            lot_number: line.lot_number || null, serial_number: line.serial_number || null,
+          })),
+          p_status: nextStatus,
+        })
+        if (updateError) throw updateError
+        setSaving(false); setMode('list'); return
+      }
+
       let docNum = editDoc?.dr_number || ''
       if (isNew) {
         const { data: num, error: ne } = await supabase.rpc('fn_next_document_number', {
@@ -441,12 +490,15 @@ export default function DeliveryReceiptsPage() {
         { key: 'customer', label: 'Customer *', card: 1, span: 2, content: readOnly || !!fSO ? <div className="pxl-readonly-field">{fCustomerName || '—'}</div> : <select value={fCustomer} onChange={e => onCustomerChange(e.target.value)} className="pxl-input w-full"><option value="">Select customer…</option>{customers.map(c => <option key={c.id} value={c.id}>{c.registered_name}</option>)}</select> },
         { key: 'address', label: 'Delivery Address *', card: 1, span: 2, content: readOnly ? <div className="pxl-readonly-field">{fAddress || '—'}</div> : <input value={fAddress} onChange={e => setFAddress(e.target.value)} className="pxl-input w-full" /> },
         { key: 'warehouse', label: 'Ship From Warehouse', card: 1, content: readOnly ? <div className="pxl-readonly-field">{warehouses.find(w => w.id === fWarehouse)?.warehouse_code || 'Per line'}</div> : <select value={fWarehouse} onChange={e => setFWarehouse(e.target.value)} className="pxl-input w-full"><option value="">Set per line</option>{warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code} — {w.warehouse_name}</option>)}</select> },
-        { key: 'source', label: 'Source Sales Order', card: 2, content: readOnly ? <div className="pxl-readonly-field">{salesOrders.find(s => s.id === fSO)?.so_number || '—'}</div> : <select value={fSO} onChange={e => onSOChange(e.target.value)} className="pxl-input w-full"><option value="">None (standalone)</option>{salesOrders.map(s => <option key={s.id} value={s.id}>{s.so_number} — {s.customer_name_snapshot}</option>)}</select> },
+        { key: 'source', label: 'Source Sales Order', card: 2, content: readOnly || convertedDocument ? <div className="pxl-readonly-field">{salesOrders.find(s => s.id === fSO)?.so_number || '—'}</div> : <select value={fSO} onChange={e => onSOChange(e.target.value)} className="pxl-input w-full"><option value="">None (standalone)</option>{salesOrders.map(s => <option key={s.id} value={s.id}>{s.so_number} — {s.customer_name_snapshot}</option>)}</select> },
         { key: 'shipping', label: 'Shipping Method *', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fShipping.replace('_', ' ')}</div> : <select value={fShipping} onChange={e => setFShipping(e.target.value as typeof fShipping)} className="pxl-input w-full"><option value="in_house">In-House</option><option value="courier">Courier</option><option value="pickup">Customer Pickup</option></select> },
         { key: 'tracking', label: 'Tracking Number', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fTracking || '—'}</div> : <input value={fTracking} onChange={e => setFTracking(e.target.value)} className="pxl-input w-full" /> },
         { key: 'driver', label: 'Driver / Personnel', card: 2, content: readOnly ? <div className="pxl-readonly-field">{fDriver || '—'}</div> : <input value={fDriver} onChange={e => setFDriver(e.target.value)} className="pxl-input w-full" /> },
       ]}
-      tabContent={{ validation: <div className="space-y-2">{canEdit && <SetupReadinessBanner readiness={readiness} />}{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}</div> }}>
+      tabContent={{
+        related: <SalesDocumentTrace documentId={editDoc?.id} />,
+        validation: <div className="space-y-2">{canEdit && <SetupReadinessBanner readiness={readiness} />}{convertedDocument && <div className="pxl-validation-message border border-blue-200 bg-blue-50 text-blue-800">Converted source quantities are read-only. Operational shipping and inventory identity fields remain editable through the governed delivery action.</div>}{error && <div className="pxl-validation-message border border-red-200 bg-red-50 text-red-700">{error}</div>}</div>,
+      }}>
     <div>
       <div className="divide-y divide-gray-200">
         <div className="bg-white">
@@ -467,7 +519,10 @@ export default function DeliveryReceiptsPage() {
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-8">#</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 min-w-[160px]">Item</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 min-w-[200px]">Description</th>
-                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-24">Qty to Deliver</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">Original</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">Reserved</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-20">Remaining</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-24">This Delivery</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 w-16">UOM</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 min-w-[140px]">Warehouse</th>
                   <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-gray-400 min-w-[140px]">Lot / Serial No.</th>
@@ -488,11 +543,14 @@ export default function DeliveryReceiptsPage() {
                       ) : <span className="text-xs text-gray-600">{items.find(i => i.id === l.item_id)?.item_name || l.description}</span>}
                     </td>
                     <td className="px-4 py-2.5">
-                      {canEdit ? <input value={l.description} onChange={e => setLineField(l._key, 'description', e.target.value)} className="w-full bg-transparent border-0 text-sm py-0 px-0 focus:outline-none" placeholder="Description…" />
+                      {canEdit && !fSO ? <input value={l.description} onChange={e => setLineField(l._key, 'description', e.target.value)} className="w-full bg-transparent border-0 text-sm py-0 px-0 focus:outline-none" placeholder="Description…" />
                         : <span className="text-xs text-gray-700">{l.description}</span>}
                     </td>
+                    <td className="px-4 py-2.5 text-right text-xs font-mono text-gray-500">{l.original_quantity ?? l.quantity}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-mono text-gray-500">{l.converted_quantity ?? 0}</td>
+                    <td className="px-4 py-2.5 text-right text-xs font-mono text-gray-700">{l.remaining_quantity ?? l.quantity}</td>
                     <td className="px-4 py-2.5 text-right">
-                      {canEdit ? <input type="number" value={l.quantity} min={0} step="any" onChange={e => setLineField(l._key, 'quantity', parseFloat(e.target.value) || 0)} className="w-20 text-right bg-transparent border-0 text-sm focus:outline-none" />
+                      {canEdit && !convertedDocument ? <input type="number" value={l.quantity} min={0} max={l.remaining_quantity} step="any" onChange={e => setLineField(l._key, 'quantity', parseFloat(e.target.value) || 0)} className="w-20 text-right bg-transparent border-0 text-sm focus:outline-none" />
                         : <span className="text-xs font-mono tabular-nums">{l.quantity}</span>}
                     </td>
                     <td className="px-4 py-2.5 text-xs text-gray-500">

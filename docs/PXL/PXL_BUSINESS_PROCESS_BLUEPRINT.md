@@ -208,9 +208,9 @@ editable status.
 outside the Posting Engine entirely.
 
 **Relationship behaviour.** A quotation is the intended parent of a Sales Order.
-**The carry-forward is not automated** — the Document Conversion Engine is not
-started, so quantities are not copied and nothing prevents quoting the same line
-twice. See §1.9.
+The Document Conversion Engine copies approved quantities and commercial values
+into one or more Sales Orders, reserves draft targets, serializes remaining
+quantity and exposes both directions of the trace. See §1.9.
 
 **Cancelled / reversed / corrected.** Rejection and expiry are status changes.
 There is nothing to reverse.
@@ -428,18 +428,21 @@ document exists to derecognise an uncollectible receivable, so a bad debt can
 only be handled today by a manual journal entry, which leaves the customer
 subledger and the control account to be reconciled by hand.
 
-### 1.9 What the flow does not automate
+### 1.9 Governed document conversion
 
-**Document conversion is not built.** Quotation → Sales Order → Sales Invoice
-carry-forward does not exist; the Document Conversion Engine is **Planned, not
-started**. The single exception is *Bill This Delivery*, which creates the
-governed delivery-line relationship and remains the **only supported way to bill
-a delivery**. A server-side readiness guard now refuses a hand-entered stock line
-when live delivered goods for the same company, customer and item are waiting to
-be billed; it runs at approval and again at posting, so it also catches a
-delivery created after approval. This prevents double stock relief and a stranded
-Goods Delivered Not Invoiced balance, but creates no relationship or
-carry-forward of its own. Backlog 18b therefore remains partially complete.
+**Implemented locally for the full Sales chain.** One server-side authority
+converts QT→SO, SO→DR, service-only SO→SI and DR→SI. It derives target commercial
+fields from the locked source, supports partial/multiple targets, reserves draft
+quantity, reopens exact quantity after reject/cancel/void and admits only one
+winner for concurrent final quantity. Inventory orders must be delivered before
+billing. Progress and source/target trace are visible from Quotation, Sales
+Order, Delivery Receipt and Sales Invoice workspaces.
+
+The original unlinked-delivered-stock readiness guard remains defence in depth.
+DR→SI relationships carry exact cost snapshots so partial invoice splits clear
+Goods Delivered Not Invoiced without moving stock twice or repricing historical
+COGS. Standalone documents and Cash Sale remain supported. This local M5 engine
+proof is not certification, hosted parity, browser UAT or pilot evidence.
 
 ## Downstream Impact
 
@@ -477,11 +480,12 @@ submission made outside PXL.
 
 ```
 Sales Quotation
-      ↓  (manual re-entry — conversion not built)
+      ↓  (governed conversion; partial/multiple)
 Sales Order
-      ↓
+      ├──────────► Sales Invoice  (services only)
+      ↓  (inventory fulfilment)
 Delivery Receipt ──────────────► Delivery Cancellation (terminal)
-      ↓  (Bill This Delivery — the only linked path)
+      ↓  (governed partial/multiple billing)
 Sales Invoice ─────────────────► Invoice Void (terminal)
       ↓
       ├──────────► Official Receipt ────► Receipt Cancellation / Bounce
@@ -502,9 +506,9 @@ Cash Sale  ─────────────────────► Vo
 
 | Scenario | Behaviour | Status |
 | --- | --- | --- |
-| Partial delivery | Deliver fewer units than ordered; the order stays open. Remaining-quantity tracking is not automated | **Implemented** (delivery); remaining-quantity carry-forward **Planned** (Backlog 18b) |
-| Over delivery | Nothing prevents delivering more than ordered | **Future** — no over-delivery control |
-| Partial billing | Bill some delivered lines and not others; unbilled lines stay in the clearing account | **Implemented** |
+| Partial delivery | Convert fewer units than ordered; draft targets reserve and the order reports exact remaining quantity | **Implemented and locally proven** |
+| Over delivery | Conversion refuses quantity above the locked Sales Order remainder | **Implemented and locally proven** |
+| Partial billing | Split a delivery across invoices; each relationship carries exact cost and the unbilled remainder stays in clearing | **Implemented and locally proven** |
 | Advance payment / customer deposit | No unapplied-cash or customer-advance document exists | **Future** |
 | Cancelled delivery | Reverses the journal, restocks the goods; refused while an invoice bills it | **Implemented** |
 | Voided invoice | Reverses journal, tax ledger and any stock it relieved | **Implemented** |
@@ -526,8 +530,10 @@ Payment and Application Engine · Approval and Workflow Engine · Reversal, Void
 and Correction Engine · Period Lock and Closing Engine · Audit and Immutability
 Engine · Permissions and RLS Engine · Reporting and Reconciliation Engine.
 
-**Not used:** Document Conversion Engine (not started) · Currency Engine
-(deferred, PHP only) · Inventory Accounting Engine (frozen, zero consumers).
+The **Document Conversion Engine** governs the Sales source chain and delegates
+cost to production Inventory Costing and accounting to Posting. **Not used:**
+Currency Engine (deferred, PHP only) · Inventory Accounting Engine (frozen, zero
+consumers).
 
 ## Accounting Truth
 
@@ -557,13 +563,13 @@ Credit Memo · Customer Return · collections monitoring · period close ·
 financial statements · output VAT and percentage tax through to the filing
 artifact.
 
-**Remaining work.** Full document conversion beyond the delivery-to-invoice link
-(Backlog 18b) · the three percentage-tax boundaries (Backlog 8b).
+**Remaining work.** Dedicated AR-to-control and full module Product-DoD proof ·
+the three percentage-tax boundaries (Backlog 8b).
 
-**Pilot blockers.** Billing a delivery is complete **only** through *Bill This
-Delivery*; unsafe hand-entry is refused rather than converted. The wider
-quotation/order/delivery/invoice relationship and remaining-quantity workflow is
-still absent, so no Sales workflow yet meets the Product Definition of Done.
+**Pilot blockers.** The quotation/order/delivery/invoice relationship and
+remaining-quantity workflow are locally proven, but no browser/hosted/UAT or
+real-company operation exists and no single Sales source-to-statements-to-tax
+workflow meets the Product Definition of Done.
 
 **Future enhancements.** Stock reservation · advance payments and unapplied cash ·
 overpayment handling · over-delivery control · AR write-off · customer inquiry
@@ -1215,9 +1221,9 @@ points · transfer · adjustment · physical count · returns in both directions
 Weighted Average, FIFO and Specific Identification · exact historical correction
 · inventory/layer/control reconciliation at ₱0.00 · period close.
 
-**Remaining work.** Full document conversion, broad module Product-DoD,
-browser/UAT, hosted parity and certification evidence. Landed cost remains a
-separate future capability.
+**Remaining work.** Broad module Product-DoD, browser/UAT, hosted parity and
+certification evidence. Sales conversion is locally complete; purchasing-side
+conversion and landed cost remain separate future capabilities.
 
 **Pilot blockers.** All three costing methods are built, reachable, exercised
 and proven locally for the intended current lifecycle. This is not module

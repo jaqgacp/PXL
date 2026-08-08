@@ -2,7 +2,7 @@
 
 **Status:** Active authoritative coverage-governance register
 **Authority:** Tier 2 governance artifact for PXL-AUD-059 coverage governance; accounting, tax, transaction, security, and findings sources prevail on product rules
-**Last Verified:** 2026-08-08 deterministic local validation after the production inventory-costing migrations (212 public base tables; 99 expected-populated, 113 explicitly deferred/empty). Canonical stock remains Weighted Average; FIFO/Specific-ID layers and allocations are exercised by focused fresh-company tests and the committed inventory lifecycle. The three transaction-local bridge tables are governed control-empty state.
+**Last Verified:** 2026-08-08 deterministic local validation after the Sales Document Conversion migration (213 public base tables; 99 expected-populated, 114 explicitly deferred/empty). Canonical stock remains Weighted Average; FIFO/Specific-ID layers and allocations are exercised by focused fresh-company tests and the committed inventory lifecycle. The three transaction-local bridge tables are governed control-empty state; conversion lineage is exercised by focused and committed-lifecycle proof rather than the canonical seed.
 **Applies To:** Every `public` base table; canonical/local validation coverage boundaries and product-readiness claims
 **Read When:** Adding a table or workflow, classifying coverage, or reconciling readiness against PXL-AUD-059
 **Do Not Read For:** Product accounting/tax rules (see the governing standards) or hosted credentials
@@ -31,12 +31,12 @@ Row counts below are the deterministic **canonical baseline** (fresh migration r
 | --- | ---: | --- |
 | `canonical-populated` | 69 | Expected non-empty; exercised by canonical regression |
 | `reference-populated` | 30 | Expected non-empty; migration/reference seeded |
-| `workflow-deferred` | 31 | Explicitly deferred; supported workflow not yet exercised by canonical |
+| `workflow-deferred` | 32 | Explicitly deferred; supported workflow not yet exercised by canonical |
 | `future-deferred` | 52 | Explicitly deferred; module not implemented end-to-end |
 | `reference-empty` | 6 | Intentionally empty reference/config |
 | `control-empty` | 4 | Healthy control/transaction-bridge state is empty; any surviving row requires investigation |
 | `dormant-foundation` | 20 | Implemented but inactive; population is prohibited during IA-5 |
-| **Total** | **212** | 99 expected-populated / 113 explicitly deferred or empty |
+| **Total** | **213** | 99 expected-populated / 114 explicitly deferred or empty |
 
 These figures are the guard's own registry, not a separate tally: re-derive them
 from `supabase/tests/075_table_coverage_governance_test.sql`, which is the
@@ -47,7 +47,7 @@ to `canonical-populated` (Phase 5.7) and `fiscal_close_runs` added as
   reference-populated and two workflow-deferred tables, while Backlog 8f removed
   eight current-product legacy working-paper tables and `wht_export_periods`.
 
-All 212 tables have row-level security enabled; the three private transaction-bridge tables intentionally expose no browser policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
+All 213 tables have row-level security enabled; the three private transaction-bridge tables intentionally expose no browser policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
 
 The COA Engine (Phase A, 2026-07-24) added four base tables: `ref_mapping_key` (reference-populated), `account_mapping` (canonical-populated, config-synced bindings), and the FS-registry framework `fs_structure` and `account_fs_map`. **Both FS tables became canonical-populated on 2026-08-03** (Delivery Plan Phase 5.7): seeding a chart of accounts now provisions its statement presentation with it, and the canonical demo seed — which builds its chart by direct insert — maps its companies explicitly. They are no longer workflow-deferred, and the coverage guard was reclassified rather than silenced.
 
@@ -137,6 +137,7 @@ current workflows do not activate them.
 | `sales_quotation_lines` | `canonical-populated` | 1 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `sales_orders` | `canonical-populated` | 3 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `sales_order_lines` | `canonical-populated` | 3 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
+| `document_relationships` | `workflow-deferred` | 0 | Governed conversion RPCs reserve and release exact source-line quantities across QT→SO, SO→DR/SI and DR→SI | on (1) | 075, 138 | Canonical intentionally retains its standalone documents; focused and committed-lifecycle lanes prove lineage, partial conversion, reversal reopening and concurrency. |
 | `delivery_receipts` | `canonical-populated` | 2 | Canonical demo seed | on (4) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `delivery_receipt_lines` | `canonical-populated` | 2 | Canonical demo seed | on (4) | 075 only | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `sales_invoices` | `canonical-populated` | 75 | Canonical demo seed | on (1) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |

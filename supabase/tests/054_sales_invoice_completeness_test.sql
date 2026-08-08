@@ -29,6 +29,9 @@ SELECT set_config(
   '{"sub":"11111111-1111-1111-1111-111111111154","role":"authenticated"}',
   true
 );
+-- This package deliberately exercises the lower-level SI source validation.
+-- Production source-linked lines are created only by fn_convert_sales_document.
+SELECT set_config('pxl.document_conversion_write', 'on', true);
 
 INSERT INTO companies (
   id, entity_type, registered_name, line_of_business, tin,
