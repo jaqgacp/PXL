@@ -386,6 +386,31 @@ The matrix below uses compact cells. Report any missing production-critical valu
   correction, GL and valuation locally. This does not activate dormant IA-5/ECC,
   certify the Inventory module, prove hosted parity or establish pilot readiness.
 
+### Sales Document Conversion — DELIVERED LOCALLY 2026-08-08
+
+- **Lineage is not posting.** `document_relationships` and
+  `fn_convert_sales_document` own QT→SO, SO→DR/SI and DR→SI source/target
+  quantity. They create no journal, inventory movement or tax row.
+- **Stage accounting.** Quotation and Sales Order remain non-posting. Delivery
+  Receipt relieves Inventory into Goods Delivered Not Invoiced through the
+  shared costing/Posting authorities. A linked Sales Invoice moves its exact
+  relationship cost from clearing to COGS without moving stock again and posts
+  AR/revenue/business tax through the existing Sales Invoice authority. Official
+  Receipt settles AR through the existing application authority.
+- **Partial cost.** Each DR→SI relationship stores an immutable proportional
+  cost allocation under the locked delivery line; the final allocation receives
+  only the rounding residual. Multiple partial invoices therefore clear exactly
+  the original Delivery Receipt cost.
+- **Correction order.** Draft targets reserve quantity. Reject/cancel/void
+  reverses the active relationship and reopens that exact quantity. A live
+  invoice blocks Delivery Receipt cancellation; live downstream targets block
+  their source cancellation. Correct downstream first.
+- **Evidence boundary.** Test `138` and the 33-check committed lifecycle prove
+  partial/multiple conversion, one-winner concurrency, all three costing methods,
+  correction, settlement and Inventory/COGS/clearing/AR/tax/TB reconciliation.
+  This is local M5 engine evidence, not certification, hosted parity or pilot
+  readiness.
+
 ### Percentage tax (Section 116) — DELIVERED 2026-08-04, migration `20260804000001`
 
 - **What it is.** Percentage tax is the business tax of a **non-VAT** taxpayer on
