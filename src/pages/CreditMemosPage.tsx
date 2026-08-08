@@ -28,6 +28,7 @@ type CMLLine = {
   quantity: number; unit_price: number; net_amount: number
   vat_code_id: string; vat_classification: 'regular' | 'zero_rated' | 'exempt'; vat_rate: number
   vat_amount: number; total_amount: number; revenue_account_id: string
+  warehouse_id: string; inventory_cost_layer_id: string; lot_number: string; serial_number: string
 }
 
 type CustomerRef = { id: string; registered_name: string; tin: string; tin_branch_code: string }
@@ -36,6 +37,8 @@ type SILine = {
   id: string; description: string; quantity: number; unit_price: number; net_amount: number
   vat_code_id: string | null; vat_amount: number; total_amount: number
   revenue_account_id: string | null; item_id: string | null
+  warehouse_id: string | null; inventory_cost_layer_id: string | null
+  lot_number: string | null; serial_number: string | null
 }
 type VATRef = { id: string; vat_code: string; vat_classification: 'regular' | 'zero_rated' | 'exempt'; rate: number }
 type ReasonCode = { id: string; code: string; description: string }
@@ -52,6 +55,7 @@ const newLine = (): CMLLine => ({
   net_amount: 0, vat_code_id: '', vat_classification: 'regular', vat_rate: 12,
   vat_amount: 0, total_amount: 0, revenue_account_id: '', item_id: '',
   invoice_line_id: '',
+  warehouse_id: '', inventory_cost_layer_id: '', lot_number: '', serial_number: '',
 })
 const computeLine = (l: CMLLine): CMLLine => {
   const net = l.unit_price * l.quantity
@@ -181,6 +185,8 @@ export default function CreditMemosPage() {
           vat_classification: (vc?.vat_classification || 'regular') as CMLLine['vat_classification'],
           vat_rate: vc?.rate ?? 12, vat_amount: Number(l.vat_amount), total_amount: Number(l.total_amount),
           revenue_account_id: l.revenue_account_id || '',
+          warehouse_id: l.warehouse_id || '', inventory_cost_layer_id: l.inventory_cost_layer_id || '',
+          lot_number: l.lot_number || '', serial_number: l.serial_number || '',
         }
       })
       setSiLines(lns as SILine[])
@@ -230,6 +236,8 @@ export default function CreditMemosPage() {
           vat_classification: (vc?.vat_classification || 'regular') as CMLLine['vat_classification'],
           vat_rate: vc?.rate ?? 12, vat_amount: Number(l.vat_amount), total_amount: Number(l.total_amount),
           revenue_account_id: l.revenue_account_id || '',
+          warehouse_id: l.warehouse_id || '', inventory_cost_layer_id: l.inventory_cost_layer_id || '',
+          lot_number: l.lot_number || '', serial_number: l.serial_number || '',
         }
       }))
     } else setLines([newLine()])
@@ -296,6 +304,8 @@ export default function CreditMemosPage() {
           invoice_line_id: l.invoice_line_id || '', item_id: l.item_id || '',
           description: l.description, quantity: l.quantity, unit_price: l.unit_price,
           vat_code_id: l.vat_code_id || '', revenue_account_id: l.revenue_account_id || '',
+          warehouse_id: l.warehouse_id || '', inventory_cost_layer_id: l.inventory_cost_layer_id || '',
+          lot_number: l.lot_number || '', serial_number: l.serial_number || '',
         }))
       const { error: rpcErr } = await supabase.rpc('fn_save_credit_memo', {
         p_cm_id: (mode === 'new' ? null : (editDoc?.id ?? null))!,
@@ -440,7 +450,7 @@ export default function CreditMemosPage() {
       ]}
       tabBadges={{ lines: lines.length }}
       tabContent={{
-        lines: <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><div className="flex items-center justify-between border-b border-[var(--pxl-border-medium)] px-3 py-2"><h2 className="pxl-section-title">Credit Lines {fInvoice && siLines.length > 0 ? '· From Invoice' : ''}</h2>{canEdit && !fInvoice && <button onClick={() => setLines(current => [...current, newLine()])} className="pxl-button pxl-button--text">+ Add Line</button>}</div><table className="pxl-data-grid w-full text-xs"><thead><tr>{['#', 'Description', 'Qty', 'Unit Price', 'Net Amount', 'VAT Code', 'VAT', 'Total', ''].map(label => <th key={label} className={['Qty', 'Unit Price', 'Net Amount', 'VAT', 'Total'].includes(label) ? 'text-right' : 'text-left'}>{label}</th>)}</tr></thead><tbody>{lines.map((line, index) => <tr key={line._key}><td className="text-right text-gray-500">{index + 1}</td><td>{canEdit && !fInvoice ? <input value={line.description} onChange={event => setLineField(line._key, 'description', event.target.value)} className="w-full rounded border px-2 py-1" /> : line.description}</td><td className="text-right">{canEdit && !fInvoice ? <input type="number" value={line.quantity} min={0} onChange={event => setLineField(line._key, 'quantity', Number(event.target.value) || 0)} className="w-16 rounded border px-2 py-1 text-right" /> : <span className="font-mono">{line.quantity}</span>}</td><td className="text-right">{canEdit && !fInvoice ? <input type="number" value={line.unit_price} min={0} onChange={event => setLineField(line._key, 'unit_price', Number(event.target.value) || 0)} className="w-24 rounded border px-2 py-1 text-right" /> : <span className="font-mono">{fmt(line.unit_price)}</span>}</td><td className="text-right font-mono">{fmt(line.net_amount)}</td><td>{canEdit && !fInvoice ? <select value={line.vat_code_id} onChange={event => setLineField(line._key, 'vat_code_id', event.target.value)} className="w-24 rounded border px-1.5 py-1"><option value="">—</option>{vatCodes.map(vatCode => <option key={vatCode.id} value={vatCode.id}>{vatCode.vat_code}</option>)}</select> : vatCodes.find(vatCode => vatCode.id === line.vat_code_id)?.vat_code || '—'}</td><td className="text-right font-mono">{fmt(line.vat_amount)}</td><td className="text-right font-mono font-semibold">{fmt(line.total_amount)}</td><td>{canEdit && !fInvoice && <button onClick={() => setLines(current => current.filter(item => item._key !== line._key))} className="text-red-600" aria-label={`Remove credit line ${index + 1}`}>✕</button>}</td></tr>)}</tbody></table></div>,
+        lines: <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><div className="flex items-center justify-between border-b border-[var(--pxl-border-medium)] px-3 py-2"><h2 className="pxl-section-title">Credit Lines {fInvoice && siLines.length > 0 ? '· From Invoice' : ''}</h2>{canEdit && !fInvoice && <button onClick={() => setLines(current => [...current, newLine()])} className="pxl-button pxl-button--text">+ Add Line</button>}</div><table className="pxl-data-grid w-full text-xs"><thead><tr>{['#', 'Description', 'Qty', 'Inventory Identity', 'Unit Price', 'Net Amount', 'VAT Code', 'VAT', 'Total', ''].map(label => <th key={label} className={['Qty', 'Unit Price', 'Net Amount', 'VAT', 'Total'].includes(label) ? 'text-right' : 'text-left'}>{label}</th>)}</tr></thead><tbody>{lines.map((line, index) => <tr key={line._key}><td className="text-right text-gray-500">{index + 1}</td><td>{canEdit && !fInvoice ? <input value={line.description} onChange={event => setLineField(line._key, 'description', event.target.value)} className="w-full rounded border px-2 py-1" /> : line.description}</td><td className="text-right">{canEdit ? <input type="number" value={line.quantity} min={0} max={fInvoice ? siLines.find(source => source.id === line.invoice_line_id)?.quantity : undefined} onChange={event => setLineField(line._key, 'quantity', Number(event.target.value) || 0)} className="w-16 rounded border px-2 py-1 text-right" /> : <span className="font-mono">{line.quantity}</span>}</td><td className="font-mono text-[10px]">{line.serial_number || line.lot_number || (line.warehouse_id ? 'Historical issue cost' : 'Non-stock credit')}</td><td className="text-right">{canEdit && !fInvoice ? <input type="number" value={line.unit_price} min={0} onChange={event => setLineField(line._key, 'unit_price', Number(event.target.value) || 0)} className="w-24 rounded border px-2 py-1 text-right" /> : <span className="font-mono">{fmt(line.unit_price)}</span>}</td><td className="text-right font-mono">{fmt(line.net_amount)}</td><td>{canEdit && !fInvoice ? <select value={line.vat_code_id} onChange={event => setLineField(line._key, 'vat_code_id', event.target.value)} className="w-24 rounded border px-1.5 py-1"><option value="">—</option>{vatCodes.map(vatCode => <option key={vatCode.id} value={vatCode.id}>{vatCode.vat_code}</option>)}</select> : vatCodes.find(vatCode => vatCode.id === line.vat_code_id)?.vat_code || '—'}</td><td className="text-right font-mono">{fmt(line.vat_amount)}</td><td className="text-right font-mono font-semibold">{fmt(line.total_amount)}</td><td>{canEdit && !fInvoice && <button onClick={() => setLines(current => current.filter(item => item._key !== line._key))} className="text-red-600" aria-label={`Remove credit line ${index + 1}`}>✕</button>}</td></tr>)}</tbody></table></div>,
         financial: <div className="ml-auto grid max-w-lg grid-cols-2 gap-2"><span className="text-gray-600">Gross Credit</span><span className="text-right font-mono">₱{fmt(totalAmt)}</span><span className="text-gray-600">Net Credit</span><span className="text-right font-mono">₱{fmt(totalNet)}</span><span className="text-gray-600">Output VAT Reversed</span><span className="text-right font-mono">₱{fmt(totalVAT)}</span><span className="pxl-section-title border-t pt-2">AR Reduction</span><span className="border-t pt-2 text-right font-mono font-bold">₱{fmt(totalAmt)}</span></div>,
         gl: <GLImpactPanel companyId={companyId} sourceDocType="CM" sourceDocId={editDoc && editDoc.status !== 'draft' ? editDoc.id : null} previewRows={glPreviewRows} />,
         tax: <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]"><table className="pxl-data-grid w-full"><thead><tr>{['VAT Classification', 'Tax Base Reversed', 'Rate', 'VAT Reversed', 'Source Lines'].map(label => <th key={label} className={['Tax Base Reversed', 'Rate', 'VAT Reversed', 'Source Lines'].includes(label) ? 'text-right' : 'text-left'}>{label}</th>)}</tr></thead><tbody>{(['regular', 'zero_rated', 'exempt'] as const).map(classification => { const classLines = lines.filter(line => line.vat_classification === classification); return <tr key={classification}><td>{classification.replace('_', ' ')}</td><td className="text-right font-mono">₱{fmt(classLines.reduce((sum, line) => sum + line.net_amount, 0))}</td><td className="text-right font-mono">{classification === 'regular' ? `${classLines[0]?.vat_rate || 0}%` : classification === 'zero_rated' ? '0%' : 'Exempt'}</td><td className="text-right font-mono">₱{fmt(classLines.reduce((sum, line) => sum + line.vat_amount, 0))}</td><td className="text-right font-mono">{classLines.length}</td></tr>})}</tbody></table></div>,

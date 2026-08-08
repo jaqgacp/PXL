@@ -120,7 +120,9 @@ if (branch && !state.includes(`**Current Branch:** \`${branch}\``)) {
 
 const stateWords = wordCount(state)
 const promptWords = wordCount(prompt)
-if (stateWords < 500 || stateWords > 1500) fail(`AI State length is ${stateWords} words; expected 500-1500`)
+// Raised from 1500 to 2500 by the owner, 2026-08-07. The cap exists to stop the
+// state file turning into a history; it is not a reason to drop a live fact.
+if (stateWords < 500 || stateWords > 2500) fail(`AI State length is ${stateWords} words; expected 500-2500`)
 if (promptWords < 800 || promptWords > 1500) fail(`Agent System Prompt length is ${promptWords} words; expected 800-1500`)
 
 const recommendedHeadings = state.match(/^## Recommended Next Task\s*$/gm) || []

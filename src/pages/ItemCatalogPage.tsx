@@ -19,7 +19,7 @@ type Item = {
   category_id: string; uom_id: string; barcode: string | null
   standard_selling_price: number; standard_cost: number; price_is_vat_inclusive: boolean
   default_sales_vat_id: string | null; default_purchase_vat_id: string | null
-  costing_method: string | null
+  costing_method: string | null; specific_id_tracking: string | null
   min_stock_level: number | null; reorder_point: number | null; is_active: boolean
   companies?: { registered_name: string }
   item_categories?: { category_name: string }
@@ -74,7 +74,7 @@ export default function ItemCatalogPage() {
     standard_selling_price: '0', standard_cost: '0', price_is_vat_inclusive: false,
     default_sales_vat_id: '', default_purchase_vat_id: '',
     sales_account_id: '', cogs_account_id: '', inventory_account_id: '', purchase_expense_account_id: '',
-    costing_method: 'weighted_average', min_stock_level: '', reorder_point: '',
+    costing_method: 'weighted_average', specific_id_tracking: '', min_stock_level: '', reorder_point: '',
   })
 
   const fetchAll = async () => {
@@ -126,6 +126,7 @@ export default function ItemCatalogPage() {
       default_purchase_vat_id: item.default_purchase_vat_id || '',
       sales_account_id: '', cogs_account_id: '', inventory_account_id: '', purchase_expense_account_id: '',
       costing_method: item.costing_method || 'weighted_average',
+      specific_id_tracking: item.specific_id_tracking || '',
       min_stock_level: item.min_stock_level ? String(item.min_stock_level) : '',
       reorder_point: item.reorder_point ? String(item.reorder_point) : '',
     })
@@ -160,6 +161,8 @@ export default function ItemCatalogPage() {
         inventory_account_id: itemForm.inventory_account_id || null,
         purchase_expense_account_id: itemForm.purchase_expense_account_id || null,
         costing_method: isInventory ? itemForm.costing_method : null,
+        specific_id_tracking: isInventory && itemForm.costing_method === 'specific_identification'
+          ? itemForm.specific_id_tracking || null : null,
         min_stock_level: itemForm.min_stock_level ? parseFloat(itemForm.min_stock_level) : null,
         reorder_point: itemForm.reorder_point ? parseFloat(itemForm.reorder_point) : null,
       }
@@ -387,9 +390,20 @@ export default function ItemCatalogPage() {
           <div className={sec}><h2 className={hd}>Section 5 — Inventory Settings</h2>
             <div className="grid grid-cols-2 gap-4">
               <div><label className={lbl}>Costing Method <span className="text-red-500">*</span></label>
-                <select value={itemForm.costing_method} onChange={e => setI('costing_method', e.target.value)} className={inp}>
+                <select value={itemForm.costing_method} onChange={e => {
+                  setI('costing_method', e.target.value)
+                  if (e.target.value !== 'specific_identification') setI('specific_id_tracking', '')
+                }} className={inp}>
                   {COSTING_METHODS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
                 </select></div>
+              {itemForm.costing_method === 'specific_identification' && (
+                <div><label className={lbl}>Identity Tracking <span className="text-red-500">*</span></label>
+                  <select value={itemForm.specific_id_tracking} onChange={e => setI('specific_id_tracking', e.target.value)} className={inp} required>
+                    <option value="">Select tracking basis…</option>
+                    <option value="serial">Serial — one identity per unit</option>
+                    <option value="lot">Lot / Batch — one identity may carry quantity</option>
+                  </select></div>
+              )}
               <div><label className={lbl}>Minimum Stock Level (alert threshold)</label>
                 <input type="number" min="0" step="0.0001" value={itemForm.min_stock_level} onChange={e => setI('min_stock_level', e.target.value)} className={inp} /></div>
               <div><label className={lbl}>Reorder Point (purchase suggestion trigger)</label>

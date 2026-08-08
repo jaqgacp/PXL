@@ -126,8 +126,12 @@ SELECT set_eq(
 -- the Accounting Kernel. fn_close_fiscal_year was already in the graph, and the
 -- period close posts nothing at all — an accounting-period close is a lock, not
 -- an entry — so the close engine's other five functions stay outside it.
-SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 87,
-  'the complete static ledger-capable call graph contains 87 functions');              -- 10
+-- Backlog 18c adds one more: fn_void_delivery_receipt, which reverses a delivery's
+-- journal through fn_reverse_posted_journal_entry and restocks the goods. It is a
+-- correction path, not a second posting path — the reversal is the same one every
+-- other void uses.
+SELECT is((SELECT count(*)::int FROM p52_reachable_mutators), 98,
+  'the complete static ledger-capable call graph contains 98 functions');              -- 10
 
 SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
   'every function in the static ledger-capable call graph is SECURITY DEFINER');       -- 11
@@ -232,26 +236,82 @@ SELECT ok((SELECT bool_and(prosecdef) FROM p52_reachable_mutators),
 -- **`anon`**, so retiring it moved the one number this file has otherwise held
 -- fixed since it was written: **197 -> 196**. A legacy compliance export was
 -- callable without a session; the governed one never has been.
-SELECT is((SELECT count(*)::int FROM p52_app_functions), 486,
-  'the complete application-owned public function census contains 486 functions');    -- 12
+--
+-- Backlog 10 adds four, 486 -> 490: the three governed succession RPCs
+-- (`fn_tax_code_succeed`, `fn_vat_code_succeed`, `fn_atc_code_succeed`) and
+-- `fn_enforce_vat_code_version_rules`, the version-rules trigger `vat_codes`
+-- alone had been missing. All four are SECURITY DEFINER (418 -> 422). Only the
+-- three RPCs reach `authenticated` (343 -> 346); the trigger body reaches **no
+-- role**, following `fn_enforce_percentage_tax_code_version_rules` rather than
+-- the two older version-rule functions that were left PUBLIC-executable. The
+-- three upserts were REPLACED with a wider signature and move no count.
+-- **anon stays exactly at 196**, and service_role at 317.
+--
+-- Backlog 18c adds one, 490 -> 491: `fn_void_delivery_receipt`, the cancellation
+-- and reversal a mis-shipped delivery had no path to. It is SECURITY DEFINER
+-- (422 -> 423) and reaches `authenticated` and `service_role` exactly as
+-- `fn_post_delivery_receipt` does (346 -> 347, 317 -> 318). The three guard
+-- functions it repairs — the delivery header guard, `fn_guard_doc_lines` and
+-- `fn_capture_cas_document_void` — were all REPLACED in place and move no count.
+-- **anon stays exactly at 196.**
+--
+-- PXL-AUD-076 adds three, 491 -> 494: `fn_void_cash_sale`, the named authority
+-- for withdrawing a cash sale as one business event, plus the two private
+-- helpers it and the ordinary invoice void now share — `fn_reverse_receipt_core`
+-- (the one receipt-reversal implementation, extracted from `fn_bounce_receipt`)
+-- and `fn_stamp_void_inventory_dimensions`. All three are SECURITY DEFINER
+-- (423 -> 426). Only the orchestrator reaches `authenticated` (347 -> 348) and
+-- `service_role` (318 -> 319); both helpers reach no role at all.
+--
+-- **`anon` FALLS, 196 -> 194.** `fn_bounce_receipt` and `fn_void_sales_invoice`
+-- were both reachable by `anon`: every historical grant for them was a bare
+-- `GRANT ... TO authenticated`, and PostgreSQL grants EXECUTE to PUBLIC by
+-- default. Neither was exploitable — both fail closed on `is_company_member` —
+-- but a destructive financial entry point should not be reachable without a
+-- session at all. PXL-AUD-076 revokes PUBLIC and anon on both, the same posture
+-- every function written since Backlog 8f already carries.
+--
+-- Backlog 18b adds one, 494 -> 495: `fn_assert_no_unlinked_delivered_stock`, the
+-- guard that refuses an invoice whose stockable line would relieve stock a
+-- delivery already relieved. SECURITY DEFINER (426 -> 427) and private: clients
+-- reach it only through the existing readiness validator, which performs the
+-- company-membership check. Authenticated/service counts therefore do not move.
+-- The package also closes the validator's inherited PUBLIC grant, so **anon
+-- falls 194 -> 193**. The helper is NOT ledger-capable — assertion 10 is
+-- unchanged: a guard refuses, it never writes.
+--
+-- The Sales + Purchasing lifecycle hardening package adds three, 495 -> 498:
+-- `fn_void_receiving_report` (the purchasing mirror of the delivery
+-- cancellation — ledger-capable, so assertion 10 moves 90 -> 91) and the two
+-- three-way-match assertions `fn_assert_receipt_within_po` and
+-- `fn_assert_bill_within_receipt`, which refuse and never write. All three are
+-- SECURITY DEFINER (427 -> 430). Only the void orchestrator reaches
+-- `authenticated` and `service_role` (348 -> 349 and 319 -> 320); both
+-- relationship assertions are private. Replacing the Vendor Bill readiness
+-- validator closes its inherited PUBLIC grant, so **anon falls 193 -> 192**.
+-- The production costing authority adds a net 18 SECURITY DEFINER functions
+-- and seven ledger-reachable orchestration paths. Private bridge revokes reduce
+-- anon by four; service-only authorities add a net two; authenticated is stable.
+SELECT is((SELECT count(*)::int FROM p52_app_functions), 516,
+  'the complete application-owned public function census contains 516 functions');    -- 12
 
-SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 418,
-  'the complete application-owned SECURITY DEFINER census contains 418 functions');   -- 13
+SELECT is((SELECT count(*)::int FROM p52_app_functions WHERE prosecdef), 448,
+  'the complete application-owned SECURITY DEFINER census contains 448 functions');   -- 13
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('authenticated', oid, 'EXECUTE')),
-  343, 'authenticated EXECUTE coverage is completely counted');                       -- 14
+  349, 'authenticated EXECUTE coverage is completely counted');                       -- 14
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('anon', oid, 'EXECUTE')),
-  196, 'anon EXECUTE coverage is completely counted');                                -- 15
+  188, 'anon EXECUTE coverage is completely counted');                                -- 15
 
 SELECT is(
   (SELECT count(*)::int FROM p52_app_functions
     WHERE has_function_privilege('service_role', oid, 'EXECUTE')),
-  317, 'service_role EXECUTE coverage is completely counted');                        -- 16
+  322, 'service_role EXECUTE coverage is completely counted');                        -- 16
 
 SELECT is(
   (SELECT count(*)::int

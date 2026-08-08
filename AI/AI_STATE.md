@@ -1,18 +1,24 @@
 # PXL AI State
 
-**Current Date:** 2026-08-05
+**Current Date:** 2026-08-08
 **Current Branch:** `main`
 **Working Tree:** Percentage tax (Backlog 8), the **filing artifact engine**
 (Phase 5.8), its **export** (8d), the **1601EQ/QAP** migration (8e i, iii),
-**8f** and the **SLSP** migration (8e ii) are complete locally with executed
-fresh, canonical, regression, frontend, build and lint evidence. A non-VAT
-Section 116 taxpayer runs the chain: line code → component → liability posting →
-tax ledger → GL reconciliation at 0.00 → working paper → **2551Q**. Every
-registered artifact — 2550Q, 2551Q, 1601EQ, SLSP, SAWT, **QAP** — comes from
-**one** generator over **one** working paper and **one** reconciliation, and is
-**exported** by one consumer. **Every current-product compliance surface is on
-the layer and every registered form reaches generate → final → export** (24
-closed 2026-08-05). **Nothing has been filed with the Bureau.**
+**8f**, the **SLSP** migration (8e ii), **governed tax-code maintenance** (10),
+**Delivery Receipt cancellation** (18c), the **Sales Invoice delivered-stock
+guard** (18b safety slice), **Receiving Report cancellation**, and exact
+**PO→RR→VB quantity match** (18k), plus production **Weighted Average, FIFO and
+Specific Identification** costing (18m), are complete locally with fresh,
+focused and committed-lifecycle evidence; the Phase B local checkpoint gate is
+green through regression, canonical, lifecycle, frontend and build proof. A non-VAT Section 116 taxpayer runs the chain: line code
+→ component → liability posting → tax ledger → GL reconciliation at 0.00 →
+working paper → **2551Q**. Every registered artifact — 2550Q, 2551Q, 1601EQ,
+SLSP, SAWT, **QAP** — comes from **one** generator over **one** working paper and
+**one** reconciliation, and is **exported** by one consumer. **Every
+current-product compliance surface is on the layer and every registered form
+reaches generate → final → export** (24 closed 2026-08-05). A statutory rate
+change is now a **succession the product can reach** (10, 2026-08-07).
+**Nothing has been filed with the Bureau.**
 **Product Phase:** Pilot Execution Plan; IA-5/ECC **frozen**.
 **Environment:** Local Supabase on a fresh schema. No hosted operation was
 performed.
@@ -43,8 +49,13 @@ next. **This file is the only status authority.**
 
 ## Current Finding Standing
 
-**93 Retested Passed / 0 In Progress / 0 Open (93 total).** Complete; that
-certifies no module or engine and confers no readiness.
+**98 Retested Passed / 0 In Progress / 0 Open (98 total).** Complete; that
+certifies no module or engine and confers no readiness. **074 through 078 were
+opened and closed on 2026-08-07/08** — a broken Delivery Receipt posting path, a
+void that refused every draft, and a **cash sale whose void left its collection
+posted**, followed by the missing Receiving Report correction and a receipt line
+that could borrow the wrong Purchase Order relationship. The committed-step
+lanes cover the transaction-boundary claims; finding closure is not certification.
 
 ## Active Work Map
 
@@ -65,8 +76,10 @@ certifies no module or engine and confers no readiness.
   source-reviewed slice. UI rollout is not completion:
   business qualification remains source-gated.
 
-- **Tests:** 128 pgTAP files / 3,079 assertions plus 69 frontend source tests;
-  regression, canonical, build and lint lanes pass.
+- **Tests:** 136 pgTAP files / 3,261 assertions plus 85 frontend source tests;
+  regression, canonical, build and lint lanes pass. **Four committed-step
+  lanes** cover general posting, Delivery Receipt, purchasing and inventory
+  costing lifecycles; pgTAP alone cannot see guards with a `same_txn` escape.
 - **Backup/restore:** **Mechanised; never operated over anything real.** Weekly
   in CI. Blocker 5.
 
@@ -74,8 +87,11 @@ certifies no module or engine and confers no readiness.
 
 1. No Sales or Purchasing source-to-statements-to-tax workflow meets the Product
    Definition of Done.
-2. Every outbound entry point relieves stock (054, 119, 120). Open: three-way
-   match, over-receipt control, Delivery Receipt cancellation.
+2. Every current inventory writer delegates to one production costing authority.
+   Weighted Average, FIFO and Specific Identification preserve historical cost,
+   layer/identity lineage and ordered correction; exact quantity matching is
+   enforced (`134`–`137` plus committed lifecycles). Open: full Document
+   Conversion and purchasing price-variance policy.
 3. **Nothing has ever been filed with the Bureau.** Six artifacts — 2550Q,
    2551Q, 1601EQ, SLSP, SAWT, QAP — generate from the posted ledger, reconcile to
    the GL and refuse to leave draft while they disagree with it; `filed` records
@@ -83,7 +99,8 @@ certifies no module or engine and confers no readiness.
    Two hand-keyed FWT prototype screens remain outside the current product; they
    carry no architecture, pilot or readiness weight (22). Percentage tax is recognised on the document, not on collections; a
    credit memo does not reverse it; nothing compels a PT-registered company to
-   select its code (8b). No governed UI for tax-code succession (10) or statement
+   select its code (8b). Tax-code succession is now governed (10), but
+   **deprecation is not** (10b); no governed UI for statement
    re-presentation (18f); the tax profile is not effective-dated (11); close
    readiness cannot see unposted documents (18h); retained earnings is
    per-fiscal-year (18g); notes carry no narrative or signature block (18i).
@@ -115,14 +132,72 @@ not retired**.
 **2026-08-05:** SLSP (8e ii) and the 2551Q export (24) — **both needed no
 migration**; each was a missing consumer of what already existed.
 
-**8f shipped** (`…05`/`…06`, `128`, `129`, `compliance_architecture.test.ts`) —
-**the second compliance architecture is retired.** Capability first: keying a
-line no ledger backs became the governed **Reconciling Item**, excluded from
-every total **structurally**. Then retirement in order: one surface replaced four
-screens, eight tables were dropped, and `fn_snapshot_wht_export` went — revealing
-it had been **`anon`-executable**. **Two regressions closed:** `filing_artifacts`
-had no owner/admin gate on final/filed, and the grouped schedule needed a trace
-drill-down.
+**2026-08-07: governed tax-code maintenance** (`…01`, `130`,
+`tax_reference_maintenance.test.ts`, 10). Two premises in that Backlog row were
+wrong. Its named gate `fn_can_maintain_tax_reference` was **dropped** by
+`20260721000002` — authority is `fn_is_bir_config_maintainer()`,
+**maintainer-only, closed by default**, which the screen now asks before offering
+anything. And succession was **unreachable**: no upsert took a `supersedes`
+argument and RLS denies direct INSERT, so the only reachable outcome was an
+**orphan successor**. `p_supersedes_id` joins the three upserts; `fn_*_succeed`
+closes a window and opens its successor **in one transaction**, delegating both
+writes to the upsert. `vat_codes` gained the version-rules trigger the other two
+had. ATC maintenance existed nowhere. **Deprecation is still not governed** (10b).
+
+**2026-08-08: the cross-transaction lane, and what it found** (`…03`, `132`,
+`verify_posting_lifecycles.mjs`). Seven documents walked save → commit → post →
+commit → correct. On its first complete run it found **076**: a Cash Sale is one
+business event recorded as two documents, and voiding withdrew only the invoice
+half — leaving its Official Receipt **posted**, cash overstated by the whole sale
+and a phantom AR credit, with the trial balance still balancing.
+`fn_void_cash_sale` is now the named authority and `fn_void_sales_invoice`
+**routes** cash sales into it, so the general invoice surface cannot bypass it
+and no screen needs to know the difference. Two private helpers were extracted so
+each rule is stated once. Closed with it: `fn_bounce_receipt` and
+`fn_void_sales_invoice` had been **`anon`-executable** by default grant.
+
+**2026-08-07: Delivery Receipt cancellation** (`…02`, `131`,
+`delivery_receipt_cancellation.test.ts`, 18c). `fn_void_delivery_receipt` reverses
+the delivery journal through the shared reversal and restocks through the shared
+costing path; an invoice claiming the delivery — **draft included** — must be
+voided first. Building it exposed **two defects, both invisible to pgTAP**:
+`delivery_receipts` became a posting document on 2026-08-03 without its
+2026-07-04 guards being widened, so **posting was refused whenever the delivery
+was marked delivered in an earlier transaction — no delivery could post from the
+screen at all** (074); and `fn_capture_cas_document_void` erased the reason it had
+resolved when no reversal journal existed, so **no draft could be voided** across
+twelve CAS families (075). pgTAP runs in one transaction, where the guards'
+`same_txn` escape applies. **`npm run verify:delivery-receipt-lifecycle` is the
+standing cross-transaction proof, and this class of defect needs one.**
+
+**2026-08-08: Sales and Purchasing integrity** (`20260808000001`–`000003`,
+`133`/`134`). Approval and posting refuse an unlinked Sales Invoice stock line
+when a live delivery should be billed; the linked path still clears Goods
+Delivered Not Invoiced, while never-delivered goods and services remain valid.
+This is a safety guard, **not** the Document Conversion Engine. Receiving Report
+cancellation is reachable from the screen and, after live bills and downstream
+allocations are corrected, removes the exact historical receipt under any of the
+three costing methods, reverses the journal, nets GRNI to zero and reopens the PO.
+PO-line receipt quantity and receipt-item bill quantity now fail closed at the
+current relationship grain; no-`rr_id` bills remain allowed. PXL-AUD-077/078
+record the reversal and cross-order line-integrity gaps. Price variance is
+deliberately separate (18l). `verify:purchasing-lifecycle` proves 36/36 across
+commits through two receipts, two bills, payment and ordered correction.
+
+**2026-08-08: production Inventory Costing** (`20260808000004`–`000006`,
+`135`–`137`). One private authority serves Weighted Average, FIFO and Specific
+Identification; exact allocations/serial-or-lot identity drive cost, reversal,
+return and transfer while the Posting Engine remains the only GL writer. Method
+changes fail closed after activity. Real Goods Issue, adjustment, transfer,
+count, customer/supplier return and sales/purchasing paths are exercised. The
+committed lifecycle proves WAC 600, FIFO 1,280, selected serial 120, exact void
+and a concurrent one-serial race. All three are **built, reachable, exercised
+and proven locally** for the intended current lifecycle. This is not Inventory
+certification, hosted parity or pilot readiness; IA-5/ECC remains frozen.
+
+**8f shipped** (`…05`/`…06`, `128`, `129`): the second compliance architecture
+is retired; governed Reconciling Items preserve manual capability without
+entering totals, one surface replaced four, and eight legacy tables were retired.
 
 Phase 3 is implemented locally and unchanged (PAD-002, PAD-003). IA-5/ECC is
 **frozen** at zero consumers (`docs/PXL/archive/ia5-ecc-frozen/`). Posting P5.2
@@ -131,7 +206,7 @@ engine.
 
 ## Hosted and UX Status
 
-Hosted project `bskjkogijpbhukjkagfj` is at `20260716000005`; **68 local
+Hosted project `bskjkogijpbhukjkagfj` is at `20260716000005`; **77 local
 migrations pending**, no destructive DDL. The deploy is **rehearsed, not
 performed, and deliberately deferred** — nothing consumes it and CI deploys
 nothing. Credentials absent by design (PXL-AUD-055). Deferred-route labelling is
@@ -139,19 +214,33 @@ governed by `deferredSurfaces.ts` (PAD-012).
 
 ## Last Verified Commands
 
-- `npm run test:db:fresh` and `test:db:regression` — **PASS**, 128 files / 3,079
+- `npm run test:db:fresh` and `test:db:regression` — **PASS**, 136 files / 3,261
   assertions; the regression lane resets the schema first, so it is
   order-independent.
 - `npm run test:canonical` — **PASS**, 30 files / 751 assertions.
-- Focused lane — **PASS**, `129` 22, `128` 30, `127` 34, `126` 24, `125` 42.
+- Focused lane — **PASS**, `130`–`137` plus `031`/`120` are 255 assertions;
+  costing `135`–`137` contribute 56; security census owner `102` passes 78/78.
+- `npm run verify:delivery-receipt-lifecycle` — **PASS**, five committed
+  transactions; post and cancel both succeed across commit boundaries.
+- `npm run verify:posting-lifecycles` — **PASS, 42/42**: Sales Invoice, Cash
+  Sale, Official Receipt, Credit Memo, Receiving Report, Vendor Bill and Payment
+  Voucher, each save → commit → post → commit → correct. It found 076 on its
+  first complete run.
+- `npm run verify:purchasing-lifecycle` — **PASS, 36/36** across committed PO,
+  two receipts, two bills, payment and ordered correction; stock/value,
+  Inventory, GRNI, AP, cash, input VAT and tax net to zero; TB balances.
+- `npm run verify:inventory-costing-lifecycle` — **PASS, 28/28**: committed WAC
+  600, FIFO 1,280, selected serial 120, exact correction, reconciliation and a
+  two-session same-serial race with exactly one winner.
 - **Committed** fresh-data percentage-tax run (never the demo seed): ledger-to-GL
   variance **0.00**, trial balance **0.00**, Q1 filed with its working paper.
-- `npm run test:frontend` — **PASS**, 66 tests.
+- `npm run test:frontend` — **PASS**, 85 tests.
 - `npm run build`, `npm run lint`, `git diff --check` — **PASS**; one
   pre-existing lint warning in `tests/backup_recovery.test.ts`.
-- `npm run docs:check` — **PASS**; 128 tests indexed. It had been **failing** in
-  this tree: a prior session left this file over its word cap and recorded the
-  lane as passing.
+- `npm run docs:check` — **PASS**; all 136 pgTAP files indexed.
+- `npm run deploy:rehearse` — **PASS**; 77 pending migrations apply to the
+  deployed-through baseline and match fresh structure; measured schema window
+  26 seconds. No hosted operation occurred.
 - `npm run backup:operate` — **PASS** (2026-08-02); replica restored
   independently, 0 mismatches.
 - Inventory-to-control **0.00** in all three stock-holding companies; trial
@@ -161,13 +250,17 @@ governed by `deferredSurfaces.ts` (PAD-012).
 
 **PHASE 2 RECOVERABILITY IS ENGINEERING-COMPLETE; the rest is owner action** (PAD-007).
 
-**Phase 5 items 3, 7 and 8 and Backlog 8, 8d, 8e, 8f, 18d and 18e are complete
-for current product scope; nothing has been filed with the Bureau.** **The
-governed compliance architecture is complete for every current-product family**
-(test `129`, `compliance_architecture.test.ts`); FWT/1601FQ is a future
-extension, not an architecture gap. **Next, owner's choice:** **8b** (percentage
-tax on collections), **18c** (Delivery Receipt cancellation), or **10** (governed
-tax-code maintenance, before the first real BIR rate change).
+**Phase 5 items 3, 7 and 8 and Backlog 8, 8d, 8e, 8f, 10, 18c, 18d, 18e and 18k
+are complete for current product scope; nothing has been filed with the Bureau.**
+**The governed compliance architecture is complete for every current-product
+family** (test `129`, `compliance_architecture.test.ts`); FWT/1601FQ is a future
+extension, not an architecture gap.
+
+After the validated Phase B checkpoint, the authorised next build is the **full
+Document Conversion Engine**: governed Quote → SO → DR → SI carry-forward,
+partial and concurrency-safe remaining quantity, source/target trace, direct
+workflow preservation and integration with all three costing methods. Conversion
+creates lineage; Inventory determines cost; Posting creates accounting.
 
 **Compliance standard (owner, 2026-08-04):** Posted Transactions → Tax Engine →
 Tax Ledger → Reconciliation → Working Paper → Filing Artifact → Export → Filed
@@ -176,13 +269,12 @@ stage, extra faces are delegations, replacement is ordered, no orphans. **Review
 Stage reads source data by design; Filing Stage is bound to the artifact**
 (settled 2026-08-05). Full rule in the Backlog and Rules Matrix.
 
-Material current-product Backlog: 8b, 8c, 10, 11, 18, 18b, 18c, 18f, 18g, 18h,
-18i, 19. **Not the full register** — the Backlog is, and also holds 9, 12, 13, 17
+Material current-product Backlog: 8b, 8c, 10b, 11, 18, 18b, 18f, 18g, 18h,
+18i, 18l, 19. **Not the full register** — the Backlog is, and also holds 9, 12, 13, 17
 and the documentation-only 20, 21, 23, 25. Then Banking & Treasury, then Fixed
 Assets. Excluded extensions, including 22, carry no readiness weight.
 
-Re-run `npm run deploy:rehearse` after adding migrations (Runbook §2a);
-**owner approval required**. No open findings remain; do not resume IA-5.
+Deploy rehearsal is current; hosted deploy still requires owner approval. **No open findings remain**; do not resume IA-5.
 
 ## Stop Conditions
 

@@ -308,12 +308,12 @@ SELECT set_eq(
       JOIN pg_namespace n ON n.oid=p.pronamespace
      WHERE n.nspname='public'
        AND strpos(p.prosrc, 'fn_receive_inventory(') > 0$$,
--- fn_post_credit_memo_vat_lump_impl joined on 2026-08-03: a customer return puts
--- goods back on hand, and it uses the one shared inbound path rather than a
--- second implementation of weighted-average roll-forward and layer creation.
+-- Runtime inventory writers delegate all inbound movements to this one shared
+-- authority; customer returns use the separate historical-return authority.
   $$VALUES ('fn_confirm_receiving_report'),('fn_post_cash_purchase'),
-           ('fn_post_opening_balance'),('fn_post_credit_memo_vat_lump_impl')$$,
-  'the live function graph has exactly the four approved generic-receipt callers');   -- 20
+           ('fn_post_opening_balance'),('fn_post_physical_count_source_locked_impl'),
+           ('fn_post_stock_adjustment_source_locked_impl')$$,
+  'the live function graph has exactly the five approved generic-receipt callers');   -- 20
 
 SELECT is(
   (SELECT count(*)::int
@@ -387,28 +387,35 @@ SELECT set_eq(
          '(insert[[:space:]]+into|update|delete[[:space:]]+from)'
          '[[:space:]]+(public[.])?'
          '(stock_balances|inventory_cost_layers|inventory_transactions)'$$,
--- `fn_save_cash_sale` joined this census on 2026-08-03: Cash Sale now relieves
--- stock and writes its issue transaction, which is the outbound entry point it
--- was missing. It uses the same fn_ensure_stock_balance / fn_consume_cost_layers
--- path as every other writer here — no second costing implementation exists.
+-- Production costing adds one shared set of receipt, issue, return, transfer,
+-- reversal, allocation, and evidence authorities. Document writers delegate to
+-- those authorities; the IA-5 event tables remain dormant and outside this set.
   $$VALUES ('fn_add_cost_layer'),
+           ('fn_bind_inventory_costing_evidence'),
+           ('fn_complete_purchase_return_source_locked_impl'),
            ('fn_consume_cost_layers'),
            ('fn_ensure_stock_balance'),
-           ('fn_post_goods_issue_source_locked_impl'),
+           ('fn_issue_inventory'),
+           ('fn_issue_inventory_from_layer'),
+           ('fn_post_credit_memo_vat_lump_impl'),
+           ('fn_post_delivery_receipt_costing_legacy_20260808'),
            ('fn_post_opening_balance'),
            ('fn_post_physical_count_source_locked_impl'),
-           ('fn_post_sales_invoice'),
+           ('fn_post_sales_invoice_costing_legacy_20260808'),
            ('fn_post_stock_adjustment_source_locked_impl'),
            ('fn_post_stock_transfer_source_locked_impl'),
            ('fn_receive_inventory'),
-           ('fn_post_credit_memo_vat_lump_impl'),
-           ('fn_post_delivery_receipt'),
+           ('fn_return_inventory'),
+           ('fn_reverse_inventory_issue'),
+           ('fn_reverse_inventory_receipt'),
            ('fn_reverse_opening_balance'),
-           ('fn_save_cash_sale'),
+           ('fn_save_cash_sale_costing_legacy_20260808'),
+           ('fn_stamp_void_inventory_dimensions'),
+           ('fn_transfer_inventory'),
            ('fn_update_wac'),
-           ('fn_void_sales_invoice'),
-           ('fn_void_sales_invoice_aud053_core')$$,
-  'the legacy-active derived-table writer census is exactly the seventeen named functions'); -- 25
+           ('fn_void_delivery_receipt_costing_legacy_20260808'),
+           ('fn_void_sales_invoice_costing_legacy_20260808')$$,
+  'the production-active direct derived inventory writer census is exactly the twenty-four named functions'); -- 25
 
 SELECT is(
   (SELECT count(*)::int

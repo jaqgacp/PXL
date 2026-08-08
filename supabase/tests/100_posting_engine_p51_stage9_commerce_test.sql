@@ -7,7 +7,7 @@ SELECT plan(16);
 CREATE TEMP VIEW v_commerce_writer AS
 SELECT unnest(ARRAY[
   'fn_complete_purchase_return_source_locked_impl',
-  'fn_save_cash_sale'
+  'fn_save_cash_sale_costing_legacy_20260808'
 ]) AS proname;
 
 SELECT is(
@@ -41,21 +41,23 @@ SELECT ok(
   'the Purchase Return fallback sequence is exact and default-off');                -- 3
 
 SELECT ok(
-  (SELECT p.prosrc ~ 'p_discard_journal => true'
-      AND p.prosrc ~ 'v_je_id := NULL'
+  (SELECT p.prosrc !~ 'p_discard_journal'
+      AND p.prosrc ~ 'inventory_cost'
+      AND p.prosrc ~ 'fn_create_posted_journal_entry'
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public'
       AND p.proname='fn_complete_purchase_return_source_locked_impl'),
-  'Purchase Return retains its historical no-JE fallback');                         -- 4
+  'Purchase Return requires exact inventory cost and creates a balanced journal');  -- 4
 
 SELECT ok(
   (SELECT p.prosrc ~ 'fn_resolve_posting_account'
-      AND p.prosrc ~ 'v_vb_count'
-      AND p.prosrc ~ 'v_total_cr = 0'
+      AND p.prosrc ~ 'v_vb_id'
+      AND p.prosrc ~ 'inventory_transaction_id'
+      AND p.prosrc ~ 'inventory_account_id'
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public'
       AND p.proname='fn_complete_purchase_return_source_locked_impl'),
-  'Purchase Return validation, posted-bill attribution, and fallback gate remain'); -- 5
+  'Purchase Return validates its posted bill and exact inventory evidence');         -- 5
 
 -- PAD-001 moved the arithmetic, not the responsibility. Cash Sale still prices
 -- every line and still refuses a CWT that does not match the ATC — it just asks
@@ -65,7 +67,7 @@ SELECT ok(
       AND p.prosrc ~ 'CWT % does not match ATC rate'
       AND p.prosrc !~ 'rate\s*/\s*100'
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale'),
+    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale_costing_legacy_20260808'),
   'Cash Sale delegates calculation to the Tax Engine and keeps CWT validation'); -- 6
 
 SELECT is(
@@ -73,7 +75,7 @@ SELECT is(
              FROM regexp_matches(
                p.prosrc, 'fn_create_posted_journal_entry', 'g'))
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale'),
+    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale_costing_legacy_20260808'),
   2, 'Cash Sale still creates exactly the SI and OR journals');                      -- 7
 
 -- Was six: AR, revenue, output VAT, cash, CWT receivable, AR clearing. Cash Sale
@@ -85,7 +87,7 @@ SELECT is(
              FROM regexp_matches(
                p.prosrc, 'fn_add_posting_line_push', 'g'))
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale'),
+    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale_costing_legacy_20260808'),
   10, 'Cash Sale retains its ten conditional/loop line sites');                     -- 8
 
 SELECT ok(
@@ -95,7 +97,7 @@ SELECT ok(
       AND p.prosrc ~ $$'tax'$$
       AND p.prosrc ~ $$'withholding'$$
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale'),
+    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale_costing_legacy_20260808'),
   'Cash Sale posting_origin and every line role remain explicit');                  -- 9
 
 SELECT ok(
@@ -103,14 +105,14 @@ SELECT ok(
       AND p.prosrc ~ $$'output_vat'$$
       AND p.prosrc ~ $$'cwt_receivable'$$
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale'),
+    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale_costing_legacy_20260808'),
   'Cash Sale tax-detail persistence remains unchanged');                           -- 10
 
 SELECT ok(
   (SELECT p.prosrc ~ 'sales_invoices SET'
       AND p.prosrc ~ 'receipts SET status'
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale'),
+    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale_costing_legacy_20260808'),
   'Cash Sale document lifecycle remains unchanged');                              -- 11
 
 SELECT ok(
@@ -121,11 +123,11 @@ SELECT ok(
    AND
    (SELECT p.prosrc ~ 'fn_next_document_number'
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale'),
+    WHERE n.nspname='public' AND p.proname='fn_save_cash_sale_costing_legacy_20260808'),
   'Purchase Return and Cash Sale numbering calls remain');                         -- 12
 
 SELECT ok(
-  (SELECT p.prosrc !~ 'fn_complete_purchase_return|fn_save_cash_sale'
+  (SELECT p.prosrc !~ 'fn_complete_purchase_return|fn_save_cash_sale_costing_legacy_20260808'
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public' AND p.proname='fn_posting_kernel_origin'),
   'Stage 9 adds no writer or exception to the classifier');                         -- 13
@@ -147,7 +149,7 @@ SELECT is(
     WHERE n.nspname='public'
       AND p.proname IN (
         'fn_complete_purchase_return_source_locked_impl',
-        'fn_save_cash_sale',
+        'fn_save_cash_sale_costing_legacy_20260808',
         'fn_post_manual_je',
         'fn_close_fiscal_year',
         'fn_execute_recurring_template_source_locked_impl')

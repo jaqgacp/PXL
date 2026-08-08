@@ -7,7 +7,7 @@ SELECT plan(15);
 
 CREATE TEMP VIEW v_batch_a_writer AS
 SELECT unnest(ARRAY[
-  'fn_post_sales_invoice',
+  'fn_post_sales_invoice_costing_legacy_20260808',
   'fn_post_vendor_bill',
   'fn_post_receipt',
   'fn_post_cash_purchase_source_locked_impl'
@@ -144,7 +144,7 @@ SELECT is(
 
 SELECT is(
   (SELECT count(*)::int FROM sys_posting_guard_violations
-    WHERE writer_function IN ('fn_post_sales_invoice','fn_post_vendor_bill',
+    WHERE writer_function IN ('fn_post_sales_invoice_costing_legacy_20260808','fn_post_vendor_bill',
                               'fn_post_receipt',
                               'fn_post_cash_purchase_source_locked_impl')),
   0, 'the Batch A writer violation census is zero in this certification run');        -- 12
@@ -152,7 +152,7 @@ SELECT is(
 SELECT ok(
   (SELECT p.prosrc ~ 'fn_finalize_journal_entry'
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public' AND p.proname='fn_post_sales_invoice'),
+    WHERE n.nspname='public' AND p.proname='fn_post_sales_invoice_costing_legacy_20260808'),
   'Sales Invoice finalization and its journal total ordering remain intact');          -- 13
 
 SELECT ok(

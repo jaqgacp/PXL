@@ -6,11 +6,11 @@
 **Applies To:** Accounting, tax, posting, reconciliation, and regression test scenarios
 **Read When:** Adding or changing accounting tests, validating a finding, or reconciling test coverage
 **Do Not Read For:** AI startup or accounting behavior authority without the accounting rules matrix
-**Last Reviewed:** 2026-07-26 after Inventory Accounting IA-5 dormant-foundation certification; P5.2 remains authoritative and fully enforced
+**Last Reviewed:** 2026-08-08 after production inventory-costing authority proof; dormant IA-5/ECC remains separate and P5.2 remains authoritative and fully enforced
 
 This file records expected accounting/reporting scenarios that must be executed before a finding can be marked `Retested Passed`.
 
-How to execute deterministic scenarios: start the isolated stack with `supabase db start`, run `npm run test:db:local` for a fresh no-seed migration replay plus all **103 files / 2,353 assertions**, and run `npm run test:canonical` for the atomic canonical rebuild plus the canonical/engine verification set (**30 files / 748 assertions**). Run the lanes in that order: test 073 asserts the zero-company bootstrap, so the regression suite must run on a fresh no-seed schema rather than on top of a canonical seed. `npm test` aliases the full pgTAP regression on the current local schema; use `npm run test:db:focused -- supabase/tests/<file>.sql` only as bounded package evidence. The permanent lane order, prerequisites, success/failure rules, hosted read-only boundary, and complete release gates are authoritative in `docs/PXL/13. Testing and Validation/README.md`. `.github/workflows/ci.yml` publishes separate static, fresh-schema/regression, canonical, protected hosted, and summary results; hosted jobs run only for a manually authorized release-candidate dispatch.
+How to execute deterministic scenarios: start the isolated stack with `supabase db start`, run `npm run test:db:local` for a fresh no-seed migration replay plus all **136 files / 3,261 assertions**, and run `npm run test:canonical` for the atomic canonical rebuild plus the canonical/engine verification set (**30 files / 751 assertions**). Run the lanes in that order: test 073 asserts the zero-company bootstrap, so the regression suite must run on a fresh no-seed schema rather than on top of a canonical seed. `npm test` aliases the full pgTAP regression on the current local schema; use `npm run test:db:focused -- supabase/tests/<file>.sql` only as bounded package evidence. The permanent lane order, prerequisites, success/failure rules, hosted read-only boundary, and complete release gates are authoritative in `docs/PXL/13. Testing and Validation/README.md`. `.github/workflows/ci.yml` publishes separate static, fresh-schema/regression, canonical, protected hosted, and summary results; hosted jobs run only for a manually authorized release-candidate dispatch.
 
 Report-page adoption is governed by `docs/PXL/11. Reports/PXL_STANDARD_REPORT_WORKSPACE.md`. Any report marked production-ready under that standard must have evidence for its accounting purpose, authoritative source data, filters, date basis, posting-state basis, totals, reconciliation target, drilldown/drillback path, export metadata, snapshot requirements where applicable, permissions, known limitations, and performance-sensitive scenarios. Visual conformance alone is not sufficient for accounting, tax, compliance, or reconciliation reports.
 
@@ -3085,3 +3085,300 @@ surface consumes `downloadFilingArtifactExport`.
 Not claimed: nothing has been filed with the Bureau. The FWT/1601FQ screens and
 four tables are excluded future-extension prototypes; they do not participate in
 the current product architecture, delivery plan or readiness assessment.
+
+## Backlog 10 — a statutory rate change is a succession the product can reach
+
+Status: **PASSING 2026-08-07.**
+`supabase/tests/130_tax_reference_succession_test.sql` (34 assertions,
+self-provisioned company and maintainer) with
+`tests/tax_reference_maintenance.test.ts` (7 tests) as its screen half.
+
+Test `039` already proved the **rule** — a used version's rate and identity are
+frozen, so a statutory change must become a successor — and test `060` proved the
+**authority**, that only a provisioned statutory-config maintainer may write and
+every write is audited once with its reason. What neither could prove is that the
+succession was **reachable**. RLS denies every direct client INSERT on
+`tax_codes`, `vat_codes` and `atc_codes`, and the governed upserts took no
+`supersedes` argument, so the only version an application could produce was an
+**orphan**: a row whose `supersedes_*_id` was NULL, indistinguishable from an
+unrelated code that happened to share a name. The chain existed in the schema and
+in the triggers, and nowhere else. The screen matched: it posted the same id back
+and rewrote the rate in place, and ATC had no maintenance UI at all.
+
+Migration `20260807000001` adds `p_supersedes_id` to the three governed upserts
+and `fn_tax_code_succeed` / `fn_vat_code_succeed` / `fn_atc_code_succeed`, which
+close a window and open its successor **in one transaction** — the two halves are
+not a client's to sequence, because a half-done succession leaves a code that
+resolves to nothing. Each succeed function delegates both writes to its upsert,
+so authority, normalization and audit are stated once. It also gives `vat_codes`
+the version-rules trigger it alone lacked; `tax_codes` and `atc_codes` had
+carried one since `20260713000012` and `20260713000002`.
+
+Section 1 refuses all three successions to a non-maintainer (2–4). Section 2 is
+the point of the file: a version that has priced a posted document still refuses
+an in-place rate change (6), accepts the succession (7), keeps its own rate (9)
+while its window closes the day before its successor's (8), and the successor
+records what it supersedes (11). A March document still resolves to 12% and an
+August one to 14% (14, 15) — the reason any of this exists. Both halves are
+audited under the typed reason (16). Sections 3 and 4 refuse a successor that
+starts on or before its predecessor (17, 18) and prove the transaction is atomic:
+a colliding successor leaves the predecessor's window exactly as it was (19, 20).
+Sections 5 and 6 repeat the chain for ATC and VAT, where a VAT successor must
+point at the tax-code version carrying the new rate (29) because `vat_codes`
+states no rate of its own. Section 7 records a link on a plain governed insert
+(31, 32) and refuses one pointing at a different code (33).
+
+The screen half asserts what pgTAP cannot see: the page writes none of the three
+tables directly, calls all nine governed RPCs, offers succession rather than only
+an in-place edit, sends the effective window as a field, asks
+`fn_is_bir_config_maintainer()` before offering any action, shows the database's
+own refusal instead of an `alert()`, and sends the reason the maintainer typed.
+
+Not claimed: **deprecation**. `deprecated_at` / `deprecated_reason` exist on all
+three tables and gate `fn_atc_code_is_current`, but no governed setter has ever
+existed and none is added here; deactivation and window closure are what the
+governed path offers. Not claimed: any real BIR rate change has been configured.
+
+## Backlog 18c — the day a delivery is wrong, and a defect only a commit could show
+
+Status: **PASSING 2026-08-07.**
+`supabase/tests/131_delivery_receipt_cancellation_test.sql` (24 assertions,
+self-provisioned company), `tests/delivery_receipt_cancellation.test.ts` (5 tests)
+and `scripts/verify_delivery_receipt_lifecycle.mjs`, which runs **outside** a
+transaction.
+
+Test `120` walks the outbound happy path. This file walks the mis-ship. A posted
+delivery could be neither cancelled nor reversed, so the cost parked in Goods
+Delivered Not Invoiced could be released only by **billing** it — by invoicing a
+customer who never received the goods. `fn_void_delivery_receipt` reverses the
+delivery journal through `fn_reverse_posted_journal_entry`, the same reversal
+every other void uses, and puts the stock back through the same shared costing
+path the posting used to take it out.
+
+The ordering rule is the substance: an invoice that already claims the delivery
+must be voided **first**, because reversing the clearing balance from underneath
+a live invoice would leave it taking a cost that no longer exists. A **draft**
+invoice counts — it already holds the delivered line through
+`uq_sil_delivery_source`. Assertions 6–9 raise a draft invoice, prove the
+cancellation is refused (7), prove the refusal changed nothing (8), then void the
+invoice and proceed. Assertions 10–20 are the correction itself: the goods come
+back (13, 14), the weighted-average cost is undisturbed (15), the restock is its
+own transaction rather than an edit of the issue (16), and Goods Delivered Not
+Invoiced nets to zero (17). Assertions 21–22 close the door afterwards — one
+reversal, not two, and a cancelled delivery can no longer be billed. Assertion 23
+cancels a draft delivery, which writes no journal because it moved nothing.
+
+**Two defects were found here, and neither was visible to pgTAP.**
+`delivery_receipts` became a posting document on 2026-08-03 without its
+2026-07-04 status guards being widened, so **`fn_post_delivery_receipt` was
+refused whenever the delivery had been marked delivered in an earlier
+transaction** — which is exactly what the screen does. Both the header guard and
+the line guard blocked it (PXL-AUD-074). Separately, `fn_capture_cas_document_void`
+erased the void reason it had just resolved whenever no reversal journal existed,
+so **no draft document could be voided at all**, across twelve CAS families
+(PXL-AUD-075).
+
+pgTAP runs each file in one transaction, and both guards carry a `same_txn`
+escape, so inside pgTAP they never engage: 130 test files could not see a defect
+that made delivery posting unusable. Assertion 1 is structural for that reason,
+and `scripts/verify_delivery_receipt_lifecycle.mjs` — five committed
+transactions, `npm run verify:delivery-receipt-lifecycle` — is the behavioural
+proof. **A gate that only ever sees one transaction cannot see this class of
+defect**, which is the lasting lesson of this entry.
+
+Not claimed: partial cancellation. A delivery cancels whole or not at all; a
+partial return is the Customer Return path test `120` already covers. Not
+claimed: FIFO restock ordering — this company costs weighted-average.
+
+## PXL-AUD-076 — a cash sale is one event, and it now withdraws as one
+
+Status: **PASSING 2026-08-08.**
+`supabase/tests/132_cash_sale_void_atomicity_test.sql` (18 assertions,
+self-provisioned company) and `scripts/verify_posting_lifecycles.mjs`, which
+found the defect and now holds the claim across committed transactions.
+
+A Cash Sale is one business event recorded as **two** documents, because that is
+what the BIR expects: the CS-series sales document and the Official Receipt that
+collects it. `fn_save_cash_sale` creates both in one act. **Voiding withdrew only
+the invoice half.** Revenue, output VAT, COGS and inventory reversed correctly;
+the receipt's `DR Cash / CR AR` journal stayed posted. Every voided cash sale
+therefore left **cash overstated by the full sale**, a **phantom credit in
+Accounts Receivable** for a customer who owed nothing, and a `posted` receipt
+collecting a sale that no longer existed — with the trial balance still
+balancing, because the surviving journal balanced perfectly well on its own.
+
+It was reachable, not latent: the Cash Sale screen has no void action, but the
+Sales Invoice screen calls `fn_void_sales_invoice` and its list filters only on
+company and status, so cash sales appear there and can be voided from there.
+
+`fn_void_cash_sale` is now the authority for the business event, and
+`fn_void_sales_invoice` **delegates** to it whenever `is_cash_sale`. Routing
+rather than blocking is the whole design: no screen has to know the difference,
+so there is no browser-side coordination to get wrong, and the general invoice
+surface cannot bypass the governed path because it *is* the governed path. One
+function is one transaction, so both halves reverse or neither does. It adds no
+reversal engine — both halves go through `fn_reverse_posted_journal_entry` — and
+two private helpers were extracted so each rule is stated once:
+`fn_reverse_receipt_core` (lifted out of `fn_bounce_receipt`, terminal state now
+a parameter, because a bounced cheque and a withdrawn sale are different events
+needing the same mechanism) and `fn_stamp_void_inventory_dimensions`.
+
+Assertions 1–2 hold the design: the invoice void routes into the cash-sale path,
+and the receipt-reversal core is private. The fixture then rings up a five-unit
+counter sale (3–5) and voids it **through the general Sales Invoice entry point**
+(6), which is the path a user actually takes. Both documents reach `cancelled`
+(7, 8). Then the accounting claim, one account at a time: cash returns to zero
+(9) — the assertion this file exists for — the AR bridge the cash-sale structure
+creates is fully cleared (10), and revenue, output VAT and COGS follow (11–13).
+Inventory returns to its pre-sale quantity and governed original cost (14, 15),
+the tax ledger nets to zero for the whole event including any CWT withheld on the
+collection (16), and the trial balance still balances (17). Assertion 18 refuses
+a second void, so no half can reverse twice.
+
+**Closed with it:** `fn_bounce_receipt` and `fn_void_sales_invoice` were both
+**`anon`-executable**. Every historical grant was a bare `GRANT ... TO
+authenticated`, and PostgreSQL grants EXECUTE to PUBLIC by default. Neither was
+exploitable — both fail closed on `is_company_member` — but a destructive
+financial entry point should not be reachable without a session. The `anon`
+census in test `102` falls from 196 to 194.
+
+Not claimed: percentage tax. This company is VAT-registered; the percentage-tax
+reversal shares the same `fn_reverse_tax_detail_entries` path already proven by
+tests `048` and `124`.
+
+## Backlog 18b safety guard — delivered stock cannot be relieved twice
+
+Status: **PASSING 2026-08-08.**
+`supabase/tests/133_sales_invoice_delivered_stock_guard_test.sql` (18 assertions,
+self-provisioned company).
+
+The full Document Conversion Engine is not delivered. This bounded guard closes
+the unsafe gap while preserving that distinction: both Sales Invoice approval
+and posting pass through `fn_validate_sales_invoice_accounting_ready`, which now
+refuses an unlinked stock line when a live delivered Delivery Receipt for the
+same company, customer and item remains available to bill. The private
+relationship helper and the SECURITY DEFINER validator are not executable by
+`anon`.
+
+The fixture first posts a Delivery Receipt and proves that a hand-entered invoice
+for the delivered goods is refused without moving stock a second time or erasing
+the Goods Delivered Not Invoiced balance. It then bills the delivery through the
+existing `source_document_type = 'DR'` / `source_line_id` relationship and proves
+stock stays unchanged while the clearing balance reaches zero. A direct invoice
+for never-delivered goods and a service line remain valid. Finally, an invoice
+approved before a later independent delivery is refused at posting, proving the
+authoritative gate is not approval-only.
+
+Not claimed: quotation/order carry-forward, automatic relationship creation,
+quantity allocation, or the full Document Conversion Engine. The guard refuses
+an unsafe invoice; the existing *Bill This Delivery* action remains the one path
+that creates the governed delivery relationship.
+
+## Purchasing quantity match and Receiving Report cancellation
+
+Status: **PASSING 2026-08-08.**
+`supabase/tests/134_purchasing_match_and_reversal_test.sql` (32 assertions,
+self-provisioned company), `tests/receiving_report_cancellation.test.ts` (4
+tests), and `scripts/verify_purchasing_lifecycle.mjs` (36 committed-step checks).
+
+The quantity match is exact because no governed tolerance exists. A Receiving
+Report line is checked against its own Purchase Order line, including company,
+header-order and item membership, and concurrent confirmations serialize on the
+order line. Confirmed quantity across multiple live receipts may not exceed the
+ordered quantity. Draft and cancelled receipts contribute nothing to received
+or billable progress. A Vendor Bill carrying `rr_id` may not exceed the live
+received quantity per item; bills without `rr_id` remain allowed for services,
+expenses and intentional bill-without-receipt processing. Relationship helpers
+stay private and both progress views use invoker security so RLS remains the
+tenant boundary.
+
+The same file proves the Receiving Report correction order. A live Vendor Bill,
+including a draft, blocks cancellation. After the bill is voided, cancellation
+still refuses if the receipt quantity is no longer on hand and names the
+shortfall. A valid weighted-average cancellation removes the received quantity
+and value atomically, reverses the original journal through the shared reversal
+authority, nets Goods Received Not Invoiced to zero, and reopens both Purchase
+Order progress and its header status. A draft receipt cancels without a stock or
+journal effect. A FIFO receipt can still be confirmed, but its cancellation is
+refused with SQLSTATE `0A000` until cost-layer replay semantics are governed.
+
+The source-contract test proves the Receiving Reports screen calls only
+`fn_void_receiving_report`, sends the selected governed reason and memo, shows
+the database refusal, and refreshes the open receipt plus the list. The separate
+purchasing lifecycle lane commits between PO, two receipts, two bills, payment,
+bill/payment correction, and both receipt cancellations; it proves partial and
+second-document behavior, both over-quantity refusals, stock/value, clearing,
+AP, input VAT, tax-detail reversal and a balanced trial balance across real
+transaction boundaries.
+
+Not claimed: price match or price variance. PXL has no governed tolerance,
+variance account, reason/approval policy, or capitalization-versus-expense rule,
+so this package does not invent one. The original Weighted-Average-only
+correction boundary was superseded by the production inventory-costing authority
+below; test `134` now proves FIFO receipt cancellation after its downstream issue
+is corrected.
+
+## INVENTORY-COSTING-AUTHORITY-001 — three production methods, one historical authority
+
+Status: **PASSING LOCALLY 2026-08-08.**
+`supabase/tests/135_inventory_costing_authority_test.sql` (25 assertions),
+`supabase/tests/136_inventory_writer_coverage_test.sql` (17),
+`supabase/tests/137_inventory_return_authority_test.sql` (14), updated production-path tests
+`031`, `120` and `134`, and `scripts/verify_inventory_costing_lifecycle.mjs`
+(28 checks across separately committed business steps).
+
+The authority owns quantity and cost evidence but not GL posting. Its private
+receive, issue, return, transfer and reversal functions update
+`stock_balances`, immutable `inventory_transactions`, cost layers and exact
+`inventory_layer_allocations`; public document RPCs delegate to it, and only the
+Posting Engine/Accounting Kernel creates journals. Browser roles cannot write
+the projections or execute private costing helpers.
+
+Test `135` states each method's core arithmetic and correction contract:
+
+- Weighted Average receives 100 @ 10 and 100 @ 14, reports 200 / 2,400 / 12,
+  issues 50 for 600 and restores the original 600 rather than repricing it.
+- FIFO issues 120 from 100 @ 10 plus 20 @ 14 for 1,280, stores both allocations,
+  refuses source-receipt cancellation while a layer is consumed, restores those
+  exact layers on issue reversal, then cancels the now-available receipt.
+- Specific Identification receives three serials at different costs, selects
+  Unit B for exactly its 12,000 cost, refuses wrong-warehouse and already-used
+  identities, and restores Unit B itself on reversal.
+
+The same test makes costing-method succession fail closed after activity,
+confirms authenticated/anonymous clients cannot mutate costing state, and proves
+the dormant IA-5/ECC `inventory_events` stream remains at zero consumers.
+
+Test `136` drives real Posting Engine entry points: FIFO Goods Issue across two
+layers, a negative FIFO Stock Adjustment at layer cost rather than standard
+cost, a Specific-ID Stock Transfer that preserves serial, value and parent-layer
+lineage, and a Physical Count that removes that same serial at exact cost. The
+layer-versus-stock reconciliation remains zero and the journals carry the same
+authoritative values.
+
+Test `137` proves return semantics. A WAC customer return uses the original issue
+rate after a later receipt changes today's pool. Partial FIFO returns restore the
+original allocations deterministically and cannot exceed the source issue.
+Specific ID restores the same serial. A supplier return selects its exact receipt
+layer — not the oldest current FIFO layer — and refuses to fall back when that
+source is missing. Production Credit Memo/Customer Return and Purchase Return
+paths are separately held by tests `120` and `031`.
+
+The committed lifecycle provisions a new company, receives WAC/FIFO/serial stock,
+posts a real Delivery Receipt, and verifies line costs 600 / 1,280 / 120,
+allocations, Inventory, clearing and trial balance after each commit. It voids
+the delivery in a later transaction and proves exact restoration. Finally, two
+real Goods Issues race for the same serial: exactly one posts, one is refused,
+no layer is over-consumed, and valuation/GL/TB remain reconciled.
+
+Classification for the intended current transaction lifecycle:
+
+| Method | Built | Reachable | Exercised | Proven |
+| --- | --- | --- | --- | --- |
+| Weighted Average | Yes | Yes | Yes | Yes, locally |
+| FIFO | Yes | Yes | Yes | Yes, locally |
+| Specific Identification | Yes | Yes, with serial/lot selection | Yes | Yes, locally |
+
+Not claimed: Inventory module certification, hosted migration, browser/UAT,
+pilot readiness, landed cost, or backdated economic replay. IA-5/ECC remains a
+separate frozen architecture with zero production consumers.

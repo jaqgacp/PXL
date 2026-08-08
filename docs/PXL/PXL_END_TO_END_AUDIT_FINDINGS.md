@@ -3,7 +3,7 @@
 **Status:** Active authoritative findings register
 **Authority:** Tier 1 Governing — the only official register for PXL defects, audit issues, blockers, and required remediation
 **Initial Audit Date:** 2026-07-01
-**Last Verified:** 2026-07-29 EA-002 WP-2 governance reconciliation
+**Last Verified:** 2026-08-08 purchasing quantity and correction lifecycle
 **Applies To:** Product readiness, accounting, tax, inventory, security, audit, UX, data, and regression findings
 **Read When:** Opening a specific referenced finding or reconciling official status
 **Do Not Read For:** Fresh-session startup beyond the one finding named in `AI/AI_STATE.md`
@@ -127,6 +127,11 @@ Status values: `Open` (not started), `In Progress` (scoped fixes landed, work re
 | PXL-AUD-070 | Critical | Retested Passed | The immutability guard family short-circuited whenever the session GUC `pxl.allow_demo_reset` was `'on'`; that placeholder GUC is USERSET, so any authenticated company member could set it and UPDATE/DELETE posted documents. Fixed by gating the bypass on `fn_demo_reset_bypass_authorized()` — the GUC AND a privileged `session_user` (rolsuper/rolbypassrls) — in migration `20260723000001`. A production-identical `authenticator` reproduction confirmed the block; regression test 078 (16 assertions) and its permanent static class guard run in the regression and canonical lanes. Found and remediated during the Audit & Immutability Engine certification review. |
 | PXL-AUD-071 | High | Retested Passed | Engineering Amendment EA-001 corrected the sole impossible WP-2 constraint label to `ref_inventory_event_source_types_doc_order_key_algorithm_ck` (59 ASCII bytes), preserved the original authorisation chronology, and reconciled the specification, authorisation, design status, AI_STATE, Documentation Index, Certification Matrix, findings register, and Transaction Matrix checksum. No SQL, schema, migration, test, runtime, accounting, ADR-C01, or ECC-01 change occurred. |
 | PXL-AUD-073 | Critical | Retested Passed | None. Inventory reconciles to its control account at 0.00 across every canonical company; guard test 111 keeps it that way. |
+| PXL-AUD-074 | Critical | Retested Passed | None. Delivery Receipt posting works across transactions; `npm run verify:delivery-receipt-lifecycle` is the standing cross-transaction proof. |
+| PXL-AUD-075 | High | Retested Passed | None. A draft document now voids with the reason supplied, across all twelve CAS families. |
+| PXL-AUD-076 | Critical | Retested Passed | None. A cash sale withdraws as one event; `npm run verify:posting-lifecycles` holds it at 42/42. |
+| PXL-AUD-077 | High | Retested Passed | None. A received Receiving Report now has a governed, reachable correction path; bill dependencies, moved stock and unsupported cost-layer replay fail closed. |
+| PXL-AUD-078 | High | Retested Passed | None. Receiving Report lines must belong to the header Purchase Order, company and item before their quantity can be received. |
 | PXL-AUD-072 | High | Retested Passed | Engineering Amendment EA-002 preserved the controlling design's T-04 Source-order, T-06 Transition-order, T-07 Effect-order, and T-27 Dormancy definitions; made T-07 explicitly applicable to WP-2's existing E3 evidence; classified registry completeness as combined completion evidence; and separated persistent M2 assertions from rolled-back certification-only WP-1 rank fixtures. No SQL, migration, test, schema, database object, runtime, accounting, ADR-C01, or ECC-01 change occurred. |
 
 ## Production Readiness Gate
@@ -363,6 +368,138 @@ Standing (2026-07-22 after PXL-AUD-069): 89 Retested Passed / 0 In Progress / 0 
 | Regression Test / Retest Plan | Test 078 (16 assertions) proves: direct-SQL immutability still blocks with the GUC off; the classifier rejects `authenticated`/`authenticator`/`anon` and admits only `postgres`/`service_role`; the gate is false with the GUC off, true only for a privileged `session_user` with the GUC on, and never authorized for a PostgREST role even with the GUC on; the authorized maintenance path still writes posted docs; and a permanent static `pg_proc` guard fails if any function reads `pxl.allow_demo_reset` for a bypass without routing through the privileged gate, if any of the six guards stops routing through it, or if the gate/classifier stops keying off `session_user`/`rolsuper`/`rolbypassrls`. The production-identical `authenticator` reproduction is the confirmatory end-to-end evidence. |
 | Dependencies / Workaround | None. |
 | Last Verified / Supporting Reports | 2026-07-23; clean `supabase db reset --local --no-seed` replay through `20260723000001`; focused test 078 (16/16); full regression and canonical lanes; production-identical `authenticator` block confirmed and authorized-maintenance path preserved. |
+
+<a id="pxl-aud-077"></a>
+
+### New Finding Detail - PXL-AUD-077
+
+| Field | Value |
+| --- | --- |
+| Title | A received Receiving Report had no governed cancellation or reversal path |
+| Status | Retested Passed |
+| Severity | High |
+| Area | Purchasing / Inventory / Reversal, Void and Correction |
+| Module / Environment | Receiving Report; weighted-average stock; Goods Received Not Invoiced |
+| Issue | Confirming a Receiving Report increased stock and posted DR Inventory / CR Goods Received Not Invoiced, but no function could reverse the journal, remove the stock, or move the source to its existing `cancelled` terminal state. The only way to release the clearing balance was to bill the receipt, even when the goods had been received in error. |
+| Reproduction / Evidence | Repository inspection found no void/cancel/reverse function for a received report. The Business Process Blueprint independently recorded the gap as High. Test `134` and the committed-step purchasing lifecycle now start from a confirmed receipt and exercise every correction dependency. |
+| Expected Behavior | A user supplies a governed reason and cancels a wrong receipt only while its stock and accounting effect can be reversed safely; dependencies and unsupported costing semantics fail closed. |
+| Actual Behavior | Resolved by migration `20260808000002_receiving_report_cancellation.sql` and the Receiving Reports UI on 2026-08-08. `fn_void_receiving_report` locks the receipt and affected stock positions, refuses every live Vendor Bill claim including drafts, refuses a stock shortfall or later negative movement, refuses FIFO/specific-identification layer replay, removes weighted-average quantity and exact receipt value, writes a reversal inventory transaction, reverses the original journal through `fn_reverse_posted_journal_entry`, stamps governed void evidence, and reopens the Purchase Order header from live receipt progress. Draft cancellation writes no stock or journal effect. |
+| Accounting / Inventory / Tax Impact | Before: a wrong receipt and its Inventory/GRNI entry were permanent unless billed. After: a safe weighted-average cancellation returns quantity/value and GRNI to their pre-receipt positions; the receipt itself has no tax effect. Any Vendor Bill tax/AP effect must be corrected first through the bill's own void path. |
+| Architecture Impact | No new posting, costing or reversal engine. The operation delegates journal reversal to the existing authority and adds an opposite inventory event rather than rewriting history. Unsupported layer replay is refused explicitly. |
+| Implementation Impact | One additive migration, a governed RPC, typed client contract, and a reason-capture action on the existing Receiving Reports surface. The browser contains no accounting or reversal logic. |
+| Certification Contract | Certifies no module or engine. Test `134` proves ordering, stock, GRNI, PO reopening and the FIFO boundary in one transaction; `scripts/verify_purchasing_lifecycle.mjs` proves the purchasing correction sequence across committed transactions; `tests/receiving_report_cancellation.test.ts` proves reachability through the governed RPC. |
+| Migration / Fixture Boundary | Additive. No posted source or journal is rewritten; cancellation appends reversal evidence. |
+| Verification | Fresh replay PASS; focused tests `132`–`134` PASS at 68 assertions; purchasing lifecycle PASS 36/36. Full regression and release lanes are recorded in `AI/AI_STATE.md` after the package gate. |
+| Dependencies / Workaround | FIFO/specific-identification receipt cancellation remains unavailable until cost-layer reversal/replay is governed. Weighted average is the supported path. |
+| Last Verified / Supporting Reports | 2026-08-08; migration `20260808000002`; test `supabase/tests/134_purchasing_match_and_reversal_test.sql`; `scripts/verify_purchasing_lifecycle.mjs`; `tests/receiving_report_cancellation.test.ts`. |
+
+<a id="pxl-aud-078"></a>
+
+### New Finding Detail - PXL-AUD-078
+
+| Field | Value |
+| --- | --- |
+| Title | A Receiving Report line could reference a Purchase Order line outside its header relationship |
+| Status | Retested Passed |
+| Severity | High |
+| Area | Purchasing / document relationships / tenant integrity |
+| Module / Environment | `receiving_report_lines.po_line_id`; Receiving Report confirmation |
+| Issue | The stored `po_line_id` foreign key proved only that some Purchase Order line existed. It did not prove that the line belonged to the Purchase Order named by the Receiving Report header, to the same company, or to the same item. A crafted payload could therefore attach an unrelated order line and make any quantity check rely on the wrong commercial commitment. |
+| Reproduction / Evidence | Test `134` creates a second same-company Purchase Order with more quantity, puts that order's line on a Receiving Report whose header names the first order, and confirms that the pre-fix relationship would have supplied the wrong ordered quantity. The permanent assertion now requires SQLSTATE `23514`. Cross-company membership is checked by the same predicate. |
+| Expected Behavior | The Receiving Report header is the relationship authority. Every receipt line must name a line from that exact order, company and item before any quantity is admitted. |
+| Actual Behavior | Resolved by migration `20260808000003_three_way_match.sql` on 2026-08-08. `fn_assert_receipt_within_po` validates company/header-order/item membership and locks the governed Purchase Order line before summing live receipts, so both crafted relationships and concurrent over-receipts fail closed. The helper is private. |
+| Accounting / Inventory / Tax Impact | Before the fix, a malformed relationship could admit inventory and GRNI against a quantity authorized by a different order. After the fix, confirmation fails before stock, journal or status changes. No receipt tax is computed. |
+| Architecture Impact | Strengthens the existing Document Relationship authority; no parallel relationship store or matching engine was added. |
+| Implementation Impact | One guard in the confirmation path plus invoker-secure progress views. Vendor Bill receipt membership receives the symmetric company/supplier/status validation at its current header `rr_id` grain. |
+| Certification Contract | Certifies no module or engine. Test `134` covers the crafted other-order line, private helper privileges, draft exclusion, exact quantity progress and both over-quantity refusals. |
+| Migration / Fixture Boundary | Additive function/view replacement on the current live definitions; no destructive DDL or historical rewrite. |
+| Verification | Fresh replay PASS; focused test `134` PASS 32/32; purchasing lifecycle PASS 36/36 across committed transactions. |
+| Dependencies / Workaround | None for quantity integrity. Price variance remains a separate product decision because no tolerance/account/treatment policy exists. |
+| Last Verified / Supporting Reports | 2026-08-08; migration `20260808000003`; test `supabase/tests/134_purchasing_match_and_reversal_test.sql`; `scripts/verify_purchasing_lifecycle.mjs`. |
+
+<a id="pxl-aud-074"></a>
+
+### New Finding Detail - PXL-AUD-074
+
+| Field | Value |
+| --- | --- |
+| Title | Delivery Receipt posting is refused outside a single transaction; no delivery could ever post from the screen |
+| Status | Retested Passed |
+| Severity | Critical |
+| Area | Sales / Inventory / Posting Engine |
+| Module / Environment | Delivery Receipt posting; Goods Delivered Not Invoiced; stock relief |
+| Issue | `delivery_receipts` became a posting document on 2026-08-03 (`20260803000004` added `journal_entry_id`, `posted_at`, `posted_by` and made `fn_post_delivery_receipt` relieve stock), but its status-immutability guards, written on 2026-07-04 when a delivery was only a shipping record, were never widened. `trg_guard_header_delivery_receipts` allowed exactly `delivered_at` to change once the row left draft, and `trg_guard_lines_delivery_receipt_lines` allowed no line change at all. `fn_post_delivery_receipt` writes both: the posting stamps on the header and `unit_cost` / `inventory_cost` / `inventory_transaction_id` on the lines. Both writes were refused whenever the receipt had been marked delivered in an **earlier transaction** — which is exactly what the screen does, committing the status update and then calling the posting RPC. |
+| Reproduction / Evidence | Fresh local schema, two separate transactions: mark a delivery `delivered` and commit, then `UPDATE delivery_receipts SET posted_at = NOW()` → `delivery_receipts <id> is "delivered" and immutable: column(s) [posted_at] cannot change (allowed: status, updated_at, updated_by, delivered_at).` After fixing the header, the line guard raised `delivery_receipt_lines cannot be changed: parent delivery_receipts <id> is "delivered" (line changes allowed only in: draft, in_transit).` |
+| Expected Behavior | A delivery marked delivered in one request posts in the next: stock leaves, its cost parks in Goods Delivered Not Invoiced, and the header and line stamps are written. |
+| Actual Behavior | Resolved by migration `20260807000002_delivery_receipt_cancellation.sql` on 2026-08-07. The header guard now names the posting stamps, as every other posting document's guard already did; `fn_guard_doc_lines` gained an **optional sixth argument** listing columns an UPDATE may still write while the parent is locked, and only the delivery-receipt line trigger passes it. Existing triggers pass five arguments and are unchanged. |
+| Accounting / Inventory / Tax Impact | Before the fix no delivery could post from the screen, so no stock was relieved and no clearing balance was created by the UI path; the whole transaction rolled back with an error. Nothing was silently mis-stated — the failure was loud but total. No tax behaviour is involved. |
+| Architecture Impact | None. No posting path, kernel, or table changed. The line guard's new argument mirrors the per-column allowance `fn_guard_doc_header` has carried since it was written. |
+| Implementation Impact | `delivery_receipts` gains `void_reason_id` and `void_memo` for PXL-AUD-075/Backlog 18c. `fn_guard_doc_lines` is replaced on top of its current PXL-AUD-070 definition, preserving the privileged demo-reset gate verbatim (test 078 asserts this). |
+| Certification Contract | Certifies no module and no engine. Test `131` assertion 1 asserts structurally that the header guard names the posting stamps. The behavioural claim is proven **outside** a transaction by `scripts/verify_delivery_receipt_lifecycle.mjs`. |
+| Migration / Fixture Boundary | Additive. No table dropped, no column removed, no posting function changed. |
+| Verification | Fresh replay PASS; regression PASS (130 files / 3,137 assertions); canonical PASS (30 / 751); `npm run verify:delivery-receipt-lifecycle` PASS across five committed transactions — post succeeds on a previously committed delivery, stock 20 → 15, 3,000 parked in clearing. |
+| Dependencies / Workaround | None. |
+| Last Verified / Supporting Reports | 2026-08-07; migration `20260807000002`; test `supabase/tests/131_delivery_receipt_cancellation_test.sql`; `scripts/verify_delivery_receipt_lifecycle.mjs`. |
+
+**Why every gate stayed green.** pgTAP runs each file inside one transaction, and both guards carry a `same_txn` escape: a row written by the current transaction may still be updated. Inside pgTAP the guards therefore never engaged, and 130 test files could not see a defect that made the feature unusable. The cross-transaction script exists for this class of defect and is the reason it was found.
+
+<a id="pxl-aud-076"></a>
+
+### New Finding Detail - PXL-AUD-076
+
+| Field | Value |
+| --- | --- |
+| Title | Voiding a Cash Sale left its Official Receipt posted, overstating cash |
+| Status | Retested Passed |
+| Severity | Critical |
+| Area | Sales / Cash / Reversal, Void and Correction |
+| Module / Environment | Cash Sale; Official Receipt; cash and AR control accounts |
+| Issue | A Cash Sale is one business event recorded as two documents — the CS-series sales document and the Official Receipt that collects it — and `fn_save_cash_sale` creates both in one act, returning both ids. `fn_void_sales_invoice` withdrew only the invoice half. Revenue, output VAT, COGS and inventory all reversed correctly; the receipt's `DR Cash / CR AR` journal stayed posted. Per voided cash sale the books were left with **cash overstated by the full sale amount**, a **phantom credit in Accounts Receivable** for a customer who owes nothing, and a `posted` Official Receipt collecting a sale that no longer existed. The journal still balanced, so the trial balance could not see it, and no reconciliation in the product covers cash. `fn_void_sales_invoice` contained zero references to `receipts`. |
+| Reproduction / Evidence | `scripts/verify_posting_lifecycles.mjs` on a fresh schema, first complete run: `CS-200-000001` reached `cancelled` while `OR-200-000001` for ₱5,600.00 remained `posted`; cash ended at ₱16,800.00 against an expected ₱11,200.00 and AR at −₱6,720.00 against an expected −₱1,120.00 — both off by exactly the ₱5,600.00 cash sale. Revenue, VAT, COGS and inventory were all exactly correct, which is what isolated the receipt half as the cause. |
+| Expected Behavior | Cancelling a cash sale withdraws the entire business event atomically: both documents reach a terminal state and no accounting, tax, AR, cash or inventory effect of the sale survives. |
+| Actual Behavior | Resolved by migration `20260807000003_cash_sale_void_atomicity.sql` on 2026-08-07. `fn_void_cash_sale` is the named authority for the business event; `fn_void_sales_invoice` delegates to it whenever `is_cash_sale`, so the general Sales Invoice surface is **routed into** the governed path rather than blocked from it. One function is one transaction, so both halves reverse or neither does. |
+| Accounting / Inventory / Tax Impact | Before: cash overstated and AR understated by the sale amount on every voided cash sale, with the trial balance still balancing. After: cash, AR, revenue, output VAT and COGS all return to zero and inventory to its pre-sale quantity and cost; the tax ledger nets to zero, including any CWT the customer withheld on the collection. Document numbers on both halves are preserved and never reused, and CAS void evidence is written for both. |
+| Architecture Impact | No new engine. Both halves reverse through `fn_reverse_posted_journal_entry`, the primitive every other void uses. Two private helpers were extracted so each rule is stated once: `fn_reverse_receipt_core` (the one receipt-reversal implementation, lifted out of `fn_bounce_receipt`, with its terminal state now a parameter because a bounced cheque and a withdrawn sale are different events needing the same mechanism) and `fn_stamp_void_inventory_dimensions` (lifted out of the invoice-void wrapper). This follows the `fn_void_sales_invoice` / `fn_void_sales_invoice_aud053_core` split AUD-053 already established. |
+| Implementation Impact | `fn_bounce_receipt` becomes a face over the shared core and is otherwise unchanged. `fn_void_cash_sale` refuses a document that is not a cash sale, and reads the receipt link as a set so a future multi-receipt structure cannot silently leak one. Repeating the void is refused by the invoice core's existing already-voided guard, so no half can reverse twice. |
+| Certification Contract | Certifies no module and no engine. Test `132` (18 assertions, self-provisioned company) asserts both terminal states and that cash, AR, revenue, VAT, COGS, inventory and the tax ledger all return to the pre-sale position with the trial balance still balanced, driving the void through the **general** Sales Invoice entry point. `scripts/verify_posting_lifecycles.mjs` carries the same claim across committed transactions. |
+| Migration / Fixture Boundary | Additive and structural. No table, column, policy or posting path changed; both document cores keep their existing behaviour. |
+| Verification | Fresh replay PASS; regression PASS (131 files / 3,155 assertions); canonical PASS; focused `132` 18/18; `npm run verify:posting-lifecycles` **42/42**, up from 40/42. |
+| Dependencies / Workaround | None. Before the fix the only safe workaround was never to void a cash sale, and nothing in the product said so. |
+| Last Verified / Supporting Reports | 2026-08-07; migration `20260807000003`; test `supabase/tests/132_cash_sale_void_atomicity_test.sql`; `scripts/verify_posting_lifecycles.mjs`. |
+
+**A second, secondary finding closed with it.** `fn_bounce_receipt` and
+`fn_void_sales_invoice` were both reachable by **`anon`**: every historical grant
+for them was a bare `GRANT ... TO authenticated`, and PostgreSQL grants EXECUTE
+to PUBLIC — which includes `anon` — by default. Neither was exploitable, because
+both fail closed on `is_company_member`, but a destructive financial entry point
+should not be reachable without a session at all. Both now carry the explicit
+`REVOKE ALL ... FROM PUBLIC, anon` that every function written since Backlog 8f
+already had, and the `anon` execute census in test `102` falls from 196 to 194 —
+the first time that number has moved down for a reason other than deletion.
+
+<a id="pxl-aud-075"></a>
+
+### New Finding Detail - PXL-AUD-075
+
+| Field | Value |
+| --- | --- |
+| Title | Voiding a never-posted document is impossible across all twelve CAS document families |
+| Status | Retested Passed |
+| Severity | High |
+| Area | CAS evidence / document lifecycle |
+| Module / Environment | `fn_capture_cas_document_void`; Sales Invoice, Vendor Bill, Payment Voucher, Receipt, Credit/Debit Memo, Vendor Credit, Fund Transfer, IBT, Bank Adjustment, PCV, Check Voucher |
+| Issue | The trigger resolved the void reason from `pxl.cas_void_reason` and the supplied reason code, then looked for the reversal journal entry with `SELECT je.id, COALESCE(v_reason, <je.description>) INTO v_reversal_je, v_reason`. A never-posted document has no reversal journal, and `SELECT ... INTO` sets **every** target to NULL when it matches no row — so the second target erased the reason just resolved, and the next line raised `A cancellation/void reason is required for CAS audit evidence` for a valid, explicitly supplied reason. |
+| Reproduction / Evidence | Test `131` assertion 9 before the fix: `fn_void_sales_invoice` on a draft invoice, passing a live `void_reason_codes` id **and** a memo, died with `P0001: A cancellation/void reason is required for CAS audit evidence`. |
+| Expected Behavior | A draft document voids with the reason its caller supplied; the CAS evidence row records that reason and simply carries no reversal journal. |
+| Actual Behavior | Resolved by migration `20260807000002_delivery_receipt_cancellation.sql` on 2026-08-07. The journal-description fallback now lands in its own variable and is applied with `COALESCE` afterwards. Nothing else in the function changes and the CAS evidence it writes is unchanged. |
+| Accounting / Inventory / Tax Impact | None directly: the failure blocked an action rather than mis-stating one. Its practical effect was that a draft document could never be withdrawn, so an erroneous draft stayed live and kept holding whatever its lines claimed — for Backlog 18c, a draft invoice permanently blocked cancelling the delivery it billed. |
+| Architecture Impact | None. |
+| Implementation Impact | One trigger function replaced; twelve document families affected by the fix, none by a behaviour change beyond drafts now being voidable. |
+| Certification Contract | Certifies no module and no engine. Test `131` assertions 6–9 cover the draft-invoice void inside the delivery-cancellation ordering rule. |
+| Migration / Fixture Boundary | Additive; `CREATE OR REPLACE` of one function. |
+| Verification | Regression PASS (130 files / 3,137 assertions); canonical PASS; test `131` 24/24. |
+| Dependencies / Workaround | None. Before the fix the only workaround was to post a document in order to be allowed to void it. |
+| Last Verified / Supporting Reports | 2026-08-07; migration `20260807000002`; test `supabase/tests/131_delivery_receipt_cancellation_test.sql`. |
 
 <a id="pxl-aud-073"></a>
 

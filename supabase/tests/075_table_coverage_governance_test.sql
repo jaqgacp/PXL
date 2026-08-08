@@ -133,6 +133,10 @@ INSERT INTO _coverage_registry (table_name, coverage_class) VALUES
   -- canonical item is weighted_average, whose quantity and value live in
   -- stock_balances, so no layer is created. Populated when a fifo item is received.
   ('inventory_cost_layers', 'workflow-deferred'),
+  ('inventory_layer_allocations', 'workflow-deferred'),
+  ('inventory_costing_pending_allocations', 'control-empty'),
+  ('inventory_costing_pending_batches', 'control-empty'),
+  ('inventory_costing_runtime_queue', 'control-empty'),
   ('inventory_cost_formula_policies', 'dormant-foundation'),
   ('inventory_event_allocations', 'dormant-foundation'),
   ('inventory_event_order_keys', 'dormant-foundation'),

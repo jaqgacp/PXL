@@ -46,12 +46,11 @@ SELECT is(
   0, 'no COGS/variance/offset mapping keys were invented');                           -- 4
 
 SELECT ok(
-  (SELECT bool_and(p.prosrc ~ 'inventory_transactions'
-                   AND p.prosrc ~ 'stock_balances')
+  (SELECT bool_and(p.prosrc ~ 'fn_(issue|receive|transfer)_inventory')
      FROM v_inventory_writer w
      JOIN pg_proc p ON p.proname=w.proname
      JOIN pg_namespace n ON n.oid=p.pronamespace AND n.nspname='public'),
-  'Inventory balance and movement persistence remains in every writer');              -- 5
+  'every Inventory writer delegates balance, movement, and costing persistence to the shared authority'); -- 5
 
 SELECT ok(
   (SELECT bool_and(p.prosrc ~ 'fn_next_document_number')
@@ -197,7 +196,10 @@ SELECT is(
      FROM v_inventory_writer w
      JOIN pg_proc p ON p.proname=w.proname
      JOIN pg_namespace n ON n.oid=p.pronamespace AND n.nspname='public'
-    WHERE p.prosrc ~ $$IF .*status = 'posted' THEN RAISE EXCEPTION 'Already posted'$$),
+    WHERE p.prosrc ~ 'Only draft goods issues can be posted \(current: %\)'
+       OR p.prosrc ~ 'Only draft stock adjustments can be posted \(current: %\)'
+       OR p.prosrc ~ 'Physical count cannot be posted in status %'
+       OR p.prosrc ~ 'Only draft transfers can be posted \(current: %\)'),
   4, 'all four lifecycle rejection messages remain verbatim');                        -- 18
 
 SELECT * FROM finish();

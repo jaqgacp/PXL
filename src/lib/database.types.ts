@@ -34,6 +34,186 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_fs_map: {
+        Row: {
+          account_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          effective_from: string | null
+          effective_to: string | null
+          fs_structure_id: string
+          id: string
+          statement: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          effective_from?: string | null
+          effective_to?: string | null
+          fs_structure_id: string
+          id?: string
+          statement: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          effective_from?: string | null
+          effective_to?: string | null
+          fs_structure_id?: string
+          id?: string
+          statement?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_fs_map_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_fs_map_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_fs_map_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "account_fs_map_fs_structure_id_fkey"
+            columns: ["fs_structure_id"]
+            isOneToOne: false
+            referencedRelation: "fs_structure"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      account_mapping: {
+        Row: {
+          account_id: string
+          branch_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          document_type: string | null
+          effective_from: string | null
+          effective_to: string | null
+          id: string
+          item_group_id: string | null
+          item_id: string | null
+          key_code: string
+          party_id: string | null
+          reason_code: string | null
+          source: string
+          tax_profile_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          branch_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          document_type?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          item_group_id?: string | null
+          item_id?: string | null
+          key_code: string
+          party_id?: string | null
+          reason_code?: string | null
+          source?: string
+          tax_profile_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          branch_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          document_type?: string | null
+          effective_from?: string | null
+          effective_to?: string | null
+          id?: string
+          item_group_id?: string | null
+          item_id?: string | null
+          key_code?: string
+          party_id?: string | null
+          reason_code?: string | null
+          source?: string
+          tax_profile_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "account_mapping_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_mapping_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_mapping_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_mapping_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "account_mapping_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "account_mapping_key_code_fkey"
+            columns: ["key_code"]
+            isOneToOne: false
+            referencedRelation: "ref_mapping_key"
+            referencedColumns: ["key_code"]
+          },
+        ]
+      }
       amortization_entries: {
         Row: {
           amount: number
@@ -75,6 +255,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "amortization_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "amortization_entries_je_id_fkey"
@@ -170,6 +357,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "amortization_schedules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "amortization_schedules_expense_account_id_fkey"
             columns: ["expense_account_id"]
             isOneToOne: false
@@ -255,6 +449,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_instances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "approval_instances_request_id_fkey"
@@ -380,6 +581,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "approval_requests_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "approval_requests_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["currency_code"]
+          },
+          {
             foreignKeyName: "approval_requests_workflow_id_fkey"
             columns: ["workflow_id"]
             isOneToOne: false
@@ -391,8 +606,8 @@ export type Database = {
       approval_workflow_steps: {
         Row: {
           action_required: string
-          approver_role_id: string | null
           approver_role_code: string | null
+          approver_role_id: string | null
           approver_type: string
           approver_user_id: string | null
           company_id: string
@@ -401,14 +616,14 @@ export type Database = {
           id: string
           is_active: boolean
           step_sequence: number
-          workflow_id: string
           updated_at: string
           updated_by: string | null
+          workflow_id: string
         }
         Insert: {
           action_required?: string
-          approver_role_id?: string | null
           approver_role_code?: string | null
+          approver_role_id?: string | null
           approver_type: string
           approver_user_id?: string | null
           company_id: string
@@ -417,14 +632,14 @@ export type Database = {
           id?: string
           is_active?: boolean
           step_sequence: number
-          workflow_id: string
           updated_at?: string
           updated_by?: string | null
+          workflow_id: string
         }
         Update: {
           action_required?: string
-          approver_role_id?: string | null
           approver_role_code?: string | null
+          approver_role_id?: string | null
           approver_type?: string
           approver_user_id?: string | null
           company_id?: string
@@ -433,9 +648,9 @@ export type Database = {
           id?: string
           is_active?: boolean
           step_sequence?: number
-          workflow_id?: string
           updated_at?: string
           updated_by?: string | null
+          workflow_id?: string
         }
         Relationships: [
           {
@@ -444,6 +659,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_workflow_steps_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "approval_workflow_steps_workflow_id_fkey"
@@ -461,6 +683,7 @@ export type Database = {
           company_id: string
           created_at: string | null
           created_by: string | null
+          currency_code: string | null
           document_type: string
           effective_from: string | null
           effective_to: string | null
@@ -468,7 +691,6 @@ export type Database = {
           id: string
           is_active: boolean | null
           module_type: string
-          currency_code: string | null
           priority: number
           requester_role_code: string | null
           requester_user_id: string | null
@@ -484,6 +706,7 @@ export type Database = {
           company_id: string
           created_at?: string | null
           created_by?: string | null
+          currency_code?: string | null
           document_type: string
           effective_from?: string | null
           effective_to?: string | null
@@ -491,7 +714,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           module_type: string
-          currency_code?: string | null
           priority?: number
           requester_role_code?: string | null
           requester_user_id?: string | null
@@ -507,6 +729,7 @@ export type Database = {
           company_id?: string
           created_at?: string | null
           created_by?: string | null
+          currency_code?: string | null
           document_type?: string
           effective_from?: string | null
           effective_to?: string | null
@@ -514,7 +737,6 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           module_type?: string
-          currency_code?: string | null
           priority?: number
           requester_role_code?: string | null
           requester_user_id?: string | null
@@ -538,6 +760,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "approval_workflows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "approval_workflows_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["currency_code"]
           },
         ]
       }
@@ -601,6 +837,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_depreciation_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "asset_depreciation_entries_journal_entry_id_fkey"
@@ -680,6 +923,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_disposals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "asset_disposals_fiscal_period_id_fkey"
@@ -769,6 +1019,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "asset_impairments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "asset_impairments_fiscal_period_id_fkey"
             columns: ["fiscal_period_id"]
             isOneToOne: false
@@ -852,6 +1109,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_transfers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "asset_transfers_from_branch_id_fkey"
@@ -1032,6 +1296,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bank_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "bank_accounts_currency_id_fkey"
             columns: ["currency_id"]
             isOneToOne: false
@@ -1137,6 +1408,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bank_adjustments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "bank_adjustments_fiscal_period_id_fkey"
             columns: ["fiscal_period_id"]
             isOneToOne: false
@@ -1206,6 +1484,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_recon_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "bank_recon_items_reconciliation_id_fkey"
@@ -1322,6 +1607,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_reconciliations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -1486,6 +1778,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "book_tax_reconciliation_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       branches: {
@@ -1585,6 +1884,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "branches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "branches_rdo_id_fkey"
             columns: ["rdo_id"]
             isOneToOne: false
@@ -1652,6 +1958,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_attachment_register_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -1721,6 +2034,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_document_number_issuances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "cas_document_number_issuances_number_series_id_fkey"
@@ -1827,6 +2147,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cas_document_void_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "cas_document_void_events_number_issuance_id_fkey"
             columns: ["number_issuance_id"]
             isOneToOne: false
@@ -1909,6 +2236,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_export_artifacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "cas_export_artifacts_snapshot_id_fkey"
@@ -1994,6 +2328,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cas_export_log_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "cas_export_log_snapshot_id_fkey"
@@ -2087,6 +2428,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_count_sheets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "cash_count_sheets_fund_id_fkey"
             columns: ["fund_id"]
             isOneToOne: false
@@ -2110,16 +2458,20 @@ export type Database = {
           expense_account_id: string | null
           id: string
           input_vat_amount: number
+          inventory_transaction_id: string | null
           item_id: string | null
           line_number: number
+          lot_number: string | null
           net_amount: number
           quantity: number
+          serial_number: string | null
           total_amount: number
           unit_price: number
           uom_id: string | null
           updated_at: string
           updated_by: string | null
           vat_code_id: string | null
+          warehouse_id: string | null
         }
         Insert: {
           company_id: string
@@ -2135,16 +2487,20 @@ export type Database = {
           expense_account_id?: string | null
           id?: string
           input_vat_amount?: number
+          inventory_transaction_id?: string | null
           item_id?: string | null
           line_number: number
+          lot_number?: string | null
           net_amount?: number
           quantity?: number
+          serial_number?: string | null
           total_amount?: number
           unit_price?: number
           uom_id?: string | null
           updated_at?: string
           updated_by?: string | null
           vat_code_id?: string | null
+          warehouse_id?: string | null
         }
         Update: {
           company_id?: string
@@ -2160,16 +2516,20 @@ export type Database = {
           expense_account_id?: string | null
           id?: string
           input_vat_amount?: number
+          inventory_transaction_id?: string | null
           item_id?: string | null
           line_number?: number
+          lot_number?: string | null
           net_amount?: number
           quantity?: number
+          serial_number?: string | null
           total_amount?: number
           unit_price?: number
           uom_id?: string | null
           updated_at?: string
           updated_by?: string | null
           vat_code_id?: string | null
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -2178,6 +2538,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_purchase_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "cash_purchase_lines_cp_id_fkey"
@@ -2201,6 +2568,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_purchase_lines_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_purchase_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
@@ -2221,6 +2595,13 @@ export type Database = {
             referencedRelation: "vat_codes"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "cash_purchase_lines_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       cash_purchases: {
@@ -2233,12 +2614,15 @@ export type Database = {
           created_by: string | null
           department_id: string | null
           fiscal_period_id: string | null
+          functional_entity_id: string | null
           id: string
           journal_entry_id: string | null
+          location_id: string | null
           payment_account_id: string | null
           payment_method: string
           posted_at: string | null
           posted_by: string | null
+          project_id: string | null
           reference_number: string | null
           remarks: string | null
           status: string
@@ -2265,12 +2649,15 @@ export type Database = {
           created_by?: string | null
           department_id?: string | null
           fiscal_period_id?: string | null
+          functional_entity_id?: string | null
           id?: string
           journal_entry_id?: string | null
+          location_id?: string | null
           payment_account_id?: string | null
           payment_method?: string
           posted_at?: string | null
           posted_by?: string | null
+          project_id?: string | null
           reference_number?: string | null
           remarks?: string | null
           status?: string
@@ -2297,12 +2684,15 @@ export type Database = {
           created_by?: string | null
           department_id?: string | null
           fiscal_period_id?: string | null
+          functional_entity_id?: string | null
           id?: string
           journal_entry_id?: string | null
+          location_id?: string | null
           payment_account_id?: string | null
           payment_method?: string
           posted_at?: string | null
           posted_by?: string | null
+          project_id?: string | null
           reference_number?: string | null
           remarks?: string | null
           status?: string
@@ -2336,6 +2726,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_purchases_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "cash_purchases_cost_center_id_fkey"
             columns: ["cost_center_id"]
             isOneToOne: false
@@ -2357,6 +2754,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_purchases_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_purchases_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
@@ -2364,10 +2768,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cash_purchases_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cash_purchases_payment_account_id_fkey"
             columns: ["payment_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_purchases_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -2406,10 +2824,12 @@ export type Database = {
           id: string
           is_active: boolean | null
           is_capitalizable: boolean
+          is_cash_equivalent: boolean
           is_control_account: boolean
           is_operating_expense: boolean
           is_postable: boolean | null
           is_tax_account: boolean
+          lifecycle_status: string
           normal_balance: string
           parent_id: string | null
           subledger_type: string | null
@@ -2435,10 +2855,12 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_capitalizable?: boolean
+          is_cash_equivalent?: boolean
           is_control_account?: boolean
           is_operating_expense?: boolean
           is_postable?: boolean | null
           is_tax_account?: boolean
+          lifecycle_status?: string
           normal_balance: string
           parent_id?: string | null
           subledger_type?: string | null
@@ -2464,10 +2886,12 @@ export type Database = {
           id?: string
           is_active?: boolean | null
           is_capitalizable?: boolean
+          is_cash_equivalent?: boolean
           is_control_account?: boolean
           is_operating_expense?: boolean
           is_postable?: boolean | null
           is_tax_account?: boolean
+          lifecycle_status?: string
           normal_balance?: string
           parent_id?: string | null
           subledger_type?: string | null
@@ -2481,6 +2905,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "chart_of_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "chart_of_accounts_parent_id_fkey"
@@ -2535,6 +2966,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_voucher_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "check_voucher_lines_cv_id_fkey"
@@ -2686,6 +3124,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "check_vouchers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "check_vouchers_fiscal_period_id_fkey"
             columns: ["fiscal_period_id"]
             isOneToOne: false
@@ -2718,6 +3163,7 @@ export type Database = {
           fs_group: string | null
           fs_subgroup: string | null
           id: string
+          is_cash_equivalent: boolean
           is_control_account: boolean
           is_postable: boolean
           is_tax_account: boolean
@@ -2736,6 +3182,7 @@ export type Database = {
           fs_group?: string | null
           fs_subgroup?: string | null
           id?: string
+          is_cash_equivalent?: boolean
           is_control_account?: boolean
           is_postable?: boolean
           is_tax_account?: boolean
@@ -2754,6 +3201,7 @@ export type Database = {
           fs_group?: string | null
           fs_subgroup?: string | null
           id?: string
+          is_cash_equivalent?: boolean
           is_control_account?: boolean
           is_postable?: boolean
           is_tax_account?: boolean
@@ -2946,6 +3394,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "companies_parent_company_id_fkey"
+            columns: ["parent_company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "companies_rdo_id_fkey"
             columns: ["rdo_id"]
             isOneToOne: false
@@ -2974,6 +3429,11 @@ export type Database = {
           ewt_withheld_account_id: string | null
           id: string
           input_vat_account_id: string | null
+          inventory_account_id: string | null
+          percentage_tax_expense_account_id: string | null
+          percentage_tax_payable_account_id: string | null
+          purchase_clearing_account_id: string | null
+          sales_delivery_clearing_account_id: string | null
           supplier_down_payments_account_id: string | null
           updated_at: string
           updated_by: string | null
@@ -2991,6 +3451,11 @@ export type Database = {
           ewt_withheld_account_id?: string | null
           id?: string
           input_vat_account_id?: string | null
+          inventory_account_id?: string | null
+          percentage_tax_expense_account_id?: string | null
+          percentage_tax_payable_account_id?: string | null
+          purchase_clearing_account_id?: string | null
+          sales_delivery_clearing_account_id?: string | null
           supplier_down_payments_account_id?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -3008,6 +3473,11 @@ export type Database = {
           ewt_withheld_account_id?: string | null
           id?: string
           input_vat_account_id?: string | null
+          inventory_account_id?: string | null
+          percentage_tax_expense_account_id?: string | null
+          percentage_tax_payable_account_id?: string | null
+          purchase_clearing_account_id?: string | null
+          sales_delivery_clearing_account_id?: string | null
           supplier_down_payments_account_id?: string | null
           updated_at?: string
           updated_by?: string | null
@@ -3034,6 +3504,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_accounting_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "company_accounting_config_customer_advances_account_id_fkey"
@@ -3066,6 +3543,41 @@ export type Database = {
           {
             foreignKeyName: "company_accounting_config_input_vat_account_id_fkey"
             columns: ["input_vat_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_accounting_config_inventory_account_id_fkey"
+            columns: ["inventory_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_accounting_config_percentage_tax_expense_account_i_fkey"
+            columns: ["percentage_tax_expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_accounting_config_percentage_tax_payable_account_i_fkey"
+            columns: ["percentage_tax_payable_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_accounting_config_purchase_clearing_account_id_fkey"
+            columns: ["purchase_clearing_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_accounting_config_sales_delivery_clearing_account__fkey"
+            columns: ["sales_delivery_clearing_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
             referencedColumns: ["id"]
@@ -3129,6 +3641,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "company_inventory_config_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "company_inventory_config_default_warehouse_id_fkey"
             columns: ["default_warehouse_id"]
             isOneToOne: false
@@ -3181,6 +3700,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_payment_modes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "company_payment_modes_gl_account_id_fkey"
@@ -3308,6 +3834,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "company_provisioning_runs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "company_provisioning_runs_template_id_fkey"
@@ -3442,88 +3975,6 @@ export type Database = {
           },
         ]
       }
-      compliance_1601eq_working_papers_headers: {
-        Row: {
-          company_id: string
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          period_quarter: number
-          period_year: number
-          status: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          period_quarter: number
-          period_year: number
-          status?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          period_quarter?: number
-          period_year?: number
-          status?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_1601eq_working_papers_headers_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      compliance_1601eq_working_papers_lines: {
-        Row: {
-          amount: number
-          created_at: string
-          header_id: string
-          id: string
-          reference: string | null
-          remarks: string | null
-        }
-        Insert: {
-          amount?: number
-          created_at?: string
-          header_id: string
-          id?: string
-          reference?: string | null
-          remarks?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          header_id?: string
-          id?: string
-          reference?: string | null
-          remarks?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_1601eq_working_papers_lines_header_id_fkey"
-            columns: ["header_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_1601eq_working_papers_headers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       compliance_1601fq_working_papers_headers: {
         Row: {
           company_id: string
@@ -3569,6 +4020,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "compliance_1601fq_working_papers_headers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       compliance_1601fq_working_papers_lines: {
@@ -3602,97 +4060,6 @@ export type Database = {
             columns: ["header_id"]
             isOneToOne: false
             referencedRelation: "compliance_1601fq_working_papers_headers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      compliance_ewt_working_papers_headers: {
-        Row: {
-          company_id: string
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          period: string
-          status: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          period: string
-          status?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          period?: string
-          status?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_ewt_working_papers_headers_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      compliance_ewt_working_papers_lines: {
-        Row: {
-          amount: number
-          created_at: string
-          created_by: string | null
-          header_id: string
-          id: string
-          reference: string | null
-          remarks: string | null
-          transaction_id: string | null
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          amount?: number
-          created_at?: string
-          created_by?: string | null
-          header_id: string
-          id?: string
-          reference?: string | null
-          remarks?: string | null
-          transaction_id?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          created_by?: string | null
-          header_id?: string
-          id?: string
-          reference?: string | null
-          remarks?: string | null
-          transaction_id?: string | null
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_ewt_working_papers_lines_header_id_fkey"
-            columns: ["header_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_ewt_working_papers_headers"
             referencedColumns: ["id"]
           },
         ]
@@ -3738,6 +4105,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "compliance_fwt_working_papers_headers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -3893,166 +4267,12 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
-        ]
-      }
-      compliance_pt_working_papers_headers: {
-        Row: {
-          company_id: string
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          period_quarter: number
-          period_year: number
-          status: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          period_quarter: number
-          period_year: number
-          status?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          period_quarter?: number
-          period_year?: number
-          status?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
           {
-            foreignKeyName: "compliance_pt_working_papers_headers_company_id_fkey"
+            foreignKeyName: "compliance_profiles_company_id_fkey"
             columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      compliance_pt_working_papers_lines: {
-        Row: {
-          amount: number
-          created_at: string
-          header_id: string
-          id: string
-          reference: string | null
-          remarks: string | null
-        }
-        Insert: {
-          amount?: number
-          created_at?: string
-          header_id: string
-          id?: string
-          reference?: string | null
-          remarks?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          header_id?: string
-          id?: string
-          reference?: string | null
-          remarks?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_pt_working_papers_lines_header_id_fkey"
-            columns: ["header_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_pt_working_papers_headers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      compliance_vat_working_papers_headers: {
-        Row: {
-          company_id: string
-          created_at: string
-          created_by: string | null
-          description: string | null
-          id: string
-          period: string
-          status: string
-          updated_at: string
-          updated_by: string | null
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          period: string
-          status?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          created_by?: string | null
-          description?: string | null
-          id?: string
-          period?: string
-          status?: string
-          updated_at?: string
-          updated_by?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_vat_working_papers_headers_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      compliance_vat_working_papers_lines: {
-        Row: {
-          amount: number
-          created_at: string
-          header_id: string
-          id: string
-          reference: string | null
-          remarks: string | null
-        }
-        Insert: {
-          amount?: number
-          created_at?: string
-          header_id: string
-          id?: string
-          reference?: string | null
-          remarks?: string | null
-        }
-        Update: {
-          amount?: number
-          created_at?: string
-          header_id?: string
-          id?: string
-          reference?: string | null
-          remarks?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_vat_working_papers_lines_header_id_fkey"
-            columns: ["header_id"]
-            isOneToOne: false
-            referencedRelation: "compliance_vat_working_papers_headers"
-            referencedColumns: ["id"]
+            isOneToOne: true
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -4130,6 +4350,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cost_centers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "cost_centers_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
@@ -4153,22 +4380,25 @@ export type Database = {
           credit_memo_id: string
           description: string
           id: string
+          inventory_cost: number | null
+          inventory_cost_layer_id: string | null
+          inventory_transaction_id: string | null
           invoice_line_id: string | null
           item_id: string | null
           line_number: number
+          lot_number: string | null
           net_amount: number
           quantity: number
-          inventory_cost: number | null
-          inventory_transaction_id: string | null
-          unit_cost: number | null
-          warehouse_id: string | null
           revenue_account_id: string | null
+          serial_number: string | null
           total_amount: number
+          unit_cost: number | null
           unit_price: number
           updated_at: string
           updated_by: string | null
           vat_amount: number
           vat_code_id: string | null
+          warehouse_id: string | null
         }
         Insert: {
           company_id: string
@@ -4177,22 +4407,25 @@ export type Database = {
           credit_memo_id: string
           description: string
           id?: string
+          inventory_cost?: number | null
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           invoice_line_id?: string | null
           item_id?: string | null
           line_number?: number
+          lot_number?: string | null
           net_amount?: number
           quantity?: number
-          inventory_cost?: number | null
-          inventory_transaction_id?: string | null
-          unit_cost?: number | null
-          warehouse_id?: string | null
           revenue_account_id?: string | null
+          serial_number?: string | null
           total_amount?: number
+          unit_cost?: number | null
           unit_price?: number
           updated_at?: string
           updated_by?: string | null
           vat_amount?: number
           vat_code_id?: string | null
+          warehouse_id?: string | null
         }
         Update: {
           company_id?: string
@@ -4201,22 +4434,25 @@ export type Database = {
           credit_memo_id?: string
           description?: string
           id?: string
+          inventory_cost?: number | null
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           invoice_line_id?: string | null
           item_id?: string | null
           line_number?: number
+          lot_number?: string | null
           net_amount?: number
           quantity?: number
-          inventory_cost?: number | null
-          inventory_transaction_id?: string | null
-          unit_cost?: number | null
-          warehouse_id?: string | null
           revenue_account_id?: string | null
+          serial_number?: string | null
           total_amount?: number
+          unit_cost?: number | null
           unit_price?: number
           updated_at?: string
           updated_by?: string | null
           vat_amount?: number
           vat_code_id?: string | null
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -4225,6 +4461,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memo_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "credit_memo_lines_credit_memo_id_fkey"
@@ -4239,6 +4482,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_credit_memo_register"
             referencedColumns: ["cm_id"]
+          },
+          {
+            foreignKeyName: "credit_memo_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memo_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+          {
+            foreignKeyName: "credit_memo_lines_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "credit_memo_lines_invoice_line_id_fkey"
@@ -4266,6 +4530,13 @@ export type Database = {
             columns: ["vat_code_id"]
             isOneToOne: false
             referencedRelation: "vat_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memo_lines_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -4366,6 +4637,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "credit_memos_customer_id_fkey"
@@ -4475,6 +4753,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "customer_groups_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       customers: {
@@ -4572,6 +4857,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "customers_customer_group_id_fkey"
@@ -4773,6 +5065,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "debit_memo_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "debit_memo_lines_debit_memo_id_fkey"
             columns: ["debit_memo_id"]
             isOneToOne: false
@@ -4903,6 +5202,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "debit_memos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "debit_memos_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -4926,18 +5232,21 @@ export type Database = {
           description: string
           dr_id: string
           id: string
+          inventory_cost: number | null
+          inventory_cost_layer_id: string | null
+          inventory_transaction_id: string | null
           item_id: string | null
           line_number: number
+          lot_number: string | null
           lot_serial_no: string | null
           quantity: number
-          inventory_cost: number | null
-          inventory_transaction_id: string | null
-          unit_cost: number | null
-          warehouse_id: string | null
+          serial_number: string | null
           so_line_id: string | null
+          unit_cost: number | null
           uom_id: string | null
           updated_at: string
           updated_by: string | null
+          warehouse_id: string | null
         }
         Insert: {
           company_id: string
@@ -4946,18 +5255,21 @@ export type Database = {
           description: string
           dr_id: string
           id?: string
+          inventory_cost?: number | null
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           item_id?: string | null
           line_number?: number
+          lot_number?: string | null
           lot_serial_no?: string | null
           quantity?: number
-          inventory_cost?: number | null
-          inventory_transaction_id?: string | null
-          unit_cost?: number | null
-          warehouse_id?: string | null
+          serial_number?: string | null
           so_line_id?: string | null
+          unit_cost?: number | null
           uom_id?: string | null
           updated_at?: string
           updated_by?: string | null
+          warehouse_id?: string | null
         }
         Update: {
           company_id?: string
@@ -4966,18 +5278,21 @@ export type Database = {
           description?: string
           dr_id?: string
           id?: string
+          inventory_cost?: number | null
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           item_id?: string | null
           line_number?: number
+          lot_number?: string | null
           lot_serial_no?: string | null
           quantity?: number
-          inventory_cost?: number | null
-          inventory_transaction_id?: string | null
-          unit_cost?: number | null
-          warehouse_id?: string | null
+          serial_number?: string | null
           so_line_id?: string | null
+          unit_cost?: number | null
           uom_id?: string | null
           updated_at?: string
           updated_by?: string | null
+          warehouse_id?: string | null
         }
         Relationships: [
           {
@@ -4988,10 +5303,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delivery_receipt_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "delivery_receipt_lines_dr_id_fkey"
             columns: ["dr_id"]
             isOneToOne: false
             referencedRelation: "delivery_receipts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_receipt_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_receipt_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+          {
+            foreignKeyName: "delivery_receipt_lines_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -5015,6 +5358,13 @@ export type Database = {
             referencedRelation: "units_of_measure"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "delivery_receipt_lines_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       delivery_receipts: {
@@ -5031,12 +5381,17 @@ export type Database = {
           dr_number: string
           driver_name: string | null
           id: string
+          journal_entry_id: string | null
+          posted_at: string | null
+          posted_by: string | null
           sales_order_id: string | null
           shipping_method: string
           status: string
           tracking_number: string | null
           updated_at: string
           updated_by: string | null
+          void_memo: string | null
+          void_reason_id: string | null
         }
         Insert: {
           branch_id: string
@@ -5051,12 +5406,17 @@ export type Database = {
           dr_number: string
           driver_name?: string | null
           id?: string
+          journal_entry_id?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
           sales_order_id?: string | null
           shipping_method?: string
           status?: string
           tracking_number?: string | null
           updated_at?: string
           updated_by?: string | null
+          void_memo?: string | null
+          void_reason_id?: string | null
         }
         Update: {
           branch_id?: string
@@ -5071,12 +5431,17 @@ export type Database = {
           dr_number?: string
           driver_name?: string | null
           id?: string
+          journal_entry_id?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
           sales_order_id?: string | null
           shipping_method?: string
           status?: string
           tracking_number?: string | null
           updated_at?: string
           updated_by?: string | null
+          void_memo?: string | null
+          void_reason_id?: string | null
         }
         Relationships: [
           {
@@ -5094,6 +5459,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delivery_receipts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "delivery_receipts_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -5101,10 +5473,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "delivery_receipts_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "delivery_receipts_sales_order_id_fkey"
             columns: ["sales_order_id"]
             isOneToOne: false
             referencedRelation: "sales_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "delivery_receipts_void_reason_id_fkey"
+            columns: ["void_reason_id"]
+            isOneToOne: false
+            referencedRelation: "void_reason_codes"
             referencedColumns: ["id"]
           },
         ]
@@ -5172,6 +5558,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "departments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "departments_parent_department_id_fkey"
@@ -5310,6 +5703,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "employees_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "employees_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
@@ -5381,6 +5781,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "ewt_returns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       exchange_rates: {
@@ -5426,10 +5833,106 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "exchange_rates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "exchange_rates_currency_id_fkey"
             columns: ["currency_id"]
             isOneToOne: false
             referencedRelation: "currencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      filing_artifact_lines: {
+        Row: {
+          artifact_id: string
+          atc_code: string | null
+          classification: string | null
+          counterparty_id: string | null
+          counterparty_name: string | null
+          counterparty_tin: string | null
+          created_at: string
+          created_by: string | null
+          document_count: number
+          id: string
+          line_kind: string
+          line_number: number
+          reason: string | null
+          reconciling_amount: number | null
+          reference: string | null
+          remarks: string | null
+          tax_amount: number
+          tax_base: number
+          tax_code: string | null
+          tax_kind: string | null
+          tax_rate: number | null
+          updated_at: string
+          updated_by: string | null
+          vat_code: string | null
+        }
+        Insert: {
+          artifact_id: string
+          atc_code?: string | null
+          classification?: string | null
+          counterparty_id?: string | null
+          counterparty_name?: string | null
+          counterparty_tin?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_count?: number
+          id?: string
+          line_kind?: string
+          line_number: number
+          reason?: string | null
+          reconciling_amount?: number | null
+          reference?: string | null
+          remarks?: string | null
+          tax_amount?: number
+          tax_base?: number
+          tax_code?: string | null
+          tax_kind?: string | null
+          tax_rate?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          vat_code?: string | null
+        }
+        Update: {
+          artifact_id?: string
+          atc_code?: string | null
+          classification?: string | null
+          counterparty_id?: string | null
+          counterparty_name?: string | null
+          counterparty_tin?: string | null
+          created_at?: string
+          created_by?: string | null
+          document_count?: number
+          id?: string
+          line_kind?: string
+          line_number?: number
+          reason?: string | null
+          reconciling_amount?: number | null
+          reference?: string | null
+          remarks?: string | null
+          tax_amount?: number
+          tax_base?: number
+          tax_code?: string | null
+          tax_kind?: string | null
+          tax_rate?: number | null
+          updated_at?: string
+          updated_by?: string | null
+          vat_code?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "filing_artifact_lines_artifact_id_fkey"
+            columns: ["artifact_id"]
+            isOneToOne: false
+            referencedRelation: "filing_artifacts"
             referencedColumns: ["id"]
           },
         ]
@@ -5510,6 +6013,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "filing_artifacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "filing_artifacts_form_code_fkey"
             columns: ["form_code"]
             isOneToOne: false
@@ -5522,9 +6032,9 @@ export type Database = {
         Row: {
           action: string
           checks: Json
+          close_type: string
           closing_je_id: string | null
           company_id: string
-          close_type: string
           effective_date: string
           fiscal_period_id: string | null
           fiscal_year_id: string
@@ -5540,9 +6050,9 @@ export type Database = {
         Insert: {
           action: string
           checks?: Json
+          close_type: string
           closing_je_id?: string | null
           company_id: string
-          close_type: string
           effective_date: string
           fiscal_period_id?: string | null
           fiscal_year_id: string
@@ -5558,9 +6068,9 @@ export type Database = {
         Update: {
           action?: string
           checks?: Json
+          close_type?: string
           closing_je_id?: string | null
           company_id?: string
-          close_type?: string
           effective_date?: string
           fiscal_period_id?: string | null
           fiscal_year_id?: string
@@ -5575,11 +6085,25 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fiscal_close_runs_closing_je_id_fkey"
+            columns: ["closing_je_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fiscal_close_runs_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_close_runs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "fiscal_close_runs_fiscal_period_id_fkey"
@@ -5593,6 +6117,20 @@ export type Database = {
             columns: ["fiscal_year_id"]
             isOneToOne: false
             referencedRelation: "fiscal_years"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_close_runs_retained_earnings_account_id_fkey"
+            columns: ["retained_earnings_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_close_runs_superseded_by_id_fkey"
+            columns: ["superseded_by_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_close_runs"
             referencedColumns: ["id"]
           },
         ]
@@ -5641,6 +6179,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_periods_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "fiscal_periods_fiscal_year_id_fkey"
@@ -5701,6 +6246,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fiscal_years_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "fiscal_years_retained_earnings_fk"
@@ -5781,6 +6333,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fixed_asset_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "fixed_asset_categories_gl_accum_depr_account_id_fkey"
             columns: ["gl_accum_depr_account_id"]
             isOneToOne: false
@@ -5834,6 +6393,7 @@ export type Database = {
           branch_id: string | null
           category_id: string
           company_id: string
+          cost_center_id: string | null
           created_at: string
           created_by: string | null
           department_id: string | null
@@ -5842,9 +6402,12 @@ export type Database = {
           description: string | null
           disposed_at: string | null
           fiscal_period_id: string | null
+          functional_entity_id: string | null
           id: string
           location: string | null
+          location_id: string | null
           notes: string | null
+          project_id: string | null
           salvage_value: number
           serial_number: string | null
           status: string
@@ -5862,6 +6425,7 @@ export type Database = {
           branch_id?: string | null
           category_id: string
           company_id: string
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
           department_id?: string | null
@@ -5870,9 +6434,12 @@ export type Database = {
           description?: string | null
           disposed_at?: string | null
           fiscal_period_id?: string | null
+          functional_entity_id?: string | null
           id?: string
           location?: string | null
+          location_id?: string | null
           notes?: string | null
+          project_id?: string | null
           salvage_value?: number
           serial_number?: string | null
           status?: string
@@ -5890,6 +6457,7 @@ export type Database = {
           branch_id?: string | null
           category_id?: string
           company_id?: string
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
           department_id?: string | null
@@ -5898,9 +6466,12 @@ export type Database = {
           description?: string | null
           disposed_at?: string | null
           fiscal_period_id?: string | null
+          functional_entity_id?: string | null
           id?: string
           location?: string | null
+          location_id?: string | null
           notes?: string | null
+          project_id?: string | null
           salvage_value?: number
           serial_number?: string | null
           status?: string
@@ -5939,6 +6510,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "fixed_assets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fixed_assets_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
@@ -5950,6 +6535,27 @@ export type Database = {
             columns: ["fiscal_period_id"]
             isOneToOne: false
             referencedRelation: "fiscal_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -6037,6 +6643,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "form_2306_issuances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       form_2307_issuance_lines: {
@@ -6108,6 +6721,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_2307_issuance_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "form_2307_issuance_lines_issuance_id_fkey"
@@ -6201,6 +6821,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "form_2307_issuances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "form_2307_issuances_superseded_by_issuance_id_fkey"
@@ -6311,6 +6938,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "form_2307_tracking_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "form_2307_tracking_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -6322,6 +6956,76 @@ export type Database = {
             columns: ["receipt_line_id"]
             isOneToOne: true
             referencedRelation: "receipt_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fs_structure: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          id: string
+          is_subtotal: boolean
+          line_code: string
+          line_label: string
+          line_role: string
+          parent_id: string | null
+          statement: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          is_subtotal?: boolean
+          line_code: string
+          line_label: string
+          line_role?: string
+          parent_id?: string | null
+          statement: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          id?: string
+          is_subtotal?: boolean
+          line_code?: string
+          line_label?: string
+          line_role?: string
+          parent_id?: string | null
+          statement?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fs_structure_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fs_structure_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "fs_structure_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "fs_structure"
             referencedColumns: ["id"]
           },
         ]
@@ -6392,6 +7096,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "functional_entities_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "functional_entities_parent_functional_entity_id_fkey"
@@ -6480,6 +7191,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fund_transfers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "fund_transfers_fiscal_period_id_fkey"
@@ -6574,6 +7292,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fwt_returns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       goods_issue_lines: {
@@ -6581,6 +7306,8 @@ export type Database = {
           company_id: string
           gl_expense_account_id: string | null
           id: string
+          inventory_cost_layer_id: string | null
+          inventory_transaction_id: string | null
           issue_id: string
           item_id: string
           lot_number: string | null
@@ -6593,6 +7320,8 @@ export type Database = {
           company_id: string
           gl_expense_account_id?: string | null
           id?: string
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           issue_id: string
           item_id: string
           lot_number?: string | null
@@ -6605,6 +7334,8 @@ export type Database = {
           company_id?: string
           gl_expense_account_id?: string | null
           id?: string
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           issue_id?: string
           item_id?: string
           lot_number?: string | null
@@ -6622,10 +7353,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "goods_issue_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "goods_issue_lines_gl_expense_account_id_fkey"
             columns: ["gl_expense_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_issue_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_issue_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+          {
+            foreignKeyName: "goods_issue_lines_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -6648,17 +7407,21 @@ export type Database = {
         Row: {
           branch_id: string | null
           company_id: string
+          cost_center_id: string | null
           created_at: string
           created_by: string | null
           department_id: string | null
           fiscal_period_id: string | null
+          functional_entity_id: string | null
           id: string
           issue_date: string
           issue_number: string
           journal_entry_id: string | null
+          location_id: string | null
           notes: string | null
           posted_at: string | null
           posted_by: string | null
+          project_id: string | null
           purpose: string | null
           status: string
           updated_at: string
@@ -6668,17 +7431,21 @@ export type Database = {
         Insert: {
           branch_id?: string | null
           company_id: string
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
           department_id?: string | null
           fiscal_period_id?: string | null
+          functional_entity_id?: string | null
           id?: string
           issue_date: string
           issue_number: string
           journal_entry_id?: string | null
+          location_id?: string | null
           notes?: string | null
           posted_at?: string | null
           posted_by?: string | null
+          project_id?: string | null
           purpose?: string | null
           status?: string
           updated_at?: string
@@ -6688,17 +7455,21 @@ export type Database = {
         Update: {
           branch_id?: string | null
           company_id?: string
+          cost_center_id?: string | null
           created_at?: string
           created_by?: string | null
           department_id?: string | null
           fiscal_period_id?: string | null
+          functional_entity_id?: string | null
           id?: string
           issue_date?: string
           issue_number?: string
           journal_entry_id?: string | null
+          location_id?: string | null
           notes?: string | null
           posted_at?: string | null
           posted_by?: string | null
+          project_id?: string | null
           purpose?: string | null
           status?: string
           updated_at?: string
@@ -6721,6 +7492,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "goods_issues_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "goods_issues_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "goods_issues_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
@@ -6735,10 +7520,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "goods_issues_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "goods_issues_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_issues_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "goods_issues_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -6815,6 +7621,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "income_tax_computations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -6897,6 +7710,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inter_branch_transfers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "inter_branch_transfers_fiscal_period_id_fkey"
             columns: ["fiscal_period_id"]
             isOneToOne: false
@@ -6947,6 +7767,261 @@ export type Database = {
           },
         ]
       }
+      inventory_accounting_profiles: {
+        Row: {
+          accounting_framework: string
+          activation_state: string
+          company_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          precision_policy_id: string
+          profile_code: string
+          version_no: number
+        }
+        Insert: {
+          accounting_framework?: string
+          activation_state?: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          precision_policy_id: string
+          profile_code: string
+          version_no: number
+        }
+        Update: {
+          accounting_framework?: string
+          activation_state?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          precision_policy_id?: string
+          profile_code?: string
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_accounting_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_accounting_profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_accounting_profiles_precision_policy_id_fkey"
+            columns: ["precision_policy_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_precision_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_canonical_form_versions: {
+        Row: {
+          activated_from: string
+          activated_to: string | null
+          activation_state: string
+          company_id: string
+          created_at: string
+          created_by: string
+          digest_algorithm: string
+          encoding_rules: Json
+          id: string
+          version_code: string
+        }
+        Insert: {
+          activated_from: string
+          activated_to?: string | null
+          activation_state?: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          digest_algorithm?: string
+          encoding_rules?: Json
+          id?: string
+          version_code: string
+        }
+        Update: {
+          activated_from?: string
+          activated_to?: string | null
+          activation_state?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          digest_algorithm?: string
+          encoding_rules?: Json
+          id?: string
+          version_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_canonical_form_versions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_canonical_form_versions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      inventory_correction_graph_versions: {
+        Row: {
+          activation_state: string
+          anchoring_semantics: Json
+          commutativity_proofs: Json
+          company_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          version_no: number
+        }
+        Insert: {
+          activation_state?: string
+          anchoring_semantics?: Json
+          commutativity_proofs?: Json
+          company_id: string
+          created_at?: string
+          created_by: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          version_no: number
+        }
+        Update: {
+          activation_state?: string
+          anchoring_semantics?: Json
+          commutativity_proofs?: Json
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_correction_graph_versions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_correction_graph_versions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      inventory_cost_formula_policies: {
+        Row: {
+          accounting_profile_id: string
+          activation_state: string
+          allowed_scope_type: string
+          company_id: string
+          costing_method: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          method_change_classification: string
+          policy_group_code: string
+          transition_evidence: Json
+          transition_from_policy_id: string | null
+          version_no: number
+        }
+        Insert: {
+          accounting_profile_id: string
+          activation_state?: string
+          allowed_scope_type: string
+          company_id: string
+          costing_method: string
+          created_at?: string
+          created_by: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          method_change_classification?: string
+          policy_group_code: string
+          transition_evidence?: Json
+          transition_from_policy_id?: string | null
+          version_no: number
+        }
+        Update: {
+          accounting_profile_id?: string
+          activation_state?: string
+          allowed_scope_type?: string
+          company_id?: string
+          costing_method?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          method_change_classification?: string
+          policy_group_code?: string
+          transition_evidence?: Json
+          transition_from_policy_id?: string | null
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_cost_formula_policies_accounting_profile_id_fkey"
+            columns: ["accounting_profile_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_accounting_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_formula_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_formula_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_formula_policies_transition_from_policy_id_fkey"
+            columns: ["transition_from_policy_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_formula_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       inventory_cost_layers: {
         Row: {
           company_id: string
@@ -6956,12 +8031,18 @@ export type Database = {
           item_id: string
           layer_date: string
           lot_number: string | null
+          origin_inventory_transaction_id: string | null
           original_qty: number
+          original_value: number
+          parent_layer_id: string | null
           qty_remaining: number
           reference_doc_id: string | null
           reference_doc_type: string | null
+          remaining_value: number
           serial_number: string | null
+          source_line_id: string | null
           unit_cost: number
+          voided_by_inventory_transaction_id: string | null
           warehouse_id: string
         }
         Insert: {
@@ -6972,12 +8053,18 @@ export type Database = {
           item_id: string
           layer_date: string
           lot_number?: string | null
+          origin_inventory_transaction_id?: string | null
           original_qty: number
+          original_value: number
+          parent_layer_id?: string | null
           qty_remaining: number
           reference_doc_id?: string | null
           reference_doc_type?: string | null
+          remaining_value: number
           serial_number?: string | null
+          source_line_id?: string | null
           unit_cost?: number
+          voided_by_inventory_transaction_id?: string | null
           warehouse_id: string
         }
         Update: {
@@ -6988,12 +8075,18 @@ export type Database = {
           item_id?: string
           layer_date?: string
           lot_number?: string | null
+          origin_inventory_transaction_id?: string | null
           original_qty?: number
+          original_value?: number
+          parent_layer_id?: string | null
           qty_remaining?: number
           reference_doc_id?: string | null
           reference_doc_type?: string | null
+          remaining_value?: number
           serial_number?: string | null
+          source_line_id?: string | null
           unit_cost?: number
+          voided_by_inventory_transaction_id?: string | null
           warehouse_id?: string
         }
         Relationships: [
@@ -7005,10 +8098,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inventory_cost_layers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "inventory_cost_layers_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_origin_inventory_transaction_id_fkey"
+            columns: ["origin_inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_parent_layer_id_fkey"
+            columns: ["parent_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_parent_layer_id_fkey"
+            columns: ["parent_layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_voided_by_inventory_transaction_id_fkey"
+            columns: ["voided_by_inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -7017,6 +8145,1383 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "warehouses"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_costing_pending_allocations: {
+        Row: {
+          batch_id: string
+          layer_id: string
+          quantity: number
+          total_cost: number
+          unit_cost: number
+        }
+        Insert: {
+          batch_id: string
+          layer_id: string
+          quantity: number
+          total_cost: number
+          unit_cost: number
+        }
+        Update: {
+          batch_id?: string
+          layer_id?: string
+          quantity?: number
+          total_cost?: number
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_costing_pending_allocations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_costing_pending_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_pending_allocations_layer_id_fkey"
+            columns: ["layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_pending_allocations_layer_id_fkey"
+            columns: ["layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+        ]
+      }
+      inventory_costing_pending_batches: {
+        Row: {
+          backend_pid: number
+          company_id: string
+          created_at: string
+          id: string
+          item_id: string
+          local_txid: number
+          quantity: number
+          source_line_id: string | null
+          total_cost: number
+          warehouse_id: string
+        }
+        Insert: {
+          backend_pid: number
+          company_id: string
+          created_at?: string
+          id?: string
+          item_id: string
+          local_txid: number
+          quantity: number
+          source_line_id?: string | null
+          total_cost: number
+          warehouse_id: string
+        }
+        Update: {
+          backend_pid?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          item_id?: string
+          local_txid?: number
+          quantity?: number
+          source_line_id?: string | null
+          total_cost?: number
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_costing_pending_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_pending_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_pending_batches_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_pending_batches_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_costing_runtime_queue: {
+        Row: {
+          backend_pid: number
+          company_id: string
+          created_at: string
+          id: string
+          inventory_cost_layer_id: string | null
+          item_id: string
+          layers_restored: boolean
+          local_txid: number
+          lot_number: string | null
+          operation: string
+          original_transaction_id: string | null
+          selection_consumed: boolean
+          sequence_no: number
+          serial_number: string | null
+          source_line_id: string | null
+          warehouse_id: string
+        }
+        Insert: {
+          backend_pid: number
+          company_id: string
+          created_at?: string
+          id?: string
+          inventory_cost_layer_id?: string | null
+          item_id: string
+          layers_restored?: boolean
+          local_txid: number
+          lot_number?: string | null
+          operation: string
+          original_transaction_id?: string | null
+          selection_consumed?: boolean
+          sequence_no: number
+          serial_number?: string | null
+          source_line_id?: string | null
+          warehouse_id: string
+        }
+        Update: {
+          backend_pid?: number
+          company_id?: string
+          created_at?: string
+          id?: string
+          inventory_cost_layer_id?: string | null
+          item_id?: string
+          layers_restored?: boolean
+          local_txid?: number
+          lot_number?: string | null
+          operation?: string
+          original_transaction_id?: string | null
+          selection_consumed?: boolean
+          sequence_no?: number
+          serial_number?: string | null
+          source_line_id?: string | null
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_costing_runtime_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_runtime_queue_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_runtime_queue_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_runtime_queue_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_runtime_queue_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_runtime_queue_original_transaction_id_fkey"
+            columns: ["original_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_costing_runtime_queue_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_event_allocations: {
+        Row: {
+          allocation_evidence: Json
+          allocation_key: string
+          allocation_sequence: number
+          authoritative_valuation_amount: number
+          company_id: string
+          created_at: string
+          created_by: string
+          gl_basis_amount: number
+          id: string
+          inventory_event_value_id: string
+          is_final_allocation: boolean
+          residual_rank: number
+          residual_units: number
+        }
+        Insert: {
+          allocation_evidence: Json
+          allocation_key: string
+          allocation_sequence: number
+          authoritative_valuation_amount: number
+          company_id: string
+          created_at?: string
+          created_by: string
+          gl_basis_amount: number
+          id?: string
+          inventory_event_value_id: string
+          is_final_allocation?: boolean
+          residual_rank: number
+          residual_units?: number
+        }
+        Update: {
+          allocation_evidence?: Json
+          allocation_key?: string
+          allocation_sequence?: number
+          authoritative_valuation_amount?: number
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          gl_basis_amount?: number
+          id?: string
+          inventory_event_value_id?: string
+          is_final_allocation?: boolean
+          residual_rank?: number
+          residual_units?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_event_allocations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_allocations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_event_allocations_inventory_event_value_id_fkey"
+            columns: ["inventory_event_value_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_event_values"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_event_effect_ranks: {
+        Row: {
+          activation_state: string
+          company_id: string
+          created_at: string
+          created_by: string
+          effect_class: string
+          effect_rank: number
+          id: string
+          order_policy_id: string
+        }
+        Insert: {
+          activation_state?: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          effect_class: string
+          effect_rank: number
+          id?: string
+          order_policy_id: string
+        }
+        Update: {
+          activation_state?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          effect_class?: string
+          effect_rank?: number
+          id?: string
+          order_policy_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_event_effect_ranks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_effect_ranks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_event_effect_ranks_order_policy_id_fkey"
+            columns: ["order_policy_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_event_order_policies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_event_order_keys: {
+        Row: {
+          canonical_form_version_id: string
+          canonical_key_bytes: string
+          canonical_source_identity: string
+          company_id: string
+          correction_approved_at: string
+          correction_chain_depth: number
+          correction_effective_at: string
+          correction_graph_version_id: string
+          correction_identity: string
+          correction_placement_class: string
+          correction_root_event_id: string | null
+          created_at: string
+          created_by: string
+          document_order_key: string
+          ecc_key_digest: string
+          economic_effect_class: string
+          economic_effect_rank: number
+          economic_effective_at: string
+          event_ordinal: number
+          id: string
+          inventory_event_id: string
+          occurrence_ordinal: number
+          order_policy_version_id: string
+          registry_source_document_type: string
+          resolution_state: string
+          scope_resolution_version_id: string
+          source_line_ordinal: number
+          source_precision_code: string
+          source_type_rank: number
+          transition_rank: number
+          valuation_stream_id: string
+        }
+        Insert: {
+          canonical_form_version_id: string
+          canonical_key_bytes: string
+          canonical_source_identity: string
+          company_id: string
+          correction_approved_at: string
+          correction_chain_depth: number
+          correction_effective_at: string
+          correction_graph_version_id: string
+          correction_identity: string
+          correction_placement_class: string
+          correction_root_event_id?: string | null
+          created_at?: string
+          created_by: string
+          document_order_key: string
+          ecc_key_digest: string
+          economic_effect_class: string
+          economic_effect_rank: number
+          economic_effective_at: string
+          event_ordinal: number
+          id?: string
+          inventory_event_id: string
+          occurrence_ordinal: number
+          order_policy_version_id: string
+          registry_source_document_type: string
+          resolution_state?: string
+          scope_resolution_version_id: string
+          source_line_ordinal: number
+          source_precision_code: string
+          source_type_rank: number
+          transition_rank: number
+          valuation_stream_id: string
+        }
+        Update: {
+          canonical_form_version_id?: string
+          canonical_key_bytes?: string
+          canonical_source_identity?: string
+          company_id?: string
+          correction_approved_at?: string
+          correction_chain_depth?: number
+          correction_effective_at?: string
+          correction_graph_version_id?: string
+          correction_identity?: string
+          correction_placement_class?: string
+          correction_root_event_id?: string | null
+          created_at?: string
+          created_by?: string
+          document_order_key?: string
+          ecc_key_digest?: string
+          economic_effect_class?: string
+          economic_effect_rank?: number
+          economic_effective_at?: string
+          event_ordinal?: number
+          id?: string
+          inventory_event_id?: string
+          occurrence_ordinal?: number
+          order_policy_version_id?: string
+          registry_source_document_type?: string
+          resolution_state?: string
+          scope_resolution_version_id?: string
+          source_line_ordinal?: number
+          source_precision_code?: string
+          source_type_rank?: number
+          transition_rank?: number
+          valuation_stream_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_event_order_keys_canonical_form_version_id_fkey"
+            columns: ["canonical_form_version_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_canonical_form_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_order_keys_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_order_keys_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_event_order_keys_correction_graph_version_id_fkey"
+            columns: ["correction_graph_version_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_correction_graph_versions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_order_keys_correction_root_event_id_fkey"
+            columns: ["correction_root_event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_order_keys_inventory_event_id_fkey"
+            columns: ["inventory_event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_order_keys_order_policy_version_id_fkey"
+            columns: ["order_policy_version_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_event_order_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_order_keys_registry_source_document_type_fkey"
+            columns: ["registry_source_document_type"]
+            isOneToOne: false
+            referencedRelation: "ref_inventory_event_source_types"
+            referencedColumns: ["source_document_type"]
+          },
+          {
+            foreignKeyName: "inventory_event_order_keys_scope_resolution_version_id_fkey"
+            columns: ["scope_resolution_version_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_valuation_scopes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_order_keys_valuation_stream_id_fkey"
+            columns: ["valuation_stream_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_valuation_streams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_event_order_policies: {
+        Row: {
+          activation_state: string
+          company_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          policy_code: string
+          version_no: number
+        }
+        Insert: {
+          activation_state?: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          policy_code: string
+          version_no: number
+        }
+        Update: {
+          activation_state?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          policy_code?: string
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_event_order_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_order_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      inventory_event_source_links: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          immutable_relationship_evidence: Json
+          inventory_event_id: string
+          related_inventory_event_id: string | null
+          relationship_type: string
+          source_document_id: string
+          source_document_type: string
+          source_line_id: string
+          source_occurrence_sequence: number
+          source_transition: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          immutable_relationship_evidence: Json
+          inventory_event_id: string
+          related_inventory_event_id?: string | null
+          relationship_type: string
+          source_document_id: string
+          source_document_type: string
+          source_line_id: string
+          source_occurrence_sequence: number
+          source_transition: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          immutable_relationship_evidence?: Json
+          inventory_event_id?: string
+          related_inventory_event_id?: string | null
+          relationship_type?: string
+          source_document_id?: string
+          source_document_type?: string
+          source_line_id?: string
+          source_occurrence_sequence?: number
+          source_transition?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_event_source_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_source_links_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_event_source_links_inventory_event_id_fkey"
+            columns: ["inventory_event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_source_links_related_inventory_event_id_fkey"
+            columns: ["related_inventory_event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_source_links_source_document_type_fkey"
+            columns: ["source_document_type"]
+            isOneToOne: false
+            referencedRelation: "ref_inventory_event_source_types"
+            referencedColumns: ["source_document_type"]
+          },
+        ]
+      }
+      inventory_event_values: {
+        Row: {
+          authoritative_functional_amount: number
+          authoritative_transaction_amount: number
+          calculation_evidence: Json
+          company_id: string
+          created_at: string
+          created_by: string
+          derived_unit_rate: number | null
+          exchange_rate_identity: string | null
+          functional_currency_code: string
+          functional_currency_scale: number
+          gl_basis_amount: number
+          id: string
+          inventory_event_id: string
+          residual_units: number
+          transaction_currency_code: string
+          transaction_currency_scale: number
+          unit_rate_scale: number
+          valuation_amount_scale: number
+          value_role: string
+        }
+        Insert: {
+          authoritative_functional_amount: number
+          authoritative_transaction_amount: number
+          calculation_evidence: Json
+          company_id: string
+          created_at?: string
+          created_by: string
+          derived_unit_rate?: number | null
+          exchange_rate_identity?: string | null
+          functional_currency_code: string
+          functional_currency_scale: number
+          gl_basis_amount: number
+          id?: string
+          inventory_event_id: string
+          residual_units?: number
+          transaction_currency_code: string
+          transaction_currency_scale: number
+          unit_rate_scale?: number
+          valuation_amount_scale?: number
+          value_role: string
+        }
+        Update: {
+          authoritative_functional_amount?: number
+          authoritative_transaction_amount?: number
+          calculation_evidence?: Json
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          derived_unit_rate?: number | null
+          exchange_rate_identity?: string | null
+          functional_currency_code?: string
+          functional_currency_scale?: number
+          gl_basis_amount?: number
+          id?: string
+          inventory_event_id?: string
+          residual_units?: number
+          transaction_currency_code?: string
+          transaction_currency_scale?: number
+          unit_rate_scale?: number
+          valuation_amount_scale?: number
+          value_role?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_event_values_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_event_values_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_event_values_inventory_event_id_fkey"
+            columns: ["inventory_event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_events: {
+        Row: {
+          accounting_date: string | null
+          accounting_profile_id: string
+          base_quantity: number
+          base_uom_id: string
+          company_id: string
+          correction_of_event_id: string | null
+          cost_formula_policy_id: string
+          costing_method: string
+          created_at: string
+          created_by: string
+          effective_at: string
+          event_effect: string
+          event_sequence: number
+          event_type: string
+          foundation_state: string
+          id: string
+          immutable_source_evidence: Json
+          item_id: string
+          journal_entry_id: string | null
+          lot_number: string | null
+          occurrence_date: string
+          occurrence_id: string
+          physical_location_id: string | null
+          physical_warehouse_id: string | null
+          precision_policy_id: string
+          predecessor_event_id: string | null
+          reason_code: string
+          reversal_of_event_id: string | null
+          scope_sequence: number
+          serial_number: string | null
+          source_document_id: string
+          source_document_type: string
+          source_evidence_fingerprint: string
+          source_line_id: string
+          source_occurrence_sequence: number
+          source_quantity: number
+          source_transition: string
+          source_uom_id: string
+          uom_conversion_factor: number
+          valuation_currency_code: string
+          valuation_scope_id: string
+        }
+        Insert: {
+          accounting_date?: string | null
+          accounting_profile_id: string
+          base_quantity: number
+          base_uom_id: string
+          company_id: string
+          correction_of_event_id?: string | null
+          cost_formula_policy_id: string
+          costing_method: string
+          created_at?: string
+          created_by: string
+          effective_at: string
+          event_effect: string
+          event_sequence: number
+          event_type: string
+          foundation_state?: string
+          id?: string
+          immutable_source_evidence: Json
+          item_id: string
+          journal_entry_id?: string | null
+          lot_number?: string | null
+          occurrence_date: string
+          occurrence_id: string
+          physical_location_id?: string | null
+          physical_warehouse_id?: string | null
+          precision_policy_id: string
+          predecessor_event_id?: string | null
+          reason_code: string
+          reversal_of_event_id?: string | null
+          scope_sequence: number
+          serial_number?: string | null
+          source_document_id: string
+          source_document_type: string
+          source_evidence_fingerprint: string
+          source_line_id: string
+          source_occurrence_sequence: number
+          source_quantity: number
+          source_transition: string
+          source_uom_id: string
+          uom_conversion_factor: number
+          valuation_currency_code: string
+          valuation_scope_id: string
+        }
+        Update: {
+          accounting_date?: string | null
+          accounting_profile_id?: string
+          base_quantity?: number
+          base_uom_id?: string
+          company_id?: string
+          correction_of_event_id?: string | null
+          cost_formula_policy_id?: string
+          costing_method?: string
+          created_at?: string
+          created_by?: string
+          effective_at?: string
+          event_effect?: string
+          event_sequence?: number
+          event_type?: string
+          foundation_state?: string
+          id?: string
+          immutable_source_evidence?: Json
+          item_id?: string
+          journal_entry_id?: string | null
+          lot_number?: string | null
+          occurrence_date?: string
+          occurrence_id?: string
+          physical_location_id?: string | null
+          physical_warehouse_id?: string | null
+          precision_policy_id?: string
+          predecessor_event_id?: string | null
+          reason_code?: string
+          reversal_of_event_id?: string | null
+          scope_sequence?: number
+          serial_number?: string | null
+          source_document_id?: string
+          source_document_type?: string
+          source_evidence_fingerprint?: string
+          source_line_id?: string
+          source_occurrence_sequence?: number
+          source_quantity?: number
+          source_transition?: string
+          source_uom_id?: string
+          uom_conversion_factor?: number
+          valuation_currency_code?: string
+          valuation_scope_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_events_accounting_profile_id_fkey"
+            columns: ["accounting_profile_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_accounting_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_base_uom_id_fkey"
+            columns: ["base_uom_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_events_correction_of_event_id_fkey"
+            columns: ["correction_of_event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_cost_formula_policy_id_fkey"
+            columns: ["cost_formula_policy_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_formula_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_occurrence_id_fkey"
+            columns: ["occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_occurrences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_physical_location_id_fkey"
+            columns: ["physical_location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_physical_warehouse_id_fkey"
+            columns: ["physical_warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_precision_policy_id_fkey"
+            columns: ["precision_policy_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_precision_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_predecessor_event_id_fkey"
+            columns: ["predecessor_event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_reversal_of_event_id_fkey"
+            columns: ["reversal_of_event_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_source_document_type_fkey"
+            columns: ["source_document_type"]
+            isOneToOne: false
+            referencedRelation: "ref_inventory_event_source_types"
+            referencedColumns: ["source_document_type"]
+          },
+          {
+            foreignKeyName: "inventory_events_source_uom_id_fkey"
+            columns: ["source_uom_id"]
+            isOneToOne: false
+            referencedRelation: "units_of_measure"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_events_valuation_scope_id_fkey"
+            columns: ["valuation_scope_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_valuation_scopes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_layer_allocations: {
+        Row: {
+          allocation_kind: string
+          company_id: string
+          created_at: string
+          id: string
+          inventory_transaction_id: string
+          layer_id: string
+          quantity: number
+          total_cost: number
+          unit_cost: number
+        }
+        Insert: {
+          allocation_kind: string
+          company_id: string
+          created_at?: string
+          id?: string
+          inventory_transaction_id: string
+          layer_id: string
+          quantity: number
+          total_cost: number
+          unit_cost: number
+        }
+        Update: {
+          allocation_kind?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          inventory_transaction_id?: string
+          layer_id?: string
+          quantity?: number
+          total_cost?: number
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_layer_allocations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_layer_allocations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_layer_allocations_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_layer_allocations_layer_id_fkey"
+            columns: ["layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_layer_allocations_layer_id_fkey"
+            columns: ["layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+        ]
+      }
+      inventory_occurrences: {
+        Row: {
+          atomic_occurrence_id: string
+          audit_identity: string
+          company_id: string
+          created_at: string
+          created_by: string
+          event_count: number
+          event_ids: string[]
+          failure_code: string | null
+          failure_evidence: Json | null
+          foundation_state: string
+          id: string
+          idempotency_key: string
+          occurred_at: string
+          occurrence_state: string
+          posting_request_id: string | null
+          posting_result_id: string | null
+          projection_effect_count: number
+          request_fingerprint: string
+          retry_of_occurrence_id: string | null
+          source_document_id: string
+          source_document_type: string
+          source_line_id: string
+          source_occurrence_sequence: number
+          source_transition: string
+        }
+        Insert: {
+          atomic_occurrence_id: string
+          audit_identity: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          event_count?: number
+          event_ids?: string[]
+          failure_code?: string | null
+          failure_evidence?: Json | null
+          foundation_state?: string
+          id?: string
+          idempotency_key: string
+          occurred_at: string
+          occurrence_state: string
+          posting_request_id?: string | null
+          posting_result_id?: string | null
+          projection_effect_count?: number
+          request_fingerprint: string
+          retry_of_occurrence_id?: string | null
+          source_document_id: string
+          source_document_type: string
+          source_line_id: string
+          source_occurrence_sequence: number
+          source_transition: string
+        }
+        Update: {
+          atomic_occurrence_id?: string
+          audit_identity?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          event_count?: number
+          event_ids?: string[]
+          failure_code?: string | null
+          failure_evidence?: Json | null
+          foundation_state?: string
+          id?: string
+          idempotency_key?: string
+          occurred_at?: string
+          occurrence_state?: string
+          posting_request_id?: string | null
+          posting_result_id?: string | null
+          projection_effect_count?: number
+          request_fingerprint?: string
+          retry_of_occurrence_id?: string | null
+          source_document_id?: string
+          source_document_type?: string
+          source_line_id?: string
+          source_occurrence_sequence?: number
+          source_transition?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_occurrences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_occurrences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_occurrences_retry_of_occurrence_id_fkey"
+            columns: ["retry_of_occurrence_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_occurrences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_occurrences_source_document_type_fkey"
+            columns: ["source_document_type"]
+            isOneToOne: false
+            referencedRelation: "ref_inventory_event_source_types"
+            referencedColumns: ["source_document_type"]
+          },
+        ]
+      }
+      inventory_precision_policies: {
+        Row: {
+          activation_state: string
+          company_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_to: string | null
+          functional_currency_code: string
+          functional_currency_scale: number
+          gl_basis_scale: number
+          id: string
+          policy_code: string
+          quantity_scale: number
+          transaction_currency_code: string
+          transaction_currency_scale: number
+          unit_rate_scale: number
+          valuation_amount_scale: number
+          version_no: number
+        }
+        Insert: {
+          activation_state?: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          effective_from: string
+          effective_to?: string | null
+          functional_currency_code: string
+          functional_currency_scale: number
+          gl_basis_scale: number
+          id?: string
+          policy_code: string
+          quantity_scale: number
+          transaction_currency_code: string
+          transaction_currency_scale: number
+          unit_rate_scale?: number
+          valuation_amount_scale?: number
+          version_no: number
+        }
+        Update: {
+          activation_state?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_to?: string | null
+          functional_currency_code?: string
+          functional_currency_scale?: number
+          gl_basis_scale?: number
+          id?: string
+          policy_code?: string
+          quantity_scale?: number
+          transaction_currency_code?: string
+          transaction_currency_scale?: number
+          unit_rate_scale?: number
+          valuation_amount_scale?: number
+          version_no?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_precision_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_precision_policies_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      inventory_projection_versions: {
+        Row: {
+          company_id: string
+          id: string
+          projection_fingerprint: string
+          projection_row_count: number
+          projection_state: string
+          projection_type: string
+          rebuilt_at: string
+          rebuilt_by: string
+          replay_watermark_sequence: number
+          source_event_count: number
+          valuation_scope_id: string
+        }
+        Insert: {
+          company_id: string
+          id?: string
+          projection_fingerprint: string
+          projection_row_count: number
+          projection_state?: string
+          projection_type: string
+          rebuilt_at?: string
+          rebuilt_by: string
+          replay_watermark_sequence: number
+          source_event_count: number
+          valuation_scope_id: string
+        }
+        Update: {
+          company_id?: string
+          id?: string
+          projection_fingerprint?: string
+          projection_row_count?: number
+          projection_state?: string
+          projection_type?: string
+          rebuilt_at?: string
+          rebuilt_by?: string
+          replay_watermark_sequence?: number
+          source_event_count?: number
+          valuation_scope_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_projection_versions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_projection_versions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_projection_versions_valuation_scope_id_fkey"
+            columns: ["valuation_scope_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_valuation_scopes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_source_type_ranks: {
+        Row: {
+          activation_state: string
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          order_policy_id: string
+          source_document_type: string
+          source_type_rank: number
+        }
+        Insert: {
+          activation_state?: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          order_policy_id: string
+          source_document_type: string
+          source_type_rank: number
+        }
+        Update: {
+          activation_state?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          order_policy_id?: string
+          source_document_type?: string
+          source_type_rank?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_source_type_ranks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_source_type_ranks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_source_type_ranks_order_policy_id_fkey"
+            columns: ["order_policy_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_event_order_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_source_type_ranks_source_document_type_fkey"
+            columns: ["source_document_type"]
+            isOneToOne: false
+            referencedRelation: "ref_inventory_event_source_types"
+            referencedColumns: ["source_document_type"]
           },
         ]
       }
@@ -7030,15 +9535,19 @@ export type Database = {
           id: string
           item_id: string
           journal_entry_id: string | null
-          lot_number: string | null
           location_id: string | null
+          lot_number: string | null
           notes: string | null
           project_id: string | null
           qty: number
           qty_on_hand_after: number
           reference_doc_id: string | null
           reference_doc_type: string | null
+          restores_inventory_transaction_id: string | null
+          reversed_by_inventory_transaction_id: string | null
+          reverses_inventory_transaction_id: string | null
           serial_number: string | null
+          source_line_id: string | null
           total_cost: number
           transaction_date: string
           transaction_type: string
@@ -7054,15 +9563,19 @@ export type Database = {
           id?: string
           item_id: string
           journal_entry_id?: string | null
-          lot_number?: string | null
           location_id?: string | null
+          lot_number?: string | null
           notes?: string | null
           project_id?: string | null
           qty: number
           qty_on_hand_after: number
           reference_doc_id?: string | null
           reference_doc_type?: string | null
+          restores_inventory_transaction_id?: string | null
+          reversed_by_inventory_transaction_id?: string | null
+          reverses_inventory_transaction_id?: string | null
           serial_number?: string | null
+          source_line_id?: string | null
           total_cost?: number
           transaction_date: string
           transaction_type: string
@@ -7078,15 +9591,19 @@ export type Database = {
           id?: string
           item_id?: string
           journal_entry_id?: string | null
-          lot_number?: string | null
           location_id?: string | null
+          lot_number?: string | null
           notes?: string | null
           project_id?: string | null
           qty?: number
           qty_on_hand_after?: number
           reference_doc_id?: string | null
           reference_doc_type?: string | null
+          restores_inventory_transaction_id?: string | null
+          reversed_by_inventory_transaction_id?: string | null
+          reverses_inventory_transaction_id?: string | null
           serial_number?: string | null
+          source_line_id?: string | null
           total_cost?: number
           transaction_date?: string
           transaction_type?: string
@@ -7099,6 +9616,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
             referencedColumns: ["id"]
           },
           {
@@ -7116,10 +9647,352 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "inventory_transactions_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_restores_inventory_transaction_id_fkey"
+            columns: ["restores_inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_reversed_by_inventory_transaction_i_fkey"
+            columns: ["reversed_by_inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transactions_reverses_inventory_transaction_id_fkey"
+            columns: ["reverses_inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "inventory_transactions_warehouse_id_fkey"
             columns: ["warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_transition_ranks: {
+        Row: {
+          activation_state: string
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          order_policy_id: string
+          source_document_type: string
+          source_transition: string
+          transition_rank: number
+        }
+        Insert: {
+          activation_state?: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          order_policy_id: string
+          source_document_type: string
+          source_transition: string
+          transition_rank: number
+        }
+        Update: {
+          activation_state?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          order_policy_id?: string
+          source_document_type?: string
+          source_transition?: string
+          transition_rank?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_transition_ranks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transition_ranks_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_transition_ranks_order_policy_id_fkey"
+            columns: ["order_policy_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_event_order_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_transition_ranks_source_document_type_fkey"
+            columns: ["source_document_type"]
+            isOneToOne: false
+            referencedRelation: "ref_inventory_event_source_types"
+            referencedColumns: ["source_document_type"]
+          },
+        ]
+      }
+      inventory_valuation_scope_sequences: {
+        Row: {
+          company_id: string
+          last_sequence: number
+          updated_at: string
+          valuation_scope_id: string
+        }
+        Insert: {
+          company_id: string
+          last_sequence?: number
+          updated_at?: string
+          valuation_scope_id: string
+        }
+        Update: {
+          company_id?: string
+          last_sequence?: number
+          updated_at?: string
+          valuation_scope_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_valuation_scope_sequences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_scope_sequences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_scope_sequences_valuation_scope_id_fkey"
+            columns: ["valuation_scope_id"]
+            isOneToOne: true
+            referencedRelation: "inventory_valuation_scopes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_valuation_scopes: {
+        Row: {
+          accounting_profile_id: string
+          activation_state: string
+          branch_id: string | null
+          company_id: string
+          cost_formula_policy_id: string
+          created_at: string
+          created_by: string
+          effective_from: string
+          effective_to: string | null
+          id: string
+          item_id: string
+          scope_code: string
+          scope_type: string
+          valuation_currency_code: string
+          warehouse_id: string | null
+        }
+        Insert: {
+          accounting_profile_id: string
+          activation_state?: string
+          branch_id?: string | null
+          company_id: string
+          cost_formula_policy_id: string
+          created_at?: string
+          created_by: string
+          effective_from: string
+          effective_to?: string | null
+          id?: string
+          item_id: string
+          scope_code: string
+          scope_type: string
+          valuation_currency_code: string
+          warehouse_id?: string | null
+        }
+        Update: {
+          accounting_profile_id?: string
+          activation_state?: string
+          branch_id?: string | null
+          company_id?: string
+          cost_formula_policy_id?: string
+          created_at?: string
+          created_by?: string
+          effective_from?: string
+          effective_to?: string | null
+          id?: string
+          item_id?: string
+          scope_code?: string
+          scope_type?: string
+          valuation_currency_code?: string
+          warehouse_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_valuation_scopes_accounting_profile_id_fkey"
+            columns: ["accounting_profile_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_accounting_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_scopes_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_scopes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_scopes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_scopes_cost_formula_policy_id_fkey"
+            columns: ["cost_formula_policy_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_formula_policies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_scopes_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_scopes_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_valuation_stream_sequences: {
+        Row: {
+          company_id: string
+          last_sequence: number
+          updated_at: string
+          valuation_stream_id: string
+        }
+        Insert: {
+          company_id: string
+          last_sequence?: number
+          updated_at?: string
+          valuation_stream_id: string
+        }
+        Update: {
+          company_id?: string
+          last_sequence?: number
+          updated_at?: string
+          valuation_stream_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_valuation_stream_sequences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_stream_sequences_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_stream_sequences_valuation_stream_id_fkey"
+            columns: ["valuation_stream_id"]
+            isOneToOne: true
+            referencedRelation: "inventory_valuation_streams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_valuation_streams: {
+        Row: {
+          activation_state: string
+          company_id: string
+          created_at: string
+          created_by: string
+          id: string
+          item_id: string
+          scope_code: string
+        }
+        Insert: {
+          activation_state?: string
+          company_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          item_id: string
+          scope_code: string
+        }
+        Update: {
+          activation_state?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          item_id?: string
+          scope_code?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_valuation_streams_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_streams_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_valuation_streams_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
             referencedColumns: ["id"]
           },
         ]
@@ -7171,6 +10044,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "item_barcodes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "item_barcodes_item_id_fkey"
@@ -7263,6 +10143,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "item_categories_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "item_categories_inventory_account_id_fkey"
             columns: ["inventory_account_id"]
             isOneToOne: false
@@ -7340,6 +10227,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "item_media_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "item_media_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
@@ -7394,6 +10288,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "item_uom_conversions_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "item_uom_conversions_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
@@ -7437,6 +10338,7 @@ export type Database = {
           reorder_quantity: number | null
           safety_stock: number | null
           sales_account_id: string | null
+          specific_id_tracking: string | null
           standard_cost: number
           standard_selling_price: number
           track_batch: boolean
@@ -7472,6 +10374,7 @@ export type Database = {
           reorder_quantity?: number | null
           safety_stock?: number | null
           sales_account_id?: string | null
+          specific_id_tracking?: string | null
           standard_cost?: number
           standard_selling_price?: number
           track_batch?: boolean
@@ -7507,6 +10410,7 @@ export type Database = {
           reorder_quantity?: number | null
           safety_stock?: number | null
           sales_account_id?: string | null
+          specific_id_tracking?: string | null
           standard_cost?: number
           standard_selling_price?: number
           track_batch?: boolean
@@ -7536,6 +10440,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "items_default_purchase_vat_id_fkey"
@@ -7657,6 +10568,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "itr_filings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       journal_entries: {
@@ -7673,9 +10591,13 @@ export type Database = {
           is_auto_reversal: boolean
           je_date: string
           je_number: string
+          posting_origin: string | null
+          posting_run_id: string | null
           reference_doc_id: string | null
           reference_doc_type: string | null
+          reversal_of_je_id: string | null
           reversed_by_je_id: string | null
+          source_fingerprint: string | null
           status: string
           total_credit: number
           total_debit: number
@@ -7695,9 +10617,13 @@ export type Database = {
           is_auto_reversal?: boolean
           je_date: string
           je_number: string
+          posting_origin?: string | null
+          posting_run_id?: string | null
           reference_doc_id?: string | null
           reference_doc_type?: string | null
+          reversal_of_je_id?: string | null
           reversed_by_je_id?: string | null
+          source_fingerprint?: string | null
           status?: string
           total_credit?: number
           total_debit?: number
@@ -7717,9 +10643,13 @@ export type Database = {
           is_auto_reversal?: boolean
           je_date?: string
           je_number?: string
+          posting_origin?: string | null
+          posting_run_id?: string | null
           reference_doc_id?: string | null
           reference_doc_type?: string | null
+          reversal_of_je_id?: string | null
           reversed_by_je_id?: string | null
+          source_fingerprint?: string | null
           status?: string
           total_credit?: number
           total_debit?: number
@@ -7742,6 +10672,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "journal_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "journal_entries_fiscal_period_id_fkey"
             columns: ["fiscal_period_id"]
             isOneToOne: false
@@ -7754,6 +10691,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "ref_posting_source_types"
             referencedColumns: ["document_type"]
+          },
+          {
+            foreignKeyName: "journal_entries_reversal_of_je_id_fkey"
+            columns: ["reversal_of_je_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "journal_entries_reversed_by_je_id_fkey"
@@ -7780,8 +10724,10 @@ export type Database = {
           id: string
           je_id: string
           line_number: number
+          line_role: string | null
           location_id: string | null
           project_id: string | null
+          source_line_id: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -7800,8 +10746,10 @@ export type Database = {
           id?: string
           je_id: string
           line_number: number
+          line_role?: string | null
           location_id?: string | null
           project_id?: string | null
+          source_line_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -7820,8 +10768,10 @@ export type Database = {
           id?: string
           je_id?: string
           line_number?: number
+          line_role?: string | null
           location_id?: string | null
           project_id?: string | null
+          source_line_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -7848,6 +10798,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "journal_entry_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "journal_entry_lines_cost_center_id_fkey"
             columns: ["cost_center_id"]
             isOneToOne: false
@@ -7862,10 +10819,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "journal_entry_lines_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "journal_entry_lines_je_id_fkey"
             columns: ["je_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -7938,6 +10916,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "locations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "locations_parent_location_id_fkey"
             columns: ["parent_location_id"]
             isOneToOne: false
@@ -7984,6 +10969,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "master_data_export_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "master_data_export_logs_master_key_fkey"
@@ -8062,6 +11054,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "master_data_import_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "master_data_import_batches_master_key_fkey"
@@ -8360,6 +11359,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "mcit_computations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       nolco_schedule: {
@@ -8415,6 +11421,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nolco_schedule_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -8513,10 +11526,490 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "number_series_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "number_series_document_type_id_fkey"
             columns: ["document_type_id"]
             isOneToOne: false
             referencedRelation: "ref_document_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opening_balance_ap_lines: {
+        Row: {
+          batch_id: string
+          bill_date: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          due_date: string | null
+          id: string
+          legacy_bill_number: string
+          line_number: number
+          memo: string | null
+          original_amount: number
+          supplier_id: string
+          supplier_invoice_number: string | null
+        }
+        Insert: {
+          batch_id: string
+          bill_date: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          legacy_bill_number: string
+          line_number: number
+          memo?: string | null
+          original_amount: number
+          supplier_id: string
+          supplier_invoice_number?: string | null
+        }
+        Update: {
+          batch_id?: string
+          bill_date?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          due_date?: string | null
+          id?: string
+          legacy_bill_number?: string
+          line_number?: number
+          memo?: string | null
+          original_amount?: number
+          supplier_id?: string
+          supplier_invoice_number?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opening_balance_ap_lines_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "opening_balance_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_ap_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_ap_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "opening_balance_ap_lines_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opening_balance_ar_lines: {
+        Row: {
+          batch_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          customer_id: string
+          due_date: string | null
+          id: string
+          invoice_date: string
+          legacy_invoice_number: string
+          line_number: number
+          memo: string | null
+          original_amount: number
+        }
+        Insert: {
+          batch_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          customer_id: string
+          due_date?: string | null
+          id?: string
+          invoice_date: string
+          legacy_invoice_number: string
+          line_number: number
+          memo?: string | null
+          original_amount: number
+        }
+        Update: {
+          batch_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          customer_id?: string
+          due_date?: string | null
+          id?: string
+          invoice_date?: string
+          legacy_invoice_number?: string
+          line_number?: number
+          memo?: string | null
+          original_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opening_balance_ar_lines_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "opening_balance_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_ar_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_ar_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "opening_balance_ar_lines_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opening_balance_bank_lines: {
+        Row: {
+          amount: number
+          bank_account_id: string
+          batch_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          line_number: number
+          memo: string | null
+        }
+        Insert: {
+          amount: number
+          bank_account_id: string
+          batch_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          line_number: number
+          memo?: string | null
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string
+          batch_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          line_number?: number
+          memo?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opening_balance_bank_lines_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_bank_lines_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "opening_balance_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_bank_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_bank_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      opening_balance_batches: {
+        Row: {
+          batch_number: string
+          branch_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          currency_code: string
+          cutover_date: string
+          description: string | null
+          id: string
+          journal_entry_id: string | null
+          posted_at: string | null
+          posted_by: string | null
+          reversal_je_id: string | null
+          reversal_reason: string | null
+          reversed_at: string | null
+          reversed_by: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          batch_number: string
+          branch_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          cutover_date: string
+          description?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          reversal_je_id?: string | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          batch_number?: string
+          branch_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          currency_code?: string
+          cutover_date?: string
+          description?: string | null
+          id?: string
+          journal_entry_id?: string | null
+          posted_at?: string | null
+          posted_by?: string | null
+          reversal_je_id?: string | null
+          reversal_reason?: string | null
+          reversed_at?: string | null
+          reversed_by?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opening_balance_batches_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_batches_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "opening_balance_batches_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_batches_reversal_je_id_fkey"
+            columns: ["reversal_je_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      opening_balance_gl_lines: {
+        Row: {
+          account_id: string
+          batch_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          credit_amount: number
+          debit_amount: number
+          description: string | null
+          id: string
+          line_number: number
+        }
+        Insert: {
+          account_id: string
+          batch_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          credit_amount?: number
+          debit_amount?: number
+          description?: string | null
+          id?: string
+          line_number: number
+        }
+        Update: {
+          account_id?: string
+          batch_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          credit_amount?: number
+          debit_amount?: number
+          description?: string | null
+          id?: string
+          line_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opening_balance_gl_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_gl_lines_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "opening_balance_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_gl_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_gl_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      opening_balance_inventory_lines: {
+        Row: {
+          batch_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          item_id: string
+          line_number: number
+          lot_number: string | null
+          memo: string | null
+          quantity: number
+          serial_number: string | null
+          total_cost: number | null
+          unit_cost: number
+          warehouse_id: string
+        }
+        Insert: {
+          batch_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_id: string
+          line_number: number
+          lot_number?: string | null
+          memo?: string | null
+          quantity: number
+          serial_number?: string | null
+          total_cost?: number | null
+          unit_cost: number
+          warehouse_id: string
+        }
+        Update: {
+          batch_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          item_id?: string
+          line_number?: number
+          lot_number?: string | null
+          memo?: string | null
+          quantity?: number
+          serial_number?: string | null
+          total_cost?: number | null
+          unit_cost?: number
+          warehouse_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opening_balance_inventory_lines_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "opening_balance_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_inventory_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_inventory_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "opening_balance_inventory_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "opening_balance_inventory_lines_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -8585,6 +12078,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "party_contacts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "party_contacts_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -8651,6 +12151,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payment_terms_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       payment_voucher_lines: {
@@ -8665,6 +12172,7 @@ export type Database = {
           ewt_variance_reason: string | null
           id: string
           line_type: string
+          opening_ap_line_id: string | null
           payment_amount: number
           payment_voucher_id: string
           updated_at: string
@@ -8682,6 +12190,7 @@ export type Database = {
           ewt_variance_reason?: string | null
           id?: string
           line_type?: string
+          opening_ap_line_id?: string | null
           payment_amount?: number
           payment_voucher_id: string
           updated_at?: string
@@ -8699,6 +12208,7 @@ export type Database = {
           ewt_variance_reason?: string | null
           id?: string
           line_type?: string
+          opening_ap_line_id?: string | null
           payment_amount?: number
           payment_voucher_id?: string
           updated_at?: string
@@ -8718,6 +12228,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_voucher_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "payment_voucher_lines_opening_ap_line_id_fkey"
+            columns: ["opening_ap_line_id"]
+            isOneToOne: false
+            referencedRelation: "opening_balance_ap_lines"
             referencedColumns: ["id"]
           },
           {
@@ -8771,6 +12295,11 @@ export type Database = {
           date_released: string | null
           id: string
           journal_entry_id: string | null
+          payee_account_name_snapshot: string | null
+          payee_account_number_snapshot: string | null
+          payee_bank_branch_snapshot: string | null
+          payee_bank_name_snapshot: string | null
+          payee_swift_snapshot: string | null
           payment_mode_id: string | null
           posted_at: string | null
           posted_by: string | null
@@ -8778,6 +12307,7 @@ export type Database = {
           released_by: string | null
           remarks: string | null
           status: string
+          supplier_bank_account_id: string | null
           supplier_id: string
           supplier_name_snapshot: string
           supplier_tin_snapshot: string | null
@@ -8801,6 +12331,11 @@ export type Database = {
           date_released?: string | null
           id?: string
           journal_entry_id?: string | null
+          payee_account_name_snapshot?: string | null
+          payee_account_number_snapshot?: string | null
+          payee_bank_branch_snapshot?: string | null
+          payee_bank_name_snapshot?: string | null
+          payee_swift_snapshot?: string | null
           payment_mode_id?: string | null
           posted_at?: string | null
           posted_by?: string | null
@@ -8808,6 +12343,7 @@ export type Database = {
           released_by?: string | null
           remarks?: string | null
           status?: string
+          supplier_bank_account_id?: string | null
           supplier_id: string
           supplier_name_snapshot: string
           supplier_tin_snapshot?: string | null
@@ -8831,6 +12367,11 @@ export type Database = {
           date_released?: string | null
           id?: string
           journal_entry_id?: string | null
+          payee_account_name_snapshot?: string | null
+          payee_account_number_snapshot?: string | null
+          payee_bank_branch_snapshot?: string | null
+          payee_bank_name_snapshot?: string | null
+          payee_swift_snapshot?: string | null
           payment_mode_id?: string | null
           posted_at?: string | null
           posted_by?: string | null
@@ -8838,6 +12379,7 @@ export type Database = {
           released_by?: string | null
           remarks?: string | null
           status?: string
+          supplier_bank_account_id?: string | null
           supplier_id?: string
           supplier_name_snapshot?: string
           supplier_tin_snapshot?: string | null
@@ -8871,6 +12413,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "payment_vouchers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "payment_vouchers_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
@@ -8882,6 +12431,13 @@ export type Database = {
             columns: ["payment_mode_id"]
             isOneToOne: false
             referencedRelation: "ref_payment_modes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_vouchers_supplier_bank_account_id_fkey"
+            columns: ["supplier_bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "supplier_bank_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -8899,12 +12455,17 @@ export type Database = {
           company_id: string
           created_at: string | null
           created_by: string | null
+          deprecated_at: string | null
+          deprecated_reason: string | null
           description: string
+          effective_from: string
+          effective_to: string | null
           form_type: string
           id: string
           is_active: boolean | null
           pt_code: string
           rate: number
+          supersedes_percentage_tax_code_id: string | null
           tax_code_id: string
           updated_at: string | null
           updated_by: string | null
@@ -8914,12 +12475,17 @@ export type Database = {
           company_id: string
           created_at?: string | null
           created_by?: string | null
+          deprecated_at?: string | null
+          deprecated_reason?: string | null
           description: string
+          effective_from?: string
+          effective_to?: string | null
           form_type?: string
           id?: string
           is_active?: boolean | null
           pt_code: string
           rate: number
+          supersedes_percentage_tax_code_id?: string | null
           tax_code_id: string
           updated_at?: string | null
           updated_by?: string | null
@@ -8929,12 +12495,17 @@ export type Database = {
           company_id?: string
           created_at?: string | null
           created_by?: string | null
+          deprecated_at?: string | null
+          deprecated_reason?: string | null
           description?: string
+          effective_from?: string
+          effective_to?: string | null
           form_type?: string
           id?: string
           is_active?: boolean | null
           pt_code?: string
           rate?: number
+          supersedes_percentage_tax_code_id?: string | null
           tax_code_id?: string
           updated_at?: string | null
           updated_by?: string | null
@@ -8952,6 +12523,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "percentage_tax_codes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "percentage_tax_codes_supersedes_percentage_tax_code_id_fkey"
+            columns: ["supersedes_percentage_tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "percentage_tax_codes"
             referencedColumns: ["id"]
           },
           {
@@ -9023,6 +12608,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_cash_funds_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "petty_cash_funds_gl_account_id_fkey"
@@ -9118,6 +12710,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "petty_cash_replenishments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "petty_cash_replenishments_fiscal_period_id_fkey"
@@ -9228,6 +12827,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "petty_cash_vouchers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "petty_cash_vouchers_expense_account_id_fkey"
             columns: ["expense_account_id"]
             isOneToOne: false
@@ -9271,6 +12877,8 @@ export type Database = {
           counted_qty: number | null
           gl_variance_account_id: string | null
           id: string
+          inventory_cost_layer_id: string | null
+          inventory_transaction_id: string | null
           item_id: string
           lot_number: string | null
           serial_number: string | null
@@ -9283,6 +12891,8 @@ export type Database = {
           counted_qty?: number | null
           gl_variance_account_id?: string | null
           id?: string
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           item_id: string
           lot_number?: string | null
           serial_number?: string | null
@@ -9295,6 +12905,8 @@ export type Database = {
           counted_qty?: number | null
           gl_variance_account_id?: string | null
           id?: string
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           item_id?: string
           lot_number?: string | null
           serial_number?: string | null
@@ -9310,6 +12922,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "physical_count_sheet_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "physical_count_sheet_lines_count_sheet_id_fkey"
             columns: ["count_sheet_id"]
             isOneToOne: false
@@ -9321,6 +12940,27 @@ export type Database = {
             columns: ["gl_variance_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "physical_count_sheet_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "physical_count_sheet_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+          {
+            foreignKeyName: "physical_count_sheet_lines_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -9401,6 +13041,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "physical_count_sheets_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "physical_count_sheets_fiscal_period_id_fkey"
@@ -9496,6 +13143,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "projects_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "projects_parent_project_id_fkey"
             columns: ["parent_project_id"]
             isOneToOne: false
@@ -9576,6 +13230,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "pt_returns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       purchase_order_lines: {
@@ -9631,6 +13292,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "purchase_order_lines_item_id_fkey"
@@ -9750,6 +13418,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchase_orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "purchase_orders_cost_center_id_fkey"
             columns: ["cost_center_id"]
             isOneToOne: false
@@ -9793,13 +13468,19 @@ export type Database = {
           created_by: string | null
           description: string
           id: string
+          inventory_cost: number | null
+          inventory_cost_layer_id: string | null
+          inventory_transaction_id: string | null
           item_id: string | null
           line_number: number
+          lot_number: string | null
           max_qty: number
           reason: string | null
           return_id: string
           return_qty: number
           rr_line_id: string | null
+          serial_number: string | null
+          unit_cost: number | null
           unit_price: number
           uom_id: string | null
           updated_at: string
@@ -9810,13 +13491,19 @@ export type Database = {
           created_by?: string | null
           description: string
           id?: string
+          inventory_cost?: number | null
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           item_id?: string | null
           line_number: number
+          lot_number?: string | null
           max_qty?: number
           reason?: string | null
           return_id: string
           return_qty?: number
           rr_line_id?: string | null
+          serial_number?: string | null
+          unit_cost?: number | null
           unit_price?: number
           uom_id?: string | null
           updated_at?: string
@@ -9827,13 +13514,19 @@ export type Database = {
           created_by?: string | null
           description?: string
           id?: string
+          inventory_cost?: number | null
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           item_id?: string | null
           line_number?: number
+          lot_number?: string | null
           max_qty?: number
           reason?: string | null
           return_id?: string
           return_qty?: number
           rr_line_id?: string | null
+          serial_number?: string | null
+          unit_cost?: number | null
           unit_price?: number
           uom_id?: string | null
           updated_at?: string
@@ -9844,6 +13537,34 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_return_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "purchase_return_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_return_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+          {
+            foreignKeyName: "purchase_return_lines_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -9944,6 +13665,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "purchase_returns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "purchase_returns_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
@@ -9956,6 +13684,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "receiving_reports"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_returns_rr_id_fkey"
+            columns: ["rr_id"]
+            isOneToOne: false
+            referencedRelation: "vw_rr_item_billing_progress"
+            referencedColumns: ["rr_id"]
           },
           {
             foreignKeyName: "purchase_returns_supplier_id_fkey"
@@ -9973,12 +13708,14 @@ export type Database = {
           created_at: string
           created_by: string | null
           cwt_amount: number
+          cwt_source: string
           cwt_tax_base: number | null
           cwt_variance_reason: string | null
           forex_adjustment: number
           id: string
           invoice_id: string | null
           line_type: string
+          opening_ar_line_id: string | null
           payment_amount: number
           receipt_id: string
           updated_at: string
@@ -9990,12 +13727,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           cwt_amount?: number
+          cwt_source?: string
           cwt_tax_base?: number | null
           cwt_variance_reason?: string | null
           forex_adjustment?: number
           id?: string
           invoice_id?: string | null
           line_type?: string
+          opening_ar_line_id?: string | null
           payment_amount?: number
           receipt_id: string
           updated_at?: string
@@ -10007,12 +13746,14 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           cwt_amount?: number
+          cwt_source?: string
           cwt_tax_base?: number | null
           cwt_variance_reason?: string | null
           forex_adjustment?: number
           id?: string
           invoice_id?: string | null
           line_type?: string
+          opening_ar_line_id?: string | null
           payment_amount?: number
           receipt_id?: string
           updated_at?: string
@@ -10034,6 +13775,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "receipt_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "receipt_lines_invoice_id_fkey"
             columns: ["invoice_id"]
             isOneToOne: false
@@ -10046,6 +13794,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_sales_invoice_register"
             referencedColumns: ["invoice_id"]
+          },
+          {
+            foreignKeyName: "receipt_lines_opening_ar_line_id_fkey"
+            columns: ["opening_ar_line_id"]
+            isOneToOne: false
+            referencedRelation: "opening_balance_ar_lines"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "receipt_lines_receipt_id_fkey"
@@ -10159,6 +13914,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "receipts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "receipts_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -10181,13 +13943,16 @@ export type Database = {
           created_by: string | null
           description: string
           id: string
+          inventory_transaction_id: string | null
           item_id: string | null
           line_number: number
+          lot_number: string | null
           ordered_qty: number
           po_line_id: string | null
           received_qty: number
           reject_qty: number
           rr_id: string
+          serial_number: string | null
           unit_price: number
           uom_id: string | null
           updated_at: string
@@ -10198,13 +13963,16 @@ export type Database = {
           created_by?: string | null
           description: string
           id?: string
+          inventory_transaction_id?: string | null
           item_id?: string | null
           line_number: number
+          lot_number?: string | null
           ordered_qty?: number
           po_line_id?: string | null
           received_qty?: number
           reject_qty?: number
           rr_id: string
+          serial_number?: string | null
           unit_price?: number
           uom_id?: string | null
           updated_at?: string
@@ -10215,13 +13983,16 @@ export type Database = {
           created_by?: string | null
           description?: string
           id?: string
+          inventory_transaction_id?: string | null
           item_id?: string | null
           line_number?: number
+          lot_number?: string | null
           ordered_qty?: number
           po_line_id?: string | null
           received_qty?: number
           reject_qty?: number
           rr_id?: string
+          serial_number?: string | null
           unit_price?: number
           uom_id?: string | null
           updated_at?: string
@@ -10232,6 +14003,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_report_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "receiving_report_lines_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -10249,11 +14034,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "receiving_report_lines_po_line_id_fkey"
+            columns: ["po_line_id"]
+            isOneToOne: false
+            referencedRelation: "vw_po_line_receipt_progress"
+            referencedColumns: ["po_line_id"]
+          },
+          {
             foreignKeyName: "receiving_report_lines_rr_id_fkey"
             columns: ["rr_id"]
             isOneToOne: false
             referencedRelation: "receiving_reports"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_report_lines_rr_id_fkey"
+            columns: ["rr_id"]
+            isOneToOne: false
+            referencedRelation: "vw_rr_item_billing_progress"
+            referencedColumns: ["rr_id"]
           },
           {
             foreignKeyName: "receiving_report_lines_uom_id_fkey"
@@ -10274,8 +14073,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           department_id: string | null
+          fiscal_period_id: string | null
           id: string
+          journal_entry_id: string | null
           po_id: string
+          posted_at: string | null
+          posted_by: string | null
           remarks: string | null
           rr_date: string
           rr_number: string
@@ -10285,6 +14088,8 @@ export type Database = {
           supplier_name_snapshot: string
           updated_at: string
           updated_by: string | null
+          void_memo: string | null
+          void_reason_id: string | null
           warehouse_id: string | null
         }
         Insert: {
@@ -10296,8 +14101,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           department_id?: string | null
+          fiscal_period_id?: string | null
           id?: string
+          journal_entry_id?: string | null
           po_id: string
+          posted_at?: string | null
+          posted_by?: string | null
           remarks?: string | null
           rr_date: string
           rr_number: string
@@ -10307,6 +14116,8 @@ export type Database = {
           supplier_name_snapshot: string
           updated_at?: string
           updated_by?: string | null
+          void_memo?: string | null
+          void_reason_id?: string | null
           warehouse_id?: string | null
         }
         Update: {
@@ -10318,8 +14129,12 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           department_id?: string | null
+          fiscal_period_id?: string | null
           id?: string
+          journal_entry_id?: string | null
           po_id?: string
+          posted_at?: string | null
+          posted_by?: string | null
           remarks?: string | null
           rr_date?: string
           rr_number?: string
@@ -10329,6 +14144,8 @@ export type Database = {
           supplier_name_snapshot?: string
           updated_at?: string
           updated_by?: string | null
+          void_memo?: string | null
+          void_reason_id?: string | null
           warehouse_id?: string | null
         }
         Relationships: [
@@ -10347,6 +14164,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "receiving_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "receiving_reports_cost_center_id_fkey"
             columns: ["cost_center_id"]
             isOneToOne: false
@@ -10361,6 +14185,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "receiving_reports_fiscal_period_id_fkey"
+            columns: ["fiscal_period_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_reports_journal_entry_id_fkey"
+            columns: ["journal_entry_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "receiving_reports_po_id_fkey"
             columns: ["po_id"]
             isOneToOne: false
@@ -10372,6 +14210,13 @@ export type Database = {
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_reports_void_reason_id_fkey"
+            columns: ["void_reason_id"]
+            isOneToOne: false
+            referencedRelation: "void_reason_codes"
             referencedColumns: ["id"]
           },
           {
@@ -10434,6 +14279,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_journal_template_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "recurring_journal_template_lines_template_id_fkey"
@@ -10516,6 +14368,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recurring_journal_templates_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -10648,6 +14507,179 @@ export type Database = {
         }
         Relationships: []
       }
+      ref_filing_artifact: {
+        Row: {
+          artifact_kind: string
+          created_at: string
+          form_code: string
+          form_name: string
+          group_dimensions: string[]
+          is_active: boolean
+          period_basis: string
+          statutory_basis: string | null
+          statutory_deadline_rule: string
+        }
+        Insert: {
+          artifact_kind: string
+          created_at?: string
+          form_code: string
+          form_name: string
+          group_dimensions: string[]
+          is_active?: boolean
+          period_basis: string
+          statutory_basis?: string | null
+          statutory_deadline_rule: string
+        }
+        Update: {
+          artifact_kind?: string
+          created_at?: string
+          form_code?: string
+          form_name?: string
+          group_dimensions?: string[]
+          is_active?: boolean
+          period_basis?: string
+          statutory_basis?: string | null
+          statutory_deadline_rule?: string
+        }
+        Relationships: []
+      }
+      ref_filing_artifact_kind: {
+        Row: {
+          form_code: string
+          net_sign: number
+          tax_kind: string
+        }
+        Insert: {
+          form_code: string
+          net_sign?: number
+          tax_kind: string
+        }
+        Update: {
+          form_code?: string
+          net_sign?: number
+          tax_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ref_filing_artifact_kind_form_code_fkey"
+            columns: ["form_code"]
+            isOneToOne: false
+            referencedRelation: "ref_filing_artifact"
+            referencedColumns: ["form_code"]
+          },
+          {
+            foreignKeyName: "ref_filing_artifact_kind_tax_kind_fkey"
+            columns: ["tax_kind"]
+            isOneToOne: false
+            referencedRelation: "ref_tax_ledger_control"
+            referencedColumns: ["tax_kind"]
+          },
+        ]
+      }
+      ref_filing_export_column: {
+        Row: {
+          column_header: string
+          column_order: number
+          export_format: string
+          form_code: string
+          source_field: string
+          value_kind: string
+        }
+        Insert: {
+          column_header: string
+          column_order: number
+          export_format: string
+          form_code: string
+          source_field: string
+          value_kind?: string
+        }
+        Update: {
+          column_header?: string
+          column_order?: number
+          export_format?: string
+          form_code?: string
+          source_field?: string
+          value_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ref_filing_export_column_form_code_fkey"
+            columns: ["form_code"]
+            isOneToOne: false
+            referencedRelation: "ref_filing_artifact"
+            referencedColumns: ["form_code"]
+          },
+        ]
+      }
+      ref_inventory_event_source_types: {
+        Row: {
+          correction_placement_class: string
+          created_at: string
+          document_order_key_algorithm: string
+          event_effect_map: Json
+          is_certification_only: boolean
+          is_production_enabled: boolean
+          line_order_authority: string
+          occurrence_semantics: string
+          owner_engine: string
+          removal_phase: string | null
+          same_time_class: string
+          source_document_type: string
+        }
+        Insert: {
+          correction_placement_class: string
+          created_at?: string
+          document_order_key_algorithm: string
+          event_effect_map: Json
+          is_certification_only?: boolean
+          is_production_enabled?: boolean
+          line_order_authority: string
+          occurrence_semantics: string
+          owner_engine: string
+          removal_phase?: string | null
+          same_time_class: string
+          source_document_type: string
+        }
+        Update: {
+          correction_placement_class?: string
+          created_at?: string
+          document_order_key_algorithm?: string
+          event_effect_map?: Json
+          is_certification_only?: boolean
+          is_production_enabled?: boolean
+          line_order_authority?: string
+          occurrence_semantics?: string
+          owner_engine?: string
+          removal_phase?: string | null
+          same_time_class?: string
+          source_document_type?: string
+        }
+        Relationships: []
+      }
+      ref_mapping_key: {
+        Row: {
+          created_at: string
+          description: string
+          expected_account_type: string | null
+          is_active: boolean
+          key_code: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          expected_account_type?: string | null
+          is_active?: boolean
+          key_code: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          expected_account_type?: string | null
+          is_active?: boolean
+          key_code?: string
+        }
+        Relationships: []
+      }
       ref_payment_modes: {
         Row: {
           code: string
@@ -10759,6 +14791,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ref_tax_ledger_control: {
+        Row: {
+          created_at: string
+          description: string
+          excluded_reference_types: string[]
+          included_je_statuses: string[]
+          is_active: boolean
+          mapping_key: string
+          normal_balance: string
+          tax_kind: string
+        }
+        Insert: {
+          created_at?: string
+          description: string
+          excluded_reference_types?: string[]
+          included_je_statuses?: string[]
+          is_active?: boolean
+          mapping_key: string
+          normal_balance: string
+          tax_kind: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          excluded_reference_types?: string[]
+          included_je_statuses?: string[]
+          is_active?: boolean
+          mapping_key?: string
+          normal_balance?: string
+          tax_kind?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ref_tax_ledger_control_mapping_key_fkey"
+            columns: ["mapping_key"]
+            isOneToOne: false
+            referencedRelation: "ref_mapping_key"
+            referencedColumns: ["key_code"]
+          },
+        ]
+      }
       report_snapshots: {
         Row: {
           company_id: string
@@ -10822,6 +14895,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "report_snapshots_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       revenue_recognition_entries: {
@@ -10865,6 +14945,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "revenue_recognition_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "revenue_recognition_entries_je_id_fkey"
@@ -10953,6 +15040,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "revenue_recognition_schedules_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "revenue_recognition_schedules_deferred_revenue_account_id_fkey"
             columns: ["deferred_revenue_account_id"]
             isOneToOne: false
@@ -10983,17 +15077,24 @@ export type Database = {
           id: string
           inventory_account_id: string | null
           inventory_cost: number | null
+          inventory_cost_layer_id: string | null
           inventory_transaction_id: string | null
           item_id: string | null
           line_number: number
           location_id: string | null
+          lot_number: string | null
           net_amount: number
+          percentage_tax_amount: number | null
+          percentage_tax_base: number | null
+          percentage_tax_code_id: string | null
+          percentage_tax_rate: number | null
           project_id: string | null
           quantity: number
           remarks: string | null
           revenue_account_id: string | null
           sales_invoice_id: string
           salesperson_id: string | null
+          serial_number: string | null
           source_document_type: string | null
           source_line_id: string | null
           total_amount: number
@@ -11005,6 +15106,10 @@ export type Database = {
           vat_amount: number
           vat_code_id: string | null
           warehouse_id: string | null
+          withholding_atc_code_id: string | null
+          withholding_tax_amount: number | null
+          withholding_tax_base: number | null
+          withholding_tax_rate: number | null
         }
         Insert: {
           cogs_account_id?: string | null
@@ -11020,17 +15125,24 @@ export type Database = {
           id?: string
           inventory_account_id?: string | null
           inventory_cost?: number | null
+          inventory_cost_layer_id?: string | null
           inventory_transaction_id?: string | null
           item_id?: string | null
           line_number: number
           location_id?: string | null
+          lot_number?: string | null
           net_amount?: number
+          percentage_tax_amount?: number | null
+          percentage_tax_base?: number | null
+          percentage_tax_code_id?: string | null
+          percentage_tax_rate?: number | null
           project_id?: string | null
           quantity?: number
           remarks?: string | null
           revenue_account_id?: string | null
           sales_invoice_id: string
           salesperson_id?: string | null
+          serial_number?: string | null
           source_document_type?: string | null
           source_line_id?: string | null
           total_amount?: number
@@ -11042,6 +15154,10 @@ export type Database = {
           vat_amount?: number
           vat_code_id?: string | null
           warehouse_id?: string | null
+          withholding_atc_code_id?: string | null
+          withholding_tax_amount?: number | null
+          withholding_tax_base?: number | null
+          withholding_tax_rate?: number | null
         }
         Update: {
           cogs_account_id?: string | null
@@ -11057,17 +15173,24 @@ export type Database = {
           id?: string
           inventory_account_id?: string | null
           inventory_cost?: number | null
+          inventory_cost_layer_id?: string | null
           inventory_transaction_id?: string | null
           item_id?: string | null
           line_number?: number
           location_id?: string | null
+          lot_number?: string | null
           net_amount?: number
+          percentage_tax_amount?: number | null
+          percentage_tax_base?: number | null
+          percentage_tax_code_id?: string | null
+          percentage_tax_rate?: number | null
           project_id?: string | null
           quantity?: number
           remarks?: string | null
           revenue_account_id?: string | null
           sales_invoice_id?: string
           salesperson_id?: string | null
+          serial_number?: string | null
           source_document_type?: string | null
           source_line_id?: string | null
           total_amount?: number
@@ -11079,6 +15202,10 @@ export type Database = {
           vat_amount?: number
           vat_code_id?: string | null
           warehouse_id?: string | null
+          withholding_atc_code_id?: string | null
+          withholding_tax_amount?: number | null
+          withholding_tax_base?: number | null
+          withholding_tax_rate?: number | null
         }
         Relationships: [
           {
@@ -11096,6 +15223,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_invoice_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "sales_invoice_lines_cost_center_id_fkey"
             columns: ["cost_center_id"]
             isOneToOne: false
@@ -11110,11 +15244,32 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_invoice_lines_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_invoice_lines_inventory_account_id_fkey"
             columns: ["inventory_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
           },
           {
             foreignKeyName: "sales_invoice_lines_inventory_transaction_id_fkey"
@@ -11128,6 +15283,27 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_percentage_tax_code_id_fkey"
+            columns: ["percentage_tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "percentage_tax_codes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoice_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -11179,6 +15355,13 @@ export type Database = {
             referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sales_invoice_lines_withholding_atc_code_id_fkey"
+            columns: ["withholding_atc_code_id"]
+            isOneToOne: false
+            referencedRelation: "atc_codes"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sales_invoices: {
@@ -11219,6 +15402,7 @@ export type Database = {
           status: string
           total_amount: number
           total_exempt_amount: number
+          total_percentage_tax_amount: number
           total_taxable_amount: number
           total_vat_amount: number
           total_zero_rated_amount: number
@@ -11265,6 +15449,7 @@ export type Database = {
           status?: string
           total_amount?: number
           total_exempt_amount?: number
+          total_percentage_tax_amount?: number
           total_taxable_amount?: number
           total_vat_amount?: number
           total_zero_rated_amount?: number
@@ -11311,6 +15496,7 @@ export type Database = {
           status?: string
           total_amount?: number
           total_exempt_amount?: number
+          total_percentage_tax_amount?: number
           total_taxable_amount?: number
           total_vat_amount?: number
           total_zero_rated_amount?: number
@@ -11341,6 +15527,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "sales_invoices_cost_center_id_fkey"
@@ -11378,10 +15571,31 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_invoices_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_invoices_payment_terms_id_fkey"
             columns: ["payment_terms_id"]
             isOneToOne: false
             referencedRelation: "payment_terms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -11472,6 +15686,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_order_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "sales_order_lines_item_id_fkey"
@@ -11592,6 +15813,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "sales_orders_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -11666,6 +15894,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_quotation_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "sales_quotation_lines_item_id_fkey"
@@ -11773,6 +16008,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_quotations_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "sales_quotations_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -11787,6 +16029,8 @@ export type Database = {
           company_id: string
           gl_offset_account_id: string | null
           id: string
+          inventory_cost_layer_id: string | null
+          inventory_transaction_id: string | null
           item_id: string
           lot_number: string | null
           qty_adjusted: number
@@ -11801,6 +16045,8 @@ export type Database = {
           company_id: string
           gl_offset_account_id?: string | null
           id?: string
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           item_id: string
           lot_number?: string | null
           qty_adjusted: number
@@ -11815,6 +16061,8 @@ export type Database = {
           company_id?: string
           gl_offset_account_id?: string | null
           id?: string
+          inventory_cost_layer_id?: string | null
+          inventory_transaction_id?: string | null
           item_id?: string
           lot_number?: string | null
           qty_adjusted?: number
@@ -11840,10 +16088,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_adjustment_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "stock_adjustment_lines_gl_offset_account_id_fkey"
             columns: ["gl_offset_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_adjustment_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_adjustment_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+          {
+            foreignKeyName: "stock_adjustment_lines_inventory_transaction_id_fkey"
+            columns: ["inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -11929,6 +16205,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_adjustments_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "stock_adjustments_fiscal_period_id_fkey"
             columns: ["fiscal_period_id"]
             isOneToOne: false
@@ -11958,6 +16241,10 @@ export type Database = {
           item_id: string
           last_issue_date: string | null
           last_receipt_date: string | null
+          projection_authority: string
+          projection_fingerprint: string | null
+          projection_version_id: string | null
+          projection_watermark_sequence: number | null
           qty_on_hand: number
           qty_reserved: number
           total_cost: number
@@ -11971,6 +16258,10 @@ export type Database = {
           item_id: string
           last_issue_date?: string | null
           last_receipt_date?: string | null
+          projection_authority?: string
+          projection_fingerprint?: string | null
+          projection_version_id?: string | null
+          projection_watermark_sequence?: number | null
           qty_on_hand?: number
           qty_reserved?: number
           total_cost?: number
@@ -11984,6 +16275,10 @@ export type Database = {
           item_id?: string
           last_issue_date?: string | null
           last_receipt_date?: string | null
+          projection_authority?: string
+          projection_fingerprint?: string | null
+          projection_version_id?: string | null
+          projection_watermark_sequence?: number | null
           qty_on_hand?: number
           qty_reserved?: number
           total_cost?: number
@@ -12000,10 +16295,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_balances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "stock_balances_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_balances_projection_version_id_fkey"
+            columns: ["projection_version_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_projection_versions"
             referencedColumns: ["id"]
           },
           {
@@ -12018,33 +16327,42 @@ export type Database = {
       stock_transfer_lines: {
         Row: {
           company_id: string
+          destination_inventory_transaction_id: string | null
           id: string
+          inventory_cost_layer_id: string | null
           item_id: string
           lot_number: string | null
           qty_transferred: number
           serial_number: string | null
+          source_inventory_transaction_id: string | null
           total_cost: number
           transfer_id: string
           unit_cost: number
         }
         Insert: {
           company_id: string
+          destination_inventory_transaction_id?: string | null
           id?: string
+          inventory_cost_layer_id?: string | null
           item_id: string
           lot_number?: string | null
           qty_transferred: number
           serial_number?: string | null
+          source_inventory_transaction_id?: string | null
           total_cost?: number
           transfer_id: string
           unit_cost?: number
         }
         Update: {
           company_id?: string
+          destination_inventory_transaction_id?: string | null
           id?: string
+          inventory_cost_layer_id?: string | null
           item_id?: string
           lot_number?: string | null
           qty_transferred?: number
           serial_number?: string | null
+          source_inventory_transaction_id?: string | null
           total_cost?: number
           transfer_id?: string
           unit_cost?: number
@@ -12058,10 +16376,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_transfer_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_lines_destination_inventory_transaction_id_fkey"
+            columns: ["destination_inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_cost_layers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_lines_inventory_cost_layer_id_fkey"
+            columns: ["inventory_cost_layer_id"]
+            isOneToOne: false
+            referencedRelation: "vw_available_inventory_identities"
+            referencedColumns: ["inventory_cost_layer_id"]
+          },
+          {
             foreignKeyName: "stock_transfer_lines_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_transfer_lines_source_inventory_transaction_id_fkey"
+            columns: ["source_inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
             referencedColumns: ["id"]
           },
           {
@@ -12137,6 +16490,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "stock_transfers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "stock_transfers_fiscal_period_id_fkey"
             columns: ["fiscal_period_id"]
             isOneToOne: false
@@ -12162,6 +16522,101 @@ export type Database = {
             columns: ["to_warehouse_id"]
             isOneToOne: false
             referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      supplier_bank_accounts: {
+        Row: {
+          account_name: string
+          account_number: string
+          account_type: string
+          bank_branch: string | null
+          bank_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean
+          is_default: boolean
+          notes: string | null
+          supplier_id: string
+          swift_code: string | null
+          updated_at: string
+          updated_by: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          account_type?: string
+          bank_branch?: string | null
+          bank_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          notes?: string | null
+          supplier_id: string
+          swift_code?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          account_type?: string
+          bank_branch?: string | null
+          bank_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean
+          is_default?: boolean
+          notes?: string | null
+          supplier_id?: string
+          swift_code?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "supplier_bank_accounts_bank_id_fkey"
+            columns: ["bank_id"]
+            isOneToOne: false
+            referencedRelation: "ref_banks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bank_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_bank_accounts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "supplier_bank_accounts_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
             referencedColumns: ["id"]
           },
         ]
@@ -12219,6 +16674,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_debit_memo_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "supplier_debit_memo_lines_item_id_fkey"
@@ -12324,6 +16786,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "supplier_debit_memos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "supplier_debit_memos_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
@@ -12376,6 +16845,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "supplier_groups_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -12465,6 +16941,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "suppliers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "suppliers_default_atc_code_id_fkey"
@@ -12591,6 +17074,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sys_feature_enablement_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "sys_feature_enablement_feature_definition_id_fkey"
             columns: ["feature_definition_id"]
             isOneToOne: false
@@ -12598,6 +17088,54 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      sys_posting_guard_violations: {
+        Row: {
+          company_id: string | null
+          current_user_name: string
+          id: string
+          je_id: string | null
+          je_number: string | null
+          maintenance_lane: boolean
+          observed_at: string
+          operation: string
+          origin_context: string
+          reference_doc_type: string | null
+          session_user_name: string
+          table_name: string
+          writer_function: string | null
+        }
+        Insert: {
+          company_id?: string | null
+          current_user_name: string
+          id?: string
+          je_id?: string | null
+          je_number?: string | null
+          maintenance_lane?: boolean
+          observed_at?: string
+          operation: string
+          origin_context: string
+          reference_doc_type?: string | null
+          session_user_name: string
+          table_name: string
+          writer_function?: string | null
+        }
+        Update: {
+          company_id?: string | null
+          current_user_name?: string
+          id?: string
+          je_id?: string | null
+          je_number?: string | null
+          maintenance_lane?: boolean
+          observed_at?: string
+          operation?: string
+          origin_context?: string
+          reference_doc_type?: string | null
+          session_user_name?: string
+          table_name?: string
+          writer_function?: string | null
+        }
+        Relationships: []
       }
       tax_calendar_events: {
         Row: {
@@ -12661,6 +17199,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_calendar_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "tax_calendar_events_compliance_form_id_fkey"
@@ -12797,6 +17342,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tax_credits_schedule_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       tax_detail_entries: {
@@ -12813,6 +17365,7 @@ export type Database = {
           id: string
           income_nature: string | null
           is_reversal: boolean
+          percentage_tax_code_id: string | null
           posting_date: string
           reverses_tax_detail_id: string | null
           source_doc_id: string
@@ -12839,6 +17392,7 @@ export type Database = {
           id?: string
           income_nature?: string | null
           is_reversal?: boolean
+          percentage_tax_code_id?: string | null
           posting_date: string
           reverses_tax_detail_id?: string | null
           source_doc_id: string
@@ -12865,6 +17419,7 @@ export type Database = {
           id?: string
           income_nature?: string | null
           is_reversal?: boolean
+          percentage_tax_code_id?: string | null
           posting_date?: string
           reverses_tax_detail_id?: string | null
           source_doc_id?: string
@@ -12898,6 +17453,20 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_detail_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "tax_detail_entries_percentage_tax_code_id_fkey"
+            columns: ["percentage_tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "percentage_tax_codes"
             referencedColumns: ["id"]
           },
           {
@@ -12994,6 +17563,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "transaction_events_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "transaction_events_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
@@ -13060,6 +17636,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "units_of_measure_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       user_company_branch_scopes: {
@@ -13108,6 +17691,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_company_branch_scopes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       user_company_memberships: {
@@ -13142,6 +17732,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_company_memberships_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -13301,6 +17898,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vat_returns_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       vendor_bill_lines: {
@@ -13394,6 +17998,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vendor_bill_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "vendor_bill_lines_ewt_atc_code_id_fkey"
             columns: ["ewt_atc_code_id"]
             isOneToOne: false
@@ -13467,12 +18078,15 @@ export type Database = {
           due_date: string | null
           ewt_amount_expected: number | null
           fiscal_period_id: string | null
+          functional_entity_id: string | null
           id: string
           journal_entry_id: string | null
+          location_id: string | null
           memo: string | null
           payment_terms_id: string | null
           posted_at: string | null
           posted_by: string | null
+          project_id: string | null
           reference: string | null
           rr_id: string | null
           status: string
@@ -13505,12 +18119,15 @@ export type Database = {
           due_date?: string | null
           ewt_amount_expected?: number | null
           fiscal_period_id?: string | null
+          functional_entity_id?: string | null
           id?: string
           journal_entry_id?: string | null
+          location_id?: string | null
           memo?: string | null
           payment_terms_id?: string | null
           posted_at?: string | null
           posted_by?: string | null
+          project_id?: string | null
           reference?: string | null
           rr_id?: string | null
           status?: string
@@ -13543,12 +18160,15 @@ export type Database = {
           due_date?: string | null
           ewt_amount_expected?: number | null
           fiscal_period_id?: string | null
+          functional_entity_id?: string | null
           id?: string
           journal_entry_id?: string | null
+          location_id?: string | null
           memo?: string | null
           payment_terms_id?: string | null
           posted_at?: string | null
           posted_by?: string | null
+          project_id?: string | null
           reference?: string | null
           rr_id?: string | null
           status?: string
@@ -13582,6 +18202,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vendor_bills_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "vendor_bills_cost_center_id_fkey"
             columns: ["cost_center_id"]
             isOneToOne: false
@@ -13603,10 +18230,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vendor_bills_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vendor_bills_journal_entry_id_fkey"
             columns: ["journal_entry_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_bills_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
             referencedColumns: ["id"]
           },
           {
@@ -13617,11 +18258,25 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vendor_bills_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "vendor_bills_rr_id_fkey"
             columns: ["rr_id"]
             isOneToOne: false
             referencedRelation: "receiving_reports"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_bills_rr_id_fkey"
+            columns: ["rr_id"]
+            isOneToOne: false
+            referencedRelation: "vw_rr_item_billing_progress"
+            referencedColumns: ["rr_id"]
           },
           {
             foreignKeyName: "vendor_bills_supplier_id_fkey"
@@ -13699,6 +18354,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_credit_applications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "vendor_credit_applications_vendor_bill_id_fkey"
@@ -13798,6 +18460,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_credit_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "vendor_credit_lines_expense_account_id_fkey"
@@ -13931,6 +18600,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vendor_credits_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "vendor_credits_fiscal_period_id_fkey"
             columns: ["fiscal_period_id"]
             isOneToOne: false
@@ -14059,6 +18735,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "warehouse_item_settings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "warehouse_item_settings_item_id_fkey"
             columns: ["item_id"]
             isOneToOne: false
@@ -14181,6 +18864,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "warehouses_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "warehouses_gl_inventory_account_id_fkey"
             columns: ["gl_inventory_account_id"]
             isOneToOne: false
@@ -14297,6 +18987,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "withholding_remittances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "withholding_remittances_fiscal_period_id_fkey"
             columns: ["fiscal_period_id"]
             isOneToOne: false
@@ -14343,10 +19040,72 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "vendor_bills_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "vendor_bills_supplier_id_fkey"
             columns: ["supplier_id"]
             isOneToOne: false
             referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_available_inventory_identities: {
+        Row: {
+          available_qty: number | null
+          company_id: string | null
+          inventory_cost_layer_id: string | null
+          item_id: string | null
+          layer_date: string | null
+          lot_number: string | null
+          origin_inventory_transaction_id: string | null
+          reference_doc_id: string | null
+          reference_doc_type: string | null
+          remaining_value: number | null
+          serial_number: string | null
+          source_line_id: string | null
+          unit_cost: number | null
+          warehouse_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_cost_layers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_origin_inventory_transaction_id_fkey"
+            columns: ["origin_inventory_transaction_id"]
+            isOneToOne: false
+            referencedRelation: "inventory_transactions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventory_cost_layers_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
             referencedColumns: ["id"]
           },
         ]
@@ -14392,7 +19151,29 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "number_series_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
+      }
+      vw_company_accounting_config: {
+        Row: {
+          ap_account_id: string | null
+          ar_account_id: string | null
+          company_id: string | null
+          customer_advances_account_id: string | null
+          default_cash_account_id: string | null
+          ewt_payable_account_id: string | null
+          ewt_withheld_account_id: string | null
+          input_vat_account_id: string | null
+          supplier_down_payments_account_id: string | null
+          vat_payable_account_id: string | null
+        }
+        Relationships: []
       }
       vw_credit_memo_register: {
         Row: {
@@ -14424,6 +19205,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "credit_memos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -14475,6 +19263,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tax_detail_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       vw_debit_memo_register: {
@@ -14508,6 +19303,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "debit_memos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       vw_deposits_in_transit: {
@@ -14532,6 +19334,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_recon_items_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
           {
             foreignKeyName: "bank_recon_items_reconciliation_id_fkey"
@@ -14580,6 +19389,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_detail_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -14654,6 +19470,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "journal_entry_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
             foreignKeyName: "journal_entry_lines_cost_center_id_fkey"
             columns: ["cost_center_id"]
             isOneToOne: false
@@ -14668,10 +19491,117 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "journal_entry_lines_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "journal_entry_lines_je_id_fkey"
             columns: ["je_id"]
             isOneToOne: false
             referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_gl_dimension_summary: {
+        Row: {
+          account_code: string | null
+          account_id: string | null
+          account_name: string | null
+          account_type: string | null
+          branch_id: string | null
+          company_id: string | null
+          cost_center_id: string | null
+          department_id: string | null
+          fiscal_period_id: string | null
+          functional_entity_id: string | null
+          line_count: number | null
+          location_id: string | null
+          net_debit: number | null
+          period_name: string | null
+          project_id: string | null
+          total_credit: number | null
+          total_debit: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_fiscal_period_id_fkey"
+            columns: ["fiscal_period_id"]
+            isOneToOne: false
+            referencedRelation: "fiscal_periods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_cost_center_id_fkey"
+            columns: ["cost_center_id"]
+            isOneToOne: false
+            referencedRelation: "cost_centers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
         ]
@@ -14703,6 +19633,57 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "tax_detail_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      vw_inventory_valuation_reconciliation: {
+        Row: {
+          active_layer_qty: number | null
+          active_layer_value: number | null
+          company_id: string | null
+          costing_method: string | null
+          item_id: string | null
+          qty_on_hand: number | null
+          quantity_variance: number | null
+          stock_balance_value: number | null
+          value_variance: number | null
+          warehouse_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stock_balances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_balances_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "stock_balances_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "stock_balances_warehouse_id_fkey"
+            columns: ["warehouse_id"]
+            isOneToOne: false
+            referencedRelation: "warehouses"
+            referencedColumns: ["id"]
+          },
         ]
       }
       vw_output_vat_review: {
@@ -14729,6 +19710,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tax_detail_entries_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -14765,6 +19753,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "check_vouchers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -14831,6 +19826,66 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "payment_vouchers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      vw_po_line_receipt_progress: {
+        Row: {
+          company_id: string | null
+          description: string | null
+          is_over_received: boolean | null
+          item_id: string | null
+          line_number: number | null
+          ordered_qty: number | null
+          po_id: string | null
+          po_line_id: string | null
+          po_number: string | null
+          received_qty: number | null
+          remaining_qty: number | null
+          supplier_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_lines_po_id_fkey"
+            columns: ["po_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "purchase_orders_supplier_id_fkey"
+            columns: ["supplier_id"]
+            isOneToOne: false
+            referencedRelation: "suppliers"
+            referencedColumns: ["id"]
+          },
         ]
       }
       vw_receipt_register: {
@@ -14891,6 +19946,47 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "receipts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+        ]
+      }
+      vw_rr_item_billing_progress: {
+        Row: {
+          billed_qty: number | null
+          company_id: string | null
+          item_id: string | null
+          received_qty: number | null
+          remaining_billable_qty: number | null
+          rr_id: string | null
+          rr_number: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receiving_report_lines_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "receiving_reports_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       vw_sales_invoice_register: {
@@ -14927,17 +20023,17 @@ export type Database = {
           customer_name_snapshot?: string | null
           customer_tin_snapshot?: string | null
           date?: string | null
-          functional_entity_code?: string | null
+          functional_entity_code?: never
           functional_entity_id?: string | null
-          functional_entity_name?: string | null
+          functional_entity_name?: never
           invoice_id?: string | null
-          location_code?: string | null
+          location_code?: never
           location_id?: string | null
-          location_name?: string | null
+          location_name?: never
           memo?: string | null
-          project_code?: string | null
+          project_code?: never
           project_id?: string | null
-          project_name?: string | null
+          project_name?: never
           reference?: string | null
           si_number?: string | null
           status?: string | null
@@ -14954,17 +20050,17 @@ export type Database = {
           customer_name_snapshot?: string | null
           customer_tin_snapshot?: string | null
           date?: string | null
-          functional_entity_code?: string | null
+          functional_entity_code?: never
           functional_entity_id?: string | null
-          functional_entity_name?: string | null
+          functional_entity_name?: never
           invoice_id?: string | null
-          location_code?: string | null
+          location_code?: never
           location_id?: string | null
-          location_name?: string | null
+          location_name?: never
           memo?: string | null
-          project_code?: string | null
+          project_code?: never
           project_id?: string | null
-          project_name?: string | null
+          project_name?: never
           reference?: string | null
           si_number?: string | null
           status?: string | null
@@ -14988,6 +20084,34 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_functional_entity_id_fkey"
+            columns: ["functional_entity_id"]
+            isOneToOne: false
+            referencedRelation: "functional_entities"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "locations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_invoices_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
@@ -15044,6 +20168,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "supplier_debit_memos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       vw_slp_export: {
@@ -15067,6 +20198,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "companies"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vendor_bills_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
           },
         ]
       }
@@ -15151,6 +20289,13 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "journal_entry_lines_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
       vw_vendor_bill_register: {
@@ -15216,86 +20361,19 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "vendor_bills_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "vw_company_accounting_config"
+            referencedColumns: ["company_id"]
+          },
         ]
       }
     }
     Functions: {
       can_admin_company: { Args: { p_company_id: string }; Returns: boolean }
-      fn_approval_inbox: {
-        Args: { p_company_id?: string | null }
-        Returns: {
-          action_type: string
-          branch_id: string | null
-          company_id: string
-          currency_code: string | null
-          current_step_sequence: number
-          module_type: string
-          record_version: string
-          request_id: string
-          requester_id: string
-          source_document_amount: number | null
-          source_document_id: string
-          source_document_no: string
-          source_document_type: string
-          status: string
-          submitted_at: string
-          workflow_name: string
-        }[]
-      }
-      fn_approve_approval_request: {
-        Args: {
-          p_current_record_version: string
-          p_remarks?: string | null
-          p_request_id: string
-        }
-        Returns: Json
-      }
-      fn_get_approval_decision: {
-        Args: {
-          p_action_type: string
-          p_amount?: number
-          p_as_of?: string
-          p_branch_id: string
-          p_company_id: string
-          p_currency_code?: string
-          p_document_type: string
-          p_module_type: string
-        }
-        Returns: Json
-      }
-      fn_get_approval_request_status: {
-        Args: { p_request_id: string }
-        Returns: Json
-      }
-      fn_reject_approval_request: {
-        Args: {
-          p_current_record_version: string
-          p_reason: string
-          p_request_id: string
-        }
-        Returns: Json
-      }
-      fn_submit_approval_request: {
-        Args: {
-          p_action_type: string
-          p_branch_id: string
-          p_company_id: string
-          p_currency_code?: string
-          p_document_type: string
-          p_module_type: string
-          p_record_snapshot?: Json
-          p_record_version: string
-          p_request_reason?: string
-          p_source_document_amount?: number
-          p_source_document_id: string
-          p_source_document_no: string
-        }
-        Returns: Json
-      }
-      fn_withdraw_approval_request: {
-        Args: { p_reason?: string; p_request_id: string }
-        Returns: Json
-      }
+      fn_account_is_leaf: { Args: { p_account_id: string }; Returns: boolean }
       fn_acknowledge_supplier_debit_memo: {
         Args: { p_sdm_id: string }
         Returns: undefined
@@ -15315,6 +20393,39 @@ export type Database = {
         }
         Returns: string
       }
+      fn_add_filing_reconciling_item: {
+        Args: {
+          p_amount: number
+          p_company_id: string
+          p_form_code: string
+          p_period: number
+          p_reason: string
+          p_reference: string
+          p_remarks: string
+          p_year: number
+        }
+        Returns: string
+      }
+      fn_add_percentage_tax_detail: {
+        Args: {
+          p_atc_code_id: string
+          p_branch_id: string
+          p_company_id: string
+          p_counterparty_id: string
+          p_counterparty_name: string
+          p_counterparty_tin: string
+          p_document_date: string
+          p_percentage_tax_code_id: string
+          p_source_doc_id: string
+          p_source_doc_type: string
+          p_tax_amount: number
+          p_tax_base: number
+          p_tax_code_id: string
+          p_tax_period_id: string
+          p_tax_rate: number
+        }
+        Returns: string
+      }
       fn_add_posting_line: {
         Args: {
           p_account_id: string
@@ -15324,12 +20435,15 @@ export type Database = {
           p_debit?: number
           p_department_id?: string
           p_description: string
+          p_functional_entity_id?: string
           p_je_id: string
           p_line_number: number
+          p_location_id?: string
+          p_project_id?: string
         }
         Returns: string
       }
-      fn_add_posting_line_core_20260718: {
+      fn_add_posting_line_push: {
         Args: {
           p_account_id: string
           p_branch_id?: string
@@ -15338,10 +20452,32 @@ export type Database = {
           p_debit?: number
           p_department_id?: string
           p_description: string
+          p_functional_entity_id?: string
           p_je_id: string
           p_line_number: number
+          p_line_role?: string
+          p_location_id?: string
+          p_project_id?: string
+          p_source_line_id?: string
         }
         Returns: string
+      }
+      fn_add_sales_invoice_posting_line: {
+        Args: {
+          p_account_id: string
+          p_branch_id: string
+          p_cost_center_id: string
+          p_credit: number
+          p_debit: number
+          p_department_id: string
+          p_description: string
+          p_functional_entity_id: string
+          p_je_id: string
+          p_line_number: number
+          p_location_id: string
+          p_project_id: string
+        }
+        Returns: undefined
       }
       fn_add_tax_detail: {
         Args: {
@@ -15368,6 +20504,33 @@ export type Database = {
           p_tax_rate: number
           p_vat_code_id: string
         }
+        Returns: string
+      }
+      fn_admin_list_company_users: {
+        Args: { p_company_id: string }
+        Returns: {
+          email: string
+          granted_at: string
+          last_sign_in_at: string
+          membership_id: string
+          role: string
+          user_id: string
+        }[]
+      }
+      fn_admin_remove_membership: {
+        Args: { p_company_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      fn_admin_set_branch_scopes: {
+        Args: {
+          p_branch_ids: string[]
+          p_company_id: string
+          p_user_id: string
+        }
+        Returns: number
+      }
+      fn_admin_upsert_membership: {
+        Args: { p_company_id: string; p_role: string; p_user_id: string }
         Returns: string
       }
       fn_ap_aging_asof: {
@@ -15408,6 +20571,43 @@ export type Database = {
           p_remarks?: string
         }
         Returns: string
+      }
+      fn_approval_inbox: {
+        Args: { p_company_id?: string }
+        Returns: {
+          action_type: string
+          branch_id: string
+          company_id: string
+          currency_code: string
+          current_step_sequence: number
+          module_type: string
+          record_version: string
+          request_id: string
+          requester_id: string
+          source_document_amount: number
+          source_document_id: string
+          source_document_no: string
+          source_document_type: string
+          status: string
+          submitted_at: string
+          workflow_name: string
+        }[]
+      }
+      fn_approval_source_permission_action: {
+        Args: { p_action_type: string }
+        Returns: string
+      }
+      fn_approval_step_has_candidate: {
+        Args: { p_branch_id: string; p_step_id: string }
+        Returns: boolean
+      }
+      fn_approve_approval_request: {
+        Args: {
+          p_current_record_version: string
+          p_remarks?: string
+          p_request_id: string
+        }
+        Returns: Json
       }
       fn_approve_petty_cash_voucher: {
         Args: { p_pcv_id: string }
@@ -15458,6 +20658,22 @@ export type Database = {
           variance: number
         }[]
       }
+      fn_assert_bill_within_receipt: {
+        Args: { p_bill_id: string }
+        Returns: undefined
+      }
+      fn_assert_manual_postable: {
+        Args: { p_account_id: string; p_as_of?: string }
+        Returns: undefined
+      }
+      fn_assert_no_unlinked_delivered_stock: {
+        Args: { p_invoice_id: string }
+        Returns: undefined
+      }
+      fn_assert_postable_leaf: {
+        Args: { p_account_id: string; p_as_of?: string }
+        Returns: undefined
+      }
       fn_assert_posting_source: {
         Args: {
           p_company_id: string
@@ -15466,12 +20682,38 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_assert_receipt_within_po: {
+        Args: { p_rr_id: string }
+        Returns: undefined
+      }
+      fn_assert_sales_invoice_dimension: {
+        Args: {
+          p_as_of: string
+          p_branch_id: string
+          p_company_id: string
+          p_context: string
+          p_dimension_id: string
+          p_dimension_type: string
+        }
+        Returns: undefined
+      }
       fn_assert_source_journal_link: {
         Args: {
           p_company_id: string
           p_document_type: string
           p_journal_entry_id: string
           p_source_id: string
+        }
+        Returns: undefined
+      }
+      fn_assert_transaction_dimension: {
+        Args: {
+          p_as_of: string
+          p_branch_id: string
+          p_company_id: string
+          p_context: string
+          p_dimension_id: string
+          p_dimension_type: string
         }
         Returns: undefined
       }
@@ -15487,6 +20729,16 @@ export type Database = {
         Args: { p_id: string; p_is_active: boolean; p_reason?: string }
         Returns: undefined
       }
+      fn_atc_code_succeed: {
+        Args: {
+          p_description?: string
+          p_effective_from: string
+          p_id: string
+          p_rate: number
+          p_reason?: string
+        }
+        Returns: string
+      }
       fn_atc_code_upsert: {
         Args: {
           p_code: string
@@ -15497,6 +20749,7 @@ export type Database = {
           p_is_active?: boolean
           p_rate: number
           p_reason?: string
+          p_supersedes_id?: string
           p_tax_category: string
         }
         Returns: string
@@ -15567,6 +20820,24 @@ export type Database = {
         }
         Returns: string
       }
+      fn_build_posting_context: {
+        Args: {
+          p_as_of?: string
+          p_branch_id: string
+          p_company_id: string
+          p_cost_center_id?: string
+          p_department_id?: string
+          p_functional_entity_id?: string
+          p_location_id?: string
+          p_posting_date: string
+          p_posting_origin?: string
+          p_project_id?: string
+          p_source_id: string
+          p_source_number: string
+          p_source_type: string
+        }
+        Returns: Json
+      }
       fn_business_tax_codes_asof: {
         Args: {
           p_as_of?: string
@@ -15588,8 +20859,26 @@ export type Database = {
           transaction_type: string
         }[]
       }
+      fn_calculate_tax: {
+        Args: { p_context: Json }
+        Returns: Database["public"]["CompositeTypes"]["tax_component"][]
+        SetofOptions: {
+          from: "*"
+          to: "tax_component"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       fn_can_access_company_branch: {
         Args: { p_branch_id?: string; p_company_id: string }
+        Returns: boolean
+      }
+      fn_can_decide_approval_request: {
+        Args: {
+          p_company_id: string
+          p_document_type: string
+          p_module_type: string
+        }
         Returns: boolean
       }
       fn_can_master_data_permission: {
@@ -15605,6 +20894,15 @@ export type Database = {
         Returns: boolean
       }
       fn_can_provision_company: { Args: never; Returns: boolean }
+      fn_can_submit_approval_request: {
+        Args: {
+          p_action_type: string
+          p_company_id: string
+          p_document_type: string
+          p_module_type: string
+        }
+        Returns: boolean
+      }
       fn_cancel_amortization_schedule: {
         Args: { p_schedule_id: string }
         Returns: undefined
@@ -15687,11 +20985,54 @@ export type Database = {
         Args: { p_company_id: string }
         Returns: boolean
       }
+      fn_company_percentage_tax_registered_asof: {
+        Args: { p_as_of?: string; p_company_id: string }
+        Returns: boolean
+      }
+      fn_company_tax_registration_asof: {
+        Args: { p_as_of?: string; p_company_id: string }
+        Returns: string
+      }
       fn_company_twa_auto_ewt_enabled: {
         Args: { p_company_id: string; p_document_date?: string }
         Returns: boolean
       }
+      fn_comparative_financial_statement_report: {
+        Args: {
+          p_branch_id?: string
+          p_company_id: string
+          p_period_end: string
+          p_period_start: string
+          p_prior_end?: string
+          p_prior_start?: string
+          p_statement: string
+        }
+        Returns: {
+          comparison_basis: string
+          current_amount: number
+          current_closing: number
+          current_movement: number
+          current_opening: number
+          depth: number
+          display_order: number
+          is_subtotal: boolean
+          line_code: string
+          line_label: string
+          line_role: string
+          parent_code: string
+          prior_amount: number
+          prior_closing: number
+          prior_movement: number
+          prior_opening: number
+          variance_amount: number
+          variance_percent: number
+        }[]
+      }
       fn_complete_purchase_return: {
+        Args: { p_return_id: string }
+        Returns: undefined
+      }
+      fn_complete_purchase_return_inventory_legacy_20260808: {
         Args: { p_return_id: string }
         Returns: undefined
       }
@@ -15732,6 +21073,18 @@ export type Database = {
         Returns: {
           total_ewt_withheld: number
           total_tax_base: number
+        }[]
+      }
+      fn_compute_percentage_tax_return: {
+        Args: { p_company_id: string; p_quarter: number; p_year: number }
+        Returns: {
+          atc_code: string
+          document_count: number
+          pt_code: string
+          tax_code: string
+          tax_due: number
+          tax_rate: number
+          taxable_base: number
         }[]
       }
       fn_confirm_receiving_report: {
@@ -15781,13 +21134,22 @@ export type Database = {
       }
       fn_create_posted_journal_entry: {
         Args: {
+          p_assert_source?: boolean
+          p_auto_reverse?: boolean
           p_branch_id: string
           p_company_id: string
           p_description: string
+          p_emit_origin_update?: boolean
+          p_entry_class?: string
+          p_fiscal_period_id?: string
           p_je_date: string
           p_je_number: string
+          p_posting_origin?: string
           p_reference_doc_id: string
           p_reference_doc_type: string
+          p_status?: string
+          p_total_credit?: number
+          p_total_debit?: number
         }
         Returns: string
       }
@@ -15824,6 +21186,20 @@ export type Database = {
           transaction_date: string
         }[]
       }
+      fn_delete_filing_reconciling_item: {
+        Args: { p_item_id: string }
+        Returns: undefined
+      }
+      fn_demo_reset_bypass_authorized: { Args: never; Returns: boolean }
+      fn_derive_journal_number: {
+        Args: {
+          p_branch_id?: string
+          p_company_id?: string
+          p_source_number?: string
+          p_source_type: string
+        }
+        Returns: string
+      }
       fn_dispose_fixed_asset: { Args: { p_data: Json }; Returns: string }
       fn_ensure_stock_balance: {
         Args: {
@@ -15837,6 +21213,10 @@ export type Database = {
           item_id: string
           last_issue_date: string | null
           last_receipt_date: string | null
+          projection_authority: string
+          projection_fingerprint: string | null
+          projection_version_id: string | null
+          projection_watermark_sequence: number | null
           qty_on_hand: number
           qty_reserved: number
           total_cost: number
@@ -15897,6 +21277,10 @@ export type Database = {
           line_number: number
         }[]
       }
+      fn_filing_period_bounds: {
+        Args: { p_period: number; p_period_basis: string; p_year: number }
+        Returns: Record<string, unknown>
+      }
       fn_filing_reconciliation: {
         Args: {
           p_company_id: string
@@ -15915,23 +21299,6 @@ export type Database = {
           tax_kind: string
           variance: number
         }[]
-      }
-      fn_add_filing_reconciling_item: {
-        Args: {
-          p_amount: number
-          p_company_id: string
-          p_form_code: string
-          p_period: number
-          p_reason: string
-          p_reference: string
-          p_remarks: string
-          p_year: number
-        }
-        Returns: string
-      }
-      fn_delete_filing_reconciling_item: {
-        Args: { p_item_id: string }
-        Returns: undefined
       }
       fn_filing_reconciling_items: {
         Args: {
@@ -15974,8 +21341,87 @@ export type Database = {
         }[]
       }
       fn_finalize_journal_entry: {
-        Args: { p_je_id: string }
+        Args: {
+          p_auto_reversal_original_je_id?: string
+          p_discard_journal?: boolean
+          p_je_id: string
+          p_link_reference_doc_id?: string
+          p_link_reference_doc_type?: string
+          p_link_source?: boolean
+          p_mark_auto_reversal?: boolean
+          p_persist_totals?: boolean
+          p_total_credit?: number
+          p_total_debit?: number
+        }
         Returns: undefined
+      }
+      fn_financial_statement_line_accounts: {
+        Args: {
+          p_branch_id?: string
+          p_company_id: string
+          p_line_code: string
+          p_period_end: string
+          p_period_start: string
+          p_prior_end?: string
+          p_prior_start?: string
+          p_statement: string
+        }
+        Returns: {
+          account_code: string
+          account_id: string
+          account_name: string
+          account_type: string
+          comparison_basis: string
+          current_amount: number
+          prior_amount: number
+          variance_amount: number
+          variance_percent: number
+        }[]
+      }
+      fn_financial_statement_notes: {
+        Args: {
+          p_company_id: string
+          p_period_end: string
+          p_period_start: string
+          p_prior_end?: string
+          p_prior_start?: string
+        }
+        Returns: {
+          is_configured: boolean
+          item_label: string
+          item_order: number
+          item_source: string
+          item_value: string
+          note_code: string
+          note_order: number
+          note_title: string
+        }[]
+      }
+      fn_financial_statement_report: {
+        Args: {
+          p_branch_id?: string
+          p_company_id: string
+          p_period_end: string
+          p_period_start: string
+          p_presentation_asof?: string
+          p_statement: string
+        }
+        Returns: {
+          closing_amount: number
+          depth: number
+          display_order: number
+          is_subtotal: boolean
+          line_code: string
+          line_label: string
+          line_role: string
+          movement_amount: number
+          opening_amount: number
+          parent_code: string
+        }[]
+      }
+      fn_fiscal_close_engine_origin: {
+        Args: { p_context: string }
+        Returns: boolean
       }
       fn_form2307_period_bounds: {
         Args: { p_quarter: number; p_year: number }
@@ -15992,6 +21438,18 @@ export type Database = {
         Returns: string
       }
       fn_format_ph_tin_branch: { Args: { p_value: string }; Returns: string }
+      fn_fs_line_is_descendant: {
+        Args: { p_ancestor_id: string; p_line_id: string }
+        Returns: boolean
+      }
+      fn_fs_presentation_sign: {
+        Args: {
+          p_is_cash_equivalent: boolean
+          p_normal_balance: string
+          p_statement: string
+        }
+        Returns: number
+      }
       fn_general_ledger_report: {
         Args: {
           p_account_id?: string
@@ -16043,16 +21501,8 @@ export type Database = {
           total_rows: number
         }[]
       }
-      fn_generate_fiscal_periods: {
-        Args: { p_fiscal_year_id: string }
-        Returns: number
-      }
-      fn_generate_form_2307_issued: {
-        Args: {
-          p_company_id: string
-          p_tax_quarter: number
-          p_tax_year: number
-        }
+      fn_generate_ewt_return: {
+        Args: { p_company_id: string; p_quarter: number; p_year: number }
         Returns: Json
       }
       fn_generate_filing_artifact: {
@@ -16064,8 +21514,16 @@ export type Database = {
         }
         Returns: Json
       }
-      fn_generate_ewt_return: {
-        Args: { p_company_id: string; p_quarter: number; p_year: number }
+      fn_generate_fiscal_periods: {
+        Args: { p_fiscal_year_id: string }
+        Returns: number
+      }
+      fn_generate_form_2307_issued: {
+        Args: {
+          p_company_id: string
+          p_tax_quarter: number
+          p_tax_year: number
+        }
         Returns: Json
       }
       fn_generate_pt_return: {
@@ -16092,6 +21550,23 @@ export type Database = {
           p_source_doc_id?: string
           p_source_doc_type?: string
         }
+        Returns: Json
+      }
+      fn_get_approval_decision: {
+        Args: {
+          p_action_type: string
+          p_amount?: number
+          p_as_of?: string
+          p_branch_id: string
+          p_company_id: string
+          p_currency_code?: string
+          p_document_type: string
+          p_module_type: string
+        }
+        Returns: Json
+      }
+      fn_get_approval_request_status: {
+        Args: { p_request_id: string }
         Returns: Json
       }
       fn_get_report_snapshot_trace_links: {
@@ -16199,7 +21674,72 @@ export type Database = {
       }
       fn_gl_report_limit: { Args: { p_limit: number }; Returns: number }
       fn_gl_report_offset: { Args: { p_offset: number }; Returns: number }
+      fn_has_enforced_master_data_sod_conflict: {
+        Args: {
+          p_action_type: string
+          p_company_id: string
+          p_master_key: string
+        }
+        Returns: boolean
+      }
+      fn_ia5_create_dormant_policy_bundle: {
+        Args: {
+          p_actor_id: string
+          p_branch_id: string
+          p_company_id: string
+          p_costing_method: string
+          p_effective_from: string
+          p_effective_to: string
+          p_item_id: string
+          p_quantity_scale: number
+          p_scope_type: string
+          p_transaction_currency_code: string
+          p_transaction_currency_scale: number
+          p_warehouse_id: string
+        }
+        Returns: Json
+      }
+      fn_ia5_derive_unit_rate: {
+        Args: { p_authoritative_amount: number; p_base_quantity: number }
+        Returns: number
+      }
+      fn_ia5_quantize_exact:
+        | {
+            Args: { p_label?: string; p_scale: number; p_value: number }
+            Returns: number
+          }
+        | {
+            Args: { p_label?: string; p_scale: number; p_value: number }
+            Returns: number
+          }
+      fn_ia5_record_dormant_inventory_occurrence: {
+        Args: {
+          p_actor_id: string
+          p_company_id: string
+          p_events: Json
+          p_idempotency_key: string
+          p_occurred_at: string
+          p_request_fingerprint: string
+          p_source_document_id: string
+          p_source_document_type: string
+          p_source_line_id: string
+          p_source_occurrence_sequence: number
+          p_source_transition: string
+        }
+        Returns: Json
+      }
       fn_import_master_data: {
+        Args: {
+          p_company_id: string
+          p_idempotency_key?: string
+          p_master_key: string
+          p_options?: Json
+          p_preview?: boolean
+          p_rows: Json
+        }
+        Returns: Json
+      }
+      fn_import_master_data_mdp15_core: {
         Args: {
           p_company_id: string
           p_idempotency_key?: string
@@ -16214,8 +21754,23 @@ export type Database = {
         Args: { p_reason?: string; p_receipt_id: string }
         Returns: undefined
       }
+      fn_is_account_postable: {
+        Args: { p_account_id: string; p_as_of?: string }
+        Returns: boolean
+      }
       fn_is_bir_config_maintainer: {
         Args: { p_user?: string }
+        Returns: boolean
+      }
+      fn_is_valid_approval_candidate: {
+        Args: {
+          p_approver_role_code: string
+          p_approver_type: string
+          p_approver_user_id: string
+          p_branch_id: string
+          p_company_id: string
+          p_user_id: string
+        }
         Returns: boolean
       }
       fn_is_valid_attribution: {
@@ -16232,6 +21787,12 @@ export type Database = {
         }
         Returns: boolean
       }
+      fn_is_valid_lifecycle_transition: {
+        Args: { p_new: string; p_old: string }
+        Returns: boolean
+      }
+      fn_issue_inventory: { Args: { p_data: Json }; Returns: Json }
+      fn_issue_inventory_from_layer: { Args: { p_data: Json }; Returns: Json }
       fn_item_costing_method: { Args: { p_item_id: string }; Returns: string }
       fn_item_negative_stock_policy: {
         Args: { p_item_id: string }
@@ -16247,6 +21808,10 @@ export type Database = {
           p_table: string
         }
         Returns: undefined
+      }
+      fn_map_company_fs_accounts: {
+        Args: { p_company_id: string }
+        Returns: number
       }
       fn_mark_tax_event_filed: {
         Args: { p_date_filed: string; p_efps_ref?: string; p_event_id: string }
@@ -16329,6 +21894,14 @@ export type Database = {
         Args: { p_hint: string }
         Returns: string
       }
+      fn_open_next_fiscal_year: {
+        Args: { p_company_id: string; p_fiscal_year_id: string }
+        Returns: string
+      }
+      fn_opening_balance_summary: {
+        Args: { p_batch_id: string }
+        Returns: Json
+      }
       fn_party_tin_duplicates: {
         Args: {
           p_company_id: string
@@ -16341,6 +21914,31 @@ export type Database = {
           party_id: string
           party_name: string
         }[]
+      }
+      fn_percentage_tax_code_used: {
+        Args: { p_percentage_tax_code_id: string }
+        Returns: boolean
+      }
+      fn_percentage_tax_gl_reconciliation: {
+        Args: { p_company_id: string; p_date_from: string; p_date_to: string }
+        Returns: {
+          gl_account_code: string
+          gl_account_id: string
+          gl_account_name: string
+          gl_amount: number
+          is_reconciled: boolean
+          ledger_tax_amount: number
+          ledger_tax_base: number
+          variance: number
+        }[]
+      }
+      fn_percentage_tax_return_period: {
+        Args: { p_quarter: number; p_year: number }
+        Returns: Record<string, unknown>
+      }
+      fn_period_close_readiness: {
+        Args: { p_company_id: string; p_fiscal_period_id: string }
+        Returns: Json
       }
       fn_ph_tin_digits: { Args: { p_value: string }; Returns: string }
       fn_post_amortization_entry: {
@@ -16366,125 +21964,6 @@ export type Database = {
         Returns: undefined
       }
       fn_post_check_voucher: { Args: { p_cv_id: string }; Returns: undefined }
-      fn_comparative_financial_statement_report: {
-        Args: {
-          p_branch_id?: string
-          p_company_id: string
-          p_period_end: string
-          p_period_start: string
-          p_prior_end?: string
-          p_prior_start?: string
-          p_statement: string
-        }
-        Returns: {
-          comparison_basis: string
-          current_amount: number
-          current_closing: number
-          current_movement: number
-          current_opening: number
-          depth: number
-          display_order: number
-          is_subtotal: boolean
-          line_code: string
-          line_label: string
-          line_role: string
-          parent_code: string
-          prior_amount: number
-          prior_closing: number
-          prior_movement: number
-          prior_opening: number
-          variance_amount: number
-          variance_percent: number
-        }[]
-      }
-      fn_financial_statement_line_accounts: {
-        Args: {
-          p_branch_id?: string
-          p_company_id: string
-          p_line_code: string
-          p_period_end: string
-          p_period_start: string
-          p_prior_end?: string
-          p_prior_start?: string
-          p_statement: string
-        }
-        Returns: {
-          account_code: string
-          account_id: string
-          account_name: string
-          account_type: string
-          comparison_basis: string
-          current_amount: number
-          prior_amount: number
-          variance_amount: number
-          variance_percent: number
-        }[]
-      }
-      fn_financial_statement_notes: {
-        Args: {
-          p_company_id: string
-          p_period_end: string
-          p_period_start: string
-          p_prior_end?: string
-          p_prior_start?: string
-        }
-        Returns: {
-          is_configured: boolean
-          item_label: string
-          item_order: number
-          item_source: string
-          item_value: string
-          note_code: string
-          note_order: number
-          note_title: string
-        }[]
-      }
-      fn_financial_statement_report: {
-        Args: {
-          p_branch_id?: string
-          p_company_id: string
-          p_period_end: string
-          p_period_start: string
-          p_presentation_asof?: string
-          p_statement: string
-        }
-        Returns: {
-          closing_amount: number
-          depth: number
-          display_order: number
-          is_subtotal: boolean
-          line_code: string
-          line_label: string
-          line_role: string
-          movement_amount: number
-          opening_amount: number
-          parent_code: string
-        }[]
-      }
-      fn_fs_presentation_sign: {
-        Args: {
-          p_is_cash_equivalent: boolean
-          p_normal_balance: string
-          p_statement: string
-        }
-        Returns: number
-      }
-      fn_fs_line_is_descendant: {
-        Args: { p_ancestor_id: string; p_line_id: string }
-        Returns: boolean
-      }
-      fn_map_company_fs_accounts: {
-        Args: { p_company_id: string }
-        Returns: number
-      }
-      fn_seed_company_fs_structure: {
-        Args: { p_company_id: string }
-        Returns: number
-      }
-      fn_post_delivery_receipt: {
-        Args: { p_dr_id: string }
-        Returns: undefined
-      }
       fn_post_credit_memo: { Args: { p_cm_id: string }; Returns: undefined }
       fn_post_credit_memo_source_locked_impl: {
         Args: { p_cm_id: string }
@@ -16501,6 +21980,14 @@ export type Database = {
       }
       fn_post_debit_memo_vat_lump_impl: {
         Args: { p_dm_id: string }
+        Returns: undefined
+      }
+      fn_post_delivery_receipt: {
+        Args: { p_dr_id: string }
+        Returns: undefined
+      }
+      fn_post_delivery_receipt_costing_legacy_20260808: {
+        Args: { p_dr_id: string }
         Returns: undefined
       }
       fn_post_depreciation_entry: {
@@ -16520,10 +22007,6 @@ export type Database = {
       fn_post_goods_issue_source_locked_impl: {
         Args: { p_issue_id: string }
         Returns: string
-      }
-      fn_period_close_readiness: {
-        Args: { p_company_id: string; p_fiscal_period_id: string }
-        Returns: Json
       }
       fn_post_inter_branch_transfer: {
         Args: { p_ibt_id: string }
@@ -16546,6 +22029,7 @@ export type Database = {
         }
         Returns: string
       }
+      fn_post_opening_balance: { Args: { p_batch_id: string }; Returns: string }
       fn_post_payment_voucher: {
         Args: { p_voucher_id: string }
         Returns: undefined
@@ -16564,6 +22048,11 @@ export type Database = {
         Returns: string
       }
       fn_post_receipt: { Args: { p_receipt_id: string }; Returns: undefined }
+      fn_post_receiving_report: { Args: { p_rr_id: string }; Returns: string }
+      fn_post_receiving_report_source_locked_impl: {
+        Args: { p_rr_id: string }
+        Returns: string
+      }
       fn_post_revenue_recognition_entry: {
         Args: { p_entry_id: string }
         Returns: string
@@ -16573,6 +22062,10 @@ export type Database = {
         Returns: string
       }
       fn_post_sales_invoice: {
+        Args: { p_invoice_id: string }
+        Returns: undefined
+      }
+      fn_post_sales_invoice_costing_legacy_20260808: {
         Args: { p_invoice_id: string }
         Returns: undefined
       }
@@ -16606,6 +22099,11 @@ export type Database = {
         Args: { p_id: string }
         Returns: string
       }
+      fn_posting_kernel_origin: {
+        Args: { p_context: string }
+        Returns: boolean
+      }
+      fn_posting_plan_fingerprint: { Args: { p_plan: Json }; Returns: string }
       fn_preview_gl_impact: {
         Args: {
           p_posting_date?: string
@@ -16623,6 +22121,10 @@ export type Database = {
         Returns: Json
       }
       fn_preview_sales_invoice_gl_impact: {
+        Args: { p_invoice_id: string; p_posting_date?: string }
+        Returns: Json
+      }
+      fn_preview_sales_invoice_gl_impact_aud053_core: {
         Args: { p_invoice_id: string; p_posting_date?: string }
         Returns: Json
       }
@@ -16648,6 +22150,10 @@ export type Database = {
       }
       fn_provision_number_series: {
         Args: { p_branch_id: string; p_company_id: string }
+        Returns: number
+      }
+      fn_provision_pxl_standard_coa: {
+        Args: { p_company_id: string; p_created_by?: string }
         Returns: number
       }
       fn_qap_2307_reconciliation: {
@@ -16720,6 +22226,14 @@ export type Database = {
         Returns: string
       }
       fn_register_fixed_asset: { Args: { p_data: Json }; Returns: string }
+      fn_reject_approval_request: {
+        Args: {
+          p_current_record_version: string
+          p_reason: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       fn_render_cas_dat: { Args: { p_snapshot_id: string }; Returns: Json }
       fn_render_cas_dat_text: {
         Args: {
@@ -16731,6 +22245,39 @@ export type Database = {
           p_snapshot_version: number
         }
         Returns: string
+      }
+      fn_reopen_accounting_period: {
+        Args: {
+          p_company_id: string
+          p_fiscal_period_id: string
+          p_reason: string
+        }
+        Returns: string
+      }
+      fn_reopen_fiscal_year: {
+        Args: {
+          p_company_id: string
+          p_fiscal_year_id: string
+          p_reason: string
+        }
+        Returns: string
+      }
+      fn_report_gl_by_dimension: {
+        Args: {
+          p_company_id: string
+          p_date_from?: string
+          p_date_to?: string
+          p_dimension: string
+        }
+        Returns: {
+          dimension_code: string
+          dimension_id: string
+          dimension_name: string
+          line_count: number
+          net_debit: number
+          total_credit: number
+          total_debit: number
+        }[]
       }
       fn_report_snapshot_key_uuid: { Args: { p_key: string }; Returns: string }
       fn_require_company_ewt_payable_enabled: {
@@ -16758,6 +22305,52 @@ export type Database = {
         }
         Returns: string
       }
+      fn_resolve_account: {
+        Args: {
+          p_as_of?: string
+          p_company_id: string
+          p_context?: Json
+          p_key_code: string
+        }
+        Returns: string
+      }
+      fn_resolve_approval_rule: {
+        Args: {
+          p_action_type: string
+          p_amount?: number
+          p_as_of?: string
+          p_branch_id: string
+          p_company_id: string
+          p_currency_code?: string
+          p_document_type: string
+          p_module_type: string
+          p_requester_id?: string
+        }
+        Returns: {
+          precedence: Json
+          specificity_score: number
+          step_count: number
+          workflow_id: string
+          workflow_name: string
+        }[]
+      }
+      fn_resolve_business_tax_code: {
+        Args: {
+          p_as_of?: string
+          p_company_id: string
+          p_context?: string
+          p_percentage_tax_code_id: string
+          p_transaction_type?: string
+          p_vat_code_id: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["business_tax_resolution"][]
+        SetofOptions: {
+          from: "*"
+          to: "business_tax_resolution"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       fn_resolve_comparative_period: {
         Args: {
           p_company_id: string
@@ -16766,28 +22359,66 @@ export type Database = {
         }
         Returns: Json
       }
+      fn_resolve_posting_account: {
+        Args: {
+          p_as_of: string
+          p_company_id: string
+          p_key: string
+          p_unconfigured_msg: string
+        }
+        Returns: string
+      }
       fn_resolve_posting_source: {
         Args: { p_document_type: string; p_lock?: boolean; p_source_id: string }
         Returns: Json
       }
-      fn_reopen_accounting_period: {
+      fn_resolve_vat_code: {
         Args: {
+          p_as_of?: string
           p_company_id: string
-          p_fiscal_period_id: string
-          p_reason: string
+          p_context?: string
+          p_transaction_type?: string
+          p_vat_code_id: string
+        }
+        Returns: Database["public"]["CompositeTypes"]["vat_code_resolution"]
+        SetofOptions: {
+          from: "*"
+          to: "vat_code_resolution"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      fn_return_inventory: { Args: { p_data: Json }; Returns: Json }
+      fn_reverse_inventory_issue: {
+        Args: {
+          p_inventory_transaction_id: string
+          p_journal_entry_id: string
+          p_notes?: string
+          p_reference_doc_id: string
+          p_reference_doc_type: string
+          p_reversal_date: string
+          p_source_line_id: string
         }
         Returns: string
       }
-      fn_reopen_fiscal_year: {
+      fn_reverse_inventory_receipt: {
         Args: {
-          p_company_id: string
-          p_fiscal_year_id: string
-          p_reason: string
+          p_inventory_transaction_id: string
+          p_journal_entry_id: string
+          p_notes?: string
+          p_reference_doc_id: string
+          p_reference_doc_type: string
+          p_reversal_date: string
+          p_source_line_id: string
         }
         Returns: string
       }
       fn_reverse_je: {
         Args: { p_je_id: string; p_reversal_date?: string }
+        Returns: string
+      }
+      fn_reverse_opening_balance: {
+        Args: { p_batch_id: string; p_reason: string; p_reversal_date: string }
         Returns: string
       }
       fn_reverse_posted_journal_entry: {
@@ -16798,6 +22429,14 @@ export type Database = {
           p_reference_doc_id: string
           p_reference_doc_type: string
           p_reversal_date: string
+        }
+        Returns: string
+      }
+      fn_reverse_receipt_core: {
+        Args: {
+          p_reason: string
+          p_receipt_id: string
+          p_terminal_status: string
         }
         Returns: string
       }
@@ -16826,6 +22465,10 @@ export type Database = {
         Args: { p_bill_id: string }
         Returns: undefined
       }
+      fn_role_is_privileged_maintenance: {
+        Args: { p_role: unknown }
+        Returns: boolean
+      }
       fn_row_written_by_current_txn: {
         Args: { p_xmin_raw: number }
         Returns: boolean
@@ -16842,7 +22485,20 @@ export type Database = {
         Args: { p_cwt_amount?: number; p_header: Json; p_lines: Json }
         Returns: Json
       }
+      fn_save_cash_sale_costing_legacy_20260808: {
+        Args: { p_cwt_amount?: number; p_header: Json; p_lines: Json }
+        Returns: Json
+      }
       fn_save_credit_memo: {
+        Args: {
+          p_cm_id: string
+          p_header: Json
+          p_lines: Json
+          p_next_status?: string
+        }
+        Returns: string
+      }
+      fn_save_credit_memo_inventory_legacy_20260808: {
         Args: {
           p_cm_id: string
           p_header: Json
@@ -16860,7 +22516,27 @@ export type Database = {
         }
         Returns: string
       }
+      fn_save_opening_balance: {
+        Args: {
+          p_ap_lines?: Json
+          p_ar_lines?: Json
+          p_bank_lines?: Json
+          p_batch_id: string
+          p_gl_lines?: Json
+          p_header: Json
+          p_inventory_lines?: Json
+        }
+        Returns: string
+      }
       fn_save_payment_voucher: {
+        Args: { p_header: Json; p_lines: Json; p_voucher_id: string }
+        Returns: string
+      }
+      fn_save_payment_voucher_phase3_core: {
+        Args: { p_header: Json; p_lines: Json; p_voucher_id: string }
+        Returns: string
+      }
+      fn_save_payment_voucher_pre_opening_core: {
         Args: { p_header: Json; p_lines: Json; p_voucher_id: string }
         Returns: string
       }
@@ -16876,7 +22552,15 @@ export type Database = {
         Args: { p_header: Json; p_lines: Json; p_return_id: string }
         Returns: string
       }
+      fn_save_purchase_return_inventory_legacy_20260808: {
+        Args: { p_header: Json; p_lines: Json; p_return_id: string }
+        Returns: string
+      }
       fn_save_receipt: {
+        Args: { p_header: Json; p_lines: Json; p_receipt_id: string }
+        Returns: string
+      }
+      fn_save_receipt_pre_opening_core: {
         Args: { p_header: Json; p_lines: Json; p_receipt_id: string }
         Returns: string
       }
@@ -16889,6 +22573,14 @@ export type Database = {
         Returns: string
       }
       fn_save_sales_invoice: {
+        Args: { p_header: Json; p_invoice_id: string; p_lines: Json }
+        Returns: string
+      }
+      fn_save_sales_invoice_aud053_core: {
+        Args: { p_header: Json; p_invoice_id: string; p_lines: Json }
+        Returns: string
+      }
+      fn_save_sales_invoice_inventory_legacy_20260808: {
         Args: { p_header: Json; p_invoice_id: string; p_lines: Json }
         Returns: string
       }
@@ -16931,6 +22623,10 @@ export type Database = {
         Args: { p_company_id: string; p_template_code?: string }
         Returns: number
       }
+      fn_seed_company_fs_structure: {
+        Args: { p_company_id: string }
+        Returns: number
+      }
       fn_seed_company_percentage_tax_codes: {
         Args: { p_company_id: string }
         Returns: number
@@ -16963,16 +22659,6 @@ export type Database = {
         }
         Returns: Json
       }
-      fn_snapshot_filing_artifact_export: {
-        Args: {
-          p_company_id: string
-          p_form_code: string
-          p_format?: string
-          p_period: number
-          p_year: number
-        }
-        Returns: string
-      }
       fn_snapshot_cas_export: {
         Args: {
           p_company_id: string
@@ -16992,6 +22678,16 @@ export type Database = {
           p_year: number
         }
         Returns: Json
+      }
+      fn_snapshot_filing_artifact_export: {
+        Args: {
+          p_company_id: string
+          p_form_code: string
+          p_format?: string
+          p_period: number
+          p_year: number
+        }
+        Returns: string
       }
       fn_snapshot_vat_export: {
         Args: {
@@ -17013,14 +22709,26 @@ export type Database = {
         }
         Returns: string
       }
-      fn_snapshot_wht_export: {
+      fn_stamp_void_inventory_dimensions: {
+        Args: { p_invoice_id: string }
+        Returns: undefined
+      }
+      fn_submit_approval_request: {
         Args: {
+          p_action_type: string
+          p_branch_id: string
           p_company_id: string
-          p_quarter: number
-          p_report_type: string
-          p_year: number
+          p_currency_code?: string
+          p_document_type: string
+          p_module_type: string
+          p_record_snapshot?: Json
+          p_record_version: string
+          p_request_reason?: string
+          p_source_document_amount?: number
+          p_source_document_id: string
+          p_source_document_no: string
         }
-        Returns: string
+        Returns: Json
       }
       fn_supersede_form_2307_issued: {
         Args: { p_issuance_id: string; p_reason?: string }
@@ -17046,6 +22754,10 @@ export type Database = {
           transaction_date: string
         }[]
       }
+      fn_sync_account_mapping_from_config: {
+        Args: { p_company_id: string }
+        Returns: number
+      }
       fn_sync_coa_control_accounts: {
         Args: { p_company_id: string }
         Returns: number
@@ -17058,6 +22770,17 @@ export type Database = {
         Args: { p_id: string; p_is_active: boolean; p_reason?: string }
         Returns: undefined
       }
+      fn_tax_code_succeed: {
+        Args: {
+          p_description?: string
+          p_effective_from: string
+          p_gl_account_id?: string
+          p_id: string
+          p_rate: number
+          p_reason?: string
+        }
+        Returns: string
+      }
       fn_tax_code_upsert: {
         Args: {
           p_code: string
@@ -17069,6 +22792,7 @@ export type Database = {
           p_is_active?: boolean
           p_rate: number
           p_reason?: string
+          p_supersedes_id?: string
           p_tax_type: string
         }
         Returns: string
@@ -17077,6 +22801,25 @@ export type Database = {
       fn_tax_code_version_asof: {
         Args: { p_as_of?: string; p_code: string }
         Returns: string
+      }
+      fn_tax_ledger_gl_reconciliation: {
+        Args: {
+          p_company_id: string
+          p_date_from: string
+          p_date_to: string
+          p_tax_kinds: string[]
+        }
+        Returns: {
+          gl_account_code: string
+          gl_account_id: string
+          gl_account_name: string
+          gl_amount: number
+          is_reconciled: boolean
+          ledger_tax_amount: number
+          ledger_tax_base: number
+          tax_kind: string
+          variance: number
+        }[]
       }
       fn_tax_reference_asof: {
         Args: {
@@ -17093,6 +22836,47 @@ export type Database = {
         Returns: string
       }
       fn_transfer_fixed_asset: { Args: { p_data: Json }; Returns: string }
+      fn_transfer_inventory: { Args: { p_data: Json }; Returns: Json }
+      fn_transition_account_lifecycle: {
+        Args: { p_account_id: string; p_new_status: string; p_reason?: string }
+        Returns: {
+          account_code: string
+          account_name: string
+          account_type: string
+          allow_subledger: boolean
+          cash_flow_category: string | null
+          company_id: string
+          cost_behavior: string | null
+          created_at: string | null
+          created_by: string | null
+          currency_code: string | null
+          effective_from: string | null
+          effective_to: string | null
+          fs_group: string | null
+          fs_statement: string | null
+          fs_subgroup: string | null
+          id: string
+          is_active: boolean | null
+          is_capitalizable: boolean
+          is_cash_equivalent: boolean
+          is_control_account: boolean
+          is_operating_expense: boolean
+          is_postable: boolean | null
+          is_tax_account: boolean
+          lifecycle_status: string
+          normal_balance: string
+          parent_id: string | null
+          subledger_type: string | null
+          updated_at: string | null
+          updated_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "chart_of_accounts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       fn_trial_balance_report: {
         Args: {
           p_account_id?: string
@@ -17242,6 +23026,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      fn_validate_posting_plan: { Args: { p_plan: Json }; Returns: boolean }
       fn_validate_purchase_dimensions: {
         Args: {
           p_branch_id: string
@@ -17274,6 +23059,10 @@ export type Database = {
         Args: { p_invoice_id: string }
         Returns: undefined
       }
+      fn_validate_sales_invoice_accounting_ready_aud053_core: {
+        Args: { p_invoice_id: string }
+        Returns: undefined
+      }
       fn_validate_sales_invoice_vat_registration: {
         Args: { p_invoice_id: string }
         Returns: undefined
@@ -17290,6 +23079,39 @@ export type Database = {
         Args: { p_bill_id: string }
         Returns: undefined
       }
+      fn_vat_code_set_active: {
+        Args: { p_id: string; p_is_active: boolean; p_reason?: string }
+        Returns: undefined
+      }
+      fn_vat_code_succeed: {
+        Args: {
+          p_description?: string
+          p_effective_from: string
+          p_id: string
+          p_reason?: string
+          p_relief_category?: string
+          p_tax_code_id: string
+        }
+        Returns: string
+      }
+      fn_vat_code_upsert: {
+        Args: {
+          p_description: string
+          p_effective_from?: string
+          p_effective_to?: string
+          p_id?: string
+          p_is_active?: boolean
+          p_reason?: string
+          p_relief_category?: string
+          p_supersedes_id?: string
+          p_tax_code_id: string
+          p_transaction_type: string
+          p_vat_classification: string
+          p_vat_code: string
+        }
+        Returns: string
+      }
+      fn_vat_code_used: { Args: { p_vat_code_id: string }; Returns: boolean }
       fn_vat_codes_asof: {
         Args: {
           p_as_of?: string
@@ -17308,27 +23130,6 @@ export type Database = {
           vat_code: string
         }[]
       }
-      fn_vat_code_set_active: {
-        Args: { p_id: string; p_is_active: boolean; p_reason?: string }
-        Returns: undefined
-      }
-      fn_vat_code_upsert: {
-        Args: {
-          p_description: string
-          p_effective_from?: string
-          p_effective_to?: string
-          p_id?: string
-          p_is_active?: boolean
-          p_reason?: string
-          p_relief_category?: string
-          p_tax_code_id: string
-          p_transaction_type: string
-          p_vat_classification: string
-          p_vat_code: string
-        }
-        Returns: string
-      }
-      fn_vat_code_used: { Args: { p_vat_code_id: string }; Returns: boolean }
       fn_vat_gl_reconciliation: {
         Args: { p_company_id: string; p_date_from: string; p_date_to: string }
         Returns: {
@@ -17364,7 +23165,43 @@ export type Database = {
         Args: { p_bill_id: string }
         Returns: boolean
       }
+      fn_void_cash_sale: {
+        Args: {
+          p_invoice_id: string
+          p_memo?: string
+          p_void_reason_id: string
+        }
+        Returns: undefined
+      }
+      fn_void_delivery_receipt: {
+        Args: { p_dr_id: string; p_memo?: string; p_void_reason_id: string }
+        Returns: undefined
+      }
+      fn_void_delivery_receipt_costing_legacy_20260808: {
+        Args: { p_dr_id: string; p_memo?: string; p_void_reason_id: string }
+        Returns: undefined
+      }
+      fn_void_receiving_report: {
+        Args: { p_memo?: string; p_rr_id: string; p_void_reason_id: string }
+        Returns: undefined
+      }
       fn_void_sales_invoice: {
+        Args: {
+          p_invoice_id: string
+          p_memo?: string
+          p_void_reason_id: string
+        }
+        Returns: undefined
+      }
+      fn_void_sales_invoice_aud053_core: {
+        Args: {
+          p_invoice_id: string
+          p_memo?: string
+          p_void_reason_id: string
+        }
+        Returns: undefined
+      }
+      fn_void_sales_invoice_costing_legacy_20260808: {
         Args: {
           p_invoice_id: string
           p_memo?: string
@@ -17394,6 +23231,10 @@ export type Database = {
           variance: number
         }[]
       }
+      fn_withdraw_approval_request: {
+        Args: { p_reason?: string; p_request_id: string }
+        Returns: Json
+      }
       is_any_company_admin: { Args: never; Returns: boolean }
       is_company_member: { Args: { p_company_id: string }; Returns: boolean }
     }
@@ -17401,7 +23242,48 @@ export type Database = {
       [_ in never]: never
     }
     CompositeTypes: {
-      [_ in never]: never
+      business_tax_resolution: {
+        tax_family: string | null
+        code_id: string | null
+        code: string | null
+        description: string | null
+        tax_code_id: string | null
+        tax_code: string | null
+        classification: string | null
+        transaction_type: string | null
+        tax_rate: number | null
+        atc_code_id: string | null
+        atc_code: string | null
+        form_type: string | null
+        effective_from: string | null
+        effective_to: string | null
+      }
+      tax_component: {
+        tax_kind: string | null
+        vat_code_id: string | null
+        tax_code_id: string | null
+        atc_code_id: string | null
+        atc_code: string | null
+        atc_description: string | null
+        classification: string | null
+        tax_base: number | null
+        tax_rate: number | null
+        tax_amount: number | null
+        net_amount: number | null
+        gross_amount: number | null
+        price_basis: string | null
+      }
+      vat_code_resolution: {
+        vat_code_id: string | null
+        vat_code: string | null
+        tax_code_id: string | null
+        tax_code: string | null
+        classification: string | null
+        transaction_type: string | null
+        vat_rate: number | null
+        effective_from: string | null
+        effective_to: string | null
+      }
     }
   }
 }

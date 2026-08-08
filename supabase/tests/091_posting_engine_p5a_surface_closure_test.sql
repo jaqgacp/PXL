@@ -327,23 +327,13 @@ SELECT throws_ok(
   '42501', NULL, 'authenticated cannot INSERT asset_depreciation_entries');              -- 25
 
 -- ── UPDATE / DELETE: legal statements that must touch nothing ─────────────────
-SELECT lives_ok($$
+-- The costing authority also revokes browser DML at the table privilege layer.
+-- PostgreSQL therefore rejects the first tamper attempt before RLS is evaluated.
+SELECT throws_ok($$
   UPDATE stock_balances SET qty_on_hand = qty_on_hand + 500
-    WHERE company_id='0f500000-0000-0000-0000-0000000000b1';
-  UPDATE stock_balances SET wac_unit_cost = wac_unit_cost * 10, total_cost = total_cost * 10
-    WHERE company_id='0f500000-0000-0000-0000-0000000000b1';
-  DELETE FROM stock_balances WHERE company_id='0f500000-0000-0000-0000-0000000000b1';
-  UPDATE inventory_transactions SET total_cost = total_cost * 10
-    WHERE company_id='0f500000-0000-0000-0000-0000000000b1';
-  UPDATE inventory_cost_layers SET qty_remaining = qty_remaining + 50
-    WHERE company_id='0f500000-0000-0000-0000-0000000000b1';
-  UPDATE asset_depreciation_entries SET depreciation_amount = 0
-    WHERE company_id='0f500000-0000-0000-0000-0000000000b1';
-  UPDATE amortization_entries SET status = 'posted'
-    WHERE company_id='0f500000-0000-0000-0000-0000000000b1';
-  UPDATE revenue_recognition_entries SET status = 'posted'
-    WHERE company_id='0f500000-0000-0000-0000-0000000000b1';
-$$, 'the derived-table UPDATE/DELETE battery is denied by row filtering');             -- 26
+    WHERE company_id='0f500000-0000-0000-0000-0000000000b1'$$,
+  '42501', NULL,
+  'the derived-table UPDATE attempt is denied by table privileges');                  -- 26
 
 RESET ROLE;
 

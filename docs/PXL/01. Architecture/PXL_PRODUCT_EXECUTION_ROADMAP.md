@@ -49,7 +49,8 @@ That is not the same as a finished ERP. No module is Certified. Banking and Fixe
 Assets are UI skeletons over governed-empty data. The central Tax Engine now
 exists as one guarded calculator for VAT, percentage tax and EWT/CWT, and six
 registered compliance outputs use one Filing Artifact generator, working paper,
-reconciliation and exporter. Three-way match and over-receipt control are open. The
+reconciliation and exporter. Exact purchasing quantity controls and ordered
+receipt correction are locally proven; price variance remains undecided. The
 receipt half of perpetual inventory was closed by `PXL-AUD-073` and inventory now
 reconciles to its control account at ₱0.00. Opening balances, verified supplier
 payees and restricted administration exist locally; operational onboarding
@@ -60,15 +61,17 @@ production-ready**.
 
 > **Correction, 2026-08-02.** A previous edition of this summary stated that
 > "sales-side COGS posting" was open. That was wrong and is withdrawn.
-> `fn_post_sales_invoice` posts DR COGS / CR inventory with weighted-average or
-> FIFO layer consumption, an insufficient-stock guard and reversal on void; test
+> `fn_post_sales_invoice` posts DR COGS / CR inventory through the shared
+> Weighted Average, FIFO or Specific Identification authority, with an
+> insufficient-stock guard and exact historical reversal; test
 > `054` asserts it and the canonical ledger shows COGS debits equal to inventory
 > credits in all three trading companies. Inventory could not tie out at ₱0.00 if
 > the claim were true. **Every outbound entry point relieves stock as of
 > 2026-08-03** — Cash Sale (test `119`), Delivery Receipt and Customer Return
 > (test `120`) joined Sales Invoice, all through the same costing path. What *is*
 > open on the sales side: document conversion beyond the delivery-to-invoice
-> link, and Delivery Receipt cancellation.
+> link. Delivery Receipt cancellation and all three production costing methods
+> are now proven locally by tests `131`, `135`–`137` and committed lifecycles.
 
 The visible product is ahead of runtime in **26** deferred routes, **17**
 navigation labels with no page, and whole Banking/Fixed Asset/compliance-generator
@@ -82,8 +85,9 @@ The dependency-forced order of outcomes is (§9.7):
 1. **Customer-to-Cash** — document conversion, an AR-to-control guard and a
    fresh-data sales end-to-end test; cash-sale and delivery posting closed
    2026-08-03;
-2. **Procure-to-Pay** — three-way match and over-receipt control (independent of
-   Customer-to-Cash; the two can run in parallel);
+2. **Procure-to-Pay** — exact quantity matching and return costing are closed;
+   price-variance policy, supplier-debit integration, AP reconciliation and the
+   complete source-to-books proof remain;
 3. ~~**Period Close**~~ — **closed 2026-08-03.** The statements are produced from
    governed configuration, the cycle closes into retained earnings, and the
    statements carry a comparative period and basic notes. What remains is a
@@ -196,8 +200,8 @@ excellent transaction and one material empty lifecycle remains M4 or below.
 | Setup | **M7** | Formal combined review executed; 14 Pass, 3 Partial, 2 Blocked, 4 N/A, 0 Fail. Not M8 because backup/restore and browser evidence remain open. |
 | Master Data | **M7** | Same review; major masters exercised and governed; certification scope still Blocked. |
 | Sales & Receivables | **M4** | SI, Cash Sale, Delivery Receipt and Customer Return all move inventory and COGS correctly (tests `054`, `119`, `120`). Held at M4 by: zero general document-conversion functions, no AR-to-control reconciliation guard, and no Quotation→SO→SI fresh-data proof. |
-| Purchasing & Payables | **M4** | PO → RR → Bill proven from first principles by fresh-data test `112`; 36 bills and 5 payment vouchers posted. Held at M4 by three-way match, over-receipt control, and empty `purchase_returns` / `supplier_debit_memos`. |
-| Inventory | **M4** | Inventory ties to control at **₱0.00** in every stock-holding company (guard `111`); adjustments, transfers and counts post. Held at M4 by `inventory_cost_layers` never holding a row (FIFO path unexercised) and `goods_issues` empty. |
+| Purchasing & Payables | **M4** | PO → RR → Bill is proven from first principles; exact receipt/bill quantity admission and ordered RR correction are concurrency-safe. Purchase Return is exercised through exact receipt-layer costing. Held at M4 by price-variance policy, supplier-debit integration and broad Product-DoD proof. |
+| Inventory | **M4** | Inventory ties to control at **₱0.00**; Weighted Average, FIFO and Specific Identification are built, reachable, exercised and proven locally across production writers, exact reversal/return, transfer, identity selection and a concurrent serial race (`135`–`137` plus the committed lifecycle). Held at M4 by broad workflow/browser/hosted/certification evidence, not by a costing-method restriction. |
 | Banking & Treasury | **M3** | Only `bank_accounts` holds data. `check_vouchers`, `fund_transfers`, `bank_reconciliations`, `petty_cash_vouchers`, `bank_adjustments` are **all empty**; their posting functions have never produced a journal. |
 | Fixed Assets | **M3** | **All six tables empty**; five routes deferred; depreciation policy has no master. |
 | Accounting | **M4** | 51 journals / 144 lines; trial balance out-of-balance **₱0.00 in all five companies**; 60 fiscal periods; all four statements produced from governed configuration, with comparatives and basic notes, since 2026-08-03; period close, year-end close and retained-earnings roll-forward all commit and are governed. Held at M4 by consumer-wide reconciliation proof — the close has never been operated over real books. |
@@ -318,7 +322,7 @@ explicit certification justification.
 | Setup | 1–7, 10–14, 16–26 | **4–7, 10–11, 14, 17–26** | Combined review is governed but operated recovery and browser evidence block certification; CAS/rule configuration and real cut-over proof remain. |
 | Master Data | 1–7, 10–15, 17–26 | **4–7, 10–11, 14–15, 17–26** | Supplier bank details and import navigation exist locally; some extension masters lack UI and attachment/correction/operational proof remains incomplete. |
 | Sales & Receivables | 1–26 | **3–26** | Product scope and architecture exist; complete source chain, returns, conversion, approvals, attachments, reconciliations, certification and operations do not. |
-| Purchasing & Payables | 1–26 | **3–26** | Receiving accounting is closed locally; matching, over-receipt, returns and complete downstream evidence remain open. |
+| Purchasing & Payables | 1–26 | **3–26** | Receiving, exact quantity matching, ordered correction and exact-cost Purchase Return are closed locally; price variance, supplier-debit integration and complete downstream evidence remain open. |
 | Inventory | 1–9, 11–26 | **3–9, 11–26** | Valuation/control reconciles locally; the operational workflow remains partial, Inventory Accounting is dormant, and no module certification exists. |
 | Banking & Treasury | 1–26 | **2–26** | Product scope is named, but ownership details, canonical data and every workflow/completion gate remain open. Tax applies to withholding-capable disbursement where used. |
 | Fixed Assets | 1–26 | **2–26** | No policy master or canonical asset lifecycle; all completion evidence remains open. |
@@ -382,8 +386,8 @@ Supplier                              [WORKING]
   ↓
 Purchase Order                        [WORKING in bounded local scope]
   ↓
-Receiving Report                      [PARTIAL]
-  ↓                                   [STOP: stock increases without journal]
+Receiving Report                      [WORKING in bounded local scope]
+  ↓                                   [DR Inventory / CR Purchase Clearing]
 Vendor Bill / Cash Purchase           [WORKING in bounded local scope]
   ↓
 Payment Voucher                       [WORKING in bounded local scope]
@@ -396,8 +400,10 @@ Trial Balance / Financial Statements  [PARTIAL]
   ↓
 Input VAT / EWT / Books               [PARTIAL; governed Tax Engine path implemented]
 
-CURRENT STOP: Receiving Report accounting, three-way match, corrections and
-the complete source-to-books proof.
+CURRENT STOP: price-variance policy, supplier-debit integration, AP
+reconciliation and the complete source-to-books proof. Exact quantity matching,
+ordered receipt correction and Purchase Return inventory/AP posting are proven
+locally.
 ```
 
 ## 9.5.4 Inventory Accounting
@@ -423,12 +429,15 @@ Inventory Accounting Effect           [FUTURE]
   ↓
 Posting / General Ledger              [FUTURE integration]
   ↓
-Inventory Valuation & Reconciliation  [CURRENT LEGACY OUTPUT DOES NOT TIE]
+Inventory Valuation & Reconciliation  [NOT AN IA-5/ECC CONSUMER]
 ```
 
-No current business workflow consumes the certified dormant foundation. WP-5
-must not be implemented until its Engineering Amendment closes WP5-AG-001…003
-and a later gate explicitly authorises it.
+No current business workflow consumes the certified dormant foundation. The
+production inventory-costing authority is separate: it now proves Weighted
+Average, FIFO and Specific Identification against stock, cost layers,
+allocations and the GL without writing an IA-5/ECC event. WP-5 must not be
+implemented until its Engineering Amendment closes WP5-AG-001…003 and a later
+gate explicitly authorises it.
 
 ## 9.5.5 Tax and Compliance
 
@@ -500,8 +509,8 @@ Book / Tax Reconciliation             [NOT PROVEN]
 | Setup | Setup; make a company operable | Permissions, Audit, Number Series, COA; tax references | Product decisions | Configuration and readiness checklist | M7 / combined scope Blocked | Restore and browser evidence | Resolve PAD-007; prepare certification evidence without claiming M9 |
 | Master Data | Master Data; govern reusable business entities | Permissions, Audit, Approval, COA | Setup | Parties/items/warehouses/accounts consumed by all modules | M7 / combined scope Blocked | Operated recovery/browser evidence plus unsurfaced extension masters | Validate supplier-bank/import browser paths; source-back remaining masters |
 | Sales & Receivables | Sales; revenue and collection cycle | Posting, COA, Dimension, AR, Payment, Approval, Correction, Reporting; Tax absent | Setup, Master Data, Inventory availability | AR ledger, sales registers, VAT/PT/CWT/books, GL/FS | M4 / In Progress | Full chain/source/correction/reconciliation | Select canonical Sales flow and prove §9.4 |
-| Purchasing & Payables | Purchasing; procurement, receipt, liability and payment | Posting, COA, Dimension, AP, Payment, Approval, Correction, Reporting; Tax absent | Setup, Master Data | AP ledger, purchase registers, input VAT/EWT/books, Inventory, GL/FS | M4 / In Progress | Three-way match, over-receipt and returns | Prove the canonical Purchase flow and remaining controls |
-| Inventory | Inventory Operations; quantity, custody and value | Posting, Dimension, Inventory Accounting, Reporting | Items/warehouses; Sales/Purchasing sources | Stock ledger, valuation, COGS, inventory control | M4 / In Progress | FIFO cost-layer path unexercised (`inventory_cost_layers` empty); Goods Issue empty; broad certification | Keep IA-5 frozen; COGS posts on Sales Invoice and inventory ties to control at ₱0.00 (guard `111`) |
+| Purchasing & Payables | Purchasing; procurement, receipt, liability and payment | Posting, COA, Dimension, AP, Payment, Approval, Correction, Reporting; Tax absent | Setup, Master Data | AP ledger, purchase registers, input VAT/EWT/books, Inventory, GL/FS | M4 / In Progress | Price-variance policy, supplier-debit integration and complete Product-DoD proof | Prove the remaining canonical Purchase controls without duplicating matching/costing authorities |
+| Inventory | Inventory Operations; quantity, custody and value | Posting, Dimension, production Inventory Costing, Reporting; IA-5/ECC separate and dormant | Items/warehouses; Sales/Purchasing sources | Stock ledger, valuation, COGS, inventory control | M4 / In Progress | Broad Product-DoD, browser/hosted operation and certification | Preserve all three proven production costing methods and keep separate IA-5/ECC frozen unless economic replay is authorised |
 | Banking & Treasury | Treasury; cash custody and bank reconciliation | Payment, Posting, Period, Correction, Reporting; tax on applicable disbursements | Bank accounts, Sales receipts, Purchasing payments | Bank position, check register, cash books, bank/GL reconciliation | M3 / Not Started | Empty canonical data; PAD-004 | Product Architecture Decision then module architecture/evidence |
 | Fixed Assets | Fixed Assets; capitalise, depreciate and dispose | Posting, Dimension, Period, Correction, Reporting; book/tax | Suppliers, COA, dimensions | Asset register, depreciation, disposal, FS/cash flow | M3 / Not Started | No policy master or canonical lifecycle | Define depreciation profiles and source chain before implementation |
 | Accounting | Accounting; own GL, periods and close | Posting/Kernel, COA, Dimension, Period, Correction, Reporting | Every posting module | GL, TB, control reconciliations, FS source | M4 / Core In Progress; Schedules Not Started | All-consumer invariants, schedules, close | Prove canonical Sales/Purchase flows; then close/schedules |
@@ -665,8 +674,9 @@ hosted parity and browser evidence.
   control account with correct tax and cost of sales.
 - **Depends on:** Foundation.
 - **Already true:** `fn_post_sales_invoice` posts AR, revenue, output VAT **and**
-  DR COGS / CR inventory with weighted-average or FIFO layer consumption, an
-  insufficient-stock guard and reversal on void (test `054`; canonical COGS
+  DR COGS / CR inventory through the shared Weighted Average, FIFO or Specific
+  Identification authority, with insufficient-stock admission and exact
+  historical reversal (tests `054`, `135`–`137`; canonical COGS
   debits equal inventory credits in all three trading companies). Official
   Receipt and Credit Memo post. AR ageing and customer ledger read posted data.
 - **Closed 2026-08-03:** Cash Sale relieves inventory and posts COGS with
@@ -689,10 +699,12 @@ hosted parity and browser evidence.
   **inventory ties to control at ₱0.00 in every stock-holding company** (guard
   `111`). Payment Voucher carries verified supplier bank accounts and immutable
   payee snapshots.
-- **Blocking the outcome:** no three-way match and no over-receipt control
-  between PO, RR and Bill; `purchase_returns` and `supplier_debit_memos` empty;
-  no AP-to-control guard; `inventory_cost_layers` has never held a row, so the
-  FIFO path is unexercised.
+- **Closed 2026-08-08:** exact PO-line receipt and receipt-linked bill quantity
+  admission; ordered Receiving Report correction for all three costing methods;
+  and exact receipt-layer Purchase Return inventory/AP posting.
+- **Blocking the outcome:** price-variance/account-determination policy,
+  supplier-debit integration, no AP-to-control guard, and broad Product-DoD
+  proof.
 
 ## 9.7.5 Period Close · 🟡 CLOSE AND STATEMENTS WORK, NEVER OPERATED
 
@@ -962,7 +974,7 @@ test counts — rather than maintaining a copy by hand.
 | Area | Evidence-based assessment |
 | --- | --- |
 | Product vision | Strong, differentiated and valuable: accounting-first PH compliance for multi-company businesses. It is broader than current delivery capacity and needs a pilot scope. |
-| Accounting architecture | The strongest part of PXL. The sealed posting doorway and immutable, traceable ledger are excellent. Receiving, all outbound inventory entry points, financial statement presentation, period close and comparatives now work; three-way match and over-receipt control remain open. |
+| Accounting architecture | The strongest part of PXL. The sealed posting doorway and immutable, traceable ledger are excellent. Receiving, all outbound inventory entry points, exact quantity matching, all three inventory costing methods, financial statement presentation, period close and comparatives now work locally; price-variance policy and broad Product-DoD proof remain open. |
 | Engineering architecture | Strong database controls and evidence discipline. Complexity is high, local/hosted states diverge, and dormant architecture risks outrunning product workflows. |
 | Repository structure | Generally governed and navigable, but the dirty tree, large active-doc set and prior missing/assumed review create provenance risk. |
 | Code maturity | Substantial local implementation with many guarded RPCs and tests. Maturity is uneven: strong transaction cores coexist with empty module scaffolds. |

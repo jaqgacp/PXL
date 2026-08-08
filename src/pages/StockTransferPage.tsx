@@ -3,10 +3,11 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
+import { InventoryIdentitySelect } from '@/components/InventoryIdentitySelect'
 
 type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
-type Item = { id: string; item_code: string; description: string; costing_method: string; uom_code: string }
-type TxLine = { item_id: string; item_code: string; item_name: string; uom_code: string; costing_method: string; qty: string; lot_number: string; serial_number: string }
+type Item = { id: string; item_code: string; description: string; costing_method: string; specific_id_tracking: string | null; uom_code: string }
+type TxLine = { item_id: string; item_code: string; item_name: string; uom_code: string; costing_method: string; specific_id_tracking: string | null; qty: string; inventory_cost_layer_id: string; lot_number: string; serial_number: string }
 type TransferRecord = { id: string; transfer_number: string; transfer_date: string; from_wh: string; to_wh: string; status: string }
 
 export default function StockTransferPage() {
@@ -30,7 +31,7 @@ export default function StockTransferPage() {
     if (!companyId) return
     const [{ data: whs }, { data: itemData }, { data: txData }] = await Promise.all([
       supabase.from('warehouses').select('id,warehouse_code,warehouse_name').eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
-      supabase.from('items').select('id,item_code,description,costing_method,units_of_measure!inner(uom_code)').eq('company_id', companyId).eq('is_active', true).eq('item_type', 'inventory_item').order('item_code'),
+      supabase.from('items').select('id,item_code,description,costing_method,specific_id_tracking,units_of_measure!inner(uom_code)').eq('company_id', companyId).eq('is_active', true).eq('item_type', 'inventory_item').order('item_code'),
       supabase.from('stock_transfers').select(`
         id,transfer_number,transfer_date,status,
         from_wh:warehouses!stock_transfers_from_warehouse_id_fkey(warehouse_name),
@@ -38,7 +39,7 @@ export default function StockTransferPage() {
       `).eq('company_id', companyId).order('transfer_date', { ascending: false }).limit(50),
     ])
     setWarehouses((whs as Warehouse[]) || [])
-    setItems(((itemData || []) as any[]).map(i => ({ id: i.id, item_code: i.item_code, description: i.description, costing_method: i.costing_method || 'weighted_average', uom_code: i.units_of_measure?.uom_code || '' })))
+    setItems(((itemData || []) as any[]).map(i => ({ id: i.id, item_code: i.item_code, description: i.description, costing_method: i.costing_method || 'weighted_average', specific_id_tracking: i.specific_id_tracking, uom_code: i.units_of_measure?.uom_code || '' })))
     setHistory(((txData || []) as any[]).map(t => ({ id: t.id, transfer_number: t.transfer_number, transfer_date: t.transfer_date, status: t.status, from_wh: t.from_wh?.warehouse_name ?? '', to_wh: t.to_wh?.warehouse_name ?? '' })))
   }, [companyId])
 
@@ -47,7 +48,7 @@ export default function StockTransferPage() {
   const addLine = (itemId: string) => {
     const item = items.find(i => i.id === itemId)
     if (!item || lines.find(l => l.item_id === itemId)) return
-    setLines(p => [...p, { item_id: itemId, item_code: item.item_code, item_name: item.description, uom_code: item.uom_code, costing_method: item.costing_method, qty: '', lot_number: '', serial_number: '' }])
+    setLines(p => [...p, { item_id: itemId, item_code: item.item_code, item_name: item.description, uom_code: item.uom_code, costing_method: item.costing_method, specific_id_tracking: item.specific_id_tracking, qty: '', inventory_cost_layer_id: '', lot_number: '', serial_number: '' }])
   }
 
   const saveDraft = async () => {
@@ -67,6 +68,7 @@ export default function StockTransferPage() {
       lines.map(l => ({
         transfer_id: (txData as any).id, company_id: companyId,
         item_id: l.item_id, qty_transferred: Number(l.qty),
+        inventory_cost_layer_id: l.inventory_cost_layer_id || null,
         lot_number: l.lot_number || null, serial_number: l.serial_number || null,
       }))
     )
@@ -152,7 +154,16 @@ export default function StockTransferPage() {
                         </div>
                       </td>
                       <td className="px-3 py-2">
-                        {l.costing_method !== 'weighted_average' ? (
+                        {l.costing_method === 'specific_identification' ? (
+                          <InventoryIdentitySelect companyId={companyId} warehouseId={fromWh}
+                            itemId={l.item_id} costingMethod={l.costing_method} value={l.inventory_cost_layer_id}
+                            onChange={choice => setLines(p => p.map((x, i) => i === idx ? {
+                              ...x, inventory_cost_layer_id: choice?.inventory_cost_layer_id || '',
+                              lot_number: choice?.lot_number || '', serial_number: choice?.serial_number || '',
+                              qty: x.specific_id_tracking === 'serial' && choice ? '1' : x.qty,
+                            } : x))}
+                            className="border border-gray-200 rounded px-1.5 py-1 text-xs w-52 focus:outline-none" />
+                        ) : l.costing_method === 'fifo' ? (
                           <div className="flex gap-1">
                             <input value={l.lot_number}
                               onChange={e => setLines(p => p.map((x, i) => i === idx ? { ...x, lot_number: e.target.value } : x))}

@@ -14,8 +14,10 @@ type ValRow = {
   qty_on_hand: number
   wac_unit_cost: number
   total_cost: number
-  fifo_layers: number
-  fifo_qty_remaining: number
+  active_layers: number
+  layer_qty_remaining: number
+  quantity_variance: number
+  value_variance: number
   category_name: string
 }
 
@@ -39,7 +41,7 @@ export default function InventoryValuationPage() {
     if (!companyId) return
     setLoading(true)
 
-    const [{ data: sbData }, { data: layerData }] = await Promise.all([
+    const [{ data: sbData }, { data: layerData }, { data: reconciliationData }] = await Promise.all([
       supabase.from('stock_balances').select(`
         warehouse_id, item_id, qty_on_hand, wac_unit_cost, total_cost,
         warehouses!inner(warehouse_code, warehouse_name, company_id),
@@ -50,6 +52,9 @@ export default function InventoryValuationPage() {
       supabase.from('inventory_cost_layers').select(
         'item_id, warehouse_id, qty_remaining'
       ).eq('company_id', companyId).eq('is_exhausted', false).gt('qty_remaining', 0),
+      supabase.from('vw_inventory_valuation_reconciliation').select(
+        'warehouse_id,item_id,quantity_variance,value_variance'
+      ).eq('company_id', companyId),
     ])
 
     const layerMap: Record<string, { count: number; qty: number }> = {}
@@ -59,6 +64,10 @@ export default function InventoryValuationPage() {
       layerMap[k].count++
       layerMap[k].qty += Number(l.qty_remaining)
     }
+    const reconciliationMap = new Map(((reconciliationData || []) as any[]).map(row => [
+      `${row.item_id}::${row.warehouse_id}`,
+      { quantity: Number(row.quantity_variance), value: Number(row.value_variance) },
+    ]))
 
     const list = ((sbData || []) as any[]).map(r => {
       const lk = `${r.item_id}::${r.warehouse_id}`
@@ -75,8 +84,10 @@ export default function InventoryValuationPage() {
         qty_on_hand: Number(r.qty_on_hand),
         wac_unit_cost: Number(r.wac_unit_cost),
         total_cost: Number(r.total_cost),
-        fifo_layers: layerMap[lk]?.count ?? 0,
-        fifo_qty_remaining: layerMap[lk]?.qty ?? 0,
+        active_layers: layerMap[lk]?.count ?? 0,
+        layer_qty_remaining: layerMap[lk]?.qty ?? 0,
+        quantity_variance: reconciliationMap.get(lk)?.quantity ?? 0,
+        value_variance: reconciliationMap.get(lk)?.value ?? 0,
       }
     })
 
@@ -96,6 +107,7 @@ export default function InventoryValuationPage() {
   })
 
   const totalValue = visible.reduce((s, r) => s + r.total_cost, 0)
+  const reconciliationExceptions = visible.filter(r => Math.abs(r.quantity_variance) > 0.0001 || Math.abs(r.value_variance) > 0.01).length
 
   // Group by logic
   const grouped = (() => {
@@ -171,6 +183,10 @@ export default function InventoryValuationPage() {
           <span className="text-xs text-gray-400 ml-auto">{visible.length} rows · ₱ {fmt(totalValue)}</span>
         </div>
 
+        <div className={`rounded border px-3 py-2 text-xs ${reconciliationExceptions ? 'border-red-200 bg-red-50 text-red-700' : 'border-green-200 bg-green-50 text-green-800'}`}>
+          {reconciliationExceptions ? `${reconciliationExceptions} layered valuation reconciliation exception(s) require review.` : 'Layered valuation reconciles to the stock subledger for every visible FIFO and Specific-ID balance.'}
+        </div>
+
         <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
           {loading ? (
             <div className="py-12 text-center text-xs text-gray-400">Loading…</div>
@@ -191,7 +207,7 @@ export default function InventoryValuationPage() {
                           <td className="px-4 py-1.5 text-gray-800">{r.item_name}</td>
                           <td className="px-4 py-1.5 text-[10px] text-gray-400">{METHOD[r.costing_method]}</td>
                           <td className="px-4 py-1.5 text-right font-mono text-gray-600">{fmtQty(r.qty_on_hand)} {r.uom_code}</td>
-                          <td className="px-4 py-1.5 text-right font-mono text-gray-600">{fmt(r.wac_unit_cost)}</td>
+                          <td className="px-4 py-1.5 text-right font-mono text-gray-600">{fmt(r.qty_on_hand ? r.total_cost / r.qty_on_hand : 0)}</td>
                           <td className="px-4 py-1.5 text-right font-mono font-semibold text-gray-900">{fmt(r.total_cost)}</td>
                         </tr>
                       ))}
@@ -209,13 +225,13 @@ export default function InventoryValuationPage() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>{['Warehouse','Item Code','Item Name','Category','Method','On Hand','Unit Cost (₱)','Total Value (₱)','FIFO Layers','FIFO Qty'].map(h => (
+                  <tr>{['Warehouse','Item Code','Item Name','Category','Method','On Hand','Avg Carrying Cost (₱)','Total Value (₱)','Active Layers','Layer Qty','Reconciled'].map(h => (
                     <th key={h} className="px-3 py-2 text-[10px] font-semibold uppercase text-gray-500 text-left whitespace-nowrap">{h}</th>
                   ))}</tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {visible.length === 0 ? (
-                    <tr><td colSpan={10} className="py-12 text-center text-gray-400">No inventory on hand</td></tr>
+                    <tr><td colSpan={11} className="py-12 text-center text-gray-400">No inventory on hand</td></tr>
                   ) : visible.map(r => (
                     <tr key={`${r.warehouse_id}::${r.item_id}`} className="hover:bg-gray-50/60">
                       <td className="px-3 py-1.5 font-mono text-gray-600 text-[10px]">{r.warehouse_code}</td>
@@ -228,10 +244,11 @@ export default function InventoryValuationPage() {
                         </span>
                       </td>
                       <td className="px-3 py-1.5 text-right font-mono text-gray-800">{fmtQty(r.qty_on_hand)} {r.uom_code}</td>
-                      <td className="px-3 py-1.5 text-right font-mono text-gray-600">{fmt(r.wac_unit_cost)}</td>
+                      <td className="px-3 py-1.5 text-right font-mono text-gray-600">{fmt(r.qty_on_hand ? r.total_cost / r.qty_on_hand : 0)}</td>
                       <td className="px-3 py-1.5 text-right font-mono font-semibold text-gray-900">{fmt(r.total_cost)}</td>
-                      <td className="px-3 py-1.5 text-center text-gray-500">{r.fifo_layers > 0 ? r.fifo_layers : '—'}</td>
-                      <td className="px-3 py-1.5 text-right font-mono text-gray-500">{r.fifo_layers > 0 ? fmtQty(r.fifo_qty_remaining) : '—'}</td>
+                      <td className="px-3 py-1.5 text-center text-gray-500">{r.active_layers > 0 ? r.active_layers : '—'}</td>
+                      <td className="px-3 py-1.5 text-right font-mono text-gray-500">{r.active_layers > 0 ? fmtQty(r.layer_qty_remaining) : '—'}</td>
+                      <td className={`px-3 py-1.5 text-center font-semibold ${Math.abs(r.quantity_variance) <= 0.0001 && Math.abs(r.value_variance) <= 0.01 ? 'text-green-700' : 'text-red-700'}`}>{Math.abs(r.quantity_variance) <= 0.0001 && Math.abs(r.value_variance) <= 0.01 ? 'Yes' : 'No'}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -239,7 +256,7 @@ export default function InventoryValuationPage() {
                   <tr>
                     <td colSpan={7} className="px-3 py-2 text-right text-xs font-bold text-gray-700">TOTAL INVENTORY VALUE</td>
                     <td className="px-3 py-2 text-right font-mono font-bold text-gray-900">₱ {fmt(totalValue)}</td>
-                    <td colSpan={2}></td>
+                    <td colSpan={3}></td>
                   </tr>
                 </tfoot>
               </table>

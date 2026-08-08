@@ -5,6 +5,7 @@ import { StatusBadge, DateCell } from '@/components/ui/shared'
 import { useTransactionReadiness, type ConfigField } from '@/lib/setupReadiness'
 import { SetupReadinessBanner } from '@/components/SetupReadiness'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
+import { InventoryIdentitySelect } from '@/components/InventoryIdentitySelect'
 
 // ── Types ─────────────────────────────────────────────────────
 type DRStatus = 'draft' | 'in_transit' | 'delivered' | 'cancelled'
@@ -21,12 +22,13 @@ type DRLine = {
   _key: string; id?: string; line_number: number; so_line_id: string | null
   item_id: string; description: string
   quantity: number; uom_id: string; lot_serial_no: string
+  inventory_cost_layer_id: string; lot_number: string; serial_number: string
   // Stock leaves a place. A delivery of an inventory item cannot post without it.
   warehouse_id: string
 }
 
 type CustomerRef = { id: string; registered_name: string; address: string | null }
-type ItemRef = { id: string; item_code: string; item_name: string; default_uom_id: string | null }
+type ItemRef = { id: string; item_code: string; item_name: string; default_uom_id: string | null; item_type: string; costing_method: string | null; specific_id_tracking: string | null }
 type UOMRef = { id: string; uom_code: string; uom_name: string }
 type SORef = { id: string; so_number: string; customer_id: string; customer_name_snapshot: string }
 type SOLineRef = { id: string; sales_order_id: string; item_id: string | null; description: string; quantity: number; fulfilled_quantity: number; uom_id: string | null; line_number: number }
@@ -37,6 +39,7 @@ const today = () => new Date().toISOString().split('T')[0]
 const newLine = (idx = 0): DRLine => ({
   _key: crypto.randomUUID(), line_number: idx + 1, so_line_id: null,
   item_id: '', description: '', quantity: 1, uom_id: '', lot_serial_no: '',
+  inventory_cost_layer_id: '', lot_number: '', serial_number: '',
   warehouse_id: '',
 })
 
@@ -83,12 +86,20 @@ export default function DeliveryReceiptsPage() {
   const [fWarehouse, setFWarehouse] = useState('')
   const [lines, setLines] = useState<DRLine[]>([newLine(0)])
 
+  // Cancelling a mis-shipped delivery. The reversal is the database's job
+  // (fn_void_delivery_receipt); the screen collects the reason it requires.
+  const [voidOpen, setVoidOpen] = useState(false)
+  const [voidReasons, setVoidReasons] = useState<{ id: string; code: string; description: string }[]>([])
+  const [voidReasonId, setVoidReasonId] = useState('')
+  const [voidMemo, setVoidMemo] = useState('')
+  const [voiding, setVoiding] = useState(false)
+
   useEffect(() => {
     if (!companyId) return
     Promise.all([
       supabase.from('customers').select('id,registered_name,address:delivery_address')
         .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
-      supabase.from('items').select('id,item_code,item_name:description,default_uom_id:uom_id')
+      supabase.from('items').select('id,item_code,item_name:description,default_uom_id:uom_id,item_type,costing_method,specific_id_tracking')
         .eq('company_id', companyId).eq('is_active', true).order('description'),
       supabase.from('units_of_measure').select('id,uom_code,uom_name:description').eq('is_active', true).order('uom_code'),
       supabase.from('sales_orders').select('id,so_number,customer_id,customer_name_snapshot')
@@ -97,7 +108,9 @@ export default function DeliveryReceiptsPage() {
       supabase.from('branches').select('id,branch_code,branch_name').eq('company_id', companyId).eq('is_active', true),
       supabase.from('warehouses').select('id,warehouse_code,warehouse_name')
         .eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
-    ]).then(([{ data: cs }, { data: is }, { data: us }, { data: sos }, { data: bs }, { data: whs }]) => {
+      supabase.from('void_reason_codes').select('id,code,description').eq('is_active', true).order('code'),
+    ]).then(([{ data: cs }, { data: is }, { data: us }, { data: sos }, { data: bs }, { data: whs }, { data: vrs }]) => {
+      setVoidReasons(vrs || [])
       setCustomers(cs as CustomerRef[] || [])
       setItems(is as ItemRef[] || [])
       setUOMs(us as UOMRef[] || [])
@@ -149,7 +162,7 @@ export default function DeliveryReceiptsPage() {
         _key: crypto.randomUUID(), line_number: l.line_number, so_line_id: l.id,
         item_id: l.item_id || '', description: l.description,
         quantity: Math.max(0, l.quantity - l.fulfilled_quantity),
-        uom_id: l.uom_id || '', lot_serial_no: '', warehouse_id: '',
+        uom_id: l.uom_id || '', lot_serial_no: '', inventory_cost_layer_id: '', lot_number: '', serial_number: '', warehouse_id: '',
       })).filter(l => l.quantity > 0))
     }
   }
@@ -180,7 +193,7 @@ export default function DeliveryReceiptsPage() {
     setFTracking(doc.tracking_number || ''); setFDriver(doc.driver_name || '')
     setFAddress(doc.delivery_address); setError('')
     const { data: lns } = await supabase.from('delivery_receipt_lines').select('*').eq('dr_id', doc.id).order('line_number')
-    if (lns && lns.length) setLines(lns.map(l => ({ _key: l.id, id: l.id, line_number: l.line_number, so_line_id: l.so_line_id, item_id: l.item_id || '', description: l.description, quantity: Number(l.quantity), uom_id: l.uom_id || '', lot_serial_no: l.lot_serial_no || '', warehouse_id: l.warehouse_id || '' })))
+    if (lns && lns.length) setLines(lns.map(l => ({ _key: l.id, id: l.id, line_number: l.line_number, so_line_id: l.so_line_id, item_id: l.item_id || '', description: l.description, quantity: Number(l.quantity), uom_id: l.uom_id || '', lot_serial_no: l.lot_serial_no || '', inventory_cost_layer_id: l.inventory_cost_layer_id || '', lot_number: l.lot_number || '', serial_number: l.serial_number || '', warehouse_id: l.warehouse_id || '' })))
     else setLines([newLine(0)])
     if (doc.status === 'delivered') void loadBilledLines(doc.id)
     else setBilledLineIds([])
@@ -246,6 +259,24 @@ export default function DeliveryReceiptsPage() {
     setBilling(false)
   }
 
+  /**
+   * Cancelling a delivery reverses its Goods Delivered Not Invoiced journal and
+   * puts the stock back. The database refuses while any non-cancelled invoice
+   * bills it, so the screen offers the action and reports what it says rather
+   * than deciding for itself.
+   */
+  const doVoid = async () => {
+    if (!editDoc || !voidReasonId) return
+    setVoiding(true); setError('')
+    const { error: e } = await supabase.rpc('fn_void_delivery_receipt', {
+      p_dr_id: editDoc.id, p_void_reason_id: voidReasonId, p_memo: voidMemo || undefined,
+    })
+    if (e) { setError(e.message); setVoiding(false); return }
+    setVoidOpen(false); setVoidReasonId(''); setVoidMemo('')
+    setVoiding(false)
+    setMode('list'); loadList()
+  }
+
   const requiredConfig = useMemo<ConfigField[]>(() => [], [])
   // Delivery receipts allocate a number series but do not post to the GL — no open-period gate.
   const readiness = useTransactionReadiness({
@@ -299,6 +330,8 @@ export default function DeliveryReceiptsPage() {
             so_line_id: l.so_line_id, item_id: l.item_id || null,
             description: l.description, quantity: l.quantity,
             uom_id: l.uom_id || null, lot_serial_no: l.lot_serial_no || null,
+            inventory_cost_layer_id: l.inventory_cost_layer_id || null,
+            lot_number: l.lot_number || null, serial_number: l.serial_number || null,
             warehouse_id: l.warehouse_id || fWarehouse || null,
           }))
         )
@@ -397,6 +430,9 @@ export default function DeliveryReceiptsPage() {
         { key: 'save', label: saving ? 'Saving…' : drStatus === 'in_transit' ? 'Update' : 'Save Draft', onClick: () => save(drStatus === 'in_transit' ? 'in_transit' : 'draft'), disabled: saving, hidden: readOnly || !['draft','in_transit'].includes(drStatus) },
         { key: 'advance', label: drStatus === 'in_transit' ? 'Confirm Delivered' : 'Dispatch', onClick: () => save(drStatus === 'in_transit' ? 'delivered' : 'in_transit'), disabled: saving, hidden: readOnly || !['draft','in_transit'].includes(drStatus), variant: 'primary' },
         { key: 'bill', label: billing ? 'Creating…' : 'Bill This Delivery', onClick: billDelivery, disabled: billing, hidden: drStatus !== 'delivered', variant: 'primary' },
+        // A warehouse mis-ships. Offered wherever the delivery is not already
+        // cancelled; a delivery an invoice still bills is refused by the database.
+        { key: 'void', label: 'Cancel Delivery', onClick: () => { setError(''); setVoidOpen(true) }, disabled: voiding, hidden: drStatus === 'cancelled' || mode === 'new' },
       ]}
       headerFields={[
         { key: 'number', label: 'Delivery Receipt Number', card: 0, content: <div className="pxl-readonly-field">{editDoc?.dr_number || 'Auto-assigned on save'}</div> },
@@ -478,8 +514,18 @@ export default function DeliveryReceiptsPage() {
                       ) : <span className="text-xs text-gray-500">{warehouses.find(w => w.id === l.warehouse_id)?.warehouse_code || '—'}</span>}
                     </td>
                     <td className="px-4 py-2.5">
-                      {canEdit ? <input value={l.lot_serial_no} onChange={e => setLineField(l._key, 'lot_serial_no', e.target.value)} className="w-full bg-transparent border-0 text-xs py-0 px-0 focus:outline-none text-gray-500" placeholder="Lot / serial #…" />
-                        : <span className="text-xs font-mono text-gray-400">{l.lot_serial_no || '—'}</span>}
+                      {canEdit && items.find(item => item.id === l.item_id)?.costing_method === 'specific_identification' ? (
+                        <InventoryIdentitySelect companyId={companyId} warehouseId={l.warehouse_id || fWarehouse}
+                          itemId={l.item_id} costingMethod="specific_identification" value={l.inventory_cost_layer_id}
+                          onChange={choice => setLines(current => current.map(line => line._key === l._key ? {
+                            ...line, inventory_cost_layer_id: choice?.inventory_cost_layer_id || '',
+                            lot_number: choice?.lot_number || '', serial_number: choice?.serial_number || '',
+                            lot_serial_no: choice?.serial_number || choice?.lot_number || '',
+                            quantity: items.find(item => item.id === l.item_id)?.specific_id_tracking === 'serial' && choice ? 1 : line.quantity,
+                          } : line))}
+                          className="w-full bg-transparent border-0 text-xs py-0 px-0 focus:outline-none text-gray-500" />
+                      ) : canEdit ? <input value={l.lot_serial_no} onChange={e => setLineField(l._key, 'lot_serial_no', e.target.value)} className="w-full bg-transparent border-0 text-xs py-0 px-0 focus:outline-none text-gray-500" placeholder="Lot / serial #…" />
+                        : <span className="text-xs font-mono text-gray-400">{l.serial_number || l.lot_number || l.lot_serial_no || '—'}</span>}
                     </td>
                     {canEdit && !fSO && (
                       <td className="px-2 py-2.5">
@@ -496,6 +542,40 @@ export default function DeliveryReceiptsPage() {
         </div>
       </div>
     </div>
+
+    {/* Cancel dialog. The reason is not optional: it is the CAS audit evidence
+        for a document that already moved stock and wrote a journal. */}
+    {voidOpen && (
+      <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
+        <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+          <h3 className="font-semibold text-gray-900 mb-1">Cancel Delivery</h3>
+          <p className="text-xs text-gray-500 mb-4">{editDoc?.dr_number}</p>
+          {drStatus === 'delivered' && (
+            <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded px-2.5 py-2 mb-3">
+              This delivery has already relieved stock. Cancelling reverses its Goods Delivered
+              Not Invoiced journal and returns the goods to the warehouse it shipped from.
+            </p>
+          )}
+          <select value={voidReasonId} onChange={e => setVoidReasonId(e.target.value)}
+            className="w-full border border-gray-300 rounded px-2.5 py-2 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-gray-900">
+            <option value="">Select cancellation reason…</option>
+            {voidReasons.map(r => <option key={r.id} value={r.id}>{r.code} — {r.description}</option>)}
+          </select>
+          <textarea value={voidMemo} onChange={e => setVoidMemo(e.target.value)} rows={2}
+            placeholder="Additional memo (optional)"
+            className="w-full border border-gray-300 rounded px-2.5 py-2 text-sm mb-4 resize-none focus:outline-none focus:ring-1 focus:ring-gray-900" />
+          {error && <p className="text-red-600 text-xs mb-3">{error}</p>}
+          <div className="flex gap-2 justify-end">
+            <button onClick={() => { setVoidOpen(false); setError('') }}
+              className="px-3 py-1.5 border border-gray-300 text-gray-700 rounded text-sm hover:bg-gray-50">Keep Delivery</button>
+            <button onClick={doVoid} disabled={!voidReasonId || voiding}
+              className="px-3 py-1.5 bg-red-600 text-white rounded text-sm hover:bg-red-700 disabled:opacity-50">
+              {voiding ? 'Cancelling…' : 'Cancel Delivery'}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
     </LegacyTransactionWorkspace>
   )
 }

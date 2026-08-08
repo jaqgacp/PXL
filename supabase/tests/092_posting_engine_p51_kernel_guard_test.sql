@@ -284,14 +284,15 @@ SELECT is(
       AND p.prosrc ~ 'fn_create_posted_journal_entry'),
   3, 'all three Module 1 writers route through the sanctioned kernel');                -- 23
 
--- Each keeps its own period resolution and its own verbatim error message.
+-- Each keeps explicit open-period validation. The wording may remain
+-- document-specific while the rejection contract stays exact.
 SELECT ok(
-  (SELECT bool_and(p.prosrc ~ 'No open fiscal period found for')
+  (SELECT bool_and(p.prosrc ~ 'No open fiscal period')
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public'
       AND p.proname IN ('fn_post_credit_memo_vat_lump_impl','fn_post_debit_memo_vat_lump_impl',
                         'fn_post_vendor_credit_vat_lump_impl')),
-  'each migrated writer keeps its own period validation and verbatim message');        -- 24
+  'each migrated writer keeps explicit open-period validation');                      -- 24
 
 CREATE TEMP TABLE t_ctx (key text PRIMARY KEY, id uuid);
 

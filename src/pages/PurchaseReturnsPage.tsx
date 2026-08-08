@@ -18,6 +18,8 @@ type ReturnLine = {
   _key: string; id?: string; rr_line_id: string; item_id: string
   description: string; max_qty: number; return_qty: number
   uom_id: string; unit_price: number; reason: string
+  inventory_cost_layer_id: string; lot_number: string; serial_number: string
+  costing_method: string; specific_id_tracking: string
 }
 
 type RRRef = { id: string; rr_number: string; supplier_name_snapshot: string; rr_date: string }
@@ -59,11 +61,13 @@ export default function PurchaseReturnsPage() {
   }, [companyId])
 
   const loadRRLines = async (rrId: string) => {
-    const { data } = await supabase.from('receiving_report_lines').select('id,item_id,description,received_qty,uom_id,unit_price').eq('rr_id', rrId).order('line_number')
+    const { data } = await supabase.from('receiving_report_lines').select('id,item_id,description,received_qty,uom_id,unit_price,lot_number,serial_number,inventory_transaction_id,item:items(costing_method,specific_id_tracking)').eq('rr_id', rrId).order('line_number')
     return (data || []).map((l: any) => ({
       _key: l.id, rr_line_id: l.id, item_id: l.item_id || '',
       description: l.description, max_qty: l.received_qty, return_qty: 0,
       uom_id: l.uom_id || '', unit_price: l.unit_price || 0, reason: '',
+      inventory_cost_layer_id: '', lot_number: l.lot_number || '', serial_number: l.serial_number || '',
+      costing_method: l.item?.costing_method || '', specific_id_tracking: l.item?.specific_id_tracking || '',
     }))
   }
 
@@ -80,12 +84,16 @@ export default function PurchaseReturnsPage() {
       if (i !== idx) return l
       const u = { ...l, ...patch }
       if (u.return_qty > u.max_qty) u.return_qty = u.max_qty
+      if (u.costing_method === 'specific_identification' && u.specific_id_tracking === 'serial' && u.return_qty > 1) u.return_qty = 1
       return u
     }))
   }
 
   const save = async () => {
     if (!companyId || !editReturn?.rr_id) { setError('Receiving Report is required'); return }
+    if (lines.some(line => line.costing_method === 'specific_identification' && line.specific_id_tracking === 'serial' && line.return_qty > 1)) {
+      setError('Serialized inventory must be returned one serial per line.'); return
+    }
     setSaving(true); setError('')
     try {
       const result = await supabase.rpc('fn_save_purchase_return', {
@@ -99,6 +107,8 @@ export default function PurchaseReturnsPage() {
           rr_line_id: l.rr_line_id || null, item_id: l.item_id || null,
           description: l.description, max_qty: l.max_qty, return_qty: l.return_qty,
           uom_id: l.uom_id || null, unit_price: l.unit_price, reason: l.reason || '',
+          inventory_cost_layer_id: l.inventory_cost_layer_id || null,
+          lot_number: l.lot_number || null, serial_number: l.serial_number || null,
         })),
       })
       if (result.error) throw new Error(result.error.message)
@@ -164,12 +174,13 @@ export default function PurchaseReturnsPage() {
       <div>
         <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Return Lines</h3>
         <table className="pxl-data-grid w-full text-xs">
-          <thead><tr className="border-b border-gray-200 text-gray-500"><th className="text-left pb-2 font-medium">Description</th><th className="text-right pb-2 font-medium w-24">Max Qty</th><th className="text-right pb-2 font-medium w-28">Return Qty</th><th className="text-left pb-2 font-medium w-40">Reason</th></tr></thead>
+          <thead><tr className="border-b border-gray-200 text-gray-500"><th className="text-left pb-2 font-medium">Description</th><th className="text-left pb-2 font-medium w-36">Receipt Identity</th><th className="text-right pb-2 font-medium w-24">Max Qty</th><th className="text-right pb-2 font-medium w-28">Return Qty</th><th className="text-left pb-2 font-medium w-40">Reason</th></tr></thead>
           <tbody>
-            {lines.length === 0 ? <tr><td colSpan={4} className="py-4 text-center text-gray-400">Select a Receiving Report to load lines</td></tr> :
+            {lines.length === 0 ? <tr><td colSpan={5} className="py-4 text-center text-gray-400">Select a Receiving Report to load lines</td></tr> :
               lines.map((l, i) => (
                 <tr key={l._key} className="border-b border-gray-100">
                   <td className="py-1.5 pr-2 text-gray-700">{l.description}</td>
+                  <td className="py-1.5 pr-2 font-mono text-[10px] text-gray-600">{l.serial_number || l.lot_number || (l.costing_method === 'weighted_average' ? 'Historical WAC' : 'Receipt layer')}</td>
                   <td className="py-1.5 pr-2 text-right font-mono text-gray-500">{fmt4(l.max_qty)}</td>
                   <td className="py-1.5 pr-2"><input type="number" value={l.return_qty} disabled={readOnly} onChange={e => updateLine(i, { return_qty: +e.target.value })} className="border border-gray-300 rounded px-2 py-1 text-xs text-right w-28 focus:outline-none focus:ring-1 focus:ring-gray-900" min={0} max={l.max_qty} step="any" /></td>
                   <td className="py-1.5"><input type="text" value={l.reason} disabled={readOnly} onChange={e => updateLine(i, { reason: e.target.value })} className="border border-gray-300 rounded px-2 py-1 text-xs w-40 focus:outline-none focus:ring-1 focus:ring-gray-900" placeholder="Reason…" /></td>
@@ -208,7 +219,23 @@ export default function PurchaseReturnsPage() {
                   <td className="px-3 py-2"><StatusBadge status={STATUS_COLORS[r.status]} label={r.status} /></td>
                   <td className="px-3 py-2">
                     <div className="flex gap-2 justify-end">
-                      <button onClick={() => { setEditReturn({ ...r }); supabase.from('purchase_return_lines').select('*').eq('return_id', r.id).order('line_number').then(({ data }) => setLines(data?.map(l => ({ ...l, _key: l.id })) as ReturnLine[] || [])); setMode('view') }} className="text-blue-600 hover:text-blue-800">View</button>
+                      <button onClick={() => { setEditReturn({ ...r }); supabase.from('purchase_return_lines').select('*').eq('return_id', r.id).order('line_number').then(({ data }) => setLines((data || []).map(l => ({
+                        _key: l.id,
+                        id: l.id,
+                        rr_line_id: l.rr_line_id || '',
+                        item_id: l.item_id || '',
+                        description: l.description,
+                        max_qty: l.max_qty,
+                        return_qty: l.return_qty,
+                        uom_id: l.uom_id || '',
+                        unit_price: l.unit_price,
+                        reason: l.reason || '',
+                        inventory_cost_layer_id: l.inventory_cost_layer_id || '',
+                        lot_number: l.lot_number || '',
+                        serial_number: l.serial_number || '',
+                        costing_method: '',
+                        specific_id_tracking: '',
+                      })))); setMode('view') }} className="text-blue-600 hover:text-blue-800">View</button>
                       {r.status === 'draft' && <button onClick={() => ship(r)} className="text-orange-600 hover:text-orange-800">Ship</button>}
                       {r.status === 'shipped' && <button onClick={() => setPreviewReturnId(r.id)} className="text-gray-600 hover:text-gray-900">Preview</button>}
                       {r.status === 'shipped' && <button onClick={() => complete(r)} className="text-green-600 hover:text-green-800">Complete</button>}

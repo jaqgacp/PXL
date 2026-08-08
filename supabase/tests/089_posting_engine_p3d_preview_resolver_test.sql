@@ -71,7 +71,7 @@ SELECT ok(
 SELECT ok(
   (SELECT p.prosrc ~ $re$fn_resolve_posting_account\(v_rec\.company_id, 'AR_TRADE', v_rec\.date$re$
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-    WHERE n.nspname='public' AND p.proname='fn_post_sales_invoice'),
+    WHERE n.nspname='public' AND p.proname='fn_post_sales_invoice_costing_legacy_20260808'),
   'actual posting resolves AR_TRADE as of the same invoice date (as-of parity)');        -- 8
 
 -- Every preview consumer must go through the adapter, never fn_resolve_account directly.

@@ -7,13 +7,14 @@ import { TransactionWorkspace } from '@/components/document/TransactionWorkspace
 import { useBranchLabel } from '@/hooks/useBranchLabel'
 import { SystemMetadataPanel, TransactionEmptyState } from '@/components/document/TransactionPrimitives'
 import { transactionSegmentButtonClass } from '@/lib/transactionWorkspace'
+import { InventoryIdentitySelect } from '@/components/InventoryIdentitySelect'
 
 type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
-type Item = { id: string; item_code: string; description: string; costing_method: string; uom_code: string }
+type Item = { id: string; item_code: string; description: string; costing_method: string; specific_id_tracking: string | null; uom_code: string }
 type COA = { id: string; account_code: string; account_name: string }
 type AdjLine = {
-  item_id: string; item_code: string; item_name: string; uom_code: string; costing_method: string
-  qty_before: number; qty_adjusted: string; lot_number: string; serial_number: string; gl_offset_account_id: string
+  item_id: string; item_code: string; item_name: string; uom_code: string; costing_method: string; specific_id_tracking: string | null
+  qty_before: number; qty_adjusted: string; inventory_cost_layer_id: string; lot_number: string; serial_number: string; gl_offset_account_id: string
 }
 type Adjustment = {
   id: string; adjustment_number: string; adjustment_date: string; reason: string
@@ -57,12 +58,12 @@ export default function StockAdjustmentPage() {
     if (!companyId) return
     const [{ data: whs }, { data: itemData }, { data: coaData }, { data: adjData }] = await Promise.all([
       supabase.from('warehouses').select('id,warehouse_code,warehouse_name').eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
-      supabase.from('items').select('id,item_code,description,costing_method,units_of_measure!inner(uom_code)').eq('company_id', companyId).eq('is_active', true).eq('item_type', 'inventory_item').order('item_code'),
+      supabase.from('items').select('id,item_code,description,costing_method,specific_id_tracking,units_of_measure!inner(uom_code)').eq('company_id', companyId).eq('is_active', true).eq('item_type', 'inventory_item').order('item_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('is_postable', true).order('account_code'),
       supabase.from('stock_adjustments').select(`id,adjustment_number,adjustment_date,reason,status,notes,warehouses!inner(warehouse_name)`).eq('company_id', companyId).order('adjustment_date', { ascending: false }).limit(50),
     ])
     setWarehouses((whs as Warehouse[]) || [])
-    setItems(((itemData || []) as any[]).map(i => ({ id: i.id, item_code: i.item_code, description: i.description, costing_method: i.costing_method || 'weighted_average', uom_code: i.units_of_measure?.uom_code || '' })))
+    setItems(((itemData || []) as any[]).map(i => ({ id: i.id, item_code: i.item_code, description: i.description, costing_method: i.costing_method || 'weighted_average', specific_id_tracking: i.specific_id_tracking, uom_code: i.units_of_measure?.uom_code || '' })))
     setCoa((coaData as COA[]) || [])
     setHistory(((adjData || []) as any[]).map(a => ({ id: a.id, adjustment_number: a.adjustment_number, adjustment_date: a.adjustment_date, reason: a.reason, warehouse_name: a.warehouses?.warehouse_name ?? '', status: a.status, notes: a.notes })))
   }, [companyId])
@@ -74,8 +75,8 @@ export default function StockAdjustmentPage() {
     if (!item || lines.find(l => l.item_id === itemId)) return
     setLines(p => [...p, {
       item_id: itemId, item_code: item.item_code, item_name: item.description,
-      uom_code: item.uom_code, costing_method: item.costing_method,
-      qty_before: 0, qty_adjusted: '0', lot_number: '', serial_number: '', gl_offset_account_id: '',
+      uom_code: item.uom_code, costing_method: item.costing_method, specific_id_tracking: item.specific_id_tracking,
+      qty_before: 0, qty_adjusted: '0', inventory_cost_layer_id: '', lot_number: '', serial_number: '', gl_offset_account_id: '',
     }])
   }
 
@@ -100,6 +101,7 @@ export default function StockAdjustmentPage() {
       adjustment_id: (adjData as any).id, company_id: companyId, item_id: l.item_id,
       qty_before: l.qty_before, qty_adjusted: Number(l.qty_adjusted),
       qty_after: l.qty_before + Number(l.qty_adjusted),
+      inventory_cost_layer_id: l.inventory_cost_layer_id || null,
       lot_number: l.lot_number || null, serial_number: l.serial_number || null,
       gl_offset_account_id: l.gl_offset_account_id || null,
     }))
@@ -130,7 +132,7 @@ export default function StockAdjustmentPage() {
   const openAdjustment = async (adjustment: Adjustment) => {
     setViewAdjustment(adjustment)
     const { data } = await supabase.from('stock_adjustment_lines')
-      .select('item_id,qty_before,qty_adjusted,lot_number,serial_number,gl_offset_account_id,items(item_code,description,costing_method,units_of_measure(uom_code))')
+      .select('item_id,qty_before,qty_adjusted,inventory_cost_layer_id,lot_number,serial_number,gl_offset_account_id,items(item_code,description,costing_method,specific_id_tracking,units_of_measure(uom_code))')
       .eq('adjustment_id', adjustment.id)
     setViewLines(((data || []) as any[]).map(line => ({
       item_id: line.item_id,
@@ -138,8 +140,10 @@ export default function StockAdjustmentPage() {
       item_name: line.items?.description || '',
       uom_code: line.items?.units_of_measure?.uom_code || '',
       costing_method: line.items?.costing_method || 'weighted_average',
+      specific_id_tracking: line.items?.specific_id_tracking || null,
       qty_before: Number(line.qty_before || 0),
       qty_adjusted: String(line.qty_adjusted || 0),
+      inventory_cost_layer_id: line.inventory_cost_layer_id || '',
       lot_number: line.lot_number || '',
       serial_number: line.serial_number || '',
       gl_offset_account_id: line.gl_offset_account_id || '',
@@ -232,7 +236,24 @@ export default function StockAdjustmentPage() {
       tabContent={{
         lines: <div className="overflow-x-auto rounded border border-[var(--pxl-border-medium)]">
           {!readOnly && <div className="flex items-center gap-2 border-b border-[var(--pxl-border-medium)] px-3 py-2"><h2 className="pxl-section-title">Inventory Movement Lines</h2><select onChange={event => { addLine(event.target.value); event.target.value = '' }} className="ml-auto w-64 rounded border border-gray-300 px-2.5 py-1 text-xs"><option value="">+ Add Item…</option>{items.map(item => <option key={item.id} value={item.id}>{item.item_code} — {item.description}</option>)}</select></div>}
-          {activeLines.length === 0 ? <TransactionEmptyState>Add inventory items to begin the adjustment.</TransactionEmptyState> : <table className="pxl-data-grid w-full text-xs"><thead><tr>{['Item', 'Method', 'Qty Before', 'Qty Adjusted (±)', 'Qty After', 'Lot / Serial', 'GL Offset Account', ''].map(label => <th key={label} className="text-left">{label}</th>)}</tr></thead><tbody>{activeLines.map((line, index) => <tr key={line.item_id}><td><p className="font-semibold">{line.item_code}</p><p className="pxl-caption">{line.item_name}</p></td><td>{line.costing_method === 'weighted_average' ? 'WAC' : line.costing_method === 'fifo' ? 'FIFO' : 'Specific ID'}</td><td className="text-right font-mono">{line.qty_before.toLocaleString()}</td><td className="text-right">{readOnly ? <span className="font-mono">{Number(line.qty_adjusted).toLocaleString()}</span> : <input type="number" step="0.0001" value={line.qty_adjusted} onChange={event => updateLine(index, 'qty_adjusted', event.target.value)} className="w-24 rounded border border-gray-300 px-2 py-1 text-right font-mono" />}</td><td className={`text-right font-mono font-semibold ${line.qty_before + Number(line.qty_adjusted) < 0 ? 'text-red-700' : ''}`}>{(line.qty_before + Number(line.qty_adjusted)).toLocaleString('en-PH', { maximumFractionDigits: 4 })} {line.uom_code}</td><td>{readOnly ? `${line.lot_number || '—'} / ${line.serial_number || '—'}` : line.costing_method !== 'weighted_average' ? <div className="flex gap-1"><input value={line.lot_number} onChange={event => updateLine(index, 'lot_number', event.target.value)} placeholder="Lot" className="w-16 rounded border px-1.5 py-0.5" /><input value={line.serial_number} onChange={event => updateLine(index, 'serial_number', event.target.value)} placeholder="Serial" className="w-20 rounded border px-1.5 py-0.5" /></div> : '—'}</td><td>{readOnly ? (coa.find(account => account.id === line.gl_offset_account_id) ? `${coa.find(account => account.id === line.gl_offset_account_id)?.account_code} — ${coa.find(account => account.id === line.gl_offset_account_id)?.account_name}` : '—') : <select value={line.gl_offset_account_id} onChange={event => updateLine(index, 'gl_offset_account_id', event.target.value)} className="w-48 rounded border px-1.5 py-1"><option value="">— Select offset —</option>{coa.map(account => <option key={account.id} value={account.id}>{account.account_code} — {account.account_name}</option>)}</select>}</td><td>{!readOnly && <button onClick={() => removeLine(index)} className="text-red-600" aria-label={`Remove ${line.item_code}`}>✕</button>}</td></tr>)}</tbody></table>}
+          {activeLines.length === 0 ? <TransactionEmptyState>Add inventory items to begin the adjustment.</TransactionEmptyState> : <table className="pxl-data-grid w-full text-xs"><thead><tr>{['Item', 'Method', 'Qty Before', 'Qty Adjusted (±)', 'Qty After', 'Lot / Serial', 'GL Offset Account', ''].map(label => <th key={label} className="text-left">{label}</th>)}</tr></thead><tbody>{activeLines.map((line, index) => <tr key={line.item_id}>
+            <td><p className="font-semibold">{line.item_code}</p><p className="pxl-caption">{line.item_name}</p></td>
+            <td>{line.costing_method === 'weighted_average' ? 'WAC' : line.costing_method === 'fifo' ? 'FIFO' : 'Specific ID'}</td>
+            <td className="text-right font-mono">{line.qty_before.toLocaleString()}</td>
+            <td className="text-right">{readOnly ? <span className="font-mono">{Number(line.qty_adjusted).toLocaleString()}</span> : <input type="number" step="0.0001" value={line.qty_adjusted} onChange={event => updateLine(index, 'qty_adjusted', event.target.value)} className="w-24 rounded border border-gray-300 px-2 py-1 text-right font-mono" />}</td>
+            <td className={`text-right font-mono font-semibold ${line.qty_before + Number(line.qty_adjusted) < 0 ? 'text-red-700' : ''}`}>{(line.qty_before + Number(line.qty_adjusted)).toLocaleString('en-PH', { maximumFractionDigits: 4 })} {line.uom_code}</td>
+            <td>{readOnly ? `${line.lot_number || '—'} / ${line.serial_number || '—'}` : line.costing_method === 'specific_identification' && Number(line.qty_adjusted) < 0 ? (
+              <InventoryIdentitySelect companyId={companyId} warehouseId={warehouseId} itemId={line.item_id}
+                costingMethod={line.costing_method} value={line.inventory_cost_layer_id}
+                onChange={choice => setLines(current => current.map((entry, entryIndex) => entryIndex === index ? {
+                  ...entry, inventory_cost_layer_id: choice?.inventory_cost_layer_id || '',
+                  lot_number: choice?.lot_number || '', serial_number: choice?.serial_number || '',
+                  qty_adjusted: entry.specific_id_tracking === 'serial' && choice ? '-1' : entry.qty_adjusted,
+                } : entry))} className="w-48 rounded border px-1.5 py-1" />
+            ) : line.costing_method !== 'weighted_average' ? <div className="flex gap-1"><input value={line.lot_number} onChange={event => updateLine(index, 'lot_number', event.target.value)} placeholder="Lot" className="w-16 rounded border px-1.5 py-0.5" /><input value={line.serial_number} onChange={event => updateLine(index, 'serial_number', event.target.value)} placeholder="Serial" className="w-20 rounded border px-1.5 py-0.5" /></div> : '—'}</td>
+            <td>{readOnly ? (coa.find(account => account.id === line.gl_offset_account_id) ? `${coa.find(account => account.id === line.gl_offset_account_id)?.account_code} — ${coa.find(account => account.id === line.gl_offset_account_id)?.account_name}` : '—') : <select value={line.gl_offset_account_id} onChange={event => updateLine(index, 'gl_offset_account_id', event.target.value)} className="w-48 rounded border px-1.5 py-1"><option value="">— Select offset —</option>{coa.map(account => <option key={account.id} value={account.id}>{account.account_code} — {account.account_name}</option>)}</select>}</td>
+            <td>{!readOnly && <button onClick={() => removeLine(index)} className="text-red-600" aria-label={`Remove ${line.item_code}`}>✕</button>}</td>
+          </tr>)}</tbody></table>}
         </div>,
         financial: <div className="ml-auto grid max-w-lg grid-cols-2 gap-2"><span className="text-gray-600">Total Quantity Change</span><span className="text-right font-mono">{quantityAdjustment.toLocaleString('en-PH', { maximumFractionDigits: 4 })}</span><span className="text-gray-600">Inventory Increase Lines</span><span className="text-right font-mono">{activeLines.filter(line => Number(line.qty_adjusted) > 0).length}</span><span className="text-gray-600">Inventory Decrease Lines</span><span className="text-right font-mono">{activeLines.filter(line => Number(line.qty_adjusted) < 0).length}</span><span className="pxl-section-title border-t pt-2">Valuation Impact</span><span className="border-t pt-2 text-right text-xs">{activeId ? 'Posting engine / GL tab' : 'Available after save'}</span></div>,
         gl: activeId ? <GLImpactPanel companyId={companyId} sourceDocType="INV_ADJ" sourceDocId={activeId} previewRows={[]} /> : <TransactionEmptyState>Save the draft to request an authoritative inventory GL preview.</TransactionEmptyState>,

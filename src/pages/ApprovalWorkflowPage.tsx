@@ -81,7 +81,7 @@ export default function ApprovalWorkflowPage() {
     setWorkflows((data as Workflow[]) || [])
   }
   const fetchInbox = useCallback(async () => {
-    const { data, error } = await supabase.rpc('fn_approval_inbox', { p_company_id: filterCompany || null })
+    const { data, error } = await supabase.rpc('fn_approval_inbox', filterCompany ? { p_company_id: filterCompany } : {})
     if (error) setMessage({ tone: 'error', text: error.message })
     else setInbox((data as InboxItem[]) || [])
   }, [filterCompany])
@@ -175,7 +175,7 @@ export default function ApprovalWorkflowPage() {
     const reason = decision === 'reject' ? window.prompt('Rejection reason') : null
     if (decision === 'reject' && !reason?.trim()) return
     const result = decision === 'approve'
-      ? await supabase.rpc('fn_approve_approval_request', { p_request_id: item.request_id, p_current_record_version: item.record_version, p_remarks: null })
+      ? await supabase.rpc('fn_approve_approval_request', { p_request_id: item.request_id, p_current_record_version: item.record_version })
       : await supabase.rpc('fn_reject_approval_request', { p_request_id: item.request_id, p_current_record_version: item.record_version, p_reason: reason! })
     if (result.error) setMessage({ tone: 'error', text: result.error.message })
     else {

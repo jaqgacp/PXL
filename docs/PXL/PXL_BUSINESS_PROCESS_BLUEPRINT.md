@@ -432,11 +432,14 @@ subledger and the control account to be reconciled by hand.
 
 **Document conversion is not built.** Quotation → Sales Order → Sales Invoice
 carry-forward does not exist; the Document Conversion Engine is **Planned, not
-started**. The single exception is *Bill This Delivery*, which does carry the
-source link, and which is therefore the **only supported way to bill a
-delivery**. An invoice typed by hand for goods already delivered will relieve the
-stock a second time and leave the clearing balance uncleared. This is recorded as
-Backlog 18b and is load-bearing, not cosmetic.
+started**. The single exception is *Bill This Delivery*, which creates the
+governed delivery-line relationship and remains the **only supported way to bill
+a delivery**. A server-side readiness guard now refuses a hand-entered stock line
+when live delivered goods for the same company, customer and item are waiting to
+be billed; it runs at approval and again at posting, so it also catches a
+delivery created after approval. This prevents double stock relief and a stranded
+Goods Delivered Not Invoiced balance, but creates no relationship or
+carry-forward of its own. Backlog 18b therefore remains partially complete.
 
 ## Downstream Impact
 
@@ -554,12 +557,13 @@ Credit Memo · Customer Return · collections monitoring · period close ·
 financial statements · output VAT and percentage tax through to the filing
 artifact.
 
-**Remaining work.** Document conversion beyond the delivery-to-invoice link
+**Remaining work.** Full document conversion beyond the delivery-to-invoice link
 (Backlog 18b) · the three percentage-tax boundaries (Backlog 8b).
 
-**Pilot blockers.** Billing a delivery is safe **only** through *Bill This
-Delivery*; a hand-typed invoice for delivered goods relieves stock twice
-(Backlog 18b). No Sales workflow yet meets the Product Definition of Done.
+**Pilot blockers.** Billing a delivery is complete **only** through *Bill This
+Delivery*; unsafe hand-entry is refused rather than converted. The wider
+quotation/order/delivery/invoice relationship and remaining-quantity workflow is
+still absent, so no Sales workflow yet meets the Product Definition of Done.
 
 **Future enhancements.** Stock reservation · advance payments and unapplied cash ·
 overpayment handling · over-delivery control · AR write-off · customer inquiry
@@ -645,12 +649,12 @@ Bill Void            Vendor Credit          Payment Voucher
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Purchase Request | Capture internal demand before committing | Requestor | — | — | — | Would require approval | None | None | None | None | Purchase Order | — | — | **Future** |
 | Purchase Order | Commit to the supplier | Purchasing officer | Purchase Request | Purchase Order | Supplier, items, branch | Yes (draft → approved) | None | None | None | Open-PO / commitment view | Receiving Report | Cancel before receipt | Header/line change log | **Implemented** |
-| Receiving Report | Take goods into stock at cost | Receiving clerk | Purchase Order | Receiving Report | Item, warehouse, quantity, open period; inventory and clearing accounts configured | No | **Increases stock** at receipt cost | DR Inventory Control / CR Purchase Clearing | None — receipt computes no tax | Stock balances, movements, valuation, GL, trial balance | Purchase Order, Vendor Bill | **No governed reversal** — see Alignment Notes | Posting event, journal, inventory transaction | **Implemented** (reversal **Future**) |
+| Receiving Report | Take goods into stock at cost | Receiving clerk | Purchase Order | Receiving Report | Item, warehouse, quantity within its exact PO line, open period; inventory and clearing accounts configured; serial/lot identity when required | No | **Increases stock** at receipt cost | DR Inventory Control / CR Purchase Clearing | None — receipt computes no tax | Stock balances, movements, valuation, GL, trial balance | Purchase Order, Vendor Bill | Governed whole cancellation after live bills and downstream consumption are corrected; exact source quantity/value/layer removed | Posting event, journal, reversal, inventory transaction, CAS void evidence | **Implemented and exercised for all three costing methods** |
 | Vendor Bill | Record the supplier's invoice and the payable | AP clerk | Receiving Report, Purchase Order | Vendor Bill | Supplier, lines, expense or inventory accounts, tax codes, open period | Yes (draft → approved → posted) | None when the goods already arrived; the clearing balance is consumed | DR Expense or Purchase Clearing / DR Input VAT / CR Accounts Payable; CR EWT Payable on accrual basis | **Input VAT** claimed; **EWT accrued** if the bill withholds at accrual | Supplier ledger, AP ageing, purchase registers, GL, trial balance, tax ledger | Receiving Report, Payment Voucher, Vendor Credit | **Bill Void** | Posting event, journal, tax detail, CAS issuance | **Implemented** |
 | Bill Void | Withdraw a wrong bill | Accountant | Vendor Bill | Reversal journal | Reason required | No (reason mandatory) | Restores anything the bill moved | Reverses the bill journal | Reverses input VAT and accrued EWT | All of the above | Vendor Bill | Terminal | Posting event, CAS void evidence | **Implemented** |
 | Cash Purchase | Buy and pay in one act | Purchasing / Cashier | — | Cash Purchase | Supplier, lines, cash account, tax codes | Yes | Increases stock where stockable | DR Expense or Inventory / DR Input VAT / CR Cash | Input VAT; EWT where applicable | Purchase registers, cash, GL, tax ledger | — | Void | Posting event, journal, tax detail | **Implemented** |
 | Vendor Credit | Reduce a payable for a supplier credit | AP clerk | Vendor Bill | Vendor Credit | Supplier; source bill optional | Yes | None unless goods return | DR Accounts Payable / CR Expense / CR Input VAT | Reduces input VAT | Supplier ledger, AP ageing, GL, tax ledger | Vendor Bill, Purchase Return | Reverse the application | Posting event, journal, tax detail | **Implemented** |
-| Purchase Return | Send goods back to the supplier | Warehouse + AP | Receiving Report, Vendor Bill | Purchase Return | Received lines; quantity available | Yes | **Reduces stock** on shipment | Reduces inventory and the payable | Reduces input VAT | Stock balances, movements, supplier ledger, GL | Vendor Credit, Receiving Report | — | Posting event, journal | **Implemented** (never exercised on real data) |
+| Purchase Return | Send goods back to the supplier | Warehouse + AP | Receiving Report, Vendor Bill | Purchase Return | Exact received line/layer; quantity available; serial/lot identity when required | Yes | **Reduces stock at exact receipt cost** on shipment | DR Accounts Payable / CR Inventory Control | Tax remains governed by the purchasing document policy | Stock balances, movements, supplier ledger, GL | Vendor Credit, Receiving Report | Correct downstream claims before receipt cancellation | Posting event, inventory allocation, journal | **Implemented and exercised locally** |
 | Payment Voucher | Pay the supplier and withhold EWT | Treasury / AP | Vendor Bill | Payment Voucher | Posted bills to apply against; cash or bank account; open period | Yes | None | DR Accounts Payable / CR Cash or Bank / CR EWT Payable on payment basis | **EWT withheld** at payment where the bill uses payment basis | Supplier ledger, AP ageing, payment monitoring, cash, Cash Disbursements Book, GL, tax ledger | Vendor Bill, Check Voucher | **Cancel** | Posting event, journal, tax detail, CAS issuance | **Implemented** |
 | Check Voucher | Pay by cheque with a governed instrument lifecycle | Treasury | Vendor Bill | Check Voucher | Bank account, payee, cheque number | Yes | None | As Payment Voucher, with cheque release / clearing / stale states | EWT as Payment Voucher | Check register, outstanding cheques, Cash Disbursements Book | Payment Voucher | Cancel | Posting event, journal | **Future Priority** — posting function exists; never produced a journal |
 | Withholding Remittance | Remit withheld EWT to the BIR | Compliance officer | Payment Vouchers, Vendor Bills | Remittance record | Posted EWT in the period | Yes | None | DR EWT Payable / CR Cash | Settles the EWT liability; feeds 1601EQ | Tax ledger, GL, 1601EQ working paper | 1601EQ, QAP | **Void** | Posting event, journal | **Implemented** |
@@ -687,7 +691,11 @@ account, which the Vendor Bill later debits, so the two documents net to zero.
 
 **Required validations.** Item, warehouse and quantity per line; an open fiscal
 period; the governed inventory-control and purchase-clearing accounts configured.
-Account determination is configuration, not a hard-coded account code.
+Each receipt line must belong to the exact Purchase Order, company and item named
+by its header. Confirmed quantity across all live receipts may not exceed that
+order-line quantity. The order line is locked while this is decided, so two
+concurrent confirmations cannot each consume the same remainder. Account
+determination is configuration, not a hard-coded account code.
 
 **Posting behaviour.** DR Inventory Control / CR Purchase Clearing. Receipt posts
 while the source is still in its draft state so the source lock is taken
@@ -704,11 +712,16 @@ symmetric with consumption.
 **GL and subledger behaviour.** A balanced journal; no payable yet, because the
 supplier has not billed.
 
-**What happens if cancelled or reversed.** **There is no governed reversal for a
-received Receiving Report.** A `cancelled` status exists on the table, but no
-function reverses the journal or removes the stock. This is the same class of gap
-that Delivery Receipt carried until Backlog 18c closed it, and is recorded in the
-Alignment Notes.
+**What happens if cancelled or reversed.** The user supplies a governed reason.
+The operation is refused while any live Vendor Bill claims the receipt, a draft
+included, or when its exact quantity/value or source layer is no longer fully
+available because stock moved onward. Correcting the downstream issue restores
+its immutable allocation to the original layer. Cancellation then removes the
+exact historical receipt, appends a reversal inventory transaction, reverses the
+original journal through the shared reversal authority, records CAS evidence,
+moves the report to `cancelled`, and recomputes the Purchase Order header. This
+ordered contract applies to Weighted Average, FIFO and Specific Identification;
+a draft report cancels without stock or journal effect.
 
 **Reports changed.** Stock balances, movements, valuation, the inventory-to-control
 reconciliation, GL and trial balance.
@@ -739,6 +752,15 @@ the QAP alphalist and the Form 2307 certificates the company **issues**.
 
 **Inventory behaviour.** None when the goods already arrived. A bill for stockable
 items never received is an inventory increase in its own right.
+
+**Relationship and match behaviour.** Where the header names a Receiving Report,
+the bill must use the same company and supplier, the receipt must be `received`,
+and live billed quantity per item may not exceed live received quantity. Partial
+and second bills are supported. A bill with no `rr_id` remains valid for an
+expense/service or intentional bill-without-receipt flow. This is a **quantity
+match only**. There is no governed price tolerance, variance account,
+approval/reason policy, or capitalization-versus-expense rule, so price variance
+is recorded as a separate product decision rather than computed here.
 
 **What happens if cancelled / voided.** Journal, input VAT and accrued EWT are all
 reversed; a reason is mandatory and becomes CAS void evidence.
@@ -845,7 +867,7 @@ Purchase Request  (Future)
       ↓
 Purchase Order
       ↓
-Receiving Report ──────────────► (no governed reversal — see Alignment Notes)
+Receiving Report ──────────────► Receipt Cancellation (terminal)
       ↓
 Vendor Bill ───────────────────► Bill Void (terminal)
       ↓
@@ -871,14 +893,15 @@ Cash Purchase  ────────────────► Void
 | Scenario | Behaviour | Status |
 | --- | --- | --- |
 | Partial receipt | Receive fewer units than ordered; the PO stays partially received | **Implemented** |
-| Over receipt | Nothing prevents receiving more than ordered | **Future** — over-receipt control absent |
-| Three-way match | PO ↔ Receipt ↔ Bill quantity and price agreement is not enforced | **Future** |
-| Receiving correction | A received report cannot be reversed | **Future** — see Alignment Notes |
-| Partial billing | Bill some received lines and not others | **Implemented** |
+| Over receipt | Exact confirmed quantity may not exceed the Purchase Order line; no tolerance exists | **Implemented** |
+| Three-way quantity match | PO line ↔ live receipts and received item ↔ live bills are governed at the relationship grain the schema supports | **Implemented** |
+| Price variance | No tolerance/account/approval or accounting-treatment policy exists | **Product decision required** — Backlog 18l |
+| Receiving correction | Cancel draft or received RR with a governed reason; live bills and consumed source layers block until corrected; exact history is retained for all three methods | **Implemented and exercised locally** |
+| Partial billing | Bill some received quantity and then a valid remainder on a second bill | **Implemented** |
 | Bill without receipt | A bill for goods never received increases inventory itself | **Implemented** |
 | Advance payment to supplier | No supplier-advance or prepayment document exists | **Future** |
 | Voided bill | Reverses journal, input VAT and accrued EWT | **Implemented** |
-| Returned goods | Purchase Return ships stock back and reduces the payable | **Implemented** — never exercised on real data |
+| Returned goods | Purchase Return ships the exact receipt cost/identity and posts against Accounts Payable | **Implemented and exercised locally** |
 | Short payment | Apply less than the bill; the balance stays open | **Implemented** |
 | Overpayment | No unapplied-cash mechanism for suppliers | **Future** |
 | Credit application | Apply a vendor credit against an open bill; reversible | **Implemented** |
@@ -919,17 +942,20 @@ QAP alphalist · Form 2307 issued.
 
 ## Pilot Status
 
-**Implemented.** Purchase Order · Receiving Report with GL posting · Vendor Bill
-and its void · Cash Purchase · Vendor Credit · Purchase Return · Payment Voucher ·
-Withholding Remittance · AP position and settlement monitoring.
+**Implemented.** Purchase Order · Receiving Report with GL posting and governed
+three-method cancellation · exact over-receipt and receipt-linked over-billing
+control · Vendor Bill and its void · Cash Purchase · Vendor Credit · exact-cost
+Purchase Return · Payment Voucher · Withholding Remittance · AP position and
+settlement monitoring.
 
-**Remaining work.** Three-way match · over-receipt control · a governed
-Receiving Report reversal.
+**Remaining work.** Governed price-variance policy/match · supplier-debit
+integration · Check Voucher · broad Product-DoD and operated evidence.
 
-**Pilot blockers.** Three-way match and over-receipt control are absent, so a
-receipt that disagrees with its order or its bill is not detected. A received
-Receiving Report cannot be corrected. No Purchasing workflow yet meets the
-Product Definition of Done.
+**Pilot blockers.** Quantity matching, ordered receipt correction and all three
+costing methods are locally proven. A supplier price that differs from its
+order/receipt still has no governed tolerance or variance treatment; hosted,
+browser/UAT and module evidence are absent. The current Purchasing flow is
+therefore exercised, not certified or pilot-ready.
 
 **Future enhancements.** Purchase Request · supplier advances and unapplied cash ·
 overpayment handling · landed cost.
@@ -992,7 +1018,7 @@ Item and Warehouse Setup  (Implemented — costing method chosen per item)
         Delivery Cancellation (in)   Invoice Void (in)
                               ↓
                     Costing and Valuation
-                    (weighted average — proven; FIFO / specific ID — unproven)
+                    (Weighted Average / FIFO / Specific ID — locally proven)
                               ↓
               Inventory-to-Control Reconciliation  (Implemented, at 0.00)
                               ↓
@@ -1000,8 +1026,7 @@ Item and Warehouse Setup  (Implemented — costing method chosen per item)
                               ↓
                     Financial Statements
 
-  * Goods Issue has a posting function and a registered source type but has
-    never been exercised on real data.
+  * Every proof in this section is local; no hosted or pilot operation is claimed.
 ```
 
 ## Business Process Matrix
@@ -1009,15 +1034,15 @@ Item and Warehouse Setup  (Implemented — costing method chosen per item)
 | Step | Business Purpose | Primary User | Source Documents | Documents Produced | Validations | Approval Required | Inventory Impact | Accounting Impact | Tax Impact | Reports Updated | Related Documents | Correction Path | Audit Trail | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Item / Warehouse setup | Define what is stocked, where, and how it is costed | Master-data steward | — | Item, Warehouse | Costing method; inventory, COGS and variance accounts | Governed maintenance | None | None | None | Master-data review | All inventory documents | Governed edit with change log | Change log | **Implemented** |
-| Receiving (inbound) | Take goods into stock | Receiving clerk | Purchase Order | Receiving Report | Warehouse, quantity, open period | No | **Increase** at receipt cost | DR Inventory / CR Purchase Clearing | None | Stock balances, movements, valuation, GL | Vendor Bill | **No governed reversal** | Posting event, inventory transaction | **Implemented** |
+| Receiving (inbound) | Take goods into stock | Receiving clerk | Purchase Order | Receiving Report | Warehouse, quantity within the exact PO line, open period; serial/lot identity where required | No | **Increase** at receipt cost | DR Inventory / CR Purchase Clearing | None | Stock balances, movements, valuation, GL | Vendor Bill | Governed whole cancellation after billing/downstream correction; exact historical source removal | Posting event, reversal, inventory transaction, CAS evidence | **Implemented and exercised for all three methods** |
 | Issue (outbound, sale) | Release goods to a customer | Warehouse | Sales Order | Delivery Receipt / Sales Invoice / Cash Sale | Sufficient stock; warehouse per line | No | **Decrease** at governed cost | DR Clearing or COGS / CR Inventory | None at delivery; tax at invoicing | Stock balances, movements, valuation, GL | Module 1 documents | Cancellation, void, or Customer Return | Posting event, inventory transaction | **Implemented** |
-| Goods Issue (internal) | Consume stock internally | Inventory controller | — | Goods Issue | Sufficient stock; expense account | Yes | **Decrease** at cost | DR Expense / CR Inventory | None | Stock balances, movements, GL | — | Reversal not exercised | Posting event | **Implemented** — never exercised |
-| Transfer | Move stock between warehouses | Warehouse | — | Stock Transfer | Stock in the source warehouse; destination warehouse | Yes | Decrease at source, increase at destination | Value-neutral within inventory, or through an in-transit account | None | Stock balances, movements | Inter-Branch Transfer | Reversal not exercised | Posting event | **Implemented** |
+| Goods Issue (internal) | Consume stock internally | Inventory controller | — | Goods Issue | Sufficient stock; expense account; identity for Specific ID | Yes | **Decrease** at authoritative cost | DR Expense / CR Inventory | None | Stock balances, movements, GL | — | Historical allocation evidence retained | Posting event, inventory allocation | **Implemented and exercised locally** |
+| Transfer | Move stock between warehouses | Warehouse | — | Stock Transfer | Stock in source; destination warehouse; identity where applicable | Yes | Decrease at source, increase at destination with cost/lineage preserved | Company-wide value-neutral inventory movement | None | Stock balances, movements | Inter-Branch Transfer | Historical source/destination lineage retained | Posting event, inventory allocations | **Implemented and exercised locally** |
 | Adjustment | Write stock up or down for a known reason | Inventory controller | — | Stock Adjustment | Reason code; item; warehouse; open period | Yes | Increase or decrease | DR or CR Inventory against the variance account | None | Stock balances, movements, valuation, GL | Physical Count | Reverse by opposite adjustment | Posting event | **Implemented** |
 | Physical Count | Reconcile the shelf to the book | Inventory controller + Accountant | Count sheet | Physical Count | Counted quantity per item per warehouse; open period | Yes | Posts the **variance** only | DR or CR Inventory / Inventory Variance | None | Stock balances, valuation, GL, variance analysis | Stock Adjustment | Recount and re-post | Posting event | **Implemented** |
-| Returns (in and out) | Put stock back or send it back | Warehouse | Credit Memo / Purchase Return | — | Warehouse named on the returning line | Yes | Increase (customer return) or decrease (purchase return) | Mirrors the original cost movement | Mirrors the original tax | Stock balances, movements, GL, tax ledger | Modules 1 and 2 | — | Posting event | **Implemented** |
+| Returns (in and out) | Put stock back or send it back | Warehouse | Credit Memo / Purchase Return | — | Original outbound or receipt evidence; warehouse; identity where applicable | Yes | Increase at historical outbound cost or decrease at exact receipt cost | Mirrors original inventory cost through the Posting Engine | Tax remains owned by the source document policy | Stock balances, movements, GL, tax ledger | Modules 1 and 2 | Correct downstream claims first | Posting event, inventory allocation, journal | **Implemented and exercised locally** |
 | Valuation | State what the stock is worth | Accountant | All inventory movements | — (read-only) | — | No | None | None | None | Inventory valuation, control reconciliation | — | — | Derived from posted data | **Implemented** |
-| Costing | Decide the cost of each unit that leaves | System | Item costing method | — | Method set per item | No | Determines the value of every outflow | Determines COGS | None | Valuation | — | — | Inventory transactions | **Implemented** (weighted average); **Planned** (FIFO / specific ID — untested) |
+| Costing | Decide the cost of each unit that leaves | System | Item costing method | — | Method set per item; method changes fail closed after activity; Specific ID requires serial/lot | No | Determines every outflow value | Supplies cost to the one Posting Engine | None | Valuation and reconciliation | Source receipt/outbound evidence | Exact allocation reversal/return | Inventory transactions, layers and immutable allocations | **Built, reachable, exercised and proven locally for all three methods** |
 | Period Close | Freeze inventory movement for a period | Accountant | — | — | Period unlocked | Yes | Blocks further posting into the period | Blocks further posting | None | All inventory reports as of the period | — | Governed reopen | Period lock record | **Implemented** |
 
 ## Detailed Step Discussion
@@ -1031,12 +1056,21 @@ recognises weighted average, FIFO and specific identification. Every inflow and
 outflow uses **one shared costing path** — there is no second costing
 implementation anywhere in the product.
 
-- **Weighted average** recomputes the unit cost after every movement and is the
-  method exercised end to end today.
-- **FIFO and specific identification** consume cost layers. Cost layers are
-  created only for these methods, symmetric with consumption. **The layer path
-  has never been exercised on real data**, so FIFO is best described as built and
-  unproven.
+- **Weighted Average** recomputes the carrying rate after an inflow; each issue
+  stamps its historical rate, so a later receipt cannot reprice its reversal or
+  customer return.
+- **FIFO** consumes layers in admitted order and stores each exact allocation.
+  Void/return restores those same source layers; receipt cancellation requires
+  them to be fully available.
+- **Specific Identification** requires serial or lot tracking. The user selects
+  an available identity, while the database validates company, item, warehouse,
+  quantity and availability and obtains cost from that identity's source layer.
+  Reversal restores the same identity, never a substitute.
+
+Cost-layer rows and immutable `inventory_layer_allocations` are now production
+evidence. Locked layer selection prevents concurrent over-consumption, including
+two writers racing for one serial. A costing-method/default change fails closed
+after stock, movements or layers exist; posted history is never reinterpreted.
 
 **Posting behaviour.** Costing produces the value the Posting Engine writes; it
 never writes the ledger itself.
@@ -1071,11 +1105,10 @@ the opposite direction; nothing is edited.
 
 The inventory subledger must equal its control account. This is one of the
 critical reconciliations the product tracks, and it is **evidenced at ₱0.00 in
-every stock-holding company**. The invariants proven are: subledger equals control
-account; every confirmed receipt carrying value is posted; every receipt journal
-balances; receipt journals touch only the two governed accounts; no
-weighted-average item retains an unconsumable cost layer; and every stock-holding
-company has both governed account keys configured.
+every stock-holding company**. The method-level reconciliation also requires
+each layered stock position to equal its active layer quantity and value.
+Production tests prove receipts, issues, transfers, adjustments, counts, returns
+and corrections preserve those equations and balanced journals.
 
 **Account determination is configuration, not a hard-coded code.** Account codes
 are not interchangeable across charts — one company's 1200 is Accounts
@@ -1111,6 +1144,7 @@ Financial Statements  (Inventory on the balance sheet; COGS on the income
 
 ```
 Purchase Order ──► Receiving Report ──► Vendor Bill
+                          ├──► Receipt Cancellation
                           ↓
                    Purchase Return
 
@@ -1132,13 +1166,15 @@ Goods Issue  (internal consumption)
 | Insufficient stock on an outbound document | Posting is refused with the on-hand and requested quantities named | **Implemented** |
 | Negative stock policy | A per-warehouse or per-item negative-stock policy is defined in master data | **Implemented** (policy master); enforcement beyond the sufficiency check **Planned** |
 | Delivery cancelled after stock left | Goods are restocked at the cost that left | **Implemented** |
+| Receipt cancelled before billing/onward movement | Exact received quantity/value/layer is removed; journal and GRNI reverse; PO reopens | **Implemented for all three methods** |
+| Receipt cancelled after a live bill or stock movement | Cancellation is refused until the bill and downstream allocation are corrected and the exact source is fully available | **Implemented** |
 | Invoice voided after stock left | Goods are restocked | **Implemented** |
 | Customer returns goods | Restocked at cost through a credit memo carrying a warehouse | **Implemented** |
-| Goods returned to supplier | Stock ships back on the Purchase Return | **Implemented** — never exercised |
+| Goods returned to supplier | Exact source receipt cost/layer/identity ships on the Purchase Return | **Implemented and exercised locally** |
 | Count variance | Posted as a variance against the Inventory Variance account | **Implemented** |
 | Backdated movement changing earlier cost | Costing is applied in posting order; no governed replay exists | **Future** — IA-5/ECC frozen |
-| FIFO consumption across layers | Layer consumption is built | **Planned** — never exercised on real data |
-| Lot and serial tracking | A lot/serial field exists on delivery lines | **Future** — no lot lifecycle |
+| FIFO consumption across layers | Exact allocations persist and restore on reversal/return | **Implemented and exercised locally** |
+| Lot and serial tracking | Specific-ID receipts create identity layers; every covered outbound/transfer/return path validates and carries the selected identity | **Implemented for inventory costing** |
 | Landed cost | Freight and duty capitalised into item cost | **Future** |
 | Stock reservation against an order | Available-to-promise reduction | **Future** |
 
@@ -1174,20 +1210,23 @@ Trial Balance · Financial Statements (Inventory and Cost of Goods Sold).
 
 ## Pilot Status
 
-**Implemented.** Receiving · outbound issue through all three sales entry points ·
-transfer · adjustment · physical count · returns in both directions ·
-weighted-average costing · inventory-to-control reconciliation at ₱0.00 · period
-close.
+**Implemented.** Receiving · outbound issue through sales and Goods Issue entry
+points · transfer · adjustment · physical count · returns in both directions ·
+Weighted Average, FIFO and Specific Identification · exact historical correction
+· inventory/layer/control reconciliation at ₱0.00 · period close.
 
-**Remaining work.** Exercise the FIFO and specific-identification layer path on
-real data. Exercise Goods Issue.
+**Remaining work.** Full document conversion, broad module Product-DoD,
+browser/UAT, hosted parity and certification evidence. Landed cost remains a
+separate future capability.
 
-**Pilot blockers.** A received Receiving Report cannot be reversed. FIFO is
-unproven, so a pilot client must use weighted average.
+**Pilot blockers.** All three costing methods are built, reachable, exercised
+and proven locally for the intended current lifecycle. This is not module
+certification or pilot readiness: hosted parity, browser/UAT, operated evidence
+and the broader sales/purchasing workflows remain absent.
 
-**Future enhancements.** Lot and serial lifecycle · landed cost · stock
-reservation · negative-stock enforcement beyond the sufficiency check ·
-backdated-movement cost replay.
+**Future enhancements.** Landed cost · stock reservation · negative-stock
+enforcement beyond the sufficiency check · backdated-movement economic replay
+through separately authorised IA-5/ECC work.
 
 **Excluded scope.** Manufacturing, work orders and bills of material. Governed
 economic-chronology costing (IA-5/ECC) is frozen and carries no readiness weight.
@@ -2289,9 +2328,9 @@ any schedule whose basis is an excluded capability.
 
 # 9. Repository / Documentation Alignment Notes
 
-Contradictions and gaps found **while writing this blueprint**, between what the
-repository does today and what the governing documentation says. **Nothing here
-was fixed.** This section records them for a later, separately scoped decision.
+Contradictions and gaps found **while writing or reconciling this blueprint**,
+between what the repository does today and what the governing documentation
+says. Rows retain the discovery and record when a later package closes it.
 
 Each row states the current implementation, what this blueprint expected, a
 recommendation, and a priority. Priority is this document's assessment only and
@@ -2299,22 +2338,22 @@ does **not** alter any backlog priority.
 
 | # | Subject | Current implementation | Blueprint expectation | Recommendation | Priority |
 | --- | --- | --- | --- | --- | --- |
-| 1 | Delivery Receipt cancellation | Implemented 2026-08-07 (Backlog 18c): a posted delivery reverses its journal and restocks the goods | The Product Architecture §3.13 Sales row still names *"Delivery Receipt has no cancellation/reversal path"* as a current blocker | Refresh the Sales row of the module operating matrix when the Product Architecture is next revised | Low — documentation lag only |
+| 1 | Delivery Receipt cancellation | Implemented 2026-08-07 (Backlog 18c): a posted delivery reverses its journal and restocks the goods | Product Architecture now records the governed correction path | Preserve the committed lifecycle regression | **Reconciled 2026-08-08** |
 | 2 | Filing artifacts | Six forms generate, reconcile, finalise and export through one governed chain | The Product Architecture §3.13 **Compliance master-data row** states *"The central Tax Engine exists; the filing artifacts do not."* This contradicts the Compliance maturity row **in the same table**, which describes the filing artifact engine as existing | Correct the master-data cell; the two cells cannot both be true | **Medium** — an internal contradiction inside one table is a trap for a reader who stops at the first cell |
 | 3 | Period close | Period close, year-end rollforward and comparatives shipped 2026-08-03 | The Product Architecture §3.13 Sales row still names *"Period close absent (nothing rolls profit into retained earnings)"* as a current blocker | Refresh with note 1 | Low — documentation lag only |
 | 4 | Posting entry points exercised | `AI/AI_STATE.md` reports 15 of 24 exercised | The Product Architecture §4.0 engine register reports *"12 have ever produced a journal"*, measured 2026-08-02 | None required — the register cell is explicitly dated and `AI_STATE` is the single status authority. Recorded only so a reader is not misled by the older figure | Low — by design |
-| 5 | **Receiving Report has no governed reversal** | `fn_confirm_receiving_report` and `fn_post_receiving_report` exist; **no void, cancel or reverse function exists** for a received report. A `cancelled` status exists on the table with nothing to drive it | A received report that increased stock and posted a journal should have a correction path, exactly as Delivery Receipt now does | Consider a backlog item mirroring Backlog 18c for the purchasing side. **A pilot warehouse will mis-receive as readily as it will mis-ship.** Not recorded in the backlog today | **High** — a real operational gap, not a documentation gap |
+| 5 | **Receiving Report had no governed reversal** | **Closed 2026-08-08 (PXL-AUD-077 / Backlog 18k).** `fn_void_receiving_report` and the Receiving Reports action reverse a safe receipt after live bills and downstream allocations are corrected | A received report that increased stock and posted a journal needs a governed, reachable correction path | Preserve exact source-layer dependency ordering for all three costing methods | **Closed and proven locally** |
 | 6 | Documentation index folder list | `docs/PXL/` contains folders `00`–`07` and `10`–`13`. **`08. Banking and Treasury/` and `09. Fixed Assets/` do not exist** | The Documentation Index §4 lists both folders with authority and contents | Either create the folders when those modules start, or mark the rows as reserved | Low — navigation only |
 | 7 | Stock reservation | No reservation table, function or available-to-promise reduction exists | An approved Sales Order does not ring-fence stock; two orders may promise the same unit | Record as a backlog item if pilot clients take orders ahead of stock | Medium |
 | 8 | AR write-off | No write-off function or document exists | An uncollectible receivable can only be removed by manual journal, leaving the customer subledger and control account to be reconciled by hand | Record as a backlog item | Medium |
 | 9 | Advance payments and unapplied cash | No customer-advance, supplier-advance or unapplied-cash mechanism exists on either side | Overpayment and deposit-taking are ordinary SME events | Record as a backlog item; it affects both Module 1 and Module 2 | Medium |
-| 10 | FIFO and specific-identification costing | Cost-layer creation and consumption are built; **the layer path has never been exercised on real data** | A costing method offered in master data should be proven before a client selects it | Either prove the layer path or restrict item costing to weighted average for the pilot | **High** — a client choosing FIFO today would be running unproven code |
-| 11 | Goods Issue | Posting function and registered source type exist; never exercised | Internal consumption of stock is an ordinary inventory event | Prove it or mark the surface as deferred | Medium |
-| 12 | Purchase Return | Table, save and ship functions and a screen exist; never exercised on real data | Returning goods to a supplier is an ordinary purchasing event | Prove it before pilot | Medium |
+| 10 | FIFO and Specific Identification costing | Exact allocations, identity selection, reversal, return, receipt cancellation ordering and concurrent admission are exercised by tests `135`–`137` and the committed inventory lifecycle | Every offered method must remain correct through its intended correction path | Retain the three-method authority and its lifecycle gate | **Closed locally; not certification** |
+| 11 | Goods Issue | Real public posting path consumes FIFO layers, stamps exact line cost and posts DR Expense / CR Inventory | Internal consumption of stock is an ordinary inventory event | Preserve test `136` | **Closed locally** |
+| 12 | Purchase Return | Real save → ship → complete path removes the selected receipt cost and posts DR AP / CR Inventory Control | Returning goods to a supplier is an ordinary purchasing event | Preserve tests `031` and `137` | **Closed locally** |
 | 13 | Close readiness and unposted documents | Close readiness cannot see unposted documents (Backlog 18h) | A period should not close while a draft document dated in it still exists | Already recorded as Backlog 18h; noted here for completeness | Recorded |
-| 14 | Cross-transaction defect class | Two defects (PXL-AUD-074, PXL-AUD-075) were invisible to the whole pgTAP suite because it runs inside one transaction | Any guard with a `same_txn` escape is untestable by pgTAP alone | `npm run verify:delivery-receipt-lifecycle` is the first cross-transaction lane. Consider whether other posting documents need the same treatment | **High** — a whole class of defect is currently outside the test strategy |
+| 14 | Cross-transaction defect class | Two defects (PXL-AUD-074, PXL-AUD-075) were invisible to the whole pgTAP suite because it runs inside one transaction | Any guard with a `same_txn` escape is untestable by pgTAP alone | Delivery, posting, purchasing and inventory-costing committed lifecycles now exercise those boundaries; add future lanes by business process | **Mitigated, not certified** |
 
-**No other contradiction was found.** In particular, the compliance chain, the
+**No other contradiction was found in the 2026-08-08 reconciliation.** In particular, the compliance chain, the
 posting and kernel model, the engine taxonomy, the excluded-scope ruling
 (PAD-015) and the ranked future priorities (Banking & Treasury, then Fixed
 Assets) are consistent across the Product Architecture, the Delivery Plan,

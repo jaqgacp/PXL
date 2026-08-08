@@ -19,7 +19,7 @@ SELECT plan(11);
 SELECT is(
   (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public'
-      AND p.proname IN ('fn_post_sales_invoice','fn_post_receipt','fn_save_cash_sale',
+      AND p.proname IN ('fn_post_sales_invoice_costing_legacy_20260808','fn_post_receipt','fn_save_cash_sale_costing_legacy_20260808',
                         'fn_post_credit_memo_vat_lump_impl','fn_post_debit_memo_vat_lump_impl')
       AND p.prosrc ~ 'fn_resolve_posting_account'),
   5, 'all 5 Sales writers resolve accounts through fn_resolve_posting_account');        -- 1
@@ -27,7 +27,7 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public'
-      AND p.proname IN ('fn_post_sales_invoice','fn_post_receipt','fn_save_cash_sale',
+      AND p.proname IN ('fn_post_sales_invoice_costing_legacy_20260808','fn_post_receipt','fn_save_cash_sale_costing_legacy_20260808',
                         'fn_post_credit_memo_vat_lump_impl','fn_post_debit_memo_vat_lump_impl')
       AND p.prosrc ~* 'company_accounting_config'),
   0, 'no Sales writer reads company_accounting_config for account resolution');          -- 2
@@ -113,7 +113,7 @@ SELECT ok(
                 OR p.prosrc ~ $re$fn_create_posted_journal_entry\([^;]*'system'$re$)
      FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
     WHERE n.nspname='public'
-      AND p.proname IN ('fn_post_sales_invoice','fn_post_receipt','fn_save_cash_sale',
+      AND p.proname IN ('fn_post_sales_invoice_costing_legacy_20260808','fn_post_receipt','fn_save_cash_sale_costing_legacy_20260808',
                         'fn_post_credit_memo_vat_lump_impl','fn_post_debit_memo_vat_lump_impl')),
   'every Sales writer populates the posting_origin metadata');                           -- 11
 

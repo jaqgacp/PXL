@@ -31,10 +31,11 @@ type CPLine = {
   input_vat_amount: number; total_amount: number; expense_account_id: string
   ewt_atc_code_id: string; ewt_tax_base: number; ewt_amount: number
   ewt_income_nature: string; ewt_variance_reason: string
+  lot_number: string; serial_number: string
 }
 
 type SupplierRef = { id: string; registered_name: string; tin: string; is_subject_to_ewt: boolean; default_atc_code_id: string | null }
-type ItemRef = { id: string; item_code: string; description: string; item_type: 'inventory_item' | 'service' | 'non_inventory'; uom_id: string; uom_label: string; standard_cost: number; default_purchase_vat_id: string | null; purchase_account_id: string | null; inventory_account_id: string | null }
+type ItemRef = { id: string; item_code: string; description: string; item_type: 'inventory_item' | 'service' | 'non_inventory'; uom_id: string; uom_label: string; standard_cost: number; default_purchase_vat_id: string | null; purchase_account_id: string | null; inventory_account_id: string | null; costing_method: string | null; specific_id_tracking: string | null }
 type VATRef = { id: string; vat_code: string; description: string; vat_classification: 'regular' | 'zero_rated' | 'exempt'; rate: number }
 type COARef = { id: string; account_code: string; account_name: string }
 type ATCCode = { id: string; code: string; description: string; rate: number }
@@ -52,6 +53,7 @@ const newLine = (): CPLine => ({
   input_vat_amount: 0, total_amount: 0, expense_account_id: '',
   ewt_atc_code_id: '', ewt_tax_base: 0, ewt_amount: 0,
   ewt_income_nature: '', ewt_variance_reason: '',
+  lot_number: '', serial_number: '',
 })
 
 const computeLine = (l: CPLine, atcCodes: ATCCode[] = []): CPLine => {
@@ -112,7 +114,7 @@ export default function CashPurchasesPage() {
   useEffect(() => {
     if (!companyId) return
     supabase.from('suppliers').select('id,registered_name,tin,is_subject_to_ewt,default_atc_code_id').eq('company_id', companyId).eq('is_active', true).order('registered_name').then(({ data }) => setSuppliers(data as SupplierRef[] || []))
-    supabase.from('items').select('id,item_code,description,item_type,uom_id,uom:units_of_measure(uom_code),standard_cost,default_purchase_vat_id,purchase_account_id:purchase_expense_account_id,inventory_account_id').eq('company_id', companyId).eq('is_active', true).order('description').then(({ data, error }) => { setItems((data || []).map((i: any) => ({ ...i, uom_label: i.uom?.uom_code || '' }))); if (error) setError(`Unable to load item picker: ${error.message}`) })
+    supabase.from('items').select('id,item_code,description,item_type,uom_id,uom:units_of_measure(uom_code),standard_cost,default_purchase_vat_id,purchase_account_id:purchase_expense_account_id,inventory_account_id,costing_method,specific_id_tracking').eq('company_id', companyId).eq('is_active', true).order('description').then(({ data, error }) => { setItems((data || []).map((i: any) => ({ ...i, uom_label: i.uom?.uom_code || '' }))); if (error) setError(`Unable to load item picker: ${error.message}`) })
     supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code').then(({ data }) => setAtcCodes(data as ATCCode[] || []))
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['asset']).eq('is_active', true).ilike('account_name', '%cash%').order('account_code').then(({ data }) => setCashAccounts(data as COARef[] || []))
     supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).in('account_type', ['asset','expense','cost_of_goods']).eq('is_active', true).eq('is_postable', true).order('account_code').then(({ data }) => setExpenseAccounts(data as COARef[] || []))
@@ -159,6 +161,7 @@ export default function CashPurchasesPage() {
         ewt_amount: Number(l.ewt_amount || 0),
         ewt_income_nature: l.ewt_income_nature || '',
         ewt_variance_reason: l.ewt_variance_reason || '',
+        lot_number: l.lot_number || '', serial_number: l.serial_number || '',
       } as CPLine, atcCodes)
     }) as CPLine[] || [newLine()]))
     setError('')
@@ -179,6 +182,7 @@ export default function CashPurchasesPage() {
         ewt_amount: Number(l.ewt_amount || 0),
         ewt_income_nature: l.ewt_income_nature || '',
         ewt_variance_reason: l.ewt_variance_reason || '',
+        lot_number: l.lot_number || '', serial_number: l.serial_number || '',
       } as CPLine, atcCodes)
     }) as CPLine[] || []))
     setMode('view')
@@ -211,6 +215,7 @@ export default function CashPurchasesPage() {
       vat_classification: vatRef?.vat_classification || 'regular',
       vat_rate: vatRef?.rate ?? 0,
       expense_account_id: (item.item_type === 'inventory_item' ? item.inventory_account_id : item.purchase_account_id) || '',
+      lot_number: '', serial_number: '',
       ewt_atc_code_id: lines[idx]?.ewt_atc_code_id || (suppliers.find(s => s.id === editCP?.supplier_id && s.is_subject_to_ewt)?.default_atc_code_id || ''),
     })
   }
@@ -321,6 +326,15 @@ export default function CashPurchasesPage() {
       return
     }
     for (const line of lines.filter(l => l.description.trim())) {
+      const item = items.find(candidate => candidate.id === line.item_id)
+      if (item?.costing_method === 'specific_identification' && !(line.serial_number || line.lot_number)) {
+        setError(`Enter the ${item.specific_id_tracking === 'serial' ? 'serial number' : 'lot number'} for ${line.description}.`)
+        return
+      }
+      if (item?.costing_method === 'specific_identification' && item.specific_id_tracking === 'serial' && line.quantity !== 1) {
+        setError(`Serialized inventory must be received one unit per line (${line.description}).`)
+        return
+      }
       if (line.ewt_amount > 0.005 && !line.ewt_atc_code_id) {
         setError('ATC code is required when EWT is withheld.')
         return
@@ -357,6 +371,7 @@ export default function CashPurchasesPage() {
           ewt_amount: l.ewt_amount || 0,
           ewt_income_nature: l.ewt_income_nature || null,
           ewt_variance_reason: l.ewt_variance_reason || null,
+          lot_number: l.lot_number || null, serial_number: l.serial_number || null,
         })),
       })
       if (result.error) throw new Error(result.error.message)
@@ -436,7 +451,7 @@ export default function CashPurchasesPage() {
           {!readOnly && <button onClick={() => setLines(l => [...l, newLine()])} className="text-xs text-blue-600 hover:text-blue-800 font-medium">+ Add Line</button>}
         </div>
         <div className="overflow-x-auto">
-        <table className="pxl-data-grid w-full min-w-[1180px] text-xs">
+        <table className="pxl-data-grid w-full min-w-[1320px] text-xs">
           <thead>
             <tr className="border-b border-gray-200 text-gray-500">
               <th className="text-left pb-2 font-medium w-36">Item</th>
@@ -445,6 +460,7 @@ export default function CashPurchasesPage() {
               <th className="text-right pb-2 font-medium w-28">Unit Price</th>
               <th className="text-left pb-2 font-medium w-32">VAT</th>
               <th className="text-left pb-2 font-medium w-36">Expense Account</th>
+              <th className="text-left pb-2 font-medium w-36">Lot / Serial</th>
               <th className="text-right pb-2 font-medium w-24">Net</th>
               <th className="text-right pb-2 font-medium w-24">VAT Amt</th>
               <th className="text-left pb-2 font-medium w-32">EWT ATC</th>
@@ -463,6 +479,10 @@ export default function CashPurchasesPage() {
                 <td className="py-1.5 pr-1"><input type="number" value={l.unit_price} disabled={readOnly} onChange={e => updateLine(i, { unit_price: +e.target.value })} className="border border-gray-300 rounded px-1.5 py-1 text-xs w-28 text-right focus:outline-none focus:ring-1 focus:ring-gray-900" min={0} step="any" /></td>
                 <td className="py-1.5 pr-1"><select value={l.vat_code_id} disabled={readOnly} onChange={e => selectVAT(i, e.target.value)} className="border border-gray-300 rounded px-1.5 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-gray-900"><option value="">—</option>{vatCodes.map(v => <option key={v.id} value={v.id}>{v.vat_code}</option>)}</select></td>
                 <td className="py-1.5 pr-1"><select value={l.expense_account_id} disabled={readOnly} onChange={e => updateLine(i, { expense_account_id: e.target.value })} className="border border-gray-300 rounded px-1.5 py-1 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-gray-900"><option value="">—</option>{expenseAccounts.map(a => <option key={a.id} value={a.id}>{a.account_code}</option>)}</select></td>
+                <td className="py-1.5 pr-1">{items.find(item => item.id === l.item_id)?.item_type === 'inventory_item' ? <input value={l.serial_number || l.lot_number} disabled={readOnly} onChange={e => {
+                  const item = items.find(candidate => candidate.id === l.item_id)
+                  updateLine(i, item?.specific_id_tracking === 'serial' ? { serial_number: e.target.value, lot_number: '' } : { lot_number: e.target.value, serial_number: '' })
+                }} className="border border-gray-300 rounded px-1.5 py-1 text-xs w-36 focus:outline-none focus:ring-1 focus:ring-gray-900" placeholder={items.find(item => item.id === l.item_id)?.specific_id_tracking === 'serial' ? 'Serial number' : 'Lot number'} /> : <span className="text-gray-400">—</span>}</td>
                 <td className="py-1.5 pr-1 text-right font-mono">{fmt(l.net_amount)}</td>
                 <td className="py-1.5 pr-1 text-right font-mono text-blue-600">{fmt(l.input_vat_amount)}</td>
                 <td className="py-1.5 pr-1"><select value={l.ewt_atc_code_id} disabled={readOnly} onChange={e => selectEWT(i, e.target.value)} className="border border-gray-300 rounded px-1.5 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-gray-900"><option value="">—</option>{atcCodes.map(a => <option key={a.id} value={a.id}>{a.code}</option>)}</select></td>
@@ -486,7 +506,7 @@ export default function CashPurchasesPage() {
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-gray-300 font-semibold text-xs">
-              <td colSpan={6} className="pt-2 text-right text-gray-600 pr-2">Totals</td>
+              <td colSpan={7} className="pt-2 text-right text-gray-600 pr-2">Totals</td>
               <td className="pt-2 text-right font-mono">{fmt(totals.taxable)}</td>
               <td className="pt-2 text-right font-mono text-blue-600">{fmt(totals.vat)}</td>
               <td />

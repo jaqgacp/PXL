@@ -66,7 +66,7 @@ SELECT * FROM v_gl_writer WHERE prosrc ~* '(vat|ewt|cwt|withhold|tax)';
 SELECT set_eq(
   $$SELECT proname FROM v_tax_writer$$,
   $$VALUES
-     ('fn_post_sales_invoice'),
+     ('fn_post_sales_invoice_costing_legacy_20260808'),
      ('fn_post_vendor_bill'),
      ('fn_post_cash_purchase_source_locked_impl'),
      ('fn_post_check_voucher'),
@@ -79,11 +79,11 @@ SELECT set_eq(
      ('fn_post_debit_memo_vat_lump_impl'),
      ('fn_post_vendor_credit_source_locked_impl'),
      ('fn_post_vendor_credit_vat_lump_impl'),
-     ('fn_save_cash_sale'),
-     ('fn_void_sales_invoice_aud053_core'),
+     ('fn_save_cash_sale_costing_legacy_20260808'),
+     ('fn_void_sales_invoice_costing_legacy_20260808'),
      ('fn_void_vendor_bill'),
      ('fn_void_withholding_remittance'),
-     ('fn_bounce_receipt'),
+     ('fn_reverse_receipt_core'),
      ('fn_cancel_payment_voucher'),
      ('fn_cancel_check_voucher')$$,
   'the tax-aware posting-writer census is exactly the 20 censused writers');       -- 1
@@ -101,10 +101,15 @@ SELECT set_eq(
 -- year-end closing journal through the Accounting Kernel. Closing and reopening
 -- move revenue and expense balances to equity and touch no tax whatsoever, so
 -- the non-tax partition grows by one and the tax census above is unchanged.
+-- Backlog 18c adds fn_void_delivery_receipt, the mirror of fn_post_delivery_receipt:
+-- it reverses that delivery's journal and restocks the goods. A delivery moved no
+-- tax, so its cancellation cannot either, and the non-tax partition grows by one.
+-- The purchasing mirror, fn_void_receiving_report, joins on the same terms: a
+-- goods receipt computes no tax, so cancelling one cannot either.
 SELECT is(
   (SELECT count(*)::int FROM v_gl_writer)
     - (SELECT count(*)::int FROM v_tax_writer),
-  35, 'the remaining GL writers are provably not tax-aware (census partition complete)'); -- 2
+  38, 'the remaining GL writers are provably not tax-aware (census partition complete)'); -- 2
 
 SELECT is(
   (SELECT count(*)::int FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -163,10 +168,10 @@ SELECT set_eq(
      ('fn_save_sales_invoice_aud053_core'),
      ('fn_save_vendor_bill_core_20260718'),
      ('fn_save_cash_purchase_core_20260718'),
-     ('fn_save_credit_memo'),
+     ('fn_save_credit_memo_inventory_legacy_20260808'),
      ('fn_save_debit_memo'),
      ('fn_save_vendor_credit'),
-     ('fn_save_cash_sale'),
+     ('fn_save_cash_sale_costing_legacy_20260808'),
      ('fn_apply_vendor_bill_line_ewt_profile'),
      ('fn_apply_cash_purchase_line_ewt_profile'),
      ('fn_validate_payment_voucher_line_ewt'),
@@ -215,16 +220,17 @@ SELECT set_eq(
   $$VALUES ('fn_add_tax_detail'),('fn_add_percentage_tax_detail'),
            ('fn_rebuild_document_vat_details'),
            ('fn_post_check_voucher'),('fn_post_cash_purchase_source_locked_impl'),
-           ('fn_post_credit_memo_vat_lump_impl'),('fn_post_debit_memo_vat_lump_impl'),
-           ('fn_post_vendor_credit_vat_lump_impl'),('fn_save_cash_sale')$$,
-  'the tax-ledger writer census is exactly the nine censused functions');           -- 14
+           ('fn_post_debit_memo_vat_lump_impl'),
+           ('fn_post_vendor_credit_vat_lump_impl'),
+           ('fn_save_cash_sale_costing_legacy_20260808')$$,
+  'the tax-ledger writer census is exactly the eight direct persistence functions'); -- 14
 
 SELECT set_eq(
   $$SELECT p.proname::text FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
      WHERE n.nspname = 'public' AND p.prokind = 'f'
        AND p.prosrc ~ 'fn_reverse_tax_detail_entries'$$,
-  $$VALUES ('fn_void_sales_invoice_aud053_core'),('fn_void_vendor_bill'),
-           ('fn_bounce_receipt'),('fn_cancel_payment_voucher'),('fn_cancel_check_voucher')$$,
+  $$VALUES ('fn_void_sales_invoice_costing_legacy_20260808'),('fn_void_vendor_bill'),
+           ('fn_reverse_receipt_core'),('fn_cancel_payment_voucher'),('fn_cancel_check_voucher')$$,
   'tax-detail reversal has one implementation, consumed by exactly the five correction writers'); -- 15
 
 -- ── The Tax Engine exists, and there is exactly one of it ────────────────────

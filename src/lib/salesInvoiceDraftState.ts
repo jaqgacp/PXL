@@ -27,6 +27,9 @@ export type SalesInvoiceDraftLine = {
   unit_cost: number
   inventory_cost: number
   inventory_transaction_id: string
+  inventory_cost_layer_id: string
+  lot_number: string
+  serial_number: string
   remarks: string
   source_document_type: string
   source_line_id: string
@@ -52,6 +55,8 @@ export type SalesInvoiceItemRef = {
   item_type: 'inventory_item' | 'service' | 'non_inventory'
   inventory_account_id: string | null
   cogs_account_id: string | null
+  costing_method?: string | null
+  specific_id_tracking?: string | null
 }
 
 export type SalesInvoiceCustomerDefaults = {
@@ -147,6 +152,9 @@ export const applySalesInvoiceItemSelection = (
     cogs_account_id: item.item_type === 'inventory_item' ? (item.cogs_account_id || '') : '',
     unit_cost: unitCost,
     inventory_cost: item.item_type === 'inventory_item' ? round2(line.quantity * unitCost) : 0,
+    inventory_cost_layer_id: '',
+    lot_number: '',
+    serial_number: '',
   }
   return computeSalesInvoiceDraftLine(updated, vatPriceBasis)
 })

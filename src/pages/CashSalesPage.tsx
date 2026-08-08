@@ -10,6 +10,7 @@ import { formatPhTinInput, normalizePhTin } from '@/lib/philippines'
 import { loadVatCodesAsOf } from '@/lib/vatCodes'
 import { loadPercentageTaxCodesAsOf, type BusinessTaxCodeOption } from '@/lib/businessTaxCodes'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
+import { InventoryIdentitySelect } from '@/components/InventoryIdentitySelect'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Mode = 'list' | 'new'
@@ -26,7 +27,11 @@ type Customer    = { id: string; registered_name: string; tin: string; address: 
 type VATCode     = { id: string; vat_code: string; description: string; vat_classification: string; rate: number }
 type COAAccount  = { id: string; account_code: string; account_name: string }
 type PaymentMode = { id: string; name: string }
-type Item        = { id: string; item_code: string; item_name: string; unit_price: number; vat_code_id: string | null }
+type Item        = {
+  id: string; item_code: string; item_name: string; unit_price: number; vat_code_id: string | null
+  item_type: 'inventory_item' | 'service' | 'non_inventory'
+  costing_method: string | null; specific_id_tracking: string | null
+}
 
 const SI_REQUIRED_CONFIG_BASE: ConfigField[] = ['ar_account_id']
 const OR_REQUIRED_CONFIG_BASE: ConfigField[] = ['ar_account_id']
@@ -40,6 +45,7 @@ type Line = {
   // Operations and withholding are per line: one counter sale may mix goods
   // relieved from a warehouse with services, withheld under different ATCs.
   warehouse_id: string
+  inventory_cost_layer_id: string; lot_number: string; serial_number: string
   withholding_atc_code_id: string; withholding_rate: number; withholding_amount: number
   // Percentage tax is the seller's own Section 116 business tax. It is per line
   // like every other tax, and it never enters what the customer pays.
@@ -57,6 +63,7 @@ const newLine = (): Line => ({
   discount_amount: 0, vat_code_id: '', vat_classification: 'regular', vat_rate: 12,
   net_amount: 0, vat_amount: 0, total_amount: 0, revenue_account_id: '',
   warehouse_id: '', withholding_atc_code_id: '', withholding_rate: 0, withholding_amount: 0,
+  inventory_cost_layer_id: '', lot_number: '', serial_number: '',
   percentage_tax_code_id: '', percentage_tax_rate: 0, percentage_tax_amount: 0,
 })
 
@@ -168,7 +175,7 @@ export default function CashSalesPage() {
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'revenue').eq('is_postable', true).eq('is_active', true).order('account_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('account_type', 'asset').eq('is_postable', true).eq('is_active', true).order('account_code'),
       supabase.from('ref_payment_modes').select('id,name').eq('is_active', true).order('sort_order'),
-      supabase.from('items').select('id,item_code,item_name:description,unit_price:standard_selling_price,vat_code_id:default_sales_vat_id').eq('company_id', companyId).eq('is_active', true).order('description'),
+      supabase.from('items').select('id,item_code,item_name:description,unit_price:standard_selling_price,vat_code_id:default_sales_vat_id,item_type,costing_method,specific_id_tracking').eq('company_id', companyId).eq('is_active', true).order('description'),
       supabase.from('atc_codes').select('id,code,description,rate').eq('is_active', true).eq('tax_category', 'ewt').order('code'),
       supabase.from('warehouses').select('id,warehouse_code,warehouse_name').eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
     ]).then(([custR, accR, bankR, pmR, itemR, atcR, whR]) => {
@@ -223,6 +230,9 @@ export default function CashSalesPage() {
         if (it) {
           merged.description = it.item_name
           merged.unit_price  = Number(it.unit_price)
+          merged.inventory_cost_layer_id = ''
+          merged.lot_number = ''
+          merged.serial_number = ''
           if (it.vat_code_id) {
             const vc = vatCodes.find(v => v.id === it.vat_code_id)
             merged.vat_code_id = vc?.id || ''
@@ -319,6 +329,16 @@ export default function CashSalesPage() {
     }
     if (!companyId || !fCustomer) { setError('Customer is required.'); return }
     if (lines.every(l => !l.description.trim())) { setError('At least one line is required.'); return }
+    const selectedLines = lines.filter(l => l.description.trim())
+    const unresolvedWarehouse = selectedLines.find(l => items.find(item => item.id === l.item_id)?.item_type === 'inventory_item' && !(l.warehouse_id || fWarehouse))
+    if (unresolvedWarehouse) { setError(`Warehouse is required for ${unresolvedWarehouse.description}.`); return }
+    const missingIdentity = selectedLines.find(l => items.find(item => item.id === l.item_id)?.costing_method === 'specific_identification' && !l.inventory_cost_layer_id)
+    if (missingIdentity) { setError(`Select an inventory serial or lot for ${missingIdentity.description}.`); return }
+    const invalidSerialQuantity = selectedLines.find(l => {
+      const item = items.find(candidate => candidate.id === l.item_id)
+      return item?.costing_method === 'specific_identification' && item.specific_id_tracking === 'serial' && l.quantity !== 1
+    })
+    if (invalidSerialQuantity) { setError(`Serialized inventory must be issued one unit per line (${invalidSerialQuantity.description}).`); return }
     setSaving(true); setError('')
     const header = {
       company_id: companyId, branch_id: fBranch || branchId,
@@ -336,7 +356,9 @@ export default function CashSalesPage() {
       item_id: l.item_id, description: l.description, quantity: l.quantity,
       unit_price: l.unit_price, discount_amount: l.discount_amount,
       vat_code_id: l.vat_code_id, revenue_account_id: l.revenue_account_id,
-      warehouse_id: l.warehouse_id, withholding_atc_code_id: l.withholding_atc_code_id,
+      warehouse_id: l.warehouse_id || fWarehouse, withholding_atc_code_id: l.withholding_atc_code_id,
+      inventory_cost_layer_id: l.inventory_cost_layer_id || null,
+      lot_number: l.lot_number || null, serial_number: l.serial_number || null,
       percentage_tax_code_id: l.percentage_tax_code_id,
     }))
     const { data, error: rpcErr } = await supabase.rpc('fn_save_cash_sale', {
@@ -493,6 +515,7 @@ export default function CashSalesPage() {
                   {ptCodes.length > 0 && <th className={th} style={{ minWidth: 130 }}>Percentage Tax</th>}
                   <th className={th} style={{ minWidth: 120 }}>Withholding Tax</th>
                   <th className={th} style={{ minWidth: 130 }}>Warehouse</th>
+                  <th className={th} style={{ minWidth: 190 }}>Inventory Identity</th>
                   <th className={th} style={{ minWidth: 150 }}>Revenue Acct</th>
                   <th className={`${th} text-right`} style={{ width: 90 }}>Net</th>
                   <th className={`${th} text-right`} style={{ width: 80 }}>VAT Amt</th>
@@ -560,6 +583,19 @@ export default function CashSalesPage() {
                         <option value="">{fWarehouse ? 'Document default' : '—'}</option>
                         {warehouses.map(w => <option key={w.id} value={w.id}>{w.warehouse_code}</option>)}
                       </select>
+                    </td>
+                    <td className={td}>
+                      <InventoryIdentitySelect
+                        companyId={companyId || ''} warehouseId={l.warehouse_id || fWarehouse}
+                        itemId={l.item_id} costingMethod={items.find(item => item.id === l.item_id)?.costing_method || ''}
+                        value={l.inventory_cost_layer_id}
+                        onChange={choice => updateLine(l._key, {
+                          inventory_cost_layer_id: choice?.inventory_cost_layer_id || '',
+                          lot_number: choice?.lot_number || '', serial_number: choice?.serial_number || '',
+                          quantity: items.find(item => item.id === l.item_id)?.specific_id_tracking === 'serial' && choice ? 1 : l.quantity,
+                        })}
+                        className="border border-gray-200 rounded px-1.5 py-1 text-xs w-full"
+                      />
                     </td>
                     <td className={td}>
                       <select value={l.revenue_account_id} onChange={e => updateLine(l._key, { revenue_account_id: e.target.value })}

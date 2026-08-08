@@ -33,6 +33,7 @@ import {
   transactionSectionTitleClass,
   transactionTableClass,
 } from '@/lib/transactionWorkspace'
+import { InventoryIdentitySelect } from '@/components/InventoryIdentitySelect'
 
 // ── Types ─────────────────────────────────────────────────────
 type SIStatus = 'draft' | 'approved' | 'posted' | 'cancelled'
@@ -87,6 +88,9 @@ type SILine = {
   unit_cost: number
   inventory_cost: number
   inventory_transaction_id: string
+  inventory_cost_layer_id: string
+  lot_number: string
+  serial_number: string
   remarks: string
   source_document_type: string
   source_line_id: string
@@ -142,6 +146,7 @@ type ItemRef = {
   inventory_account_id: string | null
   cogs_account_id: string | null
   costing_method: string | null
+  specific_id_tracking: string | null
 }
 
 type VATRef = {
@@ -211,7 +216,8 @@ const newLine = (): SILine => ({
   warehouse_id: '', department_id: '', cost_center_id: '', salesperson_id: '',
   project_id: '', location_id: '', functional_entity_id: '',
   inventory_account_id: '', cogs_account_id: '', unit_cost: 0, inventory_cost: 0,
-  inventory_transaction_id: '', remarks: '', source_document_type: '', source_line_id: '',
+  inventory_transaction_id: '', inventory_cost_layer_id: '', lot_number: '', serial_number: '',
+  remarks: '', source_document_type: '', source_line_id: '',
 })
 
 const blankDraft = (branchId: string): SalesInvoiceDraft => ({
@@ -355,6 +361,9 @@ const buildDraftSignature = ({
     remarks: line.remarks,
     source_document_type: line.source_document_type,
     source_line_id: line.source_line_id,
+    inventory_cost_layer_id: line.inventory_cost_layer_id,
+    lot_number: line.lot_number,
+    serial_number: line.serial_number,
   })),
 })
 
@@ -888,7 +897,7 @@ export default function SalesInvoicePage() {
             .select('id,customer_code,customer_group,registered_name,trade_name,business_style,tin,tin_branch_code,registered_address,delivery_address,contact_person,email,phone_number,credit_limit,default_tax_type,is_subject_to_cwt,default_terms_id,default_gl_account_id,default_cwt_atc_code_id,payment_terms(days_to_due,term_name)')
             .eq('company_id', companyId).eq('is_active', true).order('registered_name'),
           supabase.from('items')
-            .select('id,item_code,description,uom_id,units_of_measure(uom_code),standard_selling_price,standard_cost,default_sales_vat_id,sales_account_id,item_type,inventory_account_id,cogs_account_id,costing_method')
+            .select('id,item_code,description,uom_id,units_of_measure(uom_code),standard_selling_price,standard_cost,default_sales_vat_id,sales_account_id,item_type,inventory_account_id,cogs_account_id,costing_method,specific_id_tracking')
             .eq('company_id', companyId).eq('is_active', true).order('item_code'),
           supabase.from('atc_codes')
             .select('id,code,description,rate')
@@ -1073,6 +1082,9 @@ export default function SalesInvoicePage() {
           unit_cost: Number(l.unit_cost || 0),
           inventory_cost: Number(l.inventory_cost || 0),
           inventory_transaction_id: String(l.inventory_transaction_id || ''),
+          inventory_cost_layer_id: String(l.inventory_cost_layer_id || ''),
+          lot_number: String(l.lot_number || ''),
+          serial_number: String(l.serial_number || ''),
           remarks: String(l.remarks || ''),
           source_document_type: String(l.source_document_type || ''),
           source_line_id: String(l.source_line_id || ''),
@@ -1289,6 +1301,9 @@ export default function SalesInvoicePage() {
         unit_cost: 0,
         inventory_cost: 0,
         inventory_transaction_id: '',
+        inventory_cost_layer_id: '',
+        lot_number: '',
+        serial_number: '',
         remarks: '',
         source_document_type: 'sales_order',
         source_line_id: line.id,
@@ -1318,6 +1333,16 @@ export default function SalesInvoicePage() {
     }
     if (inventoryActiveLines.some(l => !l.inventory_account_id || !l.cogs_account_id)) {
       errors.push('Every inventory item line needs Inventory and COGS accounts from Item Master before approval or posting.')
+    }
+    const specificDirectLines = inventoryActiveLines.filter(line => {
+      const item = items.find(candidate => candidate.id === line.item_id)
+      return item?.costing_method === 'specific_identification' && line.source_document_type !== 'DR'
+    })
+    if (specificDirectLines.some(line => !line.inventory_cost_layer_id)) {
+      errors.push('Every direct-stock Specific Identification line must select an available serial or lot.')
+    }
+    if (specificDirectLines.some(line => items.find(item => item.id === line.item_id)?.specific_id_tracking === 'serial' && line.quantity !== 1)) {
+      errors.push('Serial-tracked Sales Invoice lines must have quantity 1 per selected serial.')
     }
     return errors
   }
@@ -1407,6 +1432,9 @@ export default function SalesInvoicePage() {
           salesperson_id: l.salesperson_id || fSalesperson || null,
           inventory_account_id: l.inventory_account_id || null,
           cogs_account_id: l.cogs_account_id || null,
+          inventory_cost_layer_id: l.inventory_cost_layer_id || null,
+          lot_number: l.lot_number || null,
+          serial_number: l.serial_number || null,
           remarks: l.remarks || null,
           source_document_type: l.source_document_type || null,
           source_line_id: l.source_line_id || null,
@@ -2353,6 +2381,7 @@ export default function SalesInvoicePage() {
                     <th className="w-20 px-3 py-2 text-right">Qty</th>
                     <th className="w-16 px-3 py-2 text-left">UOM</th>
                     {warehouses.length > 0 && <th className="w-36 px-3 py-2 text-left">Warehouse</th>}
+                    {warehouses.length > 0 && <th className="min-w-[190px] px-3 py-2 text-left">Inventory Identity</th>}
                     {departments.length > 0 && <th className="w-36 px-3 py-2 text-left">Department</th>}
                     {costCenters.length > 0 && <th className="w-36 px-3 py-2 text-left">Cost Center</th>}
                     {availableProjects.length > 0 && <th className="w-36 px-3 py-2 text-left">Project</th>}
@@ -2408,6 +2437,20 @@ export default function SalesInvoicePage() {
                           ) : (
                             <span className="text-xs text-gray-500">{warehouses.find(w => w.id === l.warehouse_id)?.warehouse_code || 'Not assigned'}</span>
                           )}
+                        </td>
+                      )}
+                      {warehouses.length > 0 && (
+                        <td className="px-3 py-2 align-middle">
+                          {canEdit && items.find(item => item.id === l.item_id)?.costing_method === 'specific_identification' && l.source_document_type !== 'DR' ? (
+                            <InventoryIdentitySelect companyId={companyId} warehouseId={l.warehouse_id || fWarehouse}
+                              itemId={l.item_id} costingMethod="specific_identification" value={l.inventory_cost_layer_id}
+                              onChange={choice => setLines(current => current.map(line => line._key === l._key ? {
+                                ...line, inventory_cost_layer_id: choice?.inventory_cost_layer_id || '',
+                                lot_number: choice?.lot_number || '', serial_number: choice?.serial_number || '',
+                                quantity: items.find(item => item.id === l.item_id)?.specific_id_tracking === 'serial' && choice ? 1 : line.quantity,
+                              } : line))}
+                              className="w-full border-0 bg-transparent text-xs focus:outline-none" />
+                          ) : <span className="font-mono text-[10px] text-gray-500">{l.serial_number || l.lot_number || (l.source_document_type === 'DR' ? 'From delivery' : '—')}</span>}
                         </td>
                       )}
                       {departments.length > 0 && (
@@ -2506,7 +2549,7 @@ export default function SalesInvoicePage() {
                       <td className="px-3 py-2 text-right align-middle font-mono text-xs font-semibold tabular-nums text-gray-900">{fmt(l.total_amount)}</td>
                       {canEdit && (
                         <td className="px-2 py-2 text-right align-middle">
-                          <button type="button" onClick={() => setLines(prev => [...prev.slice(0, idx + 1), { ...l, _key: crypto.randomUUID(), id: undefined, unit_cost: 0, inventory_cost: 0, inventory_transaction_id: '' }, ...prev.slice(idx + 1)])}
+                          <button type="button" onClick={() => setLines(prev => [...prev.slice(0, idx + 1), { ...l, _key: crypto.randomUUID(), id: undefined, unit_cost: 0, inventory_cost: 0, inventory_transaction_id: '', inventory_cost_layer_id: '', lot_number: '', serial_number: '' }, ...prev.slice(idx + 1)])}
                             className="mr-2 text-xs text-gray-400 hover:text-gray-900" title="Duplicate line">Copy</button>
                           <button type="button" onClick={() => setLines(prev => prev.length > 1 ? prev.filter(x => x._key !== l._key) : [emptyLine()])}
                             className="text-xs text-gray-400 hover:text-red-600" title="Remove line">Remove</button>

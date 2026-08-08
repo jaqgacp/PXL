@@ -9,6 +9,7 @@ type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
 type COA = { id: string; account_code: string; account_name: string }
 type CountLine = {
   id?: string; item_id: string; item_code: string; item_name: string; uom_code: string
+  costing_method: string; inventory_cost_layer_id: string | null
   lot_number: string | null; serial_number: string | null
   system_qty: number; counted_qty: string; unit_cost: number; gl_variance_account_id: string
 }
@@ -47,22 +48,41 @@ export default function PhysicalCountPage() {
   // Load current stock balances when warehouse is selected
   const loadBalances = async (whId: string) => {
     if (!whId) { setLines([]); return }
-    const { data } = await supabase.from('stock_balances').select(`
-      item_id, qty_on_hand, wac_unit_cost,
-      items!inner(item_code, description, units_of_measure!inner(uom_code))
-    `).eq('warehouse_id', whId).gt('qty_on_hand', 0)
-
-    setLines(((data || []) as any[]).map(r => ({
+    const [{ data }, identityResult] = await Promise.all([
+      supabase.from('stock_balances').select(`
+        item_id, qty_on_hand, wac_unit_cost,
+        items!inner(item_code, description, costing_method, units_of_measure!inner(uom_code))
+      `).eq('warehouse_id', whId).gt('qty_on_hand', 0),
+      (supabase as any).from('vw_available_inventory_identities')
+        .select('inventory_cost_layer_id,item_id,lot_number,serial_number,available_qty,unit_cost')
+        .eq('company_id', companyId).eq('warehouse_id', whId),
+    ])
+    const balances = (data || []) as any[]
+    const aggregateLines: CountLine[] = balances.filter(r => r.items?.costing_method !== 'specific_identification').map(r => ({
       item_id: r.item_id,
       item_code: r.items?.item_code ?? '',
       item_name: r.items?.description ?? '',
       uom_code: r.items?.units_of_measure?.uom_code ?? '',
+      costing_method: r.items?.costing_method || 'weighted_average',
+      inventory_cost_layer_id: null,
       lot_number: null, serial_number: null,
       system_qty: Number(r.qty_on_hand),
       counted_qty: Number(r.qty_on_hand).toString(),
       unit_cost: Number(r.wac_unit_cost),
       gl_variance_account_id: '',
-    })))
+    }))
+    const identityLines: CountLine[] = ((identityResult.data || []) as any[]).map(identity => {
+      const balance = balances.find(row => row.item_id === identity.item_id)
+      return {
+        item_id: identity.item_id, item_code: balance?.items?.item_code ?? '',
+        item_name: balance?.items?.description ?? '', uom_code: balance?.items?.units_of_measure?.uom_code ?? '',
+        costing_method: 'specific_identification', inventory_cost_layer_id: identity.inventory_cost_layer_id,
+        lot_number: identity.lot_number, serial_number: identity.serial_number,
+        system_qty: Number(identity.available_qty), counted_qty: String(identity.available_qty),
+        unit_cost: Number(identity.unit_cost), gl_variance_account_id: '',
+      }
+    })
+    setLines([...aggregateLines, ...identityLines])
   }
 
   const onWhChange = (whId: string) => {
@@ -88,6 +108,7 @@ export default function PhysicalCountPage() {
         system_qty: l.system_qty,
         counted_qty: l.counted_qty !== '' ? Number(l.counted_qty) : null,
         unit_cost: l.unit_cost,
+        inventory_cost_layer_id: l.inventory_cost_layer_id,
         lot_number: l.lot_number, serial_number: l.serial_number,
         gl_variance_account_id: l.gl_variance_account_id || null,
       }))
@@ -157,7 +178,7 @@ export default function PhysicalCountPage() {
               <div className="overflow-x-auto max-h-[60vh]">
                 <table className="pxl-data-grid w-full">
                   <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                    <tr>{['Item Code','Item Name','System Qty','Counted Qty','Variance','Unit Cost (₱)','Variance Value (₱)','Variance GL Account'].map(h => (
+                    <tr>{['Item Code','Item Name','Identity','System Qty','Counted Qty','Variance','Unit Cost (₱)','Variance Value (₱)','Variance GL Account'].map(h => (
                       <th key={h} className="px-3 py-2 text-[10px] font-semibold uppercase text-gray-500 text-left whitespace-nowrap">{h}</th>
                     ))}</tr>
                   </thead>
@@ -170,6 +191,7 @@ export default function PhysicalCountPage() {
                         <tr key={l.item_id} className={`hover:bg-gray-50/60 ${variance !== 0 ? 'bg-amber-50/40' : ''}`}>
                           <td className="px-3 py-1.5 font-mono font-semibold text-gray-900">{l.item_code}</td>
                           <td className="px-3 py-1.5 text-gray-800 max-w-[160px] truncate">{l.item_name}</td>
+                          <td className="px-3 py-1.5 font-mono text-[10px] text-gray-600">{l.serial_number || l.lot_number || '—'}</td>
                           <td className="px-3 py-1.5 text-right font-mono text-gray-600">{l.system_qty.toLocaleString('en-PH', { maximumFractionDigits: 4 })} {l.uom_code}</td>
                           <td className="px-3 py-1.5">
                             <input type="number" min={0} step={0.0001} value={l.counted_qty}

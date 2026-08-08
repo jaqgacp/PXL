@@ -2,7 +2,7 @@
 
 **Status:** Active authoritative coverage-governance register
 **Authority:** Tier 2 governance artifact for PXL-AUD-059 coverage governance; accounting, tax, transaction, security, and findings sources prevail on product rules
-**Last Verified:** 2026-08-04 deterministic local canonical lane after the Filing Artifact and Backlog 8f migrations (208 public base tables; 99 expected-populated, 109 explicitly deferred/empty). Canonical bank-transfer vouchers exercise verified supplier payee accounts; the six opening-balance tables remain workflow-deferred and are proved on fresh company data by guards 113 and 116.
+**Last Verified:** 2026-08-08 deterministic local validation after the production inventory-costing migrations (212 public base tables; 99 expected-populated, 113 explicitly deferred/empty). Canonical stock remains Weighted Average; FIFO/Specific-ID layers and allocations are exercised by focused fresh-company tests and the committed inventory lifecycle. The three transaction-local bridge tables are governed control-empty state.
 **Applies To:** Every `public` base table; canonical/local validation coverage boundaries and product-readiness claims
 **Read When:** Adding a table or workflow, classifying coverage, or reconciling readiness against PXL-AUD-059
 **Do Not Read For:** Product accounting/tax rules (see the governing standards) or hosted credentials
@@ -31,12 +31,12 @@ Row counts below are the deterministic **canonical baseline** (fresh migration r
 | --- | ---: | --- |
 | `canonical-populated` | 69 | Expected non-empty; exercised by canonical regression |
 | `reference-populated` | 30 | Expected non-empty; migration/reference seeded |
-| `workflow-deferred` | 30 | Explicitly deferred; supported workflow not yet exercised by canonical |
+| `workflow-deferred` | 31 | Explicitly deferred; supported workflow not yet exercised by canonical |
 | `future-deferred` | 52 | Explicitly deferred; module not implemented end-to-end |
 | `reference-empty` | 6 | Intentionally empty reference/config |
-| `control-empty` | 1 | Healthy control state is empty; any row requires investigation |
+| `control-empty` | 4 | Healthy control/transaction-bridge state is empty; any surviving row requires investigation |
 | `dormant-foundation` | 20 | Implemented but inactive; population is prohibited during IA-5 |
-| **Total** | **208** | 99 expected-populated / 109 explicitly deferred or empty |
+| **Total** | **212** | 99 expected-populated / 113 explicitly deferred or empty |
 
 These figures are the guard's own registry, not a separate tally: re-derive them
 from `supabase/tests/075_table_coverage_governance_test.sql`, which is the
@@ -47,7 +47,7 @@ to `canonical-populated` (Phase 5.7) and `fiscal_close_runs` added as
   reference-populated and two workflow-deferred tables, while Backlog 8f removed
   eight current-product legacy working-paper tables and `wht_export_periods`.
 
-All 208 tables have row-level security enabled with at least one policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
+All 212 tables have row-level security enabled; the three private transaction-bridge tables intentionally expose no browser policy. The `Test` column records prior pgTAP regression files that reference the table; guard 075 additionally governs every table's classification.
 
 The COA Engine (Phase A, 2026-07-24) added four base tables: `ref_mapping_key` (reference-populated), `account_mapping` (canonical-populated, config-synced bindings), and the FS-registry framework `fs_structure` and `account_fs_map`. **Both FS tables became canonical-populated on 2026-08-03** (Delivery Plan Phase 5.7): seeding a chart of accounts now provisions its statement presentation with it, and the canonical demo seed — which builds its chart by direct insert — maps its companies explicitly. They are no longer workflow-deferred, and the coverage guard was reclassified rather than silenced.
 
@@ -180,6 +180,10 @@ current workflows do not activate them.
 | --- | --- | ---: | --- | --- | --- | --- |
 | `inventory_transactions` | `canonical-populated` | 26 | Canonical demo seed | on (2) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `inventory_cost_layers` | `workflow-deferred` | 0 | fifo / specific-identification receipts | on (3) | 075, 111 | Empty under canonical: every canonical item is weighted_average, whose quantity and value are authoritative in `stock_balances`. Guard 111 R5 fails if a weighted-average layer ever survives. |
+| `inventory_layer_allocations` | `workflow-deferred` | 0 | Exact FIFO/Specific-ID consume, return and reversal evidence | on (1) | 075, 135–137 | Immutable historical layer allocation; absent from the Weighted-Average canonical seed and exercised by fresh-company costing tests. |
+| `inventory_costing_pending_allocations` | `control-empty` | 0 | Transaction-local legacy-writer bridge | on (0) | 075, 135–137 | Private service bridge consumed inside the originating transaction; a surviving row is a failed invariant. |
+| `inventory_costing_pending_batches` | `control-empty` | 0 | Transaction-local legacy-writer bridge | on (0) | 075, 135–137 | Private service bridge consumed inside the originating transaction; a surviving row is a failed invariant. |
+| `inventory_costing_runtime_queue` | `control-empty` | 0 | Transaction-local identity-selection bridge | on (0) | 075, 135–137 | Carries browser-selected identity to the shared costing authority inside one transaction; a surviving row is refused by the public wrapper. |
 | `stock_balances` | `canonical-populated` | 11 | Canonical demo seed | on (3) | ✓ | Maintain canonical coverage; guard 075 keeps it non-empty. |
 | `ref_inventory_event_source_types` | `reference-populated` | 1 | IA-5 base plus WP-2 registry-authority migration; certification-only and production-disabled | on (1) | 103, 105–106 | Keep the sole IA-5 source disabled; WP-2 authority remains dormant and IA-6 owns replacement/removal. |
 | `inventory_precision_policies` | `dormant-foundation` | 0 | Internal certification service only; canonical excluded | on (1) | 103 | Populate only under a separately approved policy activation/conversion phase. |

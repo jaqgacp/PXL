@@ -25,6 +25,7 @@ type StockRow = {
 type CostLayer = {
   id: string; layer_date: string; lot_number: string | null; serial_number: string | null
   original_qty: number; qty_remaining: number; unit_cost: number; is_exhausted: boolean
+  remaining_value: number
   reference_doc_type: string | null
 }
 
@@ -92,7 +93,7 @@ export default function StockBalancePage() {
     setSelected(row)
     setLayersLoading(true)
     const { data } = await supabase.from('inventory_cost_layers')
-      .select('id,layer_date,lot_number,serial_number,original_qty,qty_remaining,unit_cost,is_exhausted,reference_doc_type')
+      .select('id,layer_date,lot_number,serial_number,original_qty,qty_remaining,unit_cost,remaining_value,is_exhausted,reference_doc_type')
       .eq('item_id', row.item_id).eq('warehouse_id', row.warehouse_id)
       .order('layer_date').order('id')
     setLayers((data as CostLayer[]) || [])
@@ -117,7 +118,7 @@ export default function StockBalancePage() {
           {[
             { label: 'On Hand', value: `${fmtQty(selected.qty_on_hand)} ${selected.uom_code}` },
             { label: 'Available', value: `${fmtQty(selected.qty_available)} ${selected.uom_code}` },
-            { label: 'Unit Cost', value: `₱ ${fmt(selected.wac_unit_cost)}` },
+            { label: 'Avg Carrying Cost', value: `₱ ${fmt(selected.qty_on_hand ? selected.total_cost / selected.qty_on_hand : 0)}` },
             { label: 'Total Value', value: `₱ ${fmt(selected.total_cost)}` },
           ].map(k => (
             <div key={k.label} className="bg-white border border-gray-200 rounded-lg px-3 py-2.5">
@@ -142,7 +143,7 @@ export default function StockBalancePage() {
             <div className="overflow-y-auto max-h-72">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 border-b border-gray-200 sticky top-0">
-                  <tr>{['Date','Ref Type','Lot','Serial','Original Qty','Remaining','Unit Cost (₱)','Status'].map(h => (
+                  <tr>{['Date','Ref Type','Lot','Serial','Original Qty','Remaining','Unit Cost (₱)','Remaining Value (₱)','Status'].map(h => (
                     <th key={h} className="px-3 py-2 text-[10px] font-semibold uppercase text-gray-500 text-left whitespace-nowrap">{h}</th>
                   ))}</tr>
                 </thead>
@@ -156,6 +157,7 @@ export default function StockBalancePage() {
                       <td className="px-3 py-1.5 text-right font-mono text-gray-600">{fmtQty(l.original_qty)}</td>
                       <td className="px-3 py-1.5 text-right font-mono font-semibold text-gray-900">{fmtQty(l.qty_remaining)}</td>
                       <td className="px-3 py-1.5 text-right font-mono text-gray-800">{fmt(l.unit_cost)}</td>
+                      <td className="px-3 py-1.5 text-right font-mono text-gray-800">{fmt(l.remaining_value)}</td>
                       <td className="px-3 py-1.5">
                         <span className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium ${l.is_exhausted ? 'bg-gray-100 text-gray-400' : 'bg-green-50 text-green-700'}`}>
                           {l.is_exhausted ? 'Exhausted' : 'Active'}
@@ -195,7 +197,7 @@ export default function StockBalancePage() {
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>{['Warehouse','Item Code','Item Name','Method','On Hand','Available','Unit Cost (₱)','Total Value (₱)','Last Receipt','Last Issue'].map(h => (
+                  <tr>{['Warehouse','Item Code','Item Name','Method','On Hand','Available','Avg Carrying Cost (₱)','Total Value (₱)','Last Receipt','Last Issue'].map(h => (
                     <th key={h} className="px-3 py-2 text-[10px] font-semibold uppercase text-gray-500 text-left whitespace-nowrap">{h}</th>
                   ))}</tr>
                 </thead>
@@ -216,7 +218,7 @@ export default function StockBalancePage() {
                           <span className="ml-1 text-red-600 font-bold" title="Below minimum">!</span>}
                       </td>
                       <td className="px-3 py-2 text-right font-mono text-gray-600">{fmtQty(r.qty_available)}</td>
-                      <td className="px-3 py-2 text-right font-mono text-gray-600">{fmt(r.wac_unit_cost)}</td>
+                      <td className="px-3 py-2 text-right font-mono text-gray-600">{fmt(r.qty_on_hand ? r.total_cost / r.qty_on_hand : 0)}</td>
                       <td className="px-3 py-2 text-right font-mono font-semibold text-gray-900">{fmt(r.total_cost)}</td>
                       <td className="px-3 py-2 font-mono text-gray-400">{r.last_receipt_date || '—'}</td>
                       <td className="px-3 py-2 font-mono text-gray-400">{r.last_issue_date || '—'}</td>

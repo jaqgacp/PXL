@@ -562,7 +562,7 @@ INSERT INTO purchase_order_lines (
 );
 
 INSERT INTO receiving_reports (
-  id, company_id, branch_id, rr_number, rr_date, po_id,
+  id, company_id, branch_id, warehouse_id, rr_number, rr_date, po_id,
   supplier_id, supplier_name_snapshot, status,
   confirmed_by, confirmed_at, created_by, updated_by
 ) VALUES
@@ -570,6 +570,7 @@ INSERT INTO receiving_reports (
     '99999999-9999-9999-9999-999999999933',
     '22222222-2222-2222-2222-222222222231',
     '33333333-3333-3333-3333-333333333231',
+    '77777777-7777-7777-7777-777777777731',
     'RR-RECEIVED-031', '2026-06-05',
     '99999999-9999-9999-9999-999999999931',
     '88888888-8888-8888-8888-888888888831',
@@ -579,6 +580,7 @@ INSERT INTO receiving_reports (
     '99999999-9999-9999-9999-999999999935',
     '22222222-2222-2222-2222-222222222231',
     '33333333-3333-3333-3333-333333333231',
+    '77777777-7777-7777-7777-777777777731',
     'RR-DRAFT-031', '2026-06-06',
     '99999999-9999-9999-9999-999999999931',
     '88888888-8888-8888-8888-888888888831',
@@ -588,6 +590,7 @@ INSERT INTO receiving_reports (
     '99999999-9999-9999-9999-999999999936',
     '22222222-2222-2222-2222-222222222231',
     '33333333-3333-3333-3333-333333333231',
+    '77777777-7777-7777-7777-777777777731',
     'RR-NO-BILL-031', '2026-06-07',
     '99999999-9999-9999-9999-999999999931',
     '88888888-8888-8888-8888-888888888831',
@@ -619,6 +622,19 @@ INSERT INTO receiving_report_lines (
     '55555555-5555-5555-5555-555555555631',
     10, auth.uid()
   );
+
+-- A received RR is inventory evidence, not merely a status label. Seed its
+-- production WAC receipt so the supplier return can reverse the actual source
+-- movement instead of falling back to the current pool without lineage.
+UPDATE receiving_report_lines
+SET inventory_transaction_id = fn_receive_inventory(jsonb_build_object(
+  'company_id','22222222-2222-2222-2222-222222222231',
+  'warehouse_id','77777777-7777-7777-7777-777777777731',
+  'item_id','66666666-6666-6666-6666-666666666631',
+  'qty',5,'unit_cost',10,'receipt_date','2026-06-05',
+  'reference_doc_type','RR','reference_doc_id','99999999-9999-9999-9999-999999999933',
+  'source_line_id','99999999-9999-9999-9999-999999999934'))
+WHERE id='99999999-9999-9999-9999-999999999934';
 
 SELECT throws_like(
   $$SELECT fn_save_vendor_bill(
@@ -911,9 +927,9 @@ SELECT is(
 SELECT is(
   (SELECT credit_amount FROM journal_entry_lines
    WHERE je_id = (SELECT id FROM t_runtime_ctx WHERE key = 'purchase_return_je')
-     AND account_id = 'aaaaaaaa-0000-0000-0000-000000000931'),
+     AND account_id = 'aaaaaaaa-0000-0000-0000-000000000531'),
   20::NUMERIC,
-  'the purchase-return JE credits the matched purchase expense account'
+  'the purchase-return JE credits Inventory Control by the exact shipped cost'
 );
 
 SELECT * FROM finish();

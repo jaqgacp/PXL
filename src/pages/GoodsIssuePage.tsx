@@ -3,12 +3,13 @@ import { supabase } from '@/lib/supabase'
 import { useAppCtx } from '@/lib/context'
 import { GLImpactPanel } from '@/components/GLImpactPanel'
 import { LegacyTransactionWorkspace } from '@/components/document/LegacyTransactionWorkspace'
+import { InventoryIdentitySelect } from '@/components/InventoryIdentitySelect'
 
 type Warehouse = { id: string; warehouse_code: string; warehouse_name: string }
 type Department = { id: string; department_name: string }
-type Item = { id: string; item_code: string; description: string; costing_method: string; uom_code: string }
+type Item = { id: string; item_code: string; description: string; costing_method: string; specific_id_tracking: string | null; uom_code: string }
 type COA = { id: string; account_code: string; account_name: string }
-type IssueLine = { item_id: string; item_code: string; item_name: string; uom_code: string; costing_method: string; qty: string; lot_number: string; serial_number: string; gl_expense_account_id: string }
+type IssueLine = { item_id: string; item_code: string; item_name: string; uom_code: string; costing_method: string; specific_id_tracking: string | null; qty: string; inventory_cost_layer_id: string; lot_number: string; serial_number: string; gl_expense_account_id: string }
 type IssueRecord = { id: string; issue_number: string; issue_date: string; warehouse_name: string; department_name: string | null; purpose: string | null; status: string }
 
 export default function GoodsIssuePage() {
@@ -36,13 +37,13 @@ export default function GoodsIssuePage() {
     const [{ data: whs }, { data: depts }, { data: itemData }, { data: coaData }, { data: issData }] = await Promise.all([
       supabase.from('warehouses').select('id,warehouse_code,warehouse_name').eq('company_id', companyId).eq('is_active', true).order('warehouse_code'),
       supabase.from('departments').select('id,department_name').eq('company_id', companyId).order('department_name'),
-      supabase.from('items').select('id,item_code,description,costing_method,units_of_measure!inner(uom_code)').eq('company_id', companyId).eq('is_active', true).eq('item_type', 'inventory_item').order('item_code'),
+      supabase.from('items').select('id,item_code,description,costing_method,specific_id_tracking,units_of_measure!inner(uom_code)').eq('company_id', companyId).eq('is_active', true).eq('item_type', 'inventory_item').order('item_code'),
       supabase.from('chart_of_accounts').select('id,account_code,account_name').eq('company_id', companyId).eq('is_postable', true).order('account_code'),
       supabase.from('goods_issues').select(`id,issue_number,issue_date,purpose,status,notes,warehouses!inner(warehouse_name),departments(department_name)`).eq('company_id', companyId).order('issue_date', { ascending: false }).limit(50),
     ])
     setWarehouses((whs as Warehouse[]) || [])
     setDepartments((depts as Department[]) || [])
-    setItems(((itemData || []) as any[]).map(i => ({ id: i.id, item_code: i.item_code, description: i.description, costing_method: i.costing_method || 'weighted_average', uom_code: i.units_of_measure?.uom_code || '' })))
+    setItems(((itemData || []) as any[]).map(i => ({ id: i.id, item_code: i.item_code, description: i.description, costing_method: i.costing_method || 'weighted_average', specific_id_tracking: i.specific_id_tracking, uom_code: i.units_of_measure?.uom_code || '' })))
     setCoa((coaData as COA[]) || [])
     setHistory(((issData || []) as any[]).map(g => ({ id: g.id, issue_number: g.issue_number, issue_date: g.issue_date, status: g.status, purpose: g.purpose, warehouse_name: g.warehouses?.warehouse_name ?? '', department_name: g.departments?.department_name ?? null })))
   }, [companyId])
@@ -52,7 +53,7 @@ export default function GoodsIssuePage() {
   const addLine = (itemId: string) => {
     const item = items.find(i => i.id === itemId)
     if (!item || lines.find(l => l.item_id === itemId)) return
-    setLines(p => [...p, { item_id: itemId, item_code: item.item_code, item_name: item.description, uom_code: item.uom_code, costing_method: item.costing_method, qty: '', lot_number: '', serial_number: '', gl_expense_account_id: '' }])
+    setLines(p => [...p, { item_id: itemId, item_code: item.item_code, item_name: item.description, uom_code: item.uom_code, costing_method: item.costing_method, specific_id_tracking: item.specific_id_tracking, qty: '', inventory_cost_layer_id: '', lot_number: '', serial_number: '', gl_expense_account_id: '' }])
   }
 
   const saveDraft = async () => {
@@ -71,6 +72,7 @@ export default function GoodsIssuePage() {
       lines.map(l => ({
         issue_id: (giData as any).id, company_id: companyId, item_id: l.item_id,
         qty_issued: Number(l.qty),
+        inventory_cost_layer_id: l.inventory_cost_layer_id || null,
         lot_number: l.lot_number || null, serial_number: l.serial_number || null,
         gl_expense_account_id: l.gl_expense_account_id || null,
       }))
@@ -157,7 +159,16 @@ export default function GoodsIssuePage() {
                         </div>
                       </td>
                       <td className="px-3 py-2">
-                        {l.costing_method !== 'weighted_average' ? (
+                        {l.costing_method === 'specific_identification' ? (
+                          <InventoryIdentitySelect companyId={companyId} warehouseId={warehouseId}
+                            itemId={l.item_id} costingMethod={l.costing_method} value={l.inventory_cost_layer_id}
+                            onChange={choice => setLines(p => p.map((x, i) => i === idx ? {
+                              ...x, inventory_cost_layer_id: choice?.inventory_cost_layer_id || '',
+                              lot_number: choice?.lot_number || '', serial_number: choice?.serial_number || '',
+                              qty: x.specific_id_tracking === 'serial' && choice ? '1' : x.qty,
+                            } : x))}
+                            className="border border-gray-200 rounded px-1.5 py-1 text-xs w-52 focus:outline-none" />
+                        ) : l.costing_method === 'fifo' ? (
                           <div className="flex gap-1">
                             <input value={l.lot_number}
                               onChange={e => setLines(p => p.map((x, i) => i === idx ? { ...x, lot_number: e.target.value } : x))}

@@ -395,7 +395,7 @@ FROM t_transfer_block;
 
 SELECT throws_like(
   format('SELECT fn_post_stock_transfer(%L)', (SELECT transfer_id FROM t_transfer_block)),
-  '%Insufficient stock for transfer item%',
+  '%Insufficient stock for item ITEM-STOCK-003. On hand: 10.0000, requested: 11.0000%',
   'stock transfer exceeding source warehouse stock is blocked server-side'
 );
 
